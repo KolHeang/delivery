@@ -1,0 +1,24 @@
+# dependencies
+/node_modules
+npm-debug.log
+yarn-error.log
+yarn.lock
+package-lock.json
+
+# next.js
+/.next/
+/out/
+/build
+
+# environments
+.env
+.env.*
+!.env.example
+
+# logs
+logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db

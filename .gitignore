@@ -1,0 +1,11 @@
+# dependencies
+node_modules/
+
+# environments
+.env
+.env.*
+!.env.example
+
+# OS
+.DS_Store
+Thumbs.db

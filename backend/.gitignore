@@ -1,0 +1,26 @@
+# dependencies
+/node_modules
+npm-debug.log
+yarn-error.log
+
+# production
+/dist
+
+# NestJS
+.nest/
+
+# testing
+/coverage
+
+# environments
+.env
+.env.*
+!.env.example
+
+# logs
+logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db

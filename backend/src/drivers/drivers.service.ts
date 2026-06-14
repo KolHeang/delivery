@@ -1,0 +1,81 @@
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { Staff } from '../users/staff.entity';
+import { CreateDriverDto, UpdateDriverDto } from './dto/driver.dto';
+import * as bcrypt from 'bcrypt';
+
+@Injectable()
+export class DriversService {
+  constructor(@InjectRepository(Staff) private readonly repo: Repository<Staff>) {}
+
+  findAll(): Promise<Staff[]> {
+    return this.repo.find({
+      where: { role: 'driver' },
+      relations: { zone: true, vehicle: true } as any,
+      order: { name: 'ASC' },
+    });
+  }
+
+  async findByIdentifier(identifier: string): Promise<Staff | null> {
+    return this.repo.createQueryBuilder('staff')
+      .addSelect('staff.password')
+      .leftJoinAndSelect('staff.zone', 'zone')
+      .leftJoinAndSelect('staff.vehicle', 'vehicle')
+      .where('staff.role = :role', { role: 'driver' })
+      .andWhere('(staff.email = :identifier OR staff.phone = :identifier)', { identifier })
+      .getOne();
+  }
+
+  async findOne(id: number): Promise<Staff> {
+    const item = await this.repo.findOne({
+      where: { id, role: 'driver' },
+      relations: { zone: true, vehicle: true } as any,
+    });
+    if (!item) throw new NotFoundException(`Driver #${id} not found`);
+    return item;
+  }
+
+  async findAvailable(): Promise<Staff[]> {
+    return this.repo.find({
+      where: { role: 'driver', status: 'available' },
+      relations: { zone: true, vehicle: true } as any,
+      order: { name: 'ASC' },
+    });
+  }
+
+  async create(dto: CreateDriverDto): Promise<Staff> {
+    const rawPassword = dto.password || '123456';
+    const hashed = await bcrypt.hash(rawPassword, 10);
+    const driver = this.repo.create({
+      name: dto.name,
+      nameKh: dto.nameKh,
+      phone: dto.phone,
+      email: dto.email,
+      status: dto.status as any,
+      zoneId: dto.zoneId,
+      vehicleId: dto.vehicleId,
+      joinDate: dto.joinDate,
+      salary: dto.salary ? parseFloat(dto.salary as any) : 0,
+      role: 'driver',
+      password: hashed,
+    });
+    return this.repo.save(driver);
+  }
+
+  async update(id: number, dto: UpdateDriverDto): Promise<Staff> {
+    await this.findOne(id);
+    const payload = { ...dto } as any;
+    if (dto.password) {
+      payload.password = await bcrypt.hash(dto.password, 10);
+    }
+    await this.repo.update({ id, role: 'driver' }, payload);
+    return this.findOne(id);
+  }
+
+  async remove(id: number): Promise<{ message: string }> {
+    await this.findOne(id);
+    await this.repo.delete({ id, role: 'driver' });
+    return { message: 'Driver deleted successfully' };
+  }
+}

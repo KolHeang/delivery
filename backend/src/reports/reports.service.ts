@@ -67,6 +67,89 @@ export class ReportsService {
     return { statusCounts, zoneRevenue };
   }
 
+  async getShopSummary() {
+    const result = await this.orderRepo.createQueryBuilder('order')
+      .leftJoin('order.merchant', 'merchant')
+      .select('merchant.id', 'id')
+      .addSelect('COALESCE(merchant.name, \'Unknown Shop\')', 'name')
+      .addSelect("SUM(CASE WHEN order.status = 'delivered' THEN 1 ELSE 0 END)", 'delivered')
+      .addSelect("SUM(CASE WHEN order.status = 'failed' THEN 1 ELSE 0 END)", 'failed')
+      .addSelect("SUM(CASE WHEN order.status = 'returned' THEN 1 ELSE 0 END)", 'returned')
+      .addSelect("0", 'qrShopUSD')
+      .addSelect("0", 'qrShopKHR')
+      .addSelect("0", 'qrDriverUSD')
+      .addSelect("0", 'qrDriverKHR')
+      .addSelect("SUM(CASE WHEN order.codCurrency = 'USD' THEN order.cod ELSE 0 END)", 'codUSD')
+      .addSelect("SUM(CASE WHEN order.codCurrency = 'KHR' THEN order.cod ELSE 0 END)", 'codKHR')
+      .addSelect("SUM(order.deliveryFee)", 'fee')
+      .groupBy('merchant.id')
+      .addGroupBy('merchant.name')
+      .getRawMany();
+
+    return result.map(row => ({
+      id: row.id || Math.random(),
+      name: row.name,
+      delivered: parseInt(row.delivered || '0', 10),
+      failed: parseInt(row.failed || '0', 10),
+      returned: parseInt(row.returned || '0', 10),
+      qrShopUSD: parseFloat(row.qrShopUSD || '0'),
+      qrShopKHR: parseFloat(row.qrShopKHR || '0'),
+      qrDriverUSD: parseFloat(row.qrDriverUSD || '0'),
+      qrDriverKHR: parseFloat(row.qrDriverKHR || '0'),
+      codUSD: parseFloat(row.codUSD || '0'),
+      codKHR: parseFloat(row.codKHR || '0'),
+      fee: parseFloat(row.fee || '0'),
+    }));
+  }
+
+  async getPickupSummary() {
+    const result = await this.orderRepo.createQueryBuilder('order')
+      .leftJoin('order.driver', 'driver')
+      .select('driver.id', 'id')
+      .addSelect('COALESCE(driver.name, \'Unknown Driver\')', 'name')
+      .addSelect("COUNT(*)", 'package')
+      .addSelect("SUM(order.deliveryFee)", 'fee')
+      .where("order.status = 'picked-up'")
+      .groupBy('driver.id')
+      .addGroupBy('driver.name')
+      .getRawMany();
+
+    return result.map(row => ({
+      id: row.id || Math.random(),
+      name: row.name,
+      package: parseInt(row.package || '0', 10),
+      fee: parseFloat(row.fee || '0'),
+    }));
+  }
+
+  async getDeliverySummary() {
+    const result = await this.orderRepo.createQueryBuilder('order')
+      .leftJoin('order.driver', 'driver')
+      .select('driver.id', 'id')
+      .addSelect('COALESCE(driver.name, \'Unknown Driver\')', 'name')
+      .addSelect("SUM(CASE WHEN order.status = 'delivered' THEN 1 ELSE 0 END)", 'delivered')
+      .addSelect("SUM(CASE WHEN order.status = 'failed' THEN 1 ELSE 0 END)", 'failed')
+      .addSelect("SUM(CASE WHEN order.status = 'returned' THEN 1 ELSE 0 END)", 'returned')
+      .addSelect("SUM(CASE WHEN order.codCurrency = 'USD' THEN order.cod ELSE 0 END)", 'codUSD')
+      .addSelect("SUM(CASE WHEN order.codCurrency = 'KHR' THEN order.cod ELSE 0 END)", 'codKHR')
+      .addSelect("SUM(order.deliveryFee)", 'fee')
+      .where("order.driverId IS NOT NULL")
+      .groupBy('driver.id')
+      .addGroupBy('driver.name')
+      .getRawMany();
+
+    return result.map(row => ({
+      id: row.id || Math.random(),
+      name: row.name,
+      delivered: parseInt(row.delivered || '0', 10),
+      failed: parseInt(row.failed || '0', 10),
+      returned: parseInt(row.returned || '0', 10),
+      codUSD: parseFloat(row.codUSD || '0'),
+      codKHR: parseFloat(row.codKHR || '0'),
+      fee: parseFloat(row.fee || '0'),
+    }));
+  }
+
   async getFinancialReport(startDate?: string, endDate?: string) {
     // 1. Group Incomes by month
     const incomeQuery = this.incomeRepo.createQueryBuilder('income')

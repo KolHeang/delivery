@@ -32,6 +32,10 @@ export default function DeliveriesPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [driverFilter, setDriverFilter] = useState('');
+  const [merchantFilter, setMerchantFilter] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [viewModal, setViewModal] = useState<any>(null);
   const [editItem, setEditItem] = useState<any>(null);
@@ -67,6 +71,18 @@ export default function DeliveriesPage() {
   useEffect(() => {
     let list = orders;
     if (statusFilter !== 'all') list = list.filter(o => o.status === statusFilter);
+    if (driverFilter) list = list.filter(o => o.driverId === parseInt(driverFilter));
+    if (merchantFilter) list = list.filter(o => o.merchantId === parseInt(merchantFilter));
+    if (startDate) {
+      const start = new Date(startDate);
+      start.setHours(0, 0, 0, 0);
+      list = list.filter(o => new Date(o.createdAt) >= start);
+    }
+    if (endDate) {
+      const end = new Date(endDate);
+      end.setHours(23, 59, 59, 999);
+      list = list.filter(o => new Date(o.createdAt) <= end);
+    }
     if (search) {
       const q = search.toLowerCase();
       list = list.filter(o =>
@@ -80,7 +96,7 @@ export default function DeliveriesPage() {
       );
     }
     setFiltered(list);
-  }, [orders, search, statusFilter]);
+  }, [orders, search, statusFilter, driverFilter, merchantFilter, startDate, endDate]);
 
   const openCreate = () => { router.push('/delivery/entry_data_item'); };
   const openEdit = (o: any) => {
@@ -129,19 +145,48 @@ export default function DeliveriesPage() {
         <div className="page-content">
           {/* Filters */}
           <div className="card" style={{ marginBottom: 16 }}>
-            <div style={{ padding: '12px 16px', display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
-              <div className="search-input-wrapper">
-                <MdSearch className="search-icon" />
-                <input className="form-control search-input" placeholder="Search by tracking, receiver, merchant..." value={search} onChange={e => setSearch(e.target.value)} />
+            <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {/* Advanced Filters */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label" style={{ fontSize: 11, marginBottom: 4 }}>Status</label>
+                  <select className="form-control" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
+                    <option value="all">Select Status</option>
+                    {STATUS_OPTIONS.filter(s => s !== 'all').map(s => (
+                      <option key={s} value={s} style={{ textTransform: 'capitalize' }}>{s}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label" style={{ fontSize: 11, marginBottom: 4 }}>កាលបរិច្ឆេទបញ្ជូល</label>
+                  <input type="date" className="form-control" value={startDate} onChange={e => setStartDate(e.target.value)} />
+                </div>
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label" style={{ fontSize: 11, marginBottom: 4 }}>កាលបរិច្ឆេទបញ្ចប់</label>
+                  <input type="date" className="form-control" value={endDate} onChange={e => setEndDate(e.target.value)} />
+                </div>
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label" style={{ fontSize: 11, marginBottom: 4 }}>អ្នកដឹក</label>
+                  <select className="form-control" value={driverFilter} onChange={e => setDriverFilter(e.target.value)}>
+                    <option value="">-- ទាំងអស់ --</option>
+                    {drivers.map(d => <option key={d.id} value={d.id}>{d.name} {d.nameKh ? `(${d.nameKh})` : ''}</option>)}
+                  </select>
+                </div>
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label" style={{ fontSize: 11, marginBottom: 4 }}>ហាង</label>
+                  <select className="form-control" value={merchantFilter} onChange={e => setMerchantFilter(e.target.value)}>
+                    <option value="">-- ទាំងអស់ --</option>
+                    {merchants.map(m => <option key={m.id} value={m.id}>{m.name} {m.nameKh ? `(${m.nameKh})` : ''}</option>)}
+                  </select>
+                </div>
               </div>
-              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                {STATUS_OPTIONS.map(s => (
-                  <button key={s} onClick={() => setStatusFilter(s)}
-                    className={`btn btn-sm ${statusFilter === s ? 'btn-primary' : 'btn-outline'}`}
-                    style={{ textTransform: 'capitalize', borderRadius: 9999 }}>
-                    {s === 'all' ? 'All' : s}
-                  </button>
-                ))}
+
+              {/* Search */}
+              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
+                <div className="search-input-wrapper" style={{ flex: 1, minWidth: 200 }}>
+                  <MdSearch className="search-icon" />
+                  <input className="form-control search-input" placeholder="Search by tracking, receiver, merchant..." value={search} onChange={e => setSearch(e.target.value)} />
+                </div>
               </div>
             </div>
           </div>

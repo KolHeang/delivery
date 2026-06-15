@@ -140,14 +140,14 @@ export default function ReportsPage() {
           {/* Tab Selection */}
           <div className="no-print" style={{ display: 'flex', gap: 12, marginBottom: 20, borderBottom: '1px solid var(--border)', paddingBottom: 12 }}>
             <button 
-              onClick={() => setActiveTab('financial')}
+              onClick={() => router.push('/report/financial')}
               className={`btn btn-sm ${activeTab === 'financial' ? 'btn-primary' : 'btn-outline'}`}
               style={{ padding: '8px 16px', borderRadius: 8, fontSize: 13, fontWeight: 600 }}
             >
               💵 {t('financialReport')}
             </button>
             <button 
-              onClick={() => setActiveTab('deliveries')}
+              onClick={() => router.push('/report/operation')}
               className={`btn btn-sm ${activeTab === 'deliveries' ? 'btn-primary' : 'btn-outline'}`}
               style={{ padding: '8px 16px', borderRadius: 8, fontSize: 13, fontWeight: 600 }}
             >

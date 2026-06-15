@@ -16,7 +16,7 @@ import { ExpensesModule } from './expenses/expenses.module';
 import { IncomesModule } from './incomes/incomes.module';
 import { PaymentsModule } from './payments/payments.module';
 import { SettingsModule } from './settings/settings.module';
-import { ExternalApiModule } from './external-api/external-api.module';
+import { MobileModule } from './mobile/mobile.module';
 
 @Module({
   imports: [
@@ -51,7 +51,7 @@ import { ExternalApiModule } from './external-api/external-api.module';
     IncomesModule,
     PaymentsModule,
     SettingsModule,
-    ExternalApiModule,
+    MobileModule,
   ],
 })
 export class AppModule {}

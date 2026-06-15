@@ -22,6 +22,15 @@ export class ReportsController {
   @Get('order-summary')
   getOrderSummary() { return this.reportsService.getOrderSummary(); }
 
+  @Get('shop-summary')
+  getShopSummary() { return this.reportsService.getShopSummary(); }
+
+  @Get('pickup-summary')
+  getPickupSummary() { return this.reportsService.getPickupSummary(); }
+
+  @Get('delivery-summary')
+  getDeliverySummary() { return this.reportsService.getDeliverySummary(); }
+
   @Get('financial')
   @ApiQuery({ name: 'startDate', required: false })
   @ApiQuery({ name: 'endDate', required: false })

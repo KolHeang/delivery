@@ -1,5 +1,5 @@
 'use client';
-
+// force rebuild
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { isAuthenticated } from '@/lib/auth';
@@ -13,6 +13,7 @@ import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from 'recharts';
+import { MdHome, MdLocalPostOffice, MdSearch } from 'react-icons/md';
 
 const STATUS_COLORS: Record<string, string> = {
   pending: '#f59e0b', 'picked-up': '#3b82f6', 'in-transit': '#8b5cf6',
@@ -171,14 +172,14 @@ export default function DashboardPage() {
 
           {/* Stats Grid */}
           <div className="stats-grid">
-            <StatsCard icon="📦" label="Total Parcels" value={stats?.totalOrders ?? 0} color="#2f55a5" bg="#eef2fa" />
-            <StatsCard icon="✅" label="Successful" value={stats?.delivered ?? 0} color="#10b981" bg="#ecfdf5" />
-            <StatsCard icon="🚚" label="Delivering" value={stats?.inTransit ?? 0} color="#8b5cf6" bg="#f5f3ff" />
-            <StatsCard icon="❌" label="Canceled" value={stats?.failed ?? 0} color="#ef4444" bg="#fef2f2" />
-            <StatsCard icon="🔄" label="Returned" value={stats?.returned ?? 0} color="#6b7280" bg="#f3f4f6" />
-            <StatsCard icon="💵" label="Total Delivery Fee" value={`$${(stats?.totalDeliveryFee ?? 0).toFixed(2)}`} color="#10b981" bg="#ecfdf5" />
-            <StatsCard icon="💰" label="Collected Cash USD" value={`$${(stats?.collectedCashUSD ?? 0).toFixed(2)}`} color="#2f55a5" bg="#eef2fa" />
-            <StatsCard icon="🇰🇭" label="Collected Cash KHR" value={`${(stats?.collectedCashKHR ?? 0).toLocaleString()} ៛`} color="#f16222" bg="#fef4ef" />
+            <StatsCard icon="📦" label={t('totalParcelDashboard')} value={stats?.totalOrders ?? 0} color="#2f55a5" bg="#eef2fa" />
+            <StatsCard icon="✅" label={t('totalCompleteParcel')} value={stats?.delivered ?? 0} color="#10b981" bg="#ecfdf5" />
+            <StatsCard icon="🚚" label={t('totalProcessParcel')} value={stats?.inTransit ?? 0} color="#8b5cf6" bg="#f5f3ff" />
+            <StatsCard icon="❌" label={t('totalCanceledParcel')} value={stats?.failed ?? 0} color="#ef4444" bg="#fef2f2" />
+            <StatsCard icon="🔄" label={t('totalReturnParcel')} value={stats?.returned ?? 0} color="#6b7280" bg="#f3f4f6" />
+            <StatsCard icon="💵" label={t('totalDeliveryFeeDashboard')} value={`$${(stats?.totalDeliveryFee ?? 0).toFixed(2)}`} color="#10b981" bg="#ecfdf5" />
+            <StatsCard icon="💰" label={t('amountCollectedUSD')} value={`$${(stats?.collectedCashUSD ?? 0).toFixed(2)}`} color="#2f55a5" bg="#eef2fa" />
+            <StatsCard icon="🇰🇭" label={t('amountCollectedKHR')} value={`${(stats?.collectedCashKHR ?? 0).toLocaleString()} ៛`} color="#f16222" bg="#fef4ef" />
             <StatsCard icon="🚴" label={t('totalDrivers')} value={stats?.totalDrivers ?? 0} color="#8b5cf6" bg="#f5f3ff" />
             <StatsCard icon="👥" label={t('totalStaff')} value={stats?.totalStaff ?? 0} color="#2f55a5" bg="#eef2fa" />
           </div>

@@ -19,12 +19,13 @@ export default function Sidebar() {
 
   const menuGroups = [
     {
-      key: 'shops',
-      label: t('manageShops'),
-      icon: MdStorefront,
+      key: 'summary',
+      label: t('summaryMenu'),
+      icon: MdBarChart,
       items: [
-        { href: '/client', label: t('customerList') },
-        { href: '/client/create', label: t('createShop') },
+        { href: '/summary/shop', label: t('shopSummary') },
+        { href: '/summary/delivery', label: t('deliverySummary') },
+        { href: '/summary/pickup', label: t('pickupSummary') },
       ],
     },
     {
@@ -38,7 +39,15 @@ export default function Sidebar() {
         { href: '/delivery/assigndeliveryby', label: t('processForAssign') },
         { href: '/delivery/complete', label: t('completePackage') },
         { href: '/delivery/tracking_delivery', label: t('tracking') },
-        { href: '/vehicles', label: t('vehiclesList') },
+      ],
+    },
+    {
+      key: 'shops',
+      label: t('manageShops'),
+      icon: MdStorefront,
+      items: [
+        { href: '/client', label: t('shopList') },
+        { href: '/client/create', label: t('createShop') },
       ],
     },
     {
@@ -46,7 +55,7 @@ export default function Sidebar() {
       label: t('paymentProcess'),
       icon: MdAccountBalanceWallet,
       items: [
-        { href: '/payment/staff', label: t('paymentWithStaff') },
+        { href: '/payment/delivery', label: t('paymentWithDelivery') },
         { href: '/payment/shop', label: t('paymentWithShop') },
       ],
     },
@@ -68,7 +77,8 @@ export default function Sidebar() {
       label: t('report'),
       icon: MdBarChart,
       items: [
-        { href: '/report', label: t('report') },
+        { href: '/report/financial', label: t('financialReport') },
+        { href: '/report/operation', label: t('operationReport') },
       ],
     },
     {
@@ -77,8 +87,9 @@ export default function Sidebar() {
       icon: MdSettings,
       items: [
         { href: '/setting/zone_type', label: t('zoneType') },
+        { href: '/setting/user', label: t('userListSetting') },
         { href: '/setting/role', label: t('permission') },
-        { href: '/setting/organisation', label: t('organisationSettings') },
+        { href: '/setting/organisation', label: t('organizationSetting') },
         { href: '/setting/general', label: t('generalSettings') },
       ],
     },
@@ -126,12 +137,20 @@ export default function Sidebar() {
   return (
     <aside className="sidebar" style={{ width: 260 }}>
       {/* Brand Logo */}
-      <div className="sidebar-logo" style={{ display: 'flex', justifyContent: 'center', padding: '24px 16px 20px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-        <img
-          src="/ebs-logo-white.png"
-          alt="EBS Digital Solutions"
-          style={{ maxHeight: 45, maxWidth: '100%', objectFit: 'contain' }}
-        />
+      <div className="sidebar-logo" style={{ height: 76, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, padding: '0 16px', borderBottom: '1px solid rgba(255,255,255,0.12)' }}>
+        <div style={{
+          width: 40, height: 40, borderRadius: 12,
+          background: 'linear-gradient(135deg, var(--accent), #6366f1)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          color: '#fff', fontSize: 22, boxShadow: '0 4px 12px rgba(59,130,246,0.4)',
+          flexShrink: 0
+        }}>
+          📦
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+          <span style={{ fontSize: 18, fontWeight: 800, color: '#fff', letterSpacing: '0.5px', lineHeight: 1.1 }}>EBS<span style={{ color: '#93c5fd' }}>Express</span></span>
+          <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', fontWeight: 500, marginTop: 2, letterSpacing: '0.2px' }}>Delivery System</span>
+        </div>
       </div>
 
       {/* Navigation list */}

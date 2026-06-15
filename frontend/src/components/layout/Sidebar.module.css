@@ -1,0 +1,116 @@
+.sidebar {
+  width: 280px;
+  background-color: var(--sidebar-bg);
+  color: var(--sidebar-text);
+  height: 100vh;
+  position: fixed;
+  top: 0;
+  left: 0;
+  overflow-y: auto;
+  border-right: 1px solid var(--border-color);
+  transition: var(--transition);
+  display: flex;
+  flex-direction: column;
+}
+
+.logo {
+  padding: 24px;
+  font-size: 1.25rem;
+  font-weight: 700;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.logoIcon {
+  color: var(--primary);
+  font-size: 1.5rem;
+}
+
+.nav {
+  padding: 16px 0;
+  flex: 1;
+}
+
+.menuGroup {
+  margin-bottom: 8px;
+}
+
+.menuItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 24px;
+  cursor: pointer;
+  transition: var(--transition);
+  color: var(--sidebar-text-muted);
+}
+
+.menuItem:hover, .menuItemActive {
+  background-color: var(--sidebar-hover);
+  color: var(--sidebar-text);
+}
+
+.menuItemActive {
+  border-right: 4px solid var(--sidebar-active);
+  background-color: var(--sidebar-active);
+  background-image: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.05));
+  color: white;
+}
+
+.menuItemActive:hover {
+  background-color: var(--sidebar-active);
+}
+
+.menuIcon {
+  font-size: 1.25rem;
+}
+
+.menuText {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  font-size: 0.875rem;
+}
+
+.menuTextKh {
+  font-size: 0.75rem;
+  opacity: 0.8;
+  margin-top: 2px;
+}
+
+.subMenu {
+  background-color: rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  max-height: 0;
+  transition: max-height 0.3s ease-in-out;
+}
+
+.subMenuOpen {
+  max-height: 500px;
+}
+
+.subMenuItem {
+  display: flex;
+  flex-direction: column;
+  padding: 10px 24px 10px 48px;
+  font-size: 0.875rem;
+  color: var(--sidebar-text-muted);
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.subMenuItem:hover, .subMenuItemActive {
+  color: var(--sidebar-text);
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.chevron {
+  transition: transform 0.2s;
+  font-size: 0.875rem;
+}
+
+.chevronOpen {
+  transform: rotate(90deg);
+}

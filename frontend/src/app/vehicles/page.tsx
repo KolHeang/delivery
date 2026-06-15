@@ -10,17 +10,14 @@ import Badge from '@/components/ui/Badge';
 import api from '@/lib/api';
 import { MdAdd, MdEdit, MdDelete } from 'react-icons/md';
 
-const empty = { plate: '', type: 'motorbike', brand: '', model: '', year: new Date().getFullYear(), status: 'active' };
+
 const TYPES = ['motorbike', 'car', 'van', 'truck', 'tuk-tuk'];
 
 export default function VehiclesPage() {
   const router = useRouter();
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [modal, setModal] = useState(false);
-  const [edit, setEdit] = useState<any>(null);
-  const [form, setForm] = useState(empty);
-  const [saving, setSaving] = useState(false);
+
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -30,19 +27,8 @@ export default function VehiclesPage() {
 
   useEffect(() => { if (!isAuthenticated()) { router.push('/'); return; } load(); }, [router, load]);
 
-  const openCreate = () => { setEdit(null); setForm(empty); setModal(true); };
-  const openEdit = (i: any) => { setEdit(i); setForm({ plate: i.plate, type: i.type, brand: i.brand, model: i.model, year: i.year, status: i.status }); setModal(true); };
-  const f = (k: string) => (e: any) => setForm(p => ({ ...p, [k]: k === 'year' ? parseInt(e.target.value) : e.target.value }));
-
-  const save = async () => {
-    setSaving(true);
-    try {
-      if (edit) await api.patch(`/vehicles/${edit.id}`, form);
-      else await api.post('/vehicles', form);
-      setModal(false); await load();
-    } catch (err: any) { alert(err.response?.data?.message || 'Error'); }
-    setSaving(false);
-  };
+  const openCreate = () => { router.push('/vehicles/create'); };
+  const openEdit = (i: any) => { router.push(`/vehicles/edit/${i.id}`); };
 
   const del = async (id: number) => {
     if (!confirm('Delete this vehicle?')) return;
@@ -94,33 +80,7 @@ export default function VehiclesPage() {
           </div>
         </div>
       </div>
-      <Modal open={modal} onClose={() => setModal(false)} title={edit ? 'Edit Vehicle' : 'Add Vehicle'} size="sm"
-        footer={<><button className="btn btn-outline" onClick={() => setModal(false)}>Cancel</button><button className="btn btn-primary" onClick={save} disabled={saving}>{saving ? 'Saving...' : 'Save'}</button></>}>
-        <div className="form-row">
-          <div className="form-group"><label className="form-label">Plate Number <span>*</span></label><input className="form-control" value={form.plate} onChange={f('plate')} placeholder="e.g. 2A-4532" /></div>
-          <div className="form-group">
-            <label className="form-label">Type <span>*</span></label>
-            <select className="form-control" value={form.type} onChange={f('type')}>
-              {TYPES.map(t => <option key={t} value={t}>{TYPE_ICONS[t]} {t}</option>)}
-            </select>
-          </div>
-        </div>
-        <div className="form-row">
-          <div className="form-group"><label className="form-label">Brand <span>*</span></label><input className="form-control" value={form.brand} onChange={f('brand')} /></div>
-          <div className="form-group"><label className="form-label">Model <span>*</span></label><input className="form-control" value={form.model} onChange={f('model')} /></div>
-        </div>
-        <div className="form-row">
-          <div className="form-group"><label className="form-label">Year</label><input type="number" min="2000" max="2030" className="form-control" value={form.year} onChange={f('year')} /></div>
-          <div className="form-group">
-            <label className="form-label">Status</label>
-            <select className="form-control" value={form.status} onChange={f('status')}>
-              <option value="active">Active</option>
-              <option value="maintenance">Maintenance</option>
-              <option value="inactive">Inactive</option>
-            </select>
-          </div>
-        </div>
-      </Modal>
+
     </div>
   );
 }

@@ -21,10 +21,6 @@ export default function ShopsPage() {
   const [search, setSearch] = useState('');
   const [zones, setZones] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [modal, setModal] = useState(false);
-  const [edit, setEdit] = useState<any>(null);
-  const [form, setForm] = useState(empty);
-  const [saving, setSaving] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -47,30 +43,7 @@ export default function ShopsPage() {
 
   const openCreate = () => { router.push('/client/create'); };
   const openEdit = (i: any) => {
-    setEdit(i);
-    setForm({ 
-      name: i.name, 
-      nameKh: i.nameKh || '', 
-      contact: i.contact || '', 
-      phone: i.phone, 
-      email: i.email || '', 
-      address: i.address || '', 
-      pricingTier: i.pricingTier, 
-      zoneId: i.zoneId || '' 
-    });
-    setModal(true);
-  };
-  const f = (k: string) => (e: any) => setForm(p => ({ ...p, [k]: e.target.value }));
-
-  const save = async () => {
-    setSaving(true);
-    try {
-      const payload = { ...form, zoneId: form.zoneId || undefined };
-      if (edit) await api.patch(`/merchants/${edit.id}`, payload);
-      else await api.post('/merchants', payload);
-      setModal(false); await load();
-    } catch (err: any) { alert(err.response?.data?.message || 'Error'); }
-    setSaving(false);
+    router.push(`/client/edit/${i.id}`);
   };
 
   const del = async (id: number) => {
@@ -142,56 +115,7 @@ export default function ShopsPage() {
           </div>
         </div>
       </div>
-      <Modal open={modal} onClose={() => setModal(false)} title={edit ? t('editShop') : t('addShop')}
-        footer={<><button className="btn btn-outline" onClick={() => setModal(false)}>{t('cancel')}</button><button className="btn btn-primary" onClick={save} disabled={saving}>{saving ? t('saving') : t('save')}</button></>}>
-        <div className="form-row">
-          <div className="form-group">
-            <label className="form-label">{t('shopNameEn')} <span>*</span></label>
-            <input className="form-control" value={form.name} onChange={f('name')} placeholder="e.g. Zando Shop" />
-          </div>
-          <div className="form-group">
-            <label className="form-label">{t('shopNameKh')}</label>
-            <input className="form-control" value={form.nameKh} onChange={f('nameKh')} placeholder="e.g. ហាងហ្សង់ដូ" />
-          </div>
-        </div>
-        <div className="form-row">
-          <div className="form-group">
-            <label className="form-label">{t('contact')}</label>
-            <input className="form-control" value={form.contact} onChange={f('contact')} placeholder="e.g. Channy" />
-          </div>
-          <div className="form-group">
-            <label className="form-label">{t('phone')} <span>*</span></label>
-            <input className="form-control" value={form.phone} onChange={f('phone')} placeholder="e.g. 012-100-200" />
-          </div>
-        </div>
-        <div className="form-row">
-          <div className="form-group">
-            <label className="form-label">{t('email')}</label>
-            <input type="email" className="form-control" value={form.email} onChange={f('email')} placeholder="e.g. contact@zando.com" />
-          </div>
-          <div className="form-group">
-            <label className="form-label">{t('address')}</label>
-            <input className="form-control" value={form.address} onChange={f('address')} placeholder="Full pickup address..." />
-          </div>
-        </div>
-        <div className="form-row">
-          <div className="form-group">
-            <label className="form-label">{t('pricingTier')}</label>
-            <select className="form-control" value={form.pricingTier} onChange={f('pricingTier')}>
-              <option value="basic">Basic</option>
-              <option value="standard">Standard</option>
-              <option value="premium">Premium</option>
-            </select>
-          </div>
-          <div className="form-group">
-            <label className="form-label">{t('zone')}</label>
-            <select className="form-control" value={form.zoneId} onChange={f('zoneId')}>
-              <option value="">{t('selectZone')}</option>
-              {zones.map((z: any) => <option key={z.id} value={z.id}>{z.name}</option>)}
-            </select>
-          </div>
-        </div>
-      </Modal>
+
     </div>
   );
 }

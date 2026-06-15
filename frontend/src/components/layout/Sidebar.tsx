@@ -51,6 +51,15 @@ export default function Sidebar() {
       ],
     },
     {
+      key: 'staff',
+      label: t('manageStaff') || 'Manage Staff',
+      icon: MdPeople,
+      items: [
+        { href: '/staff', label: t('staffList') || 'List Staff' },
+        { href: '/staff/create', label: t('createStaff') || 'Create Staff' },
+      ],
+    },
+    {
       key: 'payment',
       label: t('paymentProcess'),
       icon: MdAccountBalanceWallet,
@@ -87,7 +96,6 @@ export default function Sidebar() {
       icon: MdSettings,
       items: [
         { href: '/setting/zone_type', label: t('zoneType') },
-        { href: '/setting/user', label: t('userListSetting') },
         { href: '/setting/role', label: t('permission') },
         { href: '/setting/organisation', label: t('organizationSetting') },
         { href: '/setting/general', label: t('generalSettings') },
@@ -163,16 +171,6 @@ export default function Sidebar() {
         >
           <span className="sidebar-item-icon"><MdDashboard size={18} /></span>
           {t('dashboard')}
-        </Link>
-
-        {/* Staff Link */}
-        <Link
-          href="/staff"
-          className={`sidebar-item ${pathname === '/staff' ? 'active' : ''}`}
-          style={{ marginBottom: 12 }}
-        >
-          <span className="sidebar-item-icon"><MdPeople size={18} /></span>
-          {t('staffList')}
         </Link>
 
 

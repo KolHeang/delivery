@@ -14,11 +14,7 @@ import { useLanguage } from '@/lib/LanguageContext';
 const STATUS_OPTIONS = ['all', 'pending', 'picked-up', 'in-transit', 'delivered', 'failed', 'returned'];
 const SIZE_OPTIONS = ['small', 'medium', 'large'];
 
-const emptyForm = {
-  senderName: '', senderPhone: '', receiverName: '', receiverPhone: '',
-  receiverAddress: '', weight: 0.5, size: 'small', cod: 0, codCurrency: 'USD', deliveryFee: 0,
-  note: '', merchantId: '', customerId: '', driverId: '', zoneId: '',
-};
+
 
 const formatCOD = (cod: any, currency: string) => {
   if (currency === 'KHR') return `${parseInt(cod).toLocaleString()} ៛`;
@@ -36,11 +32,8 @@ export default function DeliveriesPage() {
   const [endDate, setEndDate] = useState('');
   const [driverFilter, setDriverFilter] = useState('');
   const [merchantFilter, setMerchantFilter] = useState('');
-  const [modalOpen, setModalOpen] = useState(false);
   const [viewModal, setViewModal] = useState<any>(null);
-  const [editItem, setEditItem] = useState<any>(null);
-  const [form, setForm] = useState(emptyForm);
-  const [saving, setSaving] = useState(false);
+
   const [merchants, setMerchants] = useState<any[]>([]);
   const [customers, setCustomers] = useState<any[]>([]);
   const [drivers, setDrivers] = useState<any[]>([]);
@@ -100,31 +93,10 @@ export default function DeliveriesPage() {
 
   const openCreate = () => { router.push('/delivery/entry_data_item'); };
   const openEdit = (o: any) => {
-    setEditItem(o);
-    setForm({
-      senderName: o.senderName, senderPhone: o.senderPhone,
-      receiverName: o.receiverName, receiverPhone: o.receiverPhone,
-      receiverAddress: o.receiverAddress, weight: o.weight, size: o.size,
-      cod: o.cod, codCurrency: o.codCurrency || 'USD', deliveryFee: o.deliveryFee, note: o.note || '',
-      merchantId: o.merchantId || '', customerId: o.customerId || '',
-      driverId: o.driverId || '', zoneId: o.zoneId || '',
-    });
-    setModalOpen(true);
+    router.push(`/delivery/edit/${o.id}`);
   };
 
-  const handleSave = async () => {
-    setSaving(true);
-    try {
-      const payload = { ...form, merchantId: form.merchantId || undefined, customerId: form.customerId || undefined, driverId: form.driverId || undefined, zoneId: form.zoneId || undefined, codCurrency: form.codCurrency || 'USD' };
-      if (editItem) await api.patch(`/orders/${editItem.id}`, payload);
-      else await api.post('/orders', payload);
-      setModalOpen(false);
-      await load();
-    } catch (err: any) {
-      alert(err.response?.data?.message || 'Error saving delivery');
-    }
-    setSaving(false);
-  };
+
 
   const handleDelete = async (id: number) => {
     if (!confirm('Delete this delivery?')) return;
@@ -135,7 +107,7 @@ export default function DeliveriesPage() {
     try { await api.patch(`/orders/${id}/status`, { status }); await load(); } catch {}
   };
 
-  const f = (k: string) => (e: any) => setForm(p => ({ ...p, [k]: e.target.value }));
+
 
   return (
     <div className="app-layout">
@@ -277,98 +249,7 @@ export default function DeliveriesPage() {
         </div>
       </div>
 
-      {/* Create/Edit Modal */}
-      <Modal open={modalOpen} onClose={() => setModalOpen(false)}
-        title={editItem ? `Edit Order #${editItem.id}` : 'Create New Order'}
-        size="lg"
-        footer={
-          <>
-            <button className="btn btn-outline" onClick={() => setModalOpen(false)}>Cancel</button>
-            <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
-              {saving ? 'Saving...' : editItem ? 'Save Changes' : 'Create Order'}
-            </button>
-          </>
-        }>
-        <div className="form-row">
-          <div className="form-group">
-            <label className="form-label">Sender Name <span>*</span></label>
-            <input className="form-control" value={form.senderName} onChange={f('senderName')} />
-          </div>
-          <div className="form-group">
-            <label className="form-label">Sender Phone <span>*</span></label>
-            <input className="form-control" value={form.senderPhone} onChange={f('senderPhone')} />
-          </div>
-        </div>
-        <div className="form-row">
-          <div className="form-group">
-            <label className="form-label">Receiver Name <span>*</span></label>
-            <input className="form-control" value={form.receiverName} onChange={f('receiverName')} />
-          </div>
-          <div className="form-group">
-            <label className="form-label">Receiver Phone <span>*</span></label>
-            <input className="form-control" value={form.receiverPhone} onChange={f('receiverPhone')} />
-          </div>
-        </div>
-        <div className="form-group">
-          <label className="form-label">Receiver Address <span>*</span></label>
-          <input className="form-control" value={form.receiverAddress} onChange={f('receiverAddress')} />
-        </div>
-        <div className="form-row-3">
-          <div className="form-group">
-            <label className="form-label">Weight (kg)</label>
-            <input type="number" step="0.1" min="0" className="form-control" value={form.weight} onChange={f('weight')} />
-          </div>
-          <div className="form-group">
-            <label className="form-label">Size</label>
-            <select className="form-control" value={form.size} onChange={f('size')}>
-              {SIZE_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
-            </select>
-          </div>
-          <div className="form-group">
-            <label className="form-label">Zone</label>
-            <select className="form-control" value={form.zoneId} onChange={f('zoneId')}>
-              <option value="">— Select Zone —</option>
-              {zones.map((z: any) => <option key={z.id} value={z.id}>{z.name} (${z.price})</option>)}
-            </select>
-          </div>
-        </div>
-          <div className="form-row">
-          <div className="form-group">
-            <label className="form-label">COD Amount</label>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <select className="form-control" style={{ maxWidth: 90 }} value={form.codCurrency} onChange={f('codCurrency')}>
-                <option value="USD">$ USD</option>
-                <option value="KHR">៛ KHR</option>
-              </select>
-              <input type="number" step={form.codCurrency === 'KHR' ? '1000' : '0.01'} min="0" className="form-control" value={form.cod} onChange={f('cod')} />
-            </div>
-          </div>
-          <div className="form-group">
-            <label className="form-label">Delivery Fee ($)</label>
-            <input type="number" step="0.01" min="0" className="form-control" value={form.deliveryFee} onChange={f('deliveryFee')} />
-          </div>
-        </div>
-        <div className="form-row">
-          <div className="form-group">
-            <label className="form-label">{t('merchant')}</label>
-            <select className="form-control" value={form.merchantId} onChange={f('merchantId')}>
-              <option value="">{t('selectMerchant')}</option>
-              {merchants.map((m: any) => <option key={m.id} value={m.id}>{m.name}{m.nameKh ? ` / ${m.nameKh}` : ''}</option>)}
-            </select>
-          </div>
-          <div className="form-group">
-            <label className="form-label">{t('customer')}</label>
-            <select className="form-control" value={form.customerId} onChange={f('customerId')}>
-              <option value="">{t('selectCustomer')}</option>
-              {customers.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
-          </div>
-        </div>
-        <div className="form-group">
-          <label className="form-label">Note</label>
-          <input className="form-control" value={form.note} onChange={f('note')} placeholder="Optional note..." />
-        </div>
-      </Modal>
+
 
       {/* View Modal */}
       {viewModal && (

@@ -10,16 +10,13 @@ import Badge from '@/components/ui/Badge';
 import api from '@/lib/api';
 import { MdAdd, MdEdit, MdDelete } from 'react-icons/md';
 
-const empty = { name: '', code: '', price: 0, description: '', active: true };
+
 
 export default function ZonesPage() {
   const router = useRouter();
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [modal, setModal] = useState(false);
-  const [edit, setEdit] = useState<any>(null);
-  const [form, setForm] = useState(empty);
-  const [saving, setSaving] = useState(false);
+
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -29,19 +26,8 @@ export default function ZonesPage() {
 
   useEffect(() => { if (!isAuthenticated()) { router.push('/'); return; } load(); }, [router, load]);
 
-  const openCreate = () => { setEdit(null); setForm(empty); setModal(true); };
-  const openEdit = (i: any) => { setEdit(i); setForm({ name: i.name, code: i.code, price: i.price, description: i.description || '', active: i.active }); setModal(true); };
-  const f = (k: string) => (e: any) => setForm(p => ({ ...p, [k]: k === 'price' ? parseFloat(e.target.value) : k === 'active' ? e.target.checked : e.target.value }));
-
-  const save = async () => {
-    setSaving(true);
-    try {
-      if (edit) await api.patch(`/zones/${edit.id}`, form);
-      else await api.post('/zones', form);
-      setModal(false); await load();
-    } catch (err: any) { alert(err.response?.data?.message || 'Error'); }
-    setSaving(false);
-  };
+  const openCreate = () => { router.push('/setting/zone_type/create'); };
+  const openEdit = (i: any) => { router.push(`/setting/zone_type/edit/${i.id}`); };
 
   const del = async (id: number) => {
     if (!confirm('Delete this zone?')) return;
@@ -88,19 +74,7 @@ export default function ZonesPage() {
           </div>
         </div>
       </div>
-      <Modal open={modal} onClose={() => setModal(false)} title={edit ? 'Edit Zone' : 'Add Zone'} size="sm"
-        footer={<><button className="btn btn-outline" onClick={() => setModal(false)}>Cancel</button><button className="btn btn-primary" onClick={save} disabled={saving}>{saving ? 'Saving...' : 'Save'}</button></>}>
-        <div className="form-row">
-          <div className="form-group"><label className="form-label">Zone Name <span>*</span></label><input className="form-control" value={form.name} onChange={f('name')} /></div>
-          <div className="form-group"><label className="form-label">Code <span>*</span></label><input className="form-control" value={form.code} onChange={f('code')} placeholder="e.g. PPC" /></div>
-        </div>
-        <div className="form-group"><label className="form-label">Delivery Fee ($) <span>*</span></label><input type="number" step="0.5" min="0" className="form-control" value={form.price} onChange={f('price')} /></div>
-        <div className="form-group"><label className="form-label">Description</label><input className="form-control" value={form.description} onChange={f('description')} /></div>
-        <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <input type="checkbox" id="zone-active" checked={form.active} onChange={f('active')} style={{ width: 16, height: 16 }} />
-          <label htmlFor="zone-active" className="form-label" style={{ margin: 0 }}>Active Zone</label>
-        </div>
-      </Modal>
+
     </div>
   );
 }

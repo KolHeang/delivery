@@ -10,7 +10,7 @@ import api from '@/lib/api';
 import { MdAdd, MdSearch, MdEdit, MdDelete } from 'react-icons/md';
 import { useLanguage } from '@/lib/LanguageContext';
 
-const empty = { name: '', phone: '', email: '', address: '' };
+
 
 export default function CustomersPage() {
   const router = useRouter();
@@ -18,10 +18,7 @@ export default function CustomersPage() {
   const [filtered, setFiltered] = useState<any[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
-  const [modal, setModal] = useState(false);
-  const [edit, setEdit] = useState<any>(null);
-  const [form, setForm] = useState(empty);
-  const [saving, setSaving] = useState(false);
+
   const { t } = useLanguage();
 
   const load = useCallback(async () => {
@@ -36,19 +33,8 @@ export default function CustomersPage() {
     setFiltered(q ? items.filter(i => i.name?.toLowerCase().includes(q) || i.phone?.includes(q) || i.email?.toLowerCase().includes(q)) : items);
   }, [items, search]);
 
-  const openCreate = () => { setEdit(null); setForm(empty); setModal(true); };
-  const openEdit = (i: any) => { setEdit(i); setForm({ name: i.name, phone: i.phone, email: i.email || '', address: i.address || '' }); setModal(true); };
-  const f = (k: string) => (e: any) => setForm(p => ({ ...p, [k]: e.target.value }));
-
-  const save = async () => {
-    setSaving(true);
-    try {
-      if (edit) await api.patch(`/customers/${edit.id}`, form);
-      else await api.post('/customers', form);
-      setModal(false); await load();
-    } catch (err: any) { alert(err.response?.data?.message || 'Error'); }
-    setSaving(false);
-  };
+  const openCreate = () => { router.push('/customers/create'); };
+  const openEdit = (i: any) => { router.push(`/customers/edit/${i.id}`); };
 
   const del = async (id: number) => {
     if (!confirm('Delete this customer?')) return;
@@ -103,13 +89,7 @@ export default function CustomersPage() {
           </div>
         </div>
       </div>
-      <Modal open={modal} onClose={() => setModal(false)} title={edit ? t('editCustomer') : t('addCustomer')} size="sm"
-        footer={<><button className="btn btn-outline" onClick={() => setModal(false)}>{t('cancel')}</button><button className="btn btn-primary" onClick={save} disabled={saving}>{saving ? t('saving') : t('save')}</button></>}>
-        <div className="form-group"><label className="form-label">{t('name')} <span>*</span></label><input className="form-control" value={form.name} onChange={f('name')} /></div>
-        <div className="form-group"><label className="form-label">{t('phone')} <span>*</span></label><input className="form-control" value={form.phone} onChange={f('phone')} /></div>
-        <div className="form-group"><label className="form-label">{t('email')}</label><input type="email" className="form-control" value={form.email} onChange={f('email')} /></div>
-        <div className="form-group"><label className="form-label">{t('address')}</label><input className="form-control" value={form.address} onChange={f('address')} /></div>
-      </Modal>
+
     </div>
   );
 }

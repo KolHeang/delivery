@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+import api from '@/lib/api';
 import { useRouter } from 'next/navigation';
 import { isAuthenticated } from '@/lib/auth';
 import Sidebar from '@/components/layout/Sidebar';
@@ -36,10 +36,7 @@ export default function ShopSummaryPage() {
     if (!isAuthenticated()) { router.push('/'); return; }
     const fetchData = async () => {
       try {
-        const token = localStorage.getItem('token');
-        const res = await axios.get('http://localhost:3001/reports/shop-summary', {
-          headers: token ? { Authorization: `Bearer ${token}` } : {}
-        });
+        const res = await api.get('/reports/shop-summary');
         setData(res.data);
       } catch (error) {
         console.error('Failed to fetch shop summary:', error);

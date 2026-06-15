@@ -55,7 +55,7 @@ export default function Sidebar() {
       label: t('paymentProcess'),
       icon: MdAccountBalanceWallet,
       items: [
-        { href: '/payment/delivery', label: t('paymentWithDelivery') },
+        { href: '/payment/staff', label: t('paymentWithDelivery') || 'Payment with Delivery' },
         { href: '/payment/shop', label: t('paymentWithShop') },
       ],
     },

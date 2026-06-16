@@ -16,7 +16,7 @@ RUN npm install --legacy-peer-deps
 COPY . .
 
 # Expose the port you defined in Compose
-EXPOSE 4000
+EXPOSE 3000
 
 # Set the environment to development by default
 ENV NODE_ENV=development

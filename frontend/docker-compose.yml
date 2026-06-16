@@ -1,12 +1,22 @@
-version: '3.8'
-
 services:
-  frontend:
+  next-app:
     build:
       context: .
       dockerfile: Dockerfile
+      # Add this to speed up subsequent builds
+      cache_from:
+        - next-app:latest
+    container_name: delivery-frontend
     ports:
       - "3000:3000"
     environment:
-      - NODE_ENV=production
-    restart: always
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+      - PORT=3000
+      - NODE_ENV=development
+      - WATCHPACK_POLLING=true # Helps HMR work better in Docker on some OSs
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/.next
+    # Ensures the container doesn't hog resources if it keeps crashing
+    restart: unless-stopped

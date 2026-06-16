@@ -1,21 +1,26 @@
-FROM node:20-alpine AS builder
-
-WORKDIR /app
-
-COPY package*.json ./
-RUN npm ci
-
-COPY . .
-RUN npm run build
-
 FROM node:20-alpine
 
+# Install build dependencies if any native modules are needed
+RUN apk add --no-cache libc6-compat
+
 WORKDIR /app
 
-COPY --from=builder /app/package*.json ./
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/.next ./.next
-COPY --from=builder /app/public ./public
+# Copy package files first to leverage Docker layer caching
+COPY package*.json ./
 
-EXPOSE 3000
-CMD ["npm", "run", "start"]
+# Install dependencies
+# --legacy-peer-deps is kept for your ApexCharts requirement
+RUN npm install --legacy-peer-deps
+
+# Copy the rest of the source code
+COPY . .
+
+# Expose the port you defined in Compose
+EXPOSE 4000
+
+# Set the environment to development by default
+ENV NODE_ENV=development
+
+# Explicitly bind to the port and host
+# Using 0.0.0.0 is crucial for Docker to route traffic correctly
+CMD ["npx", "next", "dev", "-p", "3000"]

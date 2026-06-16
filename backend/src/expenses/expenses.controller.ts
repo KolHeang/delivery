@@ -1,4 +1,13 @@
-import { Controller, Get, Post, Patch, Delete, Body, Param, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Delete,
+  Body,
+  Param,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { ExpensesService } from './expenses.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -28,8 +37,21 @@ export class ExpensesController {
 
   // Expenses
   @Post()
-  create(@Body() body: { description: string; amount: number; date: Date; typeId?: number }) {
-    return this.expensesService.create(body.description, body.amount, body.date, body.typeId);
+  create(
+    @Body()
+    body: {
+      description: string;
+      amount: number;
+      date: Date;
+      typeId?: number;
+    },
+  ) {
+    return this.expensesService.create(
+      body.description,
+      body.amount,
+      body.date,
+      body.typeId,
+    );
   }
 
   @Get()

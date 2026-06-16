@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
 import * as bcrypt from 'bcrypt';
@@ -13,7 +17,7 @@ export class UsersService {
 
   async findAll(): Promise<Omit<Staff, 'password'>[]> {
     return this.repo.find({
-      relations: { zone: true, vehicle: true } as any,
+      relations: { zone: true, vehicle: true },
       order: { createdAt: 'DESC' },
     });
   }
@@ -21,7 +25,7 @@ export class UsersService {
   async findOne(id: number): Promise<Staff> {
     const user = await this.repo.findOne({
       where: { id },
-      relations: { zone: true, vehicle: true } as any,
+      relations: { zone: true, vehicle: true },
     });
     if (!user) throw new NotFoundException('User not found');
     return user;
@@ -43,7 +47,7 @@ export class UsersService {
     }
     const rawPassword = dto.password || '123456';
     const hashed = await bcrypt.hash(rawPassword, 10);
-    
+
     const payload: any = {
       ...dto,
       password: hashed,
@@ -52,7 +56,7 @@ export class UsersService {
       vehicleId: dto.vehicleId || null,
       status: dto.status || 'offline',
     };
-    
+
     const user = this.repo.create(payload as Staff);
     return this.repo.save(user);
   }
@@ -60,31 +64,31 @@ export class UsersService {
   async update(id: number, dto: UpdateUserDto): Promise<Staff> {
     await this.findOne(id);
     const payload = { ...dto } as any;
-    
+
     if (dto.password && dto.password.trim() !== '') {
       payload.password = await bcrypt.hash(dto.password, 10);
     } else {
       delete payload.password;
     }
-    
+
     if (dto.salary !== undefined) {
       payload.salary = dto.salary ? parseFloat(dto.salary as any) : 0.0;
     }
-    
+
     if (dto.zoneId !== undefined) {
       payload.zoneId = dto.zoneId ? Number(dto.zoneId) : null;
     }
-    
+
     if (dto.vehicleId !== undefined) {
       payload.vehicleId = dto.vehicleId ? Number(dto.vehicleId) : null;
     }
-    
+
     if (payload.role && payload.role !== 'driver') {
       payload.zoneId = null;
       payload.vehicleId = null;
       payload.status = 'offline';
     }
-    
+
     await this.repo.update(id, payload);
     return this.findOne(id);
   }

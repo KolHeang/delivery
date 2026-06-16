@@ -10,7 +10,8 @@ import { Merchant } from '../../merchants/merchant.entity';
 export class AuthService {
   constructor(
     @InjectRepository(Staff) private readonly staffRepo: Repository<Staff>,
-    @InjectRepository(Merchant) private readonly merchantRepo: Repository<Merchant>,
+    @InjectRepository(Merchant)
+    private readonly merchantRepo: Repository<Merchant>,
     private readonly jwtService: JwtService,
   ) {}
 
@@ -23,7 +24,7 @@ export class AuthService {
       .getOne();
 
     if (!user) throw new UnauthorizedException('Invalid driver credentials');
-    
+
     // Check password or fallback to 123456
     let isValid = false;
     if (user.password) {
@@ -37,7 +38,7 @@ export class AuthService {
 
     const { password: _, ...userWithoutPassword } = user;
     const payload = { sub: user.id, email: user.email, role: 'driver' };
-    
+
     return {
       access_token: this.jwtService.sign(payload),
       user: userWithoutPassword,
@@ -49,7 +50,9 @@ export class AuthService {
     const user = await this.merchantRepo
       .createQueryBuilder('merchant')
       .addSelect('merchant.password')
-      .where('merchant.email = :id OR merchant.phone = :id', { id: phoneOrEmail })
+      .where('merchant.email = :id OR merchant.phone = :id', {
+        id: phoneOrEmail,
+      })
       .getOne();
 
     if (!user) throw new UnauthorizedException('Invalid merchant credentials');
@@ -65,8 +68,13 @@ export class AuthService {
     if (!user.active) throw new UnauthorizedException('Account is disabled');
 
     const { password: _, ...userWithoutPassword } = user;
-    const payload = { sub: user.id, email: user.email, phone: user.phone, role: 'merchant' };
-    
+    const payload = {
+      sub: user.id,
+      email: user.email,
+      phone: user.phone,
+      role: 'merchant',
+    };
+
     return {
       access_token: this.jwtService.sign(payload),
       user: userWithoutPassword,

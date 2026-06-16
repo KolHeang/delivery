@@ -6,9 +6,13 @@ import { CreateCustomerDto, UpdateCustomerDto } from './dto/customer.dto';
 
 @Injectable()
 export class CustomersService {
-  constructor(@InjectRepository(Customer) private readonly repo: Repository<Customer>) {}
+  constructor(
+    @InjectRepository(Customer) private readonly repo: Repository<Customer>,
+  ) {}
 
-  findAll(): Promise<Customer[]> { return this.repo.find({ order: { name: 'ASC' } }); }
+  findAll(): Promise<Customer[]> {
+    return this.repo.find({ order: { name: 'ASC' } });
+  }
 
   async findOne(id: number): Promise<Customer> {
     const item = await this.repo.findOne({ where: { id } });
@@ -16,7 +20,9 @@ export class CustomersService {
     return item;
   }
 
-  create(dto: CreateCustomerDto): Promise<Customer> { return this.repo.save(this.repo.create(dto)); }
+  create(dto: CreateCustomerDto): Promise<Customer> {
+    return this.repo.save(this.repo.create(dto));
+  }
 
   async update(id: number, dto: UpdateCustomerDto): Promise<Customer> {
     await this.findOne(id);

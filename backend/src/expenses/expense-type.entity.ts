@@ -1,4 +1,11 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  OneToMany,
+} from 'typeorm';
 import { Expense } from './expense.entity';
 
 @Entity('expense_types')
@@ -12,7 +19,7 @@ export class ExpenseType {
   @Column({ nullable: true })
   description: string;
 
-  @OneToMany(() => Expense, expense => expense.type)
+  @OneToMany(() => Expense, (expense) => expense.type)
   expenses: Expense[];
 
   @CreateDateColumn()

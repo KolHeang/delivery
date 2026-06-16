@@ -1,4 +1,13 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  ManyToOne,
+  JoinColumn,
+  OneToMany,
+} from 'typeorm';
 
 @Entity('zones')
 export class Zone {
@@ -19,6 +28,19 @@ export class Zone {
 
   @Column({ default: true })
   active: boolean;
+
+  @ManyToOne('Staff', { nullable: true })
+  @JoinColumn({ name: 'driverId' })
+  driver: any;
+
+  @Column({ nullable: true })
+  driverId: number;
+
+  @Column({ default: 'E Express' })
+  branch: string;
+
+  @OneToMany('SubZone', 'zone', { eager: true })
+  subZones: any[];
 
   @CreateDateColumn()
   createdAt: Date;

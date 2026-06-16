@@ -1,4 +1,13 @@
-import { Controller, Get, Patch, Param, Body, Query, UseGuards, Request } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Patch,
+  Param,
+  Body,
+  Query,
+  UseGuards,
+  Request,
+} from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { DriverService } from './driver.service';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
@@ -37,5 +46,11 @@ export class DriverController {
   @ApiOperation({ summary: 'Get driver summary and COD to collect' })
   getSummary(@Request() req: any) {
     return this.driverService.getSummary(req.user.id);
+  }
+
+  @Get('dashboard')
+  @ApiOperation({ summary: 'Get driver dashboard data' })
+  getDashboard(@Request() req: any) {
+    return this.driverService.getDashboard(req.user.id);
   }
 }

@@ -449,6 +449,7 @@ tbody td {
 }
 
 .badge-pending    { background: var(--warning-light);  color: #92400e; }
+.badge-assigned   { background: #e0e7ff;               color: #4338ca; }
 .badge-picked-up  { background: var(--accent-light);   color: #1d4ed8; }
 .badge-in-transit { background: var(--info-light);     color: #5b21b6; }
 .badge-delivered  { background: var(--success-light);  color: #065f46; }

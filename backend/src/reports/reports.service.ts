@@ -16,17 +16,29 @@ export class ReportsService {
   ) {}
 
   async getRevenueReport(period: 'daily' | 'monthly' = 'monthly') {
-    const groupFormat = period === 'daily' ? "DATE(order.createdAt)" : "TO_CHAR(order.createdAt, 'YYYY-MM')";
-    const labelFormat = period === 'daily' ? "DATE(order.createdAt)" : "TO_CHAR(order.createdAt, 'Mon YYYY')";
+    const groupFormat =
+      period === 'daily'
+        ? 'DATE(order.createdAt)'
+        : "TO_CHAR(order.createdAt, 'YYYY-MM')";
+    const labelFormat =
+      period === 'daily'
+        ? 'DATE(order.createdAt)'
+        : "TO_CHAR(order.createdAt, 'Mon YYYY')";
 
     return this.orderRepo
       .createQueryBuilder('order')
       .select(labelFormat, 'label')
       .addSelect('COUNT(*)', 'totalOrders')
-      .addSelect("SUM(CASE WHEN order.status = 'delivered' THEN 1 ELSE 0 END)", 'delivered')
-      .addSelect("SUM(CASE WHEN order.status = 'failed' THEN 1 ELSE 0 END)", 'failed')
-      .addSelect("SUM(order.deliveryFee)", 'revenue')
-      .addSelect("SUM(order.cod)", 'totalCod')
+      .addSelect(
+        "SUM(CASE WHEN order.status = 'delivered' THEN 1 ELSE 0 END)",
+        'delivered',
+      )
+      .addSelect(
+        "SUM(CASE WHEN order.status = 'failed' THEN 1 ELSE 0 END)",
+        'failed',
+      )
+      .addSelect('SUM(order.deliveryFee)', 'revenue')
+      .addSelect('SUM(order.cod)', 'totalCod')
       .where("order.createdAt >= NOW() - INTERVAL '6 months'")
       .groupBy(`${groupFormat}, ${labelFormat}`)
       .orderBy(groupFormat, 'ASC')
@@ -57,7 +69,10 @@ export class ReportsService {
       .leftJoin('order.zone', 'zone')
       .select('zone.name', 'zone')
       .addSelect('COUNT(*)', 'count')
-      .addSelect("SUM(CASE WHEN order.status = 'delivered' THEN 1 ELSE 0 END)", 'delivered')
+      .addSelect(
+        "SUM(CASE WHEN order.status = 'delivered' THEN 1 ELSE 0 END)",
+        'delivered',
+      )
       .addSelect('SUM(order.deliveryFee)', 'revenue')
       .where('zone.id IS NOT NULL')
       .groupBy('zone.name')
@@ -68,25 +83,41 @@ export class ReportsService {
   }
 
   async getShopSummary() {
-    const result = await this.orderRepo.createQueryBuilder('order')
+    const result = await this.orderRepo
+      .createQueryBuilder('order')
       .leftJoin('order.merchant', 'merchant')
       .select('merchant.id', 'id')
-      .addSelect('COALESCE(merchant.name, \'Unknown Shop\')', 'name')
-      .addSelect("SUM(CASE WHEN order.status = 'delivered' THEN 1 ELSE 0 END)", 'delivered')
-      .addSelect("SUM(CASE WHEN order.status = 'failed' THEN 1 ELSE 0 END)", 'failed')
-      .addSelect("SUM(CASE WHEN order.status = 'returned' THEN 1 ELSE 0 END)", 'returned')
-      .addSelect("0", 'qrShopUSD')
-      .addSelect("0", 'qrShopKHR')
-      .addSelect("0", 'qrDriverUSD')
-      .addSelect("0", 'qrDriverKHR')
-      .addSelect("SUM(CASE WHEN order.codCurrency = 'USD' THEN order.cod ELSE 0 END)", 'codUSD')
-      .addSelect("SUM(CASE WHEN order.codCurrency = 'KHR' THEN order.cod ELSE 0 END)", 'codKHR')
-      .addSelect("SUM(order.deliveryFee)", 'fee')
+      .addSelect("COALESCE(merchant.name, 'Unknown Shop')", 'name')
+      .addSelect(
+        "SUM(CASE WHEN order.status = 'delivered' THEN 1 ELSE 0 END)",
+        'delivered',
+      )
+      .addSelect(
+        "SUM(CASE WHEN order.status = 'failed' THEN 1 ELSE 0 END)",
+        'failed',
+      )
+      .addSelect(
+        "SUM(CASE WHEN order.status = 'returned' THEN 1 ELSE 0 END)",
+        'returned',
+      )
+      .addSelect('0', 'qrShopUSD')
+      .addSelect('0', 'qrShopKHR')
+      .addSelect('0', 'qrDriverUSD')
+      .addSelect('0', 'qrDriverKHR')
+      .addSelect(
+        "SUM(CASE WHEN order.codCurrency = 'USD' THEN order.cod ELSE 0 END)",
+        'codUSD',
+      )
+      .addSelect(
+        "SUM(CASE WHEN order.codCurrency = 'KHR' THEN order.cod ELSE 0 END)",
+        'codKHR',
+      )
+      .addSelect('SUM(order.deliveryFee)', 'fee')
       .groupBy('merchant.id')
       .addGroupBy('merchant.name')
       .getRawMany();
 
-    return result.map(row => ({
+    return result.map((row) => ({
       id: row.id || Math.random(),
       name: row.name,
       delivered: parseInt(row.delivered || '0', 10),
@@ -103,18 +134,19 @@ export class ReportsService {
   }
 
   async getPickupSummary() {
-    const result = await this.orderRepo.createQueryBuilder('order')
+    const result = await this.orderRepo
+      .createQueryBuilder('order')
       .leftJoin('order.driver', 'driver')
       .select('driver.id', 'id')
-      .addSelect('COALESCE(driver.name, \'Unknown Driver\')', 'name')
-      .addSelect("COUNT(*)", 'package')
-      .addSelect("SUM(order.deliveryFee)", 'fee')
+      .addSelect("COALESCE(driver.name, 'Unknown Driver')", 'name')
+      .addSelect('COUNT(*)', 'package')
+      .addSelect('SUM(order.deliveryFee)', 'fee')
       .where("order.status = 'picked-up'")
       .groupBy('driver.id')
       .addGroupBy('driver.name')
       .getRawMany();
 
-    return result.map(row => ({
+    return result.map((row) => ({
       id: row.id || Math.random(),
       name: row.name,
       package: parseInt(row.package || '0', 10),
@@ -123,22 +155,38 @@ export class ReportsService {
   }
 
   async getDeliverySummary() {
-    const result = await this.orderRepo.createQueryBuilder('order')
+    const result = await this.orderRepo
+      .createQueryBuilder('order')
       .leftJoin('order.driver', 'driver')
       .select('driver.id', 'id')
-      .addSelect('COALESCE(driver.name, \'Unknown Driver\')', 'name')
-      .addSelect("SUM(CASE WHEN order.status = 'delivered' THEN 1 ELSE 0 END)", 'delivered')
-      .addSelect("SUM(CASE WHEN order.status = 'failed' THEN 1 ELSE 0 END)", 'failed')
-      .addSelect("SUM(CASE WHEN order.status = 'returned' THEN 1 ELSE 0 END)", 'returned')
-      .addSelect("SUM(CASE WHEN order.codCurrency = 'USD' THEN order.cod ELSE 0 END)", 'codUSD')
-      .addSelect("SUM(CASE WHEN order.codCurrency = 'KHR' THEN order.cod ELSE 0 END)", 'codKHR')
-      .addSelect("SUM(order.deliveryFee)", 'fee')
-      .where("order.driverId IS NOT NULL")
+      .addSelect("COALESCE(driver.name, 'Unknown Driver')", 'name')
+      .addSelect(
+        "SUM(CASE WHEN order.status = 'delivered' THEN 1 ELSE 0 END)",
+        'delivered',
+      )
+      .addSelect(
+        "SUM(CASE WHEN order.status = 'failed' THEN 1 ELSE 0 END)",
+        'failed',
+      )
+      .addSelect(
+        "SUM(CASE WHEN order.status = 'returned' THEN 1 ELSE 0 END)",
+        'returned',
+      )
+      .addSelect(
+        "SUM(CASE WHEN order.codCurrency = 'USD' THEN order.cod ELSE 0 END)",
+        'codUSD',
+      )
+      .addSelect(
+        "SUM(CASE WHEN order.codCurrency = 'KHR' THEN order.cod ELSE 0 END)",
+        'codKHR',
+      )
+      .addSelect('SUM(order.deliveryFee)', 'fee')
+      .where('order.driverId IS NOT NULL')
       .groupBy('driver.id')
       .addGroupBy('driver.name')
       .getRawMany();
 
-    return result.map(row => ({
+    return result.map((row) => ({
       id: row.id || Math.random(),
       name: row.name,
       delivered: parseInt(row.delivered || '0', 10),
@@ -152,41 +200,51 @@ export class ReportsService {
 
   async getFinancialReport(startDate?: string, endDate?: string) {
     // 1. Group Incomes by month
-    const incomeQuery = this.incomeRepo.createQueryBuilder('income')
+    const incomeQuery = this.incomeRepo
+      .createQueryBuilder('income')
       .select("TO_CHAR(income.date, 'YYYY-MM')", 'monthKey')
       .addSelect("TO_CHAR(income.date, 'Mon YYYY')", 'monthLabel')
       .addSelect('SUM(income.amount)', 'total')
-      .groupBy("TO_CHAR(income.date, 'YYYY-MM'), TO_CHAR(income.date, 'Mon YYYY')")
+      .groupBy(
+        "TO_CHAR(income.date, 'YYYY-MM'), TO_CHAR(income.date, 'Mon YYYY')",
+      )
       .orderBy("TO_CHAR(income.date, 'YYYY-MM')", 'ASC');
 
     // 2. Group Expenses by month
-    const expenseQuery = this.expenseRepo.createQueryBuilder('expense')
+    const expenseQuery = this.expenseRepo
+      .createQueryBuilder('expense')
       .select("TO_CHAR(expense.date, 'YYYY-MM')", 'monthKey')
       .addSelect("TO_CHAR(expense.date, 'Mon YYYY')", 'monthLabel')
       .addSelect('SUM(expense.amount)', 'total')
-      .groupBy("TO_CHAR(expense.date, 'YYYY-MM'), TO_CHAR(expense.date, 'Mon YYYY')")
+      .groupBy(
+        "TO_CHAR(expense.date, 'YYYY-MM'), TO_CHAR(expense.date, 'Mon YYYY')",
+      )
       .orderBy("TO_CHAR(expense.date, 'YYYY-MM')", 'ASC');
 
     // 3. Breakdown Incomes by category
-    const incomeCatQuery = this.incomeRepo.createQueryBuilder('income')
+    const incomeCatQuery = this.incomeRepo
+      .createQueryBuilder('income')
       .leftJoin('income.type', 'type')
-      .select('COALESCE(type.name, \'Other\')', 'category')
+      .select("COALESCE(type.name, 'Other')", 'category')
       .addSelect('SUM(income.amount)', 'total')
       .groupBy('type.name');
 
     // 4. Breakdown Expenses by category
-    const expenseCatQuery = this.expenseRepo.createQueryBuilder('expense')
+    const expenseCatQuery = this.expenseRepo
+      .createQueryBuilder('expense')
       .leftJoin('expense.type', 'type')
-      .select('COALESCE(type.name, \'Other\')', 'category')
+      .select("COALESCE(type.name, 'Other')", 'category')
       .addSelect('SUM(expense.amount)', 'total')
       .groupBy('type.name');
 
     // 5. Detailed Incomes for transaction log
-    const detailedIncomeQuery = this.incomeRepo.createQueryBuilder('income')
+    const detailedIncomeQuery = this.incomeRepo
+      .createQueryBuilder('income')
       .leftJoinAndSelect('income.type', 'type');
 
     // 6. Detailed Expenses for transaction log
-    const detailedExpenseQuery = this.expenseRepo.createQueryBuilder('expense')
+    const detailedExpenseQuery = this.expenseRepo
+      .createQueryBuilder('expense')
       .leftJoinAndSelect('expense.type', 'type');
 
     if (startDate) {
@@ -195,7 +253,9 @@ export class ReportsService {
       incomeCatQuery.andWhere('income.date >= :startDate', { startDate });
       expenseCatQuery.andWhere('expense.date >= :startDate', { startDate });
       detailedIncomeQuery.andWhere('income.date >= :startDate', { startDate });
-      detailedExpenseQuery.andWhere('expense.date >= :startDate', { startDate });
+      detailedExpenseQuery.andWhere('expense.date >= :startDate', {
+        startDate,
+      });
     }
     if (endDate) {
       incomeQuery.andWhere('income.date <= :endDate', { endDate });
@@ -210,13 +270,20 @@ export class ReportsService {
     const rawExpenses = await expenseQuery.getRawMany();
     const incomeByCategory = await incomeCatQuery.getRawMany();
     const expenseByCategory = await expenseCatQuery.getRawMany();
-    const detailedIncomes = await detailedIncomeQuery.orderBy('income.date', 'DESC').getMany();
-    const detailedExpenses = await detailedExpenseQuery.orderBy('expense.date', 'DESC').getMany();
+    const detailedIncomes = await detailedIncomeQuery
+      .orderBy('income.date', 'DESC')
+      .getMany();
+    const detailedExpenses = await detailedExpenseQuery
+      .orderBy('expense.date', 'DESC')
+      .getMany();
 
     // Merge monthly income and expense
-    const monthlyMap = new Map<string, { label: string; income: number; expense: number }>();
-    
-    rawIncomes.forEach(i => {
+    const monthlyMap = new Map<
+      string,
+      { label: string; income: number; expense: number }
+    >();
+
+    rawIncomes.forEach((i) => {
       monthlyMap.set(i.monthKey, {
         label: i.monthLabel,
         income: parseFloat(i.total || '0'),
@@ -224,7 +291,7 @@ export class ReportsService {
       });
     });
 
-    rawExpenses.forEach(e => {
+    rawExpenses.forEach((e) => {
       const existing = monthlyMap.get(e.monthKey);
       if (existing) {
         existing.expense = parseFloat(e.total || '0');
@@ -246,11 +313,17 @@ export class ReportsService {
         profit: val.income - val.expense,
       }));
 
-    const totalIncome = rawIncomes.reduce((sum, item) => sum + parseFloat(item.total || '0'), 0);
-    const totalExpense = rawExpenses.reduce((sum, item) => sum + parseFloat(item.total || '0'), 0);
+    const totalIncome = rawIncomes.reduce(
+      (sum, item) => sum + parseFloat(item.total || '0'),
+      0,
+    );
+    const totalExpense = rawExpenses.reduce(
+      (sum, item) => sum + parseFloat(item.total || '0'),
+      0,
+    );
 
     const transactions = [
-      ...detailedIncomes.map(i => ({
+      ...detailedIncomes.map((i) => ({
         id: `income-${i.id}`,
         dbId: i.id,
         type: 'income',
@@ -259,7 +332,7 @@ export class ReportsService {
         date: i.date,
         category: i.type?.name || 'Other',
       })),
-      ...detailedExpenses.map(e => ({
+      ...detailedExpenses.map((e) => ({
         id: `expense-${e.id}`,
         dbId: e.id,
         type: 'expense',
@@ -275,8 +348,14 @@ export class ReportsService {
       totalExpense,
       netProfit: totalIncome - totalExpense,
       monthlySummary,
-      incomeByCategory: incomeByCategory.map(item => ({ category: item.category, total: parseFloat(item.total || '0') })),
-      expenseByCategory: expenseByCategory.map(item => ({ category: item.category, total: parseFloat(item.total || '0') })),
+      incomeByCategory: incomeByCategory.map((item) => ({
+        category: item.category,
+        total: parseFloat(item.total || '0'),
+      })),
+      expenseByCategory: expenseByCategory.map((item) => ({
+        category: item.category,
+        total: parseFloat(item.total || '0'),
+      })),
       transactions,
     };
   }

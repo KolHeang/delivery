@@ -28,7 +28,12 @@ export class IncomesService {
   }
 
   // Incomes CRUD
-  async create(description: string, amount: number, date: Date, typeId?: number) {
+  async create(
+    description: string,
+    amount: number,
+    date: Date,
+    typeId?: number,
+  ) {
     const income = this.incomeRepo.create({
       description,
       amount,

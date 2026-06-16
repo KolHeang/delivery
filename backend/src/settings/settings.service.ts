@@ -8,7 +8,8 @@ import { GeneralSetting } from './general-setting.entity';
 export class SettingsService {
   constructor(
     @InjectRepository(Organisation) private orgRepo: Repository<Organisation>,
-    @InjectRepository(GeneralSetting) private settingRepo: Repository<GeneralSetting>,
+    @InjectRepository(GeneralSetting)
+    private settingRepo: Repository<GeneralSetting>,
   ) {}
 
   // Organisation Settings

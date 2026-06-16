@@ -15,9 +15,17 @@ import { SeedService } from './seed.service';
 @Module({
   imports: [
     TypeOrmModule.forFeature([
-      Staff, Zone, Vehicle, Customer, Merchant, Order,
-      Expense, ExpenseType, Income, IncomeType
-    ])
+      Staff,
+      Zone,
+      Vehicle,
+      Customer,
+      Merchant,
+      Order,
+      Expense,
+      ExpenseType,
+      Income,
+      IncomeType,
+    ]),
   ],
   providers: [SeedService],
 })

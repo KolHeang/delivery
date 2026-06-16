@@ -1,4 +1,11 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  OneToMany,
+} from 'typeorm';
 import { Income } from './income.entity';
 
 @Entity('income_types')
@@ -12,7 +19,7 @@ export class IncomeType {
   @Column({ nullable: true })
   description: string;
 
-  @OneToMany(() => Income, income => income.type)
+  @OneToMany(() => Income, (income) => income.type)
   incomes: Income[];
 
   @CreateDateColumn()

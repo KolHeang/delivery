@@ -12,8 +12,6 @@ export default function EditShopPage() {
   const router = useRouter();
   const params = useParams();
   const { t } = useLanguage();
-  
-  const [zones, setZones] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
@@ -25,6 +23,14 @@ export default function EditShopPage() {
     address: '',
     pricingTier: 'standard',
     zoneId: '',
+    deliveryFee: '0',
+    exchangeRate: '4100',
+    note: '',
+    telegram: '',
+    qrLinkKhr: '',
+    qrLinkUsd: '',
+    qrImageKhr: '',
+    qrImageUsd: '',
   });
 
   useEffect(() => {
@@ -37,8 +43,6 @@ export default function EditShopPage() {
           api.get(`/merchants/${params.id}`)
         ]);
         
-        setZones(zonesRes.data || []);
-        
         const shop = shopRes.data;
         if (shop) {
           setForm({
@@ -50,6 +54,14 @@ export default function EditShopPage() {
             address: shop.address || '',
             pricingTier: shop.pricingTier || 'standard',
             zoneId: shop.zoneId ? shop.zoneId.toString() : '',
+            deliveryFee: shop.deliveryFee ? shop.deliveryFee.toString() : '0',
+            exchangeRate: shop.exchangeRate ? shop.exchangeRate.toString() : '4100',
+            note: shop.note || '',
+            telegram: shop.telegram || '',
+            qrLinkKhr: shop.qrLinkKhr || '',
+            qrLinkUsd: shop.qrLinkUsd || '',
+            qrImageKhr: shop.qrImageKhr || '',
+            qrImageUsd: shop.qrImageUsd || '',
           });
         }
       } catch (err) {
@@ -63,6 +75,16 @@ export default function EditShopPage() {
     load();
   }, [params.id, router]);
 
+  const handleFileChange = (field: 'qrImageKhr' | 'qrImageUsd') => (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setForm(prev => ({ ...prev, [field]: reader.result as string }));
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
@@ -70,6 +92,8 @@ export default function EditShopPage() {
       const payload = {
         ...form,
         zoneId: form.zoneId ? parseInt(form.zoneId) : undefined,
+        deliveryFee: parseFloat(form.deliveryFee) || 0,
+        exchangeRate: parseFloat(form.exchangeRate) || 4100,
       };
       await api.patch(`/merchants/${params.id}`, payload);
       router.push('/client');
@@ -99,39 +123,46 @@ export default function EditShopPage() {
             <div className="card-header"><span className="card-title">🏪 {t('editShop')}</span></div>
             <div className="card-body">
               <form onSubmit={handleSubmit}>
-                <div className="form-row">
+                {/* Row 1: Delivery Fee & Exchange Rate */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
                   <div className="form-group">
-                    <label className="form-label">{t('shopNameEn')} <span>*</span></label>
+                    <label className="form-label">{t('deliveryFee')} <span>*</span></label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      className="form-control"
+                      value={form.deliveryFee}
+                      onChange={e => setForm({ ...form, deliveryFee: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">{t('exchangeRate')} <span>*</span></label>
+                    <input
+                      type="number"
+                      className="form-control"
+                      value={form.exchangeRate}
+                      onChange={e => setForm({ ...form, exchangeRate: e.target.value })}
+                      required
+                    />
+                  </div>
+                </div>
+
+                {/* Section 2: Shop Info */}
+                <div style={{ background: '#eeeeee', padding: '10px 16px', fontWeight: 'bold', fontSize: 13, color: '#334155', margin: '20px 0 16px', borderRadius: 4 }}>
+                  {t('shopInfo')}
+                </div>
+
+                {/* Row 2: Name, Phone, Address */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 20 }}>
+                  <div className="form-group">
+                    <label className="form-label">{t('name')} <span>*</span></label>
                     <input
                       type="text"
                       className="form-control"
                       placeholder="e.g. Zando Shop"
                       value={form.name}
                       onChange={e => setForm({ ...form, name: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">{t('shopNameKh')}</label>
-                    <input
-                      type="text"
-                      className="form-control"
-                      placeholder="e.g. ហាងហ្សង់ដូ"
-                      value={form.nameKh}
-                      onChange={e => setForm({ ...form, nameKh: e.target.value })}
-                    />
-                  </div>
-                </div>
-
-                <div className="form-row">
-                  <div className="form-group">
-                    <label className="form-label">{t('contact')} <span>*</span></label>
-                    <input
-                      type="text"
-                      className="form-control"
-                      placeholder="e.g. Channy"
-                      value={form.contact}
-                      onChange={e => setForm({ ...form, contact: e.target.value })}
                       required
                     />
                   </div>
@@ -146,66 +177,108 @@ export default function EditShopPage() {
                       required
                     />
                   </div>
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">{t('email')} <span>*</span></label>
-                  <input
-                    type="email"
-                    className="form-control"
-                    placeholder="e.g. contact@zando.com"
-                    value={form.email}
-                    onChange={e => setForm({ ...form, email: e.target.value })}
-                    required
-                  />
-                </div>
-
-                <div className="form-row">
                   <div className="form-group">
-                    <label className="form-label">{t('zone')} <span>*</span></label>
-                    <select
+                    <label className="form-label">{t('address')} <span>*</span></label>
+                    <input
+                      type="text"
                       className="form-control"
-                      value={form.zoneId}
-                      onChange={e => setForm({ ...form, zoneId: e.target.value })}
+                      placeholder="Full address..."
+                      value={form.address}
+                      onChange={e => setForm({ ...form, address: e.target.value })}
                       required
-                    >
-                      <option value="">{t('selectZone')}</option>
-                      {zones.map(z => (
-                        <option key={z.id} value={z.id}>{z.name} (${z.price})</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">{t('pricingTier')}</label>
-                    <select
-                      className="form-control"
-                      value={form.pricingTier}
-                      onChange={e => setForm({ ...form, pricingTier: e.target.value })}
-                    >
-                      <option value="basic">Basic</option>
-                      <option value="standard">Standard</option>
-                      <option value="premium">Premium</option>
-                    </select>
+                    />
                   </div>
                 </div>
 
+                {/* Row 3: Note */}
                 <div className="form-group">
-                  <label className="form-label">{t('address')} <span>*</span></label>
+                  <label className="form-label">{t('note')}</label>
                   <textarea
                     className="form-control"
-                    rows={3}
-                    placeholder="Full pickup address..."
-                    value={form.address}
-                    onChange={e => setForm({ ...form, address: e.target.value })}
-                    required
+                    rows={2}
+                    placeholder="Enter notes..."
+                    value={form.note}
+                    onChange={e => setForm({ ...form, note: e.target.value })}
                   />
                 </div>
 
-                <div style={{ marginTop: 20, display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
+                {/* Section 3: Bank Info */}
+                <div style={{ background: '#eeeeee', padding: '10px 16px', fontWeight: 'bold', fontSize: 13, color: '#334155', margin: '20px 0 16px', borderRadius: 4 }}>
+                  {t('bankInfo')}
+                </div>
+
+                {/* Row 4: Telegram, Link QR KHR, Link QR USD */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 20 }}>
+                  <div className="form-group">
+                    <label className="form-label">{t('telegramLabel')}</label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      placeholder="@tuyravey99"
+                      value={form.telegram}
+                      onChange={e => setForm({ ...form, telegram: e.target.value })}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">{t('qrLinkKhr')}</label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      placeholder="Link..."
+                      value={form.qrLinkKhr}
+                      onChange={e => setForm({ ...form, qrLinkKhr: e.target.value })}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">{t('qrLinkUsd')}</label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      placeholder="Link..."
+                      value={form.qrLinkUsd}
+                      onChange={e => setForm({ ...form, qrLinkUsd: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                {/* Row 5: QR KHR and USD file uploads */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+                  <div className="form-group">
+                    <label className="form-label">{t('qrFileKhr')}</label>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="form-control"
+                        onChange={handleFileChange('qrImageKhr')}
+                      />
+                      {form.qrImageKhr && (
+                        <img src={form.qrImageKhr} alt="QR KHR Preview" style={{ width: 80, height: 80, objectFit: 'contain', border: '1px solid #ddd', borderRadius: 4 }} />
+                      )}
+                    </div>
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">{t('qrFileUsd')}</label>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="form-control"
+                        onChange={handleFileChange('qrImageUsd')}
+                      />
+                      {form.qrImageUsd && (
+                        <img src={form.qrImageUsd} alt="QR USD Preview" style={{ width: 80, height: 80, objectFit: 'contain', border: '1px solid #ddd', borderRadius: 4 }} />
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Bottom Buttons */}
+                <div style={{ marginTop: 24, display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
                   <button type="button" className="btn btn-outline" onClick={() => router.push('/client')}>
                     {t('cancel')}
                   </button>
-                  <button type="submit" className="btn btn-primary" disabled={saving}>
+                  <button type="submit" style={{ background: 'var(--accent)', color: '#fff', padding: '10px 24px', border: 'none', borderRadius: 6, fontWeight: 'bold', cursor: 'pointer', transition: 'opacity 0.2s' }} disabled={saving}>
                     {saving ? t('saving') : t('save')}
                   </button>
                 </div>

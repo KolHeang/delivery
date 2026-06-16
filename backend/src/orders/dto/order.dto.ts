@@ -1,4 +1,11 @@
-import { IsString, IsNotEmpty, IsOptional, IsEnum, IsNumber, Min } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsOptional,
+  IsEnum,
+  IsNumber,
+  Min,
+} from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 
@@ -11,18 +18,41 @@ export class CreateOrderDto {
 
   @ApiProperty() @IsNumber() @Min(0) @Type(() => Number) weight: number;
   @ApiProperty({ enum: ['small', 'medium', 'large'] })
-  @IsEnum(['small', 'medium', 'large']) size: string;
+  @IsEnum(['small', 'medium', 'large'])
+  size: string;
 
   @ApiProperty() @IsNumber() @Min(0) @Type(() => Number) cod: number;
   @ApiProperty() @IsNumber() @Min(0) @Type(() => Number) deliveryFee: number;
 
   @ApiProperty({ required: false }) @IsOptional() @IsString() note?: string;
-  @ApiProperty({ required: false }) @IsOptional() @IsNumber() @Type(() => Number) merchantId?: number;
-  @ApiProperty({ required: false }) @IsOptional() @IsNumber() @Type(() => Number) customerId?: number;
-  @ApiProperty({ required: false }) @IsOptional() @IsNumber() @Type(() => Number) driverId?: number;
-  @ApiProperty({ required: false }) @IsOptional() @IsNumber() @Type(() => Number) zoneId?: number;
-  @ApiProperty({ required: false }) @IsOptional() @IsString() trackingCode?: string;
-  @ApiProperty({ required: false, enum: ['USD', 'KHR'] }) @IsOptional() @IsEnum(['USD', 'KHR']) codCurrency?: string;
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsNumber()
+  @Type(() => Number)
+  merchantId?: number;
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsNumber()
+  @Type(() => Number)
+  customerId?: number;
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsNumber()
+  @Type(() => Number)
+  driverId?: number;
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsNumber()
+  @Type(() => Number)
+  zoneId?: number;
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  trackingCode?: string;
+  @ApiProperty({ required: false, enum: ['USD', 'KHR'] })
+  @IsOptional()
+  @IsEnum(['USD', 'KHR'])
+  codCurrency?: string;
 }
 
 export class UpdateOrderDto {
@@ -44,8 +74,26 @@ export class UpdateOrderDto {
 }
 
 export class UpdateOrderStatusDto {
-  @ApiProperty({ enum: ['pending', 'picked-up', 'in-transit', 'delivered', 'failed', 'returned'] })
-  @IsEnum(['pending', 'picked-up', 'in-transit', 'delivered', 'failed', 'returned'])
+  @ApiProperty({
+    enum: [
+      'pending',
+      'assigned',
+      'picked-up',
+      'in-transit',
+      'delivered',
+      'failed',
+      'returned',
+    ],
+  })
+  @IsEnum([
+    'pending',
+    'assigned',
+    'picked-up',
+    'in-transit',
+    'delivered',
+    'failed',
+    'returned',
+  ])
   status: string;
 }
 

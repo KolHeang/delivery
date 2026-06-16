@@ -1,4 +1,10 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+} from 'typeorm';
 
 export type VehicleType = 'motorbike' | 'car' | 'van' | 'truck' | 'tuk-tuk';
 export type VehicleStatus = 'active' | 'maintenance' | 'inactive';

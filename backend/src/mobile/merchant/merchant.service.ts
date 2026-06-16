@@ -8,14 +8,15 @@ import { CreateOrderDto } from '../../orders/dto/order.dto';
 @Injectable()
 export class MerchantService {
   constructor(
-    @InjectRepository(Merchant) private readonly merchantRepo: Repository<Merchant>,
+    @InjectRepository(Merchant)
+    private readonly merchantRepo: Repository<Merchant>,
     @InjectRepository(Order) private readonly orderRepo: Repository<Order>,
   ) {}
 
   async getProfile(merchantId: number) {
     const merchant = await this.merchantRepo.findOne({
       where: { id: merchantId },
-      relations: { zone: true } as any,
+      relations: { zone: true },
     });
     if (!merchant) throw new NotFoundException('Merchant not found');
     const { password, ...safeMerchant } = merchant as any;
@@ -29,7 +30,7 @@ export class MerchantService {
     }
     return this.orderRepo.find({
       where,
-      relations: { customer: true, driver: true, zone: true } as any,
+      relations: { customer: true, driver: true, zone: true },
       order: { createdAt: 'DESC' },
     });
   }
@@ -45,7 +46,7 @@ export class MerchantService {
 
   async getSummary(merchantId: number) {
     const totalOrders = await this.orderRepo.count({ where: { merchantId } });
-    
+
     const statusCounts = await this.orderRepo
       .createQueryBuilder('order')
       .select('order.status', 'status')
@@ -64,8 +65,10 @@ export class MerchantService {
       .groupBy('order.codCurrency')
       .getRawMany();
 
-    const codPendingUSD = pendingCOD.find(c => c.currency === 'USD')?.total || 0;
-    const codPendingKHR = pendingCOD.find(c => c.currency === 'KHR')?.total || 0;
+    const codPendingUSD =
+      pendingCOD.find((c) => c.currency === 'USD')?.total || 0;
+    const codPendingKHR =
+      pendingCOD.find((c) => c.currency === 'KHR')?.total || 0;
 
     const feesPending = await this.orderRepo
       .createQueryBuilder('order')
@@ -77,10 +80,52 @@ export class MerchantService {
 
     return {
       totalOrders,
-      statusCounts: statusCounts.reduce((acc, curr) => ({ ...acc, [curr.status]: parseInt(curr.count) }), {}),
+      statusCounts: statusCounts.reduce(
+        (acc, curr) => ({ ...acc, [curr.status]: parseInt(curr.count) }),
+        {},
+      ),
       codPendingUSD: parseFloat(codPendingUSD),
       codPendingKHR: parseFloat(codPendingKHR),
       feesPending: parseFloat(feesPending?.total || '0'),
+    };
+  }
+
+  async getDashboard(merchantId: number) {
+    const merchant = await this.merchantRepo.findOne({
+      where: { id: merchantId },
+    });
+    if (!merchant) throw new NotFoundException('Merchant not found');
+
+    const totalParcel = await this.orderRepo.count({ where: { merchantId } });
+
+    const statusCounts = await this.orderRepo
+      .createQueryBuilder('order')
+      .select('order.status', 'status')
+      .addSelect('COUNT(*)', 'count')
+      .where('order.merchantId = :merchantId', { merchantId })
+      .groupBy('order.status')
+      .getRawMany();
+
+    const stats = statusCounts.reduce(
+      (acc, curr) => ({ ...acc, [curr.status]: parseInt(curr.count) }),
+      {} as Record<string, number>,
+    );
+
+    return {
+      balance: {
+        amount: Number(merchant.balance) || 0,
+        currency: 'USD',
+      },
+      statistics: {
+        totalParcel: totalParcel,
+        totalDelivered: stats['delivered'] || 0,
+        totalReturn: (stats['returned'] || 0) + (stats['rejected'] || 0),
+        totalTransit:
+          (stats['in-transit'] || 0) +
+          (stats['pending'] || 0) +
+          (stats['assigned'] || 0) +
+          (stats['picked-up'] || 0),
+      },
     };
   }
 }

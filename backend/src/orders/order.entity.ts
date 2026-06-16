@@ -1,13 +1,26 @@
 import {
-  Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn,
-  ManyToOne, JoinColumn, BeforeInsert,
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  ManyToOne,
+  JoinColumn,
+  BeforeInsert,
 } from 'typeorm';
 import { Merchant } from '../merchants/merchant.entity';
 import { Customer } from '../customers/customer.entity';
 import { Staff } from '../users/staff.entity';
 import { Zone } from '../zones/zone.entity';
 
-export type OrderStatus = 'pending' | 'picked-up' | 'in-transit' | 'delivered' | 'failed' | 'returned';
+export type OrderStatus =
+  | 'pending'
+  | 'assigned'
+  | 'picked-up'
+  | 'in-transit'
+  | 'delivered'
+  | 'failed'
+  | 'returned';
 export type OrderSize = 'small' | 'medium' | 'large';
 export type PaymentStatus = 'pending' | 'paid';
 

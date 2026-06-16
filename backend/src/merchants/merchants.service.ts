@@ -6,11 +6,13 @@ import { CreateMerchantDto, UpdateMerchantDto } from './dto/merchant.dto';
 
 @Injectable()
 export class MerchantsService {
-  constructor(@InjectRepository(Merchant) private readonly repo: Repository<Merchant>) {}
+  constructor(
+    @InjectRepository(Merchant) private readonly repo: Repository<Merchant>,
+  ) {}
 
   findAll(): Promise<Merchant[]> {
     return this.repo.find({
-      relations: { zone: true } as any,
+      relations: { zone: true },
       order: { name: 'ASC' },
     });
   }
@@ -29,14 +31,14 @@ export class MerchantsService {
         pricingTier: true,
         balance: true,
       },
-      relations: { zone: true } as any,
+      relations: { zone: true },
     });
   }
 
   async findOne(id: number): Promise<Merchant> {
     const item = await this.repo.findOne({
       where: { id },
-      relations: { zone: true } as any,
+      relations: { zone: true },
     });
     if (!item) throw new NotFoundException(`Merchant #${id} not found`);
     return item;

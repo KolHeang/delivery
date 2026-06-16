@@ -7,30 +7,35 @@ import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class DriversService {
-  constructor(@InjectRepository(Staff) private readonly repo: Repository<Staff>) {}
+  constructor(
+    @InjectRepository(Staff) private readonly repo: Repository<Staff>,
+  ) {}
 
   findAll(): Promise<Staff[]> {
     return this.repo.find({
       where: { role: 'driver' },
-      relations: { zone: true, vehicle: true } as any,
+      relations: { zone: true, vehicle: true },
       order: { name: 'ASC' },
     });
   }
 
   async findByIdentifier(identifier: string): Promise<Staff | null> {
-    return this.repo.createQueryBuilder('staff')
+    return this.repo
+      .createQueryBuilder('staff')
       .addSelect('staff.password')
       .leftJoinAndSelect('staff.zone', 'zone')
       .leftJoinAndSelect('staff.vehicle', 'vehicle')
       .where('staff.role = :role', { role: 'driver' })
-      .andWhere('(staff.email = :identifier OR staff.phone = :identifier)', { identifier })
+      .andWhere('(staff.email = :identifier OR staff.phone = :identifier)', {
+        identifier,
+      })
       .getOne();
   }
 
   async findOne(id: number): Promise<Staff> {
     const item = await this.repo.findOne({
       where: { id, role: 'driver' },
-      relations: { zone: true, vehicle: true } as any,
+      relations: { zone: true, vehicle: true },
     });
     if (!item) throw new NotFoundException(`Driver #${id} not found`);
     return item;
@@ -39,7 +44,7 @@ export class DriversService {
   async findAvailable(): Promise<Staff[]> {
     return this.repo.find({
       where: { role: 'driver', status: 'available' },
-      relations: { zone: true, vehicle: true } as any,
+      relations: { zone: true, vehicle: true },
       order: { name: 'ASC' },
     });
   }

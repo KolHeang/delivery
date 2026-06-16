@@ -8,10 +8,10 @@ import Topbar from '@/components/layout/Topbar';
 import Badge from '@/components/ui/Badge';
 import Modal from '@/components/ui/Modal';
 import api from '@/lib/api';
-import { MdAdd, MdSearch, MdEdit, MdDelete, MdVisibility, MdFilterList } from 'react-icons/md';
+import { MdAdd, MdSearch, MdEdit, MdDelete, MdVisibility, MdFilterList, MdPrint } from 'react-icons/md';
 import { useLanguage } from '@/lib/LanguageContext';
 
-const STATUS_OPTIONS = ['all', 'pending', 'picked-up', 'in-transit', 'delivered', 'failed', 'returned'];
+const STATUS_OPTIONS = ['all', 'pending', 'assigned', 'picked-up', 'in-transit', 'delivered', 'failed', 'returned'];
 const SIZE_OPTIONS = ['small', 'medium', 'large'];
 
 
@@ -224,7 +224,7 @@ export default function DeliveriesPage() {
                       <td>
                         <select value={o.status} onChange={e => handleStatusChange(o.id, e.target.value)}
                           style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 12 }}>
-                          {['pending','picked-up','in-transit','delivered','failed','returned'].map(s => (
+                          {['pending','assigned','picked-up','in-transit','delivered','failed','returned'].map(s => (
                             <option key={s} value={s}>{s}</option>
                           ))}
                         </select>
@@ -236,6 +236,7 @@ export default function DeliveriesPage() {
                       <td>
                         <div style={{ display: 'flex', gap: 4 }}>
                           <button className="btn btn-ghost btn-icon btn-sm" onClick={() => setViewModal(o)} title="View"><MdVisibility size={15} /></button>
+                          <button className="btn btn-ghost btn-icon btn-sm" onClick={() => router.push(`/delivery/list_print_qrcode?id=${o.id}`)} title="Print"><MdPrint size={15} /></button>
                           <button className="btn btn-ghost btn-icon btn-sm" onClick={() => openEdit(o)} title="Edit"><MdEdit size={15} /></button>
                           <button className="btn btn-ghost btn-icon btn-sm" style={{ color: 'var(--danger)' }} onClick={() => handleDelete(o.id)} title="Delete"><MdDelete size={15} /></button>
                         </div>

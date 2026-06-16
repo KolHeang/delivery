@@ -16,7 +16,7 @@ import {
 import { MdHome, MdLocalPostOffice, MdSearch } from 'react-icons/md';
 
 const STATUS_COLORS: Record<string, string> = {
-  pending: '#f59e0b', 'picked-up': '#3b82f6', 'in-transit': '#8b5cf6',
+  pending: '#f59e0b', assigned: '#6366f1', 'picked-up': '#3b82f6', 'in-transit': '#8b5cf6',
   delivered: '#10b981', failed: '#ef4444', returned: '#6b7280',
 };
 

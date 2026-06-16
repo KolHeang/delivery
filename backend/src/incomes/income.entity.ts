@@ -1,4 +1,12 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  ManyToOne,
+  JoinColumn,
+} from 'typeorm';
 import { IncomeType } from './income-type.entity';
 
 @Entity('incomes')
@@ -15,7 +23,10 @@ export class Income {
   @Column({ type: 'date', default: () => 'CURRENT_DATE' })
   date: Date;
 
-  @ManyToOne(() => IncomeType, incomeType => incomeType.incomes, { eager: true, onDelete: 'SET NULL' })
+  @ManyToOne(() => IncomeType, (incomeType) => incomeType.incomes, {
+    eager: true,
+    onDelete: 'SET NULL',
+  })
   @JoinColumn({ name: 'typeId' })
   type: IncomeType;
 

@@ -17,6 +17,7 @@ import { IncomesModule } from './incomes/incomes.module';
 import { PaymentsModule } from './payments/payments.module';
 import { SettingsModule } from './settings/settings.module';
 import { MobileModule } from './mobile/mobile.module';
+import { InvoicesModule } from './invoices/invoices.module';
 
 @Module({
   imports: [
@@ -25,11 +26,23 @@ import { MobileModule } from './mobile/mobile.module';
       imports: [ConfigModule],
       useFactory: (config: ConfigService) => ({
         type: 'postgres',
-        host: config.get('DATABASE_HOST', 'localhost'),
-        port: parseInt(config.get('DATABASE_PORT', '5432')),
-        username: config.get('DATABASE_USER', 'postgres'),
-        password: config.get('DATABASE_PASSWORD', '123456'),
-        database: config.get('DATABASE_NAME', 'delivery_db'),
+        host:
+          config.get('DB_HOST') || config.get('DATABASE_HOST') || 'localhost',
+        port: parseInt(
+          config.get('DB_PORT') || config.get('DATABASE_PORT') || '5432',
+        ),
+        username:
+          config.get('DB_USERNAME') ||
+          config.get('DATABASE_USER') ||
+          'postgres',
+        password:
+          config.get('DB_PASSWORD') ||
+          config.get('DATABASE_PASSWORD') ||
+          '123456',
+        database:
+          config.get('DB_DATABASE') ||
+          config.get('DATABASE_NAME') ||
+          'delivery_db',
         entities: [__dirname + '/**/*.entity{.ts,.js}'],
         synchronize: true,
         logging: false,
@@ -52,6 +65,7 @@ import { MobileModule } from './mobile/mobile.module';
     PaymentsModule,
     SettingsModule,
     MobileModule,
+    InvoicesModule,
   ],
 })
 export class AppModule {}

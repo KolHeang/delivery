@@ -6,9 +6,13 @@ import { CreateVehicleDto, UpdateVehicleDto } from './dto/vehicle.dto';
 
 @Injectable()
 export class VehiclesService {
-  constructor(@InjectRepository(Vehicle) private readonly repo: Repository<Vehicle>) {}
+  constructor(
+    @InjectRepository(Vehicle) private readonly repo: Repository<Vehicle>,
+  ) {}
 
-  findAll(): Promise<Vehicle[]> { return this.repo.find({ order: { createdAt: 'DESC' } }); }
+  findAll(): Promise<Vehicle[]> {
+    return this.repo.find({ order: { createdAt: 'DESC' } });
+  }
 
   async findOne(id: number): Promise<Vehicle> {
     const item = await this.repo.findOne({ where: { id } });

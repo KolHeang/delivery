@@ -28,7 +28,12 @@ export class ExpensesService {
   }
 
   // Expenses CRUD
-  async create(description: string, amount: number, date: Date, typeId?: number) {
+  async create(
+    description: string,
+    amount: number,
+    date: Date,
+    typeId?: number,
+  ) {
     const expense = this.expenseRepo.create({
       description,
       amount,

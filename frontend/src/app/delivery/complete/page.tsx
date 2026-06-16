@@ -30,7 +30,7 @@ export default function CompletePackagePage() {
       const res = await api.get('/orders');
       // only show non-final statuses
       const activeOrders = (res.data || []).filter((o: any) =>
-        o.status === 'in-transit' || o.status === 'picked-up' || o.status === 'pending'
+        o.status === 'in-transit' || o.status === 'picked-up' || o.status === 'pending' || o.status === 'assigned'
       );
       setOrders(activeOrders);
     } catch {}

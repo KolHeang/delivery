@@ -8,7 +8,7 @@ import Topbar from '@/components/layout/Topbar';
 import Modal from '@/components/ui/Modal';
 import Badge from '@/components/ui/Badge';
 import api from '@/lib/api';
-import { MdAdd, MdSearch, MdEdit, MdDelete } from 'react-icons/md';
+import { MdAdd, MdSearch, MdEdit, MdDelete, MdPerson } from 'react-icons/md';
 import { useLanguage } from '@/lib/LanguageContext';
 
 const empty = { name: '', nameKh: '', contact: '', phone: '', email: '', address: '', pricingTier: 'standard', zoneId: '' };
@@ -77,12 +77,14 @@ export default function ShopsPage() {
                   <thead>
                     <tr>
                       <th>#</th>
-                      <th>{t('shopsTitle')}</th>
-                      <th>{t('contact')}</th>
+                      <th>{t('code')}</th>
+                      <th>{t('name')}</th>
                       <th>{t('phone')}</th>
-                      <th>{t('zone')}</th>
-                      <th>{t('pricingTier')}</th>
-                      <th>{t('balance')}</th>
+                      <th>{t('telegram')}</th>
+                      <th>{t('mapsLocation')}</th>
+                      <th>{t('serviceLabel')}</th>
+                      <th>{t('branch')}</th>
+                      <th>{t('status')}</th>
                       <th>{t('actions')}</th>
                     </tr>
                   </thead>
@@ -90,16 +92,55 @@ export default function ShopsPage() {
                     {filtered.map((m: any, i) => (
                       <tr key={m.id}>
                         <td style={{ color: 'var(--text-muted)', fontSize: 12 }}>{i + 1}</td>
+                        <td><code style={{ fontSize: 12, background: 'var(--bg-primary)', padding: '2px 8px', borderRadius: 4 }}>{String(m.id).padStart(6, '0')}</code></td>
                         <td>
-                          <div style={{ fontWeight: 700 }}>{m.name}</div>
-                          {m.nameKh && <div style={{ fontSize: 12, color: 'var(--accent)', fontWeight: 600 }}>{m.nameKh}</div>}
-                          <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{m.email}</div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                            <div style={{
+                              width: 32, height: 32, borderRadius: '50%',
+                              background: '#e2e8f0', color: '#94a3b8',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              fontSize: 18, flexShrink: 0
+                            }}>
+                              <MdPerson />
+                            </div>
+                            <div>
+                              <div style={{ fontWeight: 700 }}>{m.name}</div>
+                              {m.nameKh && <div style={{ fontSize: 12, color: 'var(--accent)', fontWeight: 600 }}>{m.nameKh}</div>}
+                            </div>
+                          </div>
                         </td>
-                        <td style={{ fontSize: 12 }}>{m.contact || '—'}</td>
                         <td style={{ fontSize: 12 }}>{m.phone}</td>
-                        <td style={{ fontSize: 12 }}>{m.zone?.name || '—'}</td>
-                        <td><Badge status={m.pricingTier} /></td>
-                        <td style={{ fontWeight: 600, color: 'var(--success)' }}>${parseFloat(m.balance).toFixed(2)}</td>
+                        <td>
+                          {m.telegram ? (
+                            <a
+                              href={`https://t.me/${m.telegram.replace('@', '')}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{ color: 'var(--accent)', fontWeight: 600, textDecoration: 'none' }}
+                            >
+                              {t('clickTelegram')}
+                            </a>
+                          ) : '—'}
+                        </td>
+                        <td>
+                          {m.address ? (
+                            <a
+                              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(m.address)}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{ color: 'var(--accent)', fontWeight: 600, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                            >
+                              📍 {t('clickHere')}
+                            </a>
+                          ) : '—'}
+                        </td>
+                        <td style={{ fontSize: 12, fontWeight: 600 }}>
+                          {m.deliveryFee ? parseFloat(m.deliveryFee).toFixed(2) : '1.25'}
+                        </td>
+                        <td style={{ fontSize: 12 }}>{m.contact || 'E Express'}</td>
+                        <td>
+                          <Badge status={m.active ? 'active' : 'inactive'} />
+                        </td>
                         <td>
                           <div style={{ display: 'flex', gap: 4 }}>
                             <button className="btn btn-ghost btn-icon btn-sm" onClick={() => openEdit(m)}><MdEdit size={15} /></button>

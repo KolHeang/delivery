@@ -17,19 +17,29 @@ export class ReportsController {
   }
 
   @Get('driver-performance')
-  getDriverPerformance() { return this.reportsService.getDriverPerformance(); }
+  getDriverPerformance() {
+    return this.reportsService.getDriverPerformance();
+  }
 
   @Get('order-summary')
-  getOrderSummary() { return this.reportsService.getOrderSummary(); }
+  getOrderSummary() {
+    return this.reportsService.getOrderSummary();
+  }
 
   @Get('shop-summary')
-  getShopSummary() { return this.reportsService.getShopSummary(); }
+  getShopSummary() {
+    return this.reportsService.getShopSummary();
+  }
 
   @Get('pickup-summary')
-  getPickupSummary() { return this.reportsService.getPickupSummary(); }
+  getPickupSummary() {
+    return this.reportsService.getPickupSummary();
+  }
 
   @Get('delivery-summary')
-  getDeliverySummary() { return this.reportsService.getDeliverySummary(); }
+  getDeliverySummary() {
+    return this.reportsService.getDeliverySummary();
+  }
 
   @Get('financial')
   @ApiQuery({ name: 'startDate', required: false })
@@ -41,4 +51,3 @@ export class ReportsController {
     return this.reportsService.getFinancialReport(startDate, endDate);
   }
 }
-

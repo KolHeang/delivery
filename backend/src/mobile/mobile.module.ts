@@ -20,8 +20,13 @@ import { MerchantService } from './merchant/merchant.service';
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: (config: ConfigService) => ({
-        secret: config.get<string>('JWT_SECRET', 'delivery_jwt_secret_2024_!@#$'),
-        signOptions: { expiresIn: config.get<string>('JWT_EXPIRES_IN', '30d') as any },
+        secret: config.get<string>(
+          'JWT_SECRET',
+          'delivery_jwt_secret_2024_!@#$',
+        ),
+        signOptions: {
+          expiresIn: config.get<string>('JWT_EXPIRES_IN', '30d') as any,
+        },
       }),
       inject: [ConfigService],
     }),

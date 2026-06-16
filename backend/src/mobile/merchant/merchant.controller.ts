@@ -1,4 +1,12 @@
-import { Controller, Get, Post, Body, Query, UseGuards, Request } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Query,
+  UseGuards,
+  Request,
+} from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { MerchantService } from './merchant.service';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
@@ -33,5 +41,11 @@ export class MerchantController {
   @ApiOperation({ summary: 'Get merchant summary and finances' })
   getSummary(@Request() req: any) {
     return this.merchantService.getSummary(req.user.id);
+  }
+
+  @Get('dashboard')
+  @ApiOperation({ summary: 'Get merchant dashboard data' })
+  getDashboard(@Request() req: any) {
+    return this.merchantService.getDashboard(req.user.id);
   }
 }

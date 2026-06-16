@@ -1,24 +1,48 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, FindManyOptions } from 'typeorm';
 import { Order } from './order.entity';
-import { CreateOrderDto, UpdateOrderDto, UpdateOrderStatusDto, AssignDriverDto } from './dto/order.dto';
+import {
+  CreateOrderDto,
+  UpdateOrderDto,
+  UpdateOrderStatusDto,
+  AssignDriverDto,
+} from './dto/order.dto';
 
 @Injectable()
 export class OrdersService {
-  constructor(@InjectRepository(Order) private readonly repo: Repository<Order>) {}
+  constructor(
+    @InjectRepository(Order) private readonly repo: Repository<Order>,
+  ) {}
 
   private get relations(): any {
-    return { merchant: true, customer: true, driver: { zone: true, vehicle: true }, zone: true };
+    return {
+      merchant: true,
+      customer: true,
+      driver: { zone: true, vehicle: true },
+      zone: true,
+    };
   }
 
-  findAll(filters?: { status?: string; driverId?: number; merchantId?: number; driverPaymentStatus?: string; merchantPaymentStatus?: string }): Promise<Order[]> {
+  findAll(filters?: {
+    status?: string;
+    driverId?: number;
+    merchantId?: number;
+    driverPaymentStatus?: string;
+    merchantPaymentStatus?: string;
+  }): Promise<Order[]> {
     const where: any = {};
     if (filters?.status) where.status = filters.status;
     if (filters?.driverId) where.driverId = filters.driverId;
     if (filters?.merchantId) where.merchantId = filters.merchantId;
-    if (filters?.driverPaymentStatus) where.driverPaymentStatus = filters.driverPaymentStatus;
-    if (filters?.merchantPaymentStatus) where.merchantPaymentStatus = filters.merchantPaymentStatus;
+    if (filters?.driverPaymentStatus)
+      where.driverPaymentStatus = filters.driverPaymentStatus;
+    if (filters?.merchantPaymentStatus)
+      where.merchantPaymentStatus = filters.merchantPaymentStatus;
     return this.repo.find({
       where,
       relations: this.relations,
@@ -27,14 +51,23 @@ export class OrdersService {
   }
 
   async findOne(id: number): Promise<Order> {
-    const item = await this.repo.findOne({ where: { id }, relations: this.relations });
+    const item = await this.repo.findOne({
+      where: { id },
+      relations: this.relations,
+    });
     if (!item) throw new NotFoundException(`Order #${id} not found`);
     return item;
   }
 
   async findByTracking(trackingCode: string): Promise<Order> {
-    const item = await this.repo.findOne({ where: { trackingCode }, relations: this.relations });
-    if (!item) throw new NotFoundException(`Order with tracking ${trackingCode} not found`);
+    const item = await this.repo.findOne({
+      where: { trackingCode },
+      relations: this.relations,
+    });
+    if (!item)
+      throw new NotFoundException(
+        `Order with tracking ${trackingCode} not found`,
+      );
     return item;
   }
 
@@ -75,7 +108,7 @@ export class OrdersService {
     if (order.status !== 'pending') {
       throw new BadRequestException('Can only assign driver to pending orders');
     }
-    await this.repo.update(id, { driverId: dto.driverId, status: 'picked-up', pickedUpAt: new Date() });
+    await this.repo.update(id, { driverId: dto.driverId, status: 'assigned' });
     return this.findOne(id);
   }
 
@@ -88,8 +121,11 @@ export class OrdersService {
   async getStats() {
     const total = await this.repo.count();
     const pending = await this.repo.count({ where: { status: 'pending' } });
+    const assigned = await this.repo.count({ where: { status: 'assigned' } });
     const pickedUp = await this.repo.count({ where: { status: 'picked-up' } });
-    const inTransit = await this.repo.count({ where: { status: 'in-transit' } });
+    const inTransit = await this.repo.count({
+      where: { status: 'in-transit' },
+    });
     const delivered = await this.repo.count({ where: { status: 'delivered' } });
     const failed = await this.repo.count({ where: { status: 'failed' } });
     const returned = await this.repo.count({ where: { status: 'returned' } });
@@ -101,7 +137,14 @@ export class OrdersService {
       .getRawOne();
 
     return {
-      total, pending, pickedUp, inTransit, delivered, failed, returned,
+      total,
+      pending,
+      assigned,
+      pickedUp,
+      inTransit,
+      delivered,
+      failed,
+      returned,
       revenue: parseFloat(revenue?.total || '0'),
     };
   }

@@ -11,22 +11,34 @@ export class DashboardController {
   constructor(private readonly dashboardService: DashboardService) {}
 
   @Get('stats')
-  getStats(@Query('startDate') startDate?: string, @Query('endDate') endDate?: string) {
+  getStats(
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
     return this.dashboardService.getStats(startDate, endDate);
   }
 
   @Get('chart-data')
-  getChartData(@Query('startDate') startDate?: string, @Query('endDate') endDate?: string) {
+  getChartData(
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
     return this.dashboardService.getChartData(startDate, endDate);
   }
 
   @Get('recent-orders')
-  getRecentOrders(@Query('startDate') startDate?: string, @Query('endDate') endDate?: string) {
+  getRecentOrders(
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
     return this.dashboardService.getRecentOrders(startDate, endDate);
   }
 
   @Get('top-drivers')
-  getTopDrivers(@Query('startDate') startDate?: string, @Query('endDate') endDate?: string) {
+  getTopDrivers(
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
     return this.dashboardService.getTopDrivers(startDate, endDate);
   }
 }

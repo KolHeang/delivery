@@ -1,4 +1,12 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  ManyToOne,
+  JoinColumn,
+} from 'typeorm';
 import { ExpenseType } from './expense-type.entity';
 
 @Entity('expenses')
@@ -15,7 +23,10 @@ export class Expense {
   @Column({ type: 'date', default: () => 'CURRENT_DATE' })
   date: Date;
 
-  @ManyToOne(() => ExpenseType, expenseType => expenseType.expenses, { eager: true, onDelete: 'SET NULL' })
+  @ManyToOne(() => ExpenseType, (expenseType) => expenseType.expenses, {
+    eager: true,
+    onDelete: 'SET NULL',
+  })
   @JoinColumn({ name: 'typeId' })
   type: ExpenseType;
 

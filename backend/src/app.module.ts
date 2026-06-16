@@ -11,7 +11,6 @@ import { MerchantsModule } from './merchants/merchants.module';
 import { OrdersModule } from './orders/orders.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { ReportsModule } from './reports/reports.module';
-import { SeedModule } from './seed/seed.module';
 import { ExpensesModule } from './expenses/expenses.module';
 import { IncomesModule } from './incomes/incomes.module';
 import { PaymentsModule } from './payments/payments.module';
@@ -59,7 +58,6 @@ import { InvoicesModule } from './invoices/invoices.module';
     OrdersModule,
     DashboardModule,
     ReportsModule,
-    SeedModule,
     ExpensesModule,
     IncomesModule,
     PaymentsModule,

@@ -1,39 +1,53 @@
-version: '3.8'
+version: "3.9"
 
 services:
-  backend:
+  delivery-api:
     build:
       context: .
       dockerfile: Dockerfile
+    container_name: delivery-api
+    restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "3001:3001"
+    env_file:
+      - .env
     environment:
-      - NODE_ENV=production
-      - DB_HOST=${DATABASE_HOST}
-      - DB_PORT=${DATABASE_PORT}
-      - DB_USERNAME=${DATABASE_USER}
-      - DB_PASSWORD=${DATABASE_PASSWORD}
-      - DB_DATABASE=${DATABASE_NAME}
+      NODE_ENV: development
+      CHOKIDAR_USEPOLLING: "true"
+      CHOKIDAR_INTERVAL: "500"
+      DATABASE_HOST: delivery-db
+    volumes:
+      - .:/usr/src/app
+      - /usr/src/app/node_modules
+    networks:
+      - app-network
     depends_on:
-      db:
+      delivery-db:
         condition: service_healthy
-    restart: always
 
-  db:
-    image: postgres:15-alpine
+  delivery-db:
+    image: postgres:17
+    container_name: delivery-db
+    restart: always
+    environment:
+      POSTGRES_USER: ${DATABASE_USER}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
+      POSTGRES_DB: ${DATABASE_NAME}
     ports:
       - "5432:5432"
-    environment:
-      - POSTGRES_USER=${DATABASE_USER}
-      - POSTGRES_PASSWORD=${DATABASE_PASSWORD}
-      - POSTGRES_DB=${DATABASE_NAME}
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U ${DATABASE_USER} -d ${DATABASE_NAME}"]
       interval: 5s
       timeout: 5s
       retries: 5
+    networks:
+      - app-network
+    volumes:
+      - delivery_db_data:/var/lib/postgresql/data
+
+networks:
+  app-network:
+    driver: bridge
 
 volumes:
-  postgres_data:
+  delivery_db_data:

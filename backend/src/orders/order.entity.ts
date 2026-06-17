@@ -15,7 +15,6 @@ import { Zone } from '../zones/zone.entity';
 
 export type OrderStatus =
   | 'pending'
-  | 'assigned'
   | 'picked-up'
   | 'in-transit'
   | 'delivered'
@@ -80,6 +79,15 @@ export class Order {
 
   @Column({ default: 'unpaid' })
   merchantPaymentStatus: 'unpaid' | 'paid';
+
+  @Column({ nullable: true })
+  paymentMethod: string;
+
+  @Column('decimal', { precision: 10, scale: 2, default: 0 })
+  receivedAmountUSD: number;
+
+  @Column('decimal', { precision: 10, scale: 2, default: 0 })
+  receivedAmountKHR: number;
 
   // Timestamps
   @Column({ type: 'timestamp', nullable: true })

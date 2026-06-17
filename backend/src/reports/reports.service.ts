@@ -82,8 +82,8 @@ export class ReportsService {
     return { statusCounts, zoneRevenue };
   }
 
-  async getShopSummary() {
-    const result = await this.orderRepo
+  async getShopSummary(startDate?: string, endDate?: string, merchantId?: string) {
+    let q = this.orderRepo
       .createQueryBuilder('order')
       .leftJoin('order.merchant', 'merchant')
       .select('merchant.id', 'id')
@@ -114,8 +114,13 @@ export class ReportsService {
       )
       .addSelect('SUM(order.deliveryFee)', 'fee')
       .groupBy('merchant.id')
-      .addGroupBy('merchant.name')
-      .getRawMany();
+      .addGroupBy('merchant.name');
+
+    if (startDate) q = q.andWhere('order.createdAt >= :startDate', { startDate });
+    if (endDate) q = q.andWhere('order.createdAt <= :endDate', { endDate: `${endDate} 23:59:59` });
+    if (merchantId) q = q.andWhere('merchant.id = :merchantId', { merchantId });
+
+    const result = await q.getRawMany();
 
     return result.map((row) => ({
       id: row.id || Math.random(),
@@ -133,18 +138,21 @@ export class ReportsService {
     }));
   }
 
-  async getPickupSummary() {
-    const result = await this.orderRepo
+  async getPickupSummary(startDate?: string, endDate?: string) {
+    let q = this.orderRepo
       .createQueryBuilder('order')
       .leftJoin('order.driver', 'driver')
       .select('driver.id', 'id')
       .addSelect("COALESCE(driver.name, 'Unknown Driver')", 'name')
       .addSelect('COUNT(*)', 'package')
       .addSelect('SUM(order.deliveryFee)', 'fee')
-      .where("order.status = 'picked-up'")
-      .groupBy('driver.id')
-      .addGroupBy('driver.name')
-      .getRawMany();
+      .where("order.status = 'picked-up'");
+
+    if (startDate) q = q.andWhere('order.createdAt >= :startDate', { startDate });
+    if (endDate) q = q.andWhere('order.createdAt <= :endDate', { endDate: `${endDate} 23:59:59` });
+
+    q = q.groupBy('driver.id').addGroupBy('driver.name');
+    const result = await q.getRawMany();
 
     return result.map((row) => ({
       id: row.id || Math.random(),
@@ -154,8 +162,8 @@ export class ReportsService {
     }));
   }
 
-  async getDeliverySummary() {
-    const result = await this.orderRepo
+  async getDeliverySummary(startDate?: string, endDate?: string, driverId?: string) {
+    let q = this.orderRepo
       .createQueryBuilder('order')
       .leftJoin('order.driver', 'driver')
       .select('driver.id', 'id')
@@ -181,10 +189,14 @@ export class ReportsService {
         'codKHR',
       )
       .addSelect('SUM(order.deliveryFee)', 'fee')
-      .where('order.driverId IS NOT NULL')
-      .groupBy('driver.id')
-      .addGroupBy('driver.name')
-      .getRawMany();
+      .where('order.driverId IS NOT NULL');
+
+    if (startDate) q = q.andWhere('order.createdAt >= :startDate', { startDate });
+    if (endDate) q = q.andWhere('order.createdAt <= :endDate', { endDate: `${endDate} 23:59:59` });
+    if (driverId) q = q.andWhere('driver.id = :driverId', { driverId });
+
+    q = q.groupBy('driver.id').addGroupBy('driver.name');
+    const result = await q.getRawMany();
 
     return result.map((row) => ({
       id: row.id || Math.random(),
@@ -195,6 +207,43 @@ export class ReportsService {
       codUSD: parseFloat(row.codUSD || '0'),
       codKHR: parseFloat(row.codKHR || '0'),
       fee: parseFloat(row.fee || '0'),
+    }));
+  }
+
+  async getDailyDeliveryReport(
+    startDate?: string,
+    endDate?: string,
+    driverId?: string,
+    merchantId?: string,
+  ) {
+    let q = this.orderRepo
+      .createQueryBuilder('order')
+      .leftJoinAndSelect('order.driver', 'driver')
+      .leftJoinAndSelect('order.merchant', 'merchant')
+      .leftJoinAndSelect('order.zone', 'zone')
+      .orderBy('order.createdAt', 'DESC');
+
+    if (startDate) q = q.andWhere('order.createdAt >= :startDate', { startDate });
+    if (endDate) q = q.andWhere('order.createdAt <= :endDate', { endDate: `${endDate} 23:59:59` });
+    if (driverId) q = q.andWhere('driver.id = :driverId', { driverId });
+    if (merchantId) q = q.andWhere('merchant.id = :merchantId', { merchantId });
+
+    const orders = await q.getMany();
+
+    return orders.map((o) => ({
+      id: o.id,
+      trackingCode: o.trackingCode,
+      driver: o.driver?.name || '—',
+      shopName: o.merchant?.name || '—',
+      receiverPhone: o.receiverPhone,
+      location: o.zone?.name || o.receiverAddress || '—',
+      date: o.createdAt ? new Date(o.createdAt).toISOString().split('T')[0] : '—',
+      status: o.status,
+      currency: o.codCurrency || 'USD',
+      codAmount: parseFloat(o.cod as any || '0'),
+      deliveryFee: parseFloat(o.deliveryFee as any || '0'),
+      paidAmount: parseFloat(o.cod as any || '0'),
+      note: o.note || '',
     }));
   }
 

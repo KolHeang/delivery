@@ -95,7 +95,7 @@ export default function BatchEntryPage() {
           zoneId: merchant?.zoneId ? parseInt(merchant.zoneId) : undefined,
           note: r.note,
           driverId: driverIdVal ? parseInt(driverIdVal) : undefined,
-          status: driverIdVal ? 'assigned' : 'pending',
+          status: driverIdVal ? 'picked-up' : 'pending',
         };
         return api.post('/orders', payload);
       });
@@ -134,7 +134,7 @@ export default function BatchEntryPage() {
                 >
                   {merchants.map(m => (
                     <option key={m.id} value={m.id}>
-                      {m.id}-{m.nameKh || m.name}
+                      {m.id}-{m.nameKh ? `${m.nameKh} (${m.name})` : m.name}
                     </option>
                   ))}
                 </select>

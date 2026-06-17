@@ -27,18 +27,51 @@ export class ReportsController {
   }
 
   @Get('shop-summary')
-  getShopSummary() {
-    return this.reportsService.getShopSummary();
+  @ApiQuery({ name: 'startDate', required: false })
+  @ApiQuery({ name: 'endDate', required: false })
+  @ApiQuery({ name: 'merchantId', required: false })
+  getShopSummary(
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+    @Query('merchantId') merchantId?: string,
+  ) {
+    return this.reportsService.getShopSummary(startDate, endDate, merchantId);
   }
 
   @Get('pickup-summary')
-  getPickupSummary() {
-    return this.reportsService.getPickupSummary();
+  @ApiQuery({ name: 'startDate', required: false })
+  @ApiQuery({ name: 'endDate', required: false })
+  getPickupSummary(
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
+    return this.reportsService.getPickupSummary(startDate, endDate);
   }
 
   @Get('delivery-summary')
-  getDeliverySummary() {
-    return this.reportsService.getDeliverySummary();
+  @ApiQuery({ name: 'startDate', required: false })
+  @ApiQuery({ name: 'endDate', required: false })
+  @ApiQuery({ name: 'driverId', required: false })
+  getDeliverySummary(
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+    @Query('driverId') driverId?: string,
+  ) {
+    return this.reportsService.getDeliverySummary(startDate, endDate, driverId);
+  }
+
+  @Get('delivery-daily')
+  @ApiQuery({ name: 'startDate', required: false })
+  @ApiQuery({ name: 'endDate', required: false })
+  @ApiQuery({ name: 'driverId', required: false })
+  @ApiQuery({ name: 'merchantId', required: false })
+  getDailyDelivery(
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+    @Query('driverId') driverId?: string,
+    @Query('merchantId') merchantId?: string,
+  ) {
+    return this.reportsService.getDailyDeliveryReport(startDate, endDate, driverId, merchantId);
   }
 
   @Get('financial')

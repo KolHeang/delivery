@@ -66,7 +66,7 @@ export class DashboardService {
     ] = await Promise.all([
       ordersQuery(),
       ordersQuery('pending'),
-      ordersQuery('assigned'),
+      Promise.resolve(0),
       ordersQuery('picked-up'),
       ordersQuery('in-transit'),
       ordersQuery('delivered'),

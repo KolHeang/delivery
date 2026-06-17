@@ -84,13 +84,23 @@ export class OrdersService {
   }
 
   async create(dto: CreateOrderDto): Promise<Order> {
-    const order = this.repo.create(dto as any);
+    const order = this.repo.create(dto as any) as any as Order;
+    if (order.status === 'picked-up' && !order.pickedUpAt) {
+      order.pickedUpAt = new Date();
+    }
     return this.repo.save(order) as any;
   }
 
   async update(id: number, dto: UpdateOrderDto): Promise<Order> {
-    await this.findOne(id);
-    await this.repo.update(id, dto as any);
+    const order = await this.findOne(id);
+    const updates: any = { ...dto };
+    if (dto.status === 'picked-up' && !order.pickedUpAt) {
+      updates.pickedUpAt = new Date();
+    }
+    if (dto.status === 'delivered' && !order.deliveredAt) {
+      updates.deliveredAt = new Date();
+    }
+    await this.repo.update(id, updates);
     return this.findOne(id);
   }
 
@@ -108,7 +118,11 @@ export class OrdersService {
     if (order.status !== 'pending') {
       throw new BadRequestException('Can only assign driver to pending orders');
     }
-    await this.repo.update(id, { driverId: dto.driverId, status: 'assigned' });
+    await this.repo.update(id, { 
+      driverId: dto.driverId, 
+      status: 'picked-up',
+      pickedUpAt: new Date()
+    });
     return this.findOne(id);
   }
 
@@ -121,7 +135,6 @@ export class OrdersService {
   async getStats() {
     const total = await this.repo.count();
     const pending = await this.repo.count({ where: { status: 'pending' } });
-    const assigned = await this.repo.count({ where: { status: 'assigned' } });
     const pickedUp = await this.repo.count({ where: { status: 'picked-up' } });
     const inTransit = await this.repo.count({
       where: { status: 'in-transit' },
@@ -139,7 +152,7 @@ export class OrdersService {
     return {
       total,
       pending,
-      assigned,
+      assigned: 0,
       pickedUp,
       inTransit,
       delivered,

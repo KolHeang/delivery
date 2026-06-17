@@ -271,8 +271,7 @@ export default function DashboardPage() {
                       <tr key={o.id}>
                         <td><code style={{ fontSize: 12 }}>{o.trackingCode}</code></td>
                         <td>
-                          <div style={{ fontWeight: 600, fontSize: 13 }}>{o.receiverName}</div>
-                          <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{o.receiverPhone}</div>
+                          <div style={{ fontWeight: 600, fontSize: 13 }}>{o.receiverPhone}</div>
                         </td>
                         <td style={{ fontSize: 12 }}>{o.merchant?.name || '—'}</td>
                         <td style={{ fontSize: 12 }}>{o.zone?.name || '—'}</td>

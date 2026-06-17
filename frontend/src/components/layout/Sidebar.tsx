@@ -85,10 +85,7 @@ export default function Sidebar() {
       key: 'reports',
       label: t('report'),
       icon: MdBarChart,
-      items: [
-        { href: '/report/financial', label: t('financialReport') },
-        { href: '/report/operation', label: t('operationReport') },
-      ],
+      href: '/report',
     },
     {
       key: 'settings',
@@ -131,7 +128,7 @@ export default function Sidebar() {
   // Auto-expand active group on load
   useEffect(() => {
     const activeGroup = menuGroups.find(group =>
-      group.items.some(item => pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href)))
+      'items' in group && group.items && group.items.some(item => pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href)))
     );
     if (activeGroup) {
       setOpenGroups(prev => ({ ...prev, [activeGroup.key]: true }));
@@ -176,8 +173,24 @@ export default function Sidebar() {
 
         {menuGroups.map(group => {
           const Icon = group.icon;
+
+          if ('href' in group && group.href) {
+            const isActive = pathname === group.href || (group.href !== '/dashboard' && pathname.startsWith(group.href));
+            return (
+              <Link
+                key={group.key}
+                href={group.href}
+                className={`sidebar-item ${isActive ? 'active' : ''}`}
+                style={{ marginBottom: 8 }}
+              >
+                <span className="sidebar-item-icon"><Icon size={18} /></span>
+                {group.label}
+              </Link>
+            );
+          }
+
           const isOpen = openGroups[group.key];
-          const isGroupActive = group.items.some(item =>
+          const isGroupActive = 'items' in group && group.items && group.items.some(item =>
             pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href))
           );
 
@@ -202,7 +215,7 @@ export default function Sidebar() {
               </button>
 
               {/* Group Sub-items */}
-              {isOpen && (
+              {isOpen && 'items' in group && group.items && (
                 <div style={{ paddingLeft: 24, marginTop: 4, display: 'flex', flexDirection: 'column', gap: 2 }}>
                   {group.items.map(item => {
                     const exactActive = pathname === item.href;

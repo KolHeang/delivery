@@ -7,10 +7,7 @@ import { Zone } from '../zones/zone.entity';
 import { Vehicle } from '../vehicles/vehicle.entity';
 import { Customer } from '../customers/customer.entity';
 import { Merchant } from '../merchants/merchant.entity';
-import { Order } from '../orders/order.entity';
-import { Expense } from '../expenses/expense.entity';
 import { ExpenseType } from '../expenses/expense-type.entity';
-import { Income } from '../incomes/income.entity';
 import { IncomeType } from '../incomes/income-type.entity';
 
 @Injectable()
@@ -22,18 +19,15 @@ export class SeedService implements OnApplicationBootstrap {
     @InjectRepository(Zone) private zoneRepo: Repository<Zone>,
     @InjectRepository(Vehicle) private vehicleRepo: Repository<Vehicle>,
     @InjectRepository(Staff) private driverRepo: Repository<Staff>,
-    @InjectRepository(Customer) private customerRepo: Repository<Customer>,
     @InjectRepository(Merchant) private merchantRepo: Repository<Merchant>,
     @InjectRepository(ExpenseType)
     private expenseTypeRepo: Repository<ExpenseType>,
     @InjectRepository(IncomeType)
     private incomeTypeRepo: Repository<IncomeType>,
-  ) {}
+  ) { }
 
   async onApplicationBootstrap() {
     await this.seedUsers();
-    await this.seedZones();
-    await this.seedVehicles();
     await this.seedDrivers();
     await this.seedMerchants();
     await this.seedExpenseTypes();
@@ -65,113 +59,7 @@ export class SeedService implements OnApplicationBootstrap {
     this.logger.log('✅ Users seeded');
   }
 
-  private async seedZones() {
-    const count = await this.zoneRepo.count();
-    if (count > 0) return;
-    const zones = [
-      {
-        name: 'Phnom Penh Central',
-        code: 'PPC',
-        price: 2.5,
-        description: 'Khan Daun Penh, Khan 7 Makara',
-        active: true,
-      },
-      {
-        name: 'Phnom Penh South',
-        code: 'PPS',
-        price: 3.0,
-        description: 'Khan Chamkarmon, Khan Toul Kork',
-        active: true,
-      },
-      {
-        name: 'Phnom Penh North',
-        code: 'PPN',
-        price: 3.5,
-        description: 'Khan Russey Keo, Khan Prek Pnov',
-        active: true,
-      },
-      {
-        name: 'Kandal Province',
-        code: 'KDL',
-        price: 5.0,
-        description: 'Ta Khmau, Khsach Kandal',
-        active: true,
-      },
-      {
-        name: 'Siem Reap',
-        code: 'SRP',
-        price: 8.0,
-        description: 'Siem Reap City & Province',
-        active: true,
-      },
-      {
-        name: 'Battambang',
-        code: 'BTB',
-        price: 9.0,
-        description: 'Battambang City & Province',
-        active: false,
-      },
-    ];
-    await this.zoneRepo.save(this.zoneRepo.create(zones));
-    this.logger.log('✅ Zones seeded');
-  }
 
-  private async seedVehicles() {
-    const count = await this.vehicleRepo.count();
-    if (count > 0) return;
-    const vehicles = [
-      {
-        plate: '2A-4532',
-        type: 'motorbike',
-        brand: 'Honda',
-        model: 'Wave',
-        year: 2021,
-        status: 'active',
-      },
-      {
-        plate: '2B-7891',
-        type: 'motorbike',
-        brand: 'Yamaha',
-        model: 'Fino',
-        year: 2022,
-        status: 'active',
-      },
-      {
-        plate: '1A-1234',
-        type: 'car',
-        brand: 'Toyota',
-        model: 'Hilux',
-        year: 2020,
-        status: 'active',
-      },
-      {
-        plate: '3C-5678',
-        type: 'motorbike',
-        brand: 'Honda',
-        model: 'PCX',
-        year: 2023,
-        status: 'active',
-      },
-      {
-        plate: '2D-9012',
-        type: 'tuk-tuk',
-        brand: 'Generic',
-        model: 'Electric',
-        year: 2022,
-        status: 'maintenance',
-      },
-      {
-        plate: '1B-3456',
-        type: 'van',
-        brand: 'Toyota',
-        model: 'Hiace',
-        year: 2019,
-        status: 'active',
-      },
-    ];
-    await this.vehicleRepo.save(this.vehicleRepo.create(vehicles as any));
-    this.logger.log('✅ Vehicles seeded');
-  }
 
   private async seedDrivers() {
     const count = await this.driverRepo.count({ where: { role: 'driver' } });

@@ -230,7 +230,7 @@ export default function PrintInvoicePage() {
                   <option value="">{lang === 'km' ? '-- ទាំងអស់ --' : '-- All --'}</option>
                   {merchants.map(m => (
                     <option key={m.id} value={m.id}>
-                      {m.nameKh || m.name}
+                      {m.nameKh ? `${m.nameKh} (${m.name})` : m.name}
                     </option>
                   ))}
                 </select>
@@ -416,7 +416,7 @@ export default function PrintInvoicePage() {
               fontSize: 13 
             }}>
               <div>
-                {lang === 'km' ? 'អ្នកផ្ញើ' : 'Sender'} : {o.senderPhone || o.merchant?.phone}
+                {lang === 'km' ? 'ឈ្មោះហាង' : 'Shop Name'} : {o.senderPhone || o.merchant?.phone}
               </div>
               <div>
                 {lang === 'km' ? 'អតិថិជន' : 'Customer'}: {o.receiverName}
@@ -428,7 +428,7 @@ export default function PrintInvoicePage() {
               {/* Left Side */}
               <div style={{ flex: 1, padding: '8px 4px', borderRight: '1.5px solid #000', display: 'flex', flexDirection: 'column', gap: 6 }}>
                 <div>
-                  {lang === 'km' ? 'អ្នកទទួល' : 'Receiver'} : {o.receiverPhone}
+                  {lang === 'km' ? 'លេខអ្នកទទួល' : 'Receiver Phone'} : {o.receiverPhone}
                 </div>
                 <div>
                   {lang === 'km' ? 'តំបន់' : 'Zone'} : {o.zone?.name || '—'}

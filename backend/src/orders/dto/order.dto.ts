@@ -71,13 +71,17 @@ export class UpdateOrderDto {
   @IsOptional() @IsNumber() @Type(() => Number) customerId?: number;
   @IsOptional() @IsNumber() @Type(() => Number) zoneId?: number;
   @IsOptional() @IsEnum(['pending', 'paid']) paymentStatus?: string;
+  @IsOptional() @IsString() status?: string;
+  @IsOptional() @IsString() paymentMethod?: string;
+  @IsOptional() @IsNumber() @Type(() => Number) receivedAmountUSD?: number;
+  @IsOptional() @IsNumber() @Type(() => Number) receivedAmountKHR?: number;
+  @IsOptional() @IsNumber() @Type(() => Number) driverId?: number;
 }
 
 export class UpdateOrderStatusDto {
   @ApiProperty({
     enum: [
       'pending',
-      'assigned',
       'picked-up',
       'in-transit',
       'delivered',
@@ -87,7 +91,6 @@ export class UpdateOrderStatusDto {
   })
   @IsEnum([
     'pending',
-    'assigned',
     'picked-up',
     'in-transit',
     'delivered',

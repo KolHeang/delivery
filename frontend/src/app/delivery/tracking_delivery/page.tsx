@@ -35,7 +35,7 @@ export default function TrackingPage() {
   const getStepClass = (stepStatus: string) => {
     if (!order) return 'disabled';
     const status = order.status;
-    const statuses = ['pending', 'assigned', 'picked-up', 'in-transit', 'delivered', 'failed', 'returned'];
+    const statuses = ['pending', 'picked-up', 'in-transit', 'delivered', 'failed', 'returned'];
     const activeIdx = statuses.indexOf(status);
     const stepIdx = statuses.indexOf(stepStatus);
 
@@ -115,7 +115,6 @@ export default function TrackingPage() {
 
                   {[
                     { key: 'pending', title: 'Package Registered', desc: 'The merchant has registered the package details.' },
-                    { key: 'assigned', title: 'Driver Assigned', desc: 'A driver has been assigned to this package.' },
                     { key: 'picked-up', title: 'Picked Up', desc: 'Driver has picked up the package from the merchant.' },
                     { key: 'in-transit', title: 'In Transit', desc: 'Package is on the way to the delivery address.' },
                     { key: 'delivered', title: 'Delivered / Complete', desc: 'Package has been successfully received.', optionalKey: 'failed', optionalTitle: 'Delivery Failed' },

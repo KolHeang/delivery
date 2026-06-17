@@ -143,8 +143,7 @@ export default function AssignDeliveryPage() {
                               {o.merchant?.phone && <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{o.merchant.phone}</div>}
                             </td>
                             <td>
-                              <div style={{ fontWeight: 600, fontSize: 13 }}>{o.receiverName}</div>
-                              <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{o.receiverPhone}</div>
+                              <div style={{ fontWeight: 600, fontSize: 13 }}>{o.receiverPhone}</div>
                             </td>
                             <td>
                               {o.zone ? (

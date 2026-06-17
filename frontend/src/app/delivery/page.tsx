@@ -11,7 +11,7 @@ import api from '@/lib/api';
 import { MdAdd, MdSearch, MdEdit, MdDelete, MdVisibility, MdFilterList, MdPrint } from 'react-icons/md';
 import { useLanguage } from '@/lib/LanguageContext';
 
-const STATUS_OPTIONS = ['all', 'pending', 'assigned', 'picked-up', 'in-transit', 'delivered', 'failed', 'returned'];
+const STATUS_OPTIONS = ['all', 'pending', 'picked-up', 'in-transit', 'delivered', 'failed', 'returned'];
 const SIZE_OPTIONS = ['small', 'medium', 'large'];
 
 
@@ -207,8 +207,7 @@ export default function DeliveriesPage() {
                         </div>
                       </td>
                       <td>
-                        <div style={{ fontWeight: 600, fontSize: 13 }}>{o.receiverName}</div>
-                        <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{o.receiverPhone}</div>
+                        <div style={{ fontWeight: 600, fontSize: 13 }}>{o.receiverPhone}</div>
                       </td>
                       <td style={{ fontSize: 12 }}>{o.zone?.name || '—'}</td>
                       <td style={{ fontSize: 12 }}>
@@ -224,7 +223,7 @@ export default function DeliveriesPage() {
                       <td>
                         <select value={o.status} onChange={e => handleStatusChange(o.id, e.target.value)}
                           style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 12 }}>
-                          {['pending','assigned','picked-up','in-transit','delivered','failed','returned'].map(s => (
+                          {['pending','picked-up','in-transit','delivered','failed','returned'].map(s => (
                             <option key={s} value={s}>{s}</option>
                           ))}
                         </select>

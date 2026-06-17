@@ -28,9 +28,14 @@ export default function CreateShopPage() {
     telegram: '',
     qrLinkKhr: '',
     qrLinkUsd: '',
-    qrImageKhr: '',
-    qrImageUsd: '',
   });
+
+  const [qrKhrFile, setQrKhrFile] = useState<File | null>(null);
+  const [qrUsdFile, setQrUsdFile] = useState<File | null>(null);
+  const [qrKhrPreview, setQrKhrPreview] = useState<string>('');
+  const [qrUsdPreview, setQrUsdPreview] = useState<string>('');
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string>('');
 
   useEffect(() => {
     if (!isAuthenticated()) { router.push('/'); return; }
@@ -49,25 +54,51 @@ export default function CreateShopPage() {
   const handleFileChange = (field: 'qrImageKhr' | 'qrImageUsd') => (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setForm(prev => ({ ...prev, [field]: reader.result as string }));
-    };
-    reader.readAsDataURL(file);
+    if (field === 'qrImageKhr') {
+      setQrKhrFile(file);
+      setQrKhrPreview(URL.createObjectURL(file));
+    } else {
+      setQrUsdFile(file);
+      setQrUsdPreview(URL.createObjectURL(file));
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
     try {
-      const payload = {
-        ...form,
-        zoneId: form.zoneId ? parseInt(form.zoneId) : undefined,
-        deliveryFee: parseFloat(form.deliveryFee) || 0,
-        exchangeRate: parseFloat(form.exchangeRate) || 4100,
-        balance: 0,
-      };
-      await api.post('/merchants', payload);
+      const formData = new FormData();
+      formData.append('name', form.name);
+      formData.append('nameKh', form.nameKh);
+      formData.append('contact', form.contact);
+      formData.append('phone', form.phone);
+      formData.append('email', form.email);
+      formData.append('address', form.address);
+      formData.append('pricingTier', form.pricingTier);
+      if (form.zoneId) formData.append('zoneId', form.zoneId);
+      formData.append('deliveryFee', form.deliveryFee);
+      formData.append('exchangeRate', form.exchangeRate);
+      formData.append('note', form.note);
+      formData.append('telegram', form.telegram);
+      formData.append('qrLinkKhr', form.qrLinkKhr);
+      formData.append('qrLinkUsd', form.qrLinkUsd);
+      formData.append('balance', '0');
+
+      if (qrKhrFile) {
+        formData.append('qrImageKhr', qrKhrFile);
+      }
+      if (qrUsdFile) {
+        formData.append('qrImageUsd', qrUsdFile);
+      }
+      if (photoFile) {
+        formData.append('photo', photoFile);
+      }
+
+      await api.post('/merchants', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
       router.push('/client');
     } catch (err: any) {
       alert(err.response?.data?.message || 'Error creating shop');
@@ -94,6 +125,44 @@ export default function CreateShopPage() {
             <div className="card-header"><span className="card-title">🏪 {t('createShop')}</span></div>
             <div className="card-body">
               <form onSubmit={handleSubmit}>
+                {/* Shop Photo Upload */}
+                <div className="form-row" style={{ alignItems: 'center', marginBottom: 20 }}>
+                  <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                    <div style={{
+                      width: 70,
+                      height: 70,
+                      borderRadius: '50%',
+                      border: '2px dashed var(--border)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      overflow: 'hidden',
+                      background: 'var(--card-bg)'
+                    }}>
+                      {photoPreview ? (
+                        <img src={photoPreview} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      ) : (
+                        <span style={{ fontSize: 28, color: 'var(--text-muted)' }}>🏪</span>
+                      )}
+                    </div>
+                    <div>
+                      <label className="form-label" style={{ marginBottom: 4 }}>{t('profilePhoto')}</label>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={e => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            setPhotoFile(file);
+                            setPhotoPreview(URL.createObjectURL(file));
+                          }
+                        }}
+                        style={{ fontSize: 13 }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
                 {/* Row 1: Delivery Fee & Exchange Rate */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
                   <div className="form-group">
@@ -224,8 +293,8 @@ export default function CreateShopPage() {
                         onChange={handleFileChange('qrImageKhr')}
                         required
                       />
-                      {form.qrImageKhr && (
-                        <img src={form.qrImageKhr} alt="QR KHR Preview" style={{ width: 80, height: 80, objectFit: 'contain', border: '1px solid #ddd', borderRadius: 4 }} />
+                      {qrKhrPreview && (
+                        <img src={qrKhrPreview} alt="QR KHR Preview" style={{ width: 80, height: 80, objectFit: 'contain', border: '1px solid #ddd', borderRadius: 4 }} />
                       )}
                     </div>
                   </div>
@@ -239,8 +308,8 @@ export default function CreateShopPage() {
                         onChange={handleFileChange('qrImageUsd')}
                         required
                       />
-                      {form.qrImageUsd && (
-                        <img src={form.qrImageUsd} alt="QR USD Preview" style={{ width: 80, height: 80, objectFit: 'contain', border: '1px solid #ddd', borderRadius: 4 }} />
+                      {qrUsdPreview && (
+                        <img src={qrUsdPreview} alt="QR USD Preview" style={{ width: 80, height: 80, objectFit: 'contain', border: '1px solid #ddd', borderRadius: 4 }} />
                       )}
                     </div>
                   </div>

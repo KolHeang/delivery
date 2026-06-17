@@ -1,17 +1,17 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Staff } from '../users/staff.entity';
+import { User } from '../users/users.entity';
 import { CreateDriverDto, UpdateDriverDto } from './dto/driver.dto';
 import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class DriversService {
   constructor(
-    @InjectRepository(Staff) private readonly repo: Repository<Staff>,
-  ) {}
+    @InjectRepository(User) private readonly repo: Repository<User>,
+  ) { }
 
-  findAll(): Promise<Staff[]> {
+  findAll(): Promise<User[]> {
     return this.repo.find({
       where: { role: 'driver' },
       relations: { zone: true, vehicle: true },
@@ -19,20 +19,20 @@ export class DriversService {
     });
   }
 
-  async findByIdentifier(identifier: string): Promise<Staff | null> {
+  async findByIdentifier(identifier: string): Promise<User | null> {
     return this.repo
-      .createQueryBuilder('staff')
-      .addSelect('staff.password')
-      .leftJoinAndSelect('staff.zone', 'zone')
-      .leftJoinAndSelect('staff.vehicle', 'vehicle')
-      .where('staff.role = :role', { role: 'driver' })
-      .andWhere('(staff.email = :identifier OR staff.phone = :identifier)', {
+      .createQueryBuilder('user')
+      .addSelect('user.password')
+      .leftJoinAndSelect('user.zone', 'zone')
+      .leftJoinAndSelect('user.vehicle', 'vehicle')
+      .where('user.role = :role', { role: 'driver' })
+      .andWhere('(user.email = :identifier OR user.phone = :identifier)', {
         identifier,
       })
       .getOne();
   }
 
-  async findOne(id: number): Promise<Staff> {
+  async findOne(id: number): Promise<User> {
     const item = await this.repo.findOne({
       where: { id, role: 'driver' },
       relations: { zone: true, vehicle: true },
@@ -41,7 +41,7 @@ export class DriversService {
     return item;
   }
 
-  async findAvailable(): Promise<Staff[]> {
+  async findAvailable(): Promise<User[]> {
     return this.repo.find({
       where: { role: 'driver', status: 'available' },
       relations: { zone: true, vehicle: true },
@@ -49,7 +49,7 @@ export class DriversService {
     });
   }
 
-  async create(dto: CreateDriverDto): Promise<Staff> {
+  async create(dto: CreateDriverDto): Promise<User> {
     const rawPassword = dto.password || '123456';
     const hashed = await bcrypt.hash(rawPassword, 10);
     const driver = this.repo.create({
@@ -68,7 +68,7 @@ export class DriversService {
     return this.repo.save(driver);
   }
 
-  async update(id: number, dto: UpdateDriverDto): Promise<Staff> {
+  async update(id: number, dto: UpdateDriverDto): Promise<User> {
     await this.findOne(id);
     const payload = { ...dto } as any;
     if (dto.password) {

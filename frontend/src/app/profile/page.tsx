@@ -14,7 +14,7 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
-  
+
   const [form, setForm] = useState({
     name: '',
     email: '',
@@ -37,7 +37,7 @@ export default function ProfilePage() {
           router.push('/');
           return;
         }
-        
+
         const response = await api.get(`/users/${cachedUser.id}`);
         setCurrentUser(response.data);
         setForm({
@@ -140,7 +140,7 @@ export default function ProfilePage() {
             </div>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '24px', alignItems: 'start' }}>
-              
+
               {/* Profile Card Summary */}
               <div className="card">
                 <div className="card-header">
@@ -154,7 +154,7 @@ export default function ProfilePage() {
                     <h2 style={{ fontSize: '18px', fontWeight: 700, margin: '8px 0 4px' }}>{currentUser?.name}</h2>
                     <p style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>{currentUser?.email}</p>
                   </div>
-                  
+
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', justifyContent: 'center', margin: '8px 0' }}>
                     <Badge status={currentUser?.role || 'staff'} />
                     <Badge status={currentUser?.active ? 'active' : 'inactive'} />
@@ -165,7 +165,7 @@ export default function ProfilePage() {
                   <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '13px', textAlign: 'left', color: 'var(--text-secondary)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <MdVerifiedUser size={16} style={{ color: 'var(--accent)' }} />
-                      <span>Permission Level: <strong style={{ color: 'var(--text-primary)' }}>{currentUser?.role === 'admin' ? 'Administrator' : 'Staff Member'}</strong></span>
+                      <span>Permission Level: <strong style={{ color: 'var(--text-primary)' }}>{currentUser?.role === 'admin' ? 'Administrator' : 'UserMember'}</strong></span>
                     </div>
                     {currentUser?.createdAt && (
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>

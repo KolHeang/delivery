@@ -20,7 +20,9 @@ const emptyForm = {
   vehicleId: '',
   joinDate: '',
   salary: '',
-  password: ''
+  password: '',
+  dob: '',
+  gender: ''
 };
 
 export default function CreateStaffPage() {
@@ -29,10 +31,13 @@ export default function CreateStaffPage() {
 
   const [zones, setZones] = useState<any[]>([]);
   const [vehicles, setVehicles] = useState<any[]>([]);
+  const [roles, setRoles] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  
+
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string>('');
 
   useEffect(() => {
     if (!isAuthenticated()) {
@@ -41,12 +46,14 @@ export default function CreateStaffPage() {
     }
     const load = async () => {
       try {
-        const [z, v] = await Promise.all([
+        const [z, v, r] = await Promise.all([
           api.get('/zones'),
-          api.get('/vehicles')
+          api.get('/vehicles'),
+          api.get('/roles')
         ]);
         setZones(z.data);
         setVehicles(v.data);
+        setRoles(r.data);
       } catch (err) {
         console.error(err);
       }
@@ -58,6 +65,14 @@ export default function CreateStaffPage() {
   const f = (k: string) => (e: any) => {
     const val = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
     setForm(p => ({ ...p, [k]: val }));
+  };
+
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setPhotoFile(file);
+      setPhotoPreview(URL.createObjectURL(file));
+    }
   };
 
   const save = async () => {
@@ -74,28 +89,35 @@ export default function CreateStaffPage() {
       return;
     }
 
+    const selectedRole = roles.find(r => r.name === form.role);
     setSaving(true);
     try {
-      const payload: any = {
-        name: form.name,
-        nameKh: form.nameKh || undefined,
-        phone: form.phone || undefined,
-        email: form.email || undefined,
-        role: form.role,
-        active: form.active,
-        status: form.role === 'driver' ? form.status : 'offline',
-        zoneId: form.role === 'driver' && form.zoneId ? parseInt(form.zoneId) : undefined,
-        vehicleId: form.role === 'driver' && form.vehicleId ? parseInt(form.vehicleId) : undefined,
-        joinDate: form.joinDate || undefined,
-        salary: form.salary ? parseFloat(form.salary) : 0.0
-      };
-
-      if (form.password) {
-        payload.password = form.password;
+      const formData = new FormData();
+      formData.append('name', form.name);
+      if (form.nameKh) formData.append('nameKh', form.nameKh);
+      if (form.phone) formData.append('phone', form.phone);
+      if (form.email) formData.append('email', form.email);
+      formData.append('role', form.role);
+      if (selectedRole?.id) formData.append('roleId', selectedRole.id.toString());
+      formData.append('active', form.active.toString());
+      formData.append('status', form.role === 'driver' ? form.status : 'offline');
+      if (form.role === 'driver' && form.zoneId) formData.append('zoneId', form.zoneId);
+      if (form.role === 'driver' && form.vehicleId) formData.append('vehicleId', form.vehicleId);
+      if (form.joinDate) formData.append('joinDate', form.joinDate);
+      if (form.salary) formData.append('salary', form.salary);
+      if (form.dob) formData.append('dob', form.dob);
+      if (form.gender) formData.append('gender', form.gender);
+      if (form.password) formData.append('password', form.password);
+      if (photoFile) {
+        formData.append('photo', photoFile);
       }
 
-      await api.post('/users', payload);
-      router.push('/staff');
+      await api.post('/users', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      router.push('/user');
     } catch (err: any) {
       alert(err.response?.data?.message || 'Error saving staff');
     }
@@ -116,20 +138,53 @@ export default function CreateStaffPage() {
     <div className="app-layout">
       <Sidebar />
       <div className="main-content">
-        <Topbar title={t('addStaff')} subtitle="Create a new staff profile" />
+        <Topbar title={t('addStaff')} subtitle="Create a new Userprofile" />
         <div className="page-content">
           <div className="card">
             <div className="card-header">
               <span className="card-title">👥 {t('addStaff')}</span>
             </div>
             <div className="card-body">
+              <div className="form-row" style={{ alignItems: 'center', marginBottom: 20 }}>
+                <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                  <div style={{
+                    width: 70,
+                    height: 70,
+                    borderRadius: '50%',
+                    border: '2px dashed var(--border)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    overflow: 'hidden',
+                    background: 'var(--card-bg)'
+                  }}>
+                    {photoPreview ? (
+                      <img src={photoPreview} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ) : (
+                      <span style={{ fontSize: 28, color: 'var(--text-muted)' }}>👤</span>
+                    )}
+                  </div>
+                  <div>
+                    <label className="form-label" style={{ marginBottom: 4 }}>{t('profilePhoto')}</label>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handlePhotoChange}
+                      style={{ fontSize: 13 }}
+                    />
+                  </div>
+                </div>
+              </div>
+
               <div className="form-row">
                 <div className="form-group">
                   <label className="form-label">Role</label>
                   <select className="form-control" value={form.role} onChange={f('role')}>
-                    <option value="admin">Admin</option>
-                    <option value="staff">Staff</option>
-                    <option value="driver">Driver</option>
+                    {roles.map((r: any) => (
+                      <option key={r.id} value={r.name} style={{ textTransform: 'capitalize' }}>
+                        {r.name.charAt(0).toUpperCase() + r.name.slice(1)}
+                      </option>
+                    ))}
                   </select>
                 </div>
                 <div className="form-group">
@@ -215,6 +270,27 @@ export default function CreateStaffPage() {
                 </div>
               </div>
 
+              <div className="form-row">
+                <div className="form-group">
+                  <label className="form-label">{t('dob')}</label>
+                  <input
+                    type="date"
+                    className="form-control"
+                    value={form.dob}
+                    onChange={f('dob')}
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">{t('gender')}</label>
+                  <select className="form-control" value={form.gender} onChange={f('gender')}>
+                    <option value="">{t('selectGender')}</option>
+                    <option value="male">{t('male')}</option>
+                    <option value="female">{t('female')}</option>
+                    <option value="other">{t('otherGender')}</option>
+                  </select>
+                </div>
+              </div>
+
               {form.role === 'driver' ? (
                 <>
                   <div className="form-row">
@@ -273,7 +349,7 @@ export default function CreateStaffPage() {
               )}
 
               <div style={{ marginTop: 24, display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
-                <button className="btn btn-outline" onClick={() => router.push('/staff')}>
+                <button className="btn btn-outline" onClick={() => router.push('/user')}>
                   {t('cancel')}
                 </button>
                 <button className="btn btn-primary" onClick={save} disabled={saving}>

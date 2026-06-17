@@ -88,7 +88,7 @@ export default function DashboardPage() {
       setChartData(c.data);
       setRecentOrders(r.data);
       setTopDrivers(d.data);
-    } catch {}
+    } catch { }
     setLoading(false);
   }, []);
 
@@ -129,9 +129,9 @@ export default function DashboardPage() {
             <div style={{ display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                 <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)' }}>{t('dateRange')}</span>
-                <select 
-                  className="form-control" 
-                  value={rangeType} 
+                <select
+                  className="form-control"
+                  value={rangeType}
                   onChange={e => setRangeType(e.target.value)}
                   style={{ minWidth: 160 }}
                 >
@@ -149,20 +149,20 @@ export default function DashboardPage() {
                 <>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                     <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)' }}>{t('fromDate')}</span>
-                    <input 
-                      type="date" 
-                      className="form-control" 
-                      value={customStart} 
-                      onChange={e => setCustomStart(e.target.value)} 
+                    <input
+                      type="date"
+                      className="form-control"
+                      value={customStart}
+                      onChange={e => setCustomStart(e.target.value)}
                     />
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                     <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)' }}>{t('toDate')}</span>
-                    <input 
-                      type="date" 
-                      className="form-control" 
-                      value={customEnd} 
-                      onChange={e => setCustomEnd(e.target.value)} 
+                    <input
+                      type="date"
+                      className="form-control"
+                      value={customEnd}
+                      onChange={e => setCustomEnd(e.target.value)}
                     />
                   </div>
                 </>
@@ -181,7 +181,7 @@ export default function DashboardPage() {
             <StatsCard icon="💰" label={t('amountCollectedUSD')} value={`$${(stats?.collectedCashUSD ?? 0).toFixed(2)}`} color="#2f55a5" bg="#eef2fa" />
             <StatsCard icon="🇰🇭" label={t('amountCollectedKHR')} value={`${(stats?.collectedCashKHR ?? 0).toLocaleString()} ៛`} color="#f16222" bg="#fef4ef" />
             <StatsCard icon="🚴" label={t('totalDrivers')} value={stats?.totalDrivers ?? 0} color="#8b5cf6" bg="#f5f3ff" />
-            <StatsCard icon="👥" label={t('totalStaff')} value={stats?.totalStaff ?? 0} color="#2f55a5" bg="#eef2fa" />
+            <StatsCard icon="👥" label={t('totalStaff')} value={stats?.totalUser ?? 0} color="#2f55a5" bg="#eef2fa" />
           </div>
 
           {/* Charts */}

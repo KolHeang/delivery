@@ -20,14 +20,18 @@ import {
 } from './dto/order.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
+import { PermissionsGuard } from '../auth/permissions.guard';
+import { RequirePermissions } from '../auth/permissions.decorator';
+
 @ApiTags('Orders')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, PermissionsGuard)
 @Controller('orders')
 export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}
 
   @Get()
+  @RequirePermissions('orders.read')
   @ApiQuery({ name: 'status', required: false })
   @ApiQuery({ name: 'driverId', required: false })
   @ApiQuery({ name: 'driverPaymentStatus', required: false })
@@ -47,36 +51,43 @@ export class OrdersController {
   }
 
   @Get('unassigned')
+  @RequirePermissions('orders.read')
   findUnassigned() {
     return this.ordersService.findUnassigned();
   }
 
   @Get('stats')
+  @RequirePermissions('orders.read')
   getStats() {
     return this.ordersService.getStats();
   }
 
   @Get('tracking/:code')
+  @RequirePermissions('orders.read')
   findByTracking(@Param('code') code: string) {
     return this.ordersService.findByTracking(code);
   }
 
   @Get(':id')
+  @RequirePermissions('orders.read')
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.ordersService.findOne(id);
   }
 
   @Post()
+  @RequirePermissions('orders.create')
   create(@Body() dto: CreateOrderDto) {
     return this.ordersService.create(dto);
   }
 
   @Patch(':id')
+  @RequirePermissions('orders.update')
   update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateOrderDto) {
     return this.ordersService.update(id, dto);
   }
 
   @Patch(':id/status')
+  @RequirePermissions('orders.update')
   updateStatus(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateOrderStatusDto,
@@ -85,6 +96,7 @@ export class OrdersController {
   }
 
   @Post(':id/assign')
+  @RequirePermissions('orders.update')
   assignDriver(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: AssignDriverDto,
@@ -93,6 +105,7 @@ export class OrdersController {
   }
 
   @Delete(':id')
+  @RequirePermissions('orders.delete')
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.ordersService.remove(id);
   }

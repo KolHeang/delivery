@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
 import { Order } from '../orders/order.entity';
-import { Staff } from '../users/staff.entity';
+import { User } from '../users/users.entity';
 import { Customer } from '../customers/customer.entity';
 import { Merchant } from '../merchants/merchant.entity';
 
@@ -10,10 +10,10 @@ import { Merchant } from '../merchants/merchant.entity';
 export class DashboardService {
   constructor(
     @InjectRepository(Order) private orderRepo: Repository<Order>,
-    @InjectRepository(Staff) private driverRepo: Repository<Staff>,
+    @InjectRepository(User) private driverRepo: Repository<User>,
     @InjectRepository(Customer) private customerRepo: Repository<Customer>,
     @InjectRepository(Merchant) private merchantRepo: Repository<Merchant>,
-  ) {}
+  ) { }
 
   private applyDateFilter(
     queryBuilder: any,

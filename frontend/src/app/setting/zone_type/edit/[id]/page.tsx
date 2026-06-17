@@ -15,7 +15,7 @@ export default function EditZonePage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [drivers, setDrivers] = useState<any[]>([]);
-  const [form, setForm] = useState({ name: '', driverId: '', branch: 'E Express', active: true });
+  const [form, setForm] = useState({ name: '', driverId: '', branch: 'EBS Express', active: true });
 
   useEffect(() => {
     if (!isAuthenticated()) { router.push('/'); return; }
@@ -33,7 +33,7 @@ export default function EditZonePage() {
           setForm({
             name: zone.name || '',
             driverId: zone.driverId || '',
-            branch: zone.branch || 'E Express',
+            branch: zone.branch || 'EBS Express',
             active: zone.active ?? true
           });
         }

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { getUser, clearAuth } from '@/lib/auth';
+import { getUser, clearAuth, hasPermission } from '@/lib/auth';
 import { useLanguage } from '@/lib/LanguageContext';
 import {
   MdDashboard, MdStorefront, MdPeople, MdLocalShipping,
@@ -16,12 +16,14 @@ export default function Sidebar() {
   const router = useRouter();
   const { t } = useLanguage();
   const [user, setUser] = useState<any>(null);
+  const [mounted, setMounted] = useState(false);
 
   const menuGroups = [
     {
       key: 'summary',
       label: t('summaryMenu'),
       icon: MdBarChart,
+      permission: 'reports.view',
       items: [
         { href: '/summary/shop', label: t('shopSummary') },
         { href: '/summary/delivery', label: t('deliverySummary') },
@@ -32,12 +34,13 @@ export default function Sidebar() {
       key: 'delivery',
       label: t('manageDelivery'),
       icon: MdLocalShipping,
+      permission: 'orders.read',
       items: [
-        { href: '/delivery/entry_data_item', label: t('batchEntryData') },
+        { href: '/delivery/entry_data_item', label: t('batchEntryData'), permission: 'orders.create' },
         { href: '/delivery', label: t('listOfDelivery') },
         { href: '/delivery/list_print_qrcode', label: t('printInvoiceDelivery') },
-        { href: '/delivery/assigndeliveryby', label: t('processForAssign') },
-        { href: '/delivery/complete', label: t('completePackage') },
+        { href: '/delivery/assigndeliveryby', label: t('processForAssign'), permission: 'orders.update' },
+        { href: '/delivery/complete', label: t('completePackage'), permission: 'orders.update' },
         { href: '/delivery/tracking_delivery', label: t('tracking') },
       ],
     },
@@ -45,24 +48,27 @@ export default function Sidebar() {
       key: 'shops',
       label: t('manageShops'),
       icon: MdStorefront,
+      permission: 'merchants.read',
       items: [
         { href: '/client', label: t('shopList') },
-        { href: '/client/create', label: t('createShop') },
+        { href: '/client/create', label: t('createShop'), permission: 'merchants.create' },
       ],
     },
     {
       key: 'staff',
       label: t('manageStaff') || 'Manage Staff',
       icon: MdPeople,
+      permission: 'users.read',
       items: [
-        { href: '/staff', label: t('staffList') || 'List Staff' },
-        { href: '/staff/create', label: t('createStaff') || 'Create Staff' },
+        { href: '/user', label: t('staffList') || 'List Staff' },
+        { href: '/user/create', label: t('createStaff') || 'Create Staff', permission: 'users.create' },
       ],
     },
     {
       key: 'payment',
       label: t('paymentProcess'),
       icon: MdAccountBalanceWallet,
+      permission: 'payments.read',
       items: [
         { href: '/payment/staff', label: t('paymentWithDelivery') || 'Payment with Delivery' },
         { href: '/payment/shop', label: t('paymentWithShop') },
@@ -72,13 +78,14 @@ export default function Sidebar() {
       key: 'accounting',
       label: t('accounting'),
       icon: MdReceipt,
+      permission: 'expenses.read',
       items: [
-        { href: '/expense/create', label: t('addExpense') },
+        { href: '/expense/create', label: t('addExpense'), permission: 'expenses.create' },
         { href: '/expense', label: t('expenseList') },
-        { href: '/income/create', label: t('addIncome') },
-        { href: '/income', label: t('incomeList') },
-        { href: '/income/type', label: t('typeOfIncome') },
-        { href: '/expense/type', label: t('typeOfExpense') },
+        { href: '/income/create', label: t('addIncome'), permission: 'incomes.create' },
+        { href: '/income', label: t('incomeList'), permission: 'incomes.read' },
+        { href: '/income/type', label: t('typeOfIncome'), permission: 'incomes.read' },
+        { href: '/expense/type', label: t('typeOfExpense'), permission: 'expenses.read' },
       ],
     },
     {
@@ -86,14 +93,16 @@ export default function Sidebar() {
       label: t('report'),
       icon: MdBarChart,
       href: '/report',
+      permission: 'reports.view',
     },
     {
       key: 'settings',
       label: t('settings'),
       icon: MdSettings,
+      permission: 'settings.manage',
       items: [
-        { href: '/setting/zone_type', label: t('zoneType') },
-        { href: '/setting/role', label: t('permission') },
+        { href: '/setting/zone_type', label: t('zoneType'), permission: 'zones.read' },
+        { href: '/setting/role', label: t('permission'), permission: 'users.manage' },
         { href: '/setting/organisation', label: t('organizationSetting') },
         { href: '/setting/general', label: t('generalSettings') },
       ],
@@ -111,6 +120,7 @@ export default function Sidebar() {
 
   // Load user client-side and set up listeners
   useEffect(() => {
+    setMounted(true);
     setUser(getUser());
 
     const handleUserUpdate = () => {
@@ -171,76 +181,84 @@ export default function Sidebar() {
         </Link>
 
 
-        {menuGroups.map(group => {
-          const Icon = group.icon;
+        {mounted && menuGroups
+          .filter(group => !group.permission || hasPermission(group.permission))
+          .map(group => {
+            const Icon = group.icon;
 
-          if ('href' in group && group.href) {
-            const isActive = pathname === group.href || (group.href !== '/dashboard' && pathname.startsWith(group.href));
-            return (
-              <Link
-                key={group.key}
-                href={group.href}
-                className={`sidebar-item ${isActive ? 'active' : ''}`}
-                style={{ marginBottom: 8 }}
-              >
-                <span className="sidebar-item-icon"><Icon size={18} /></span>
-                {group.label}
-              </Link>
-            );
-          }
-
-          const isOpen = openGroups[group.key];
-          const isGroupActive = 'items' in group && group.items && group.items.some(item =>
-            pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href))
-          );
-
-          return (
-            <div key={group.key} style={{ marginBottom: 8 }}>
-              {/* Group Header */}
-              <button
-                onClick={() => toggleGroup(group.key)}
-                className="sidebar-item"
-                style={{
-                  justifyContent: 'space-between',
-                  background: isGroupActive ? 'rgba(255,255,255,0.05)' : 'transparent',
-                  color: isGroupActive ? '#fff' : 'var(--sidebar-text)',
-                  fontWeight: 600,
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            if ('href' in group && group.href) {
+              const isActive = pathname === group.href || (group.href !== '/dashboard' && pathname.startsWith(group.href));
+              return (
+                <Link
+                  key={group.key}
+                  href={group.href}
+                  className={`sidebar-item ${isActive ? 'active' : ''}`}
+                  style={{ marginBottom: 8 }}
+                >
                   <span className="sidebar-item-icon"><Icon size={18} /></span>
                   {group.label}
-                </div>
-                {isOpen ? <MdKeyboardArrowUp size={16} /> : <MdKeyboardArrowDown size={16} />}
-              </button>
+                </Link>
+              );
+            }
 
-              {/* Group Sub-items */}
-              {isOpen && 'items' in group && group.items && (
-                <div style={{ paddingLeft: 24, marginTop: 4, display: 'flex', flexDirection: 'column', gap: 2 }}>
-                  {group.items.map(item => {
-                    const exactActive = pathname === item.href;
+            const isOpen = openGroups[group.key];
+            const isGroupActive = 'items' in group && group.items && group.items.some(item =>
+              pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href))
+            );
 
-                    return (
-                      <Link
-                        key={item.href}
-                        href={item.href}
-                        className={`sidebar-item ${exactActive ? 'active' : ''}`}
-                        style={{
-                          fontSize: '13.5px',
-                          padding: '8px 12px',
-                          opacity: exactActive ? 1 : 0.85,
-                          borderRadius: 'var(--radius-sm)',
-                        }}
-                      >
-                        {item.label}
-                      </Link>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          );
-        })}
+            const visibleItems = 'items' in group && group.items
+              ? group.items.filter(item => !item.permission || hasPermission(item.permission))
+              : [];
+
+            if (visibleItems.length === 0) return null;
+
+            return (
+              <div key={group.key} style={{ marginBottom: 8 }}>
+                {/* Group Header */}
+                <button
+                  onClick={() => toggleGroup(group.key)}
+                  className="sidebar-item"
+                  style={{
+                    justifyContent: 'space-between',
+                    background: isGroupActive ? 'rgba(255,255,255,0.05)' : 'transparent',
+                    color: isGroupActive ? '#fff' : 'var(--sidebar-text)',
+                    fontWeight: 600,
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span className="sidebar-item-icon"><Icon size={18} /></span>
+                    {group.label}
+                  </div>
+                  {isOpen ? <MdKeyboardArrowUp size={16} /> : <MdKeyboardArrowDown size={16} />}
+                </button>
+
+                {/* Group Sub-items */}
+                {isOpen && (
+                  <div style={{ paddingLeft: 24, marginTop: 4, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    {visibleItems.map(item => {
+                      const exactActive = pathname === item.href;
+
+                      return (
+                        <Link
+                          key={item.href}
+                          href={item.href}
+                          className={`sidebar-item ${exactActive ? 'active' : ''}`}
+                          style={{
+                            fontSize: '13.5px',
+                            padding: '8px 12px',
+                            opacity: exactActive ? 1 : 0.85,
+                            borderRadius: 'var(--radius-sm)',
+                          }}
+                        >
+                          {item.label}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })}
       </div>
 
     </aside>

@@ -4,6 +4,15 @@ export interface User {
   email: string;
   role: 'admin' | 'staff';
   active: boolean;
+  photo?: string;
+  permissions?: string[];
+}
+
+export function hasPermission(permission: string): boolean {
+  const user = getUser();
+  if (!user) return false;
+  if (user.role === 'admin') return true;
+  return user.permissions?.includes(permission) || false;
 }
 
 export function getUser(): User | null {

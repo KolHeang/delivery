@@ -99,9 +99,13 @@ export default function ShopsPage() {
                               width: 32, height: 32, borderRadius: '50%',
                               background: '#e2e8f0', color: '#94a3b8',
                               display: 'flex', alignItems: 'center', justifyContent: 'center',
-                              fontSize: 18, flexShrink: 0
+                              fontSize: 18, flexShrink: 0, overflow: 'hidden'
                             }}>
-                              <MdPerson />
+                              {m.photo ? (
+                                <img src={m.photo} alt={m.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                              ) : (
+                                <span style={{ fontSize: 16 }}>🏪</span>
+                              )}
                             </div>
                             <div>
                               <div style={{ fontWeight: 700 }}>{m.name}</div>
@@ -137,7 +141,7 @@ export default function ShopsPage() {
                         <td style={{ fontSize: 12, fontWeight: 600 }}>
                           {m.deliveryFee ? parseFloat(m.deliveryFee).toFixed(2) : '1.25'}
                         </td>
-                        <td style={{ fontSize: 12 }}>{m.contact || 'E Express'}</td>
+                        <td style={{ fontSize: 12 }}>{m.contact || 'EBS Express'}</td>
                         <td>
                           <Badge status={m.active ? 'active' : 'inactive'} />
                         </td>

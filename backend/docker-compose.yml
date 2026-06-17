@@ -16,6 +16,13 @@ services:
       CHOKIDAR_USEPOLLING: "true"
       CHOKIDAR_INTERVAL: "500"
       DATABASE_HOST: delivery-db
+      # Use Docker service name 'minio' for internal network access
+      MINIO_ENDPOINT: ${MINIO_ENDPOINT}
+      MINIO_PORT: ${MINIO_PORT}
+      MINIO_USE_SSL: ${MINIO_USE_SSL}
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
+      MINIO_BUCKET: ${MINIO_BUCKET}
     volumes:
       - .:/usr/src/app
       - /usr/src/app/node_modules
@@ -24,6 +31,8 @@ services:
     depends_on:
       delivery-db:
         condition: service_healthy
+      minio:
+        condition: service_started
 
   delivery-db:
     image: postgres:17
@@ -36,7 +45,7 @@ services:
     ports:
       - "5432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DATABASE_USER} -d ${DATABASE_NAME}"]
+      test: [ "CMD-SHELL", "pg_isready -U ${DATABASE_USER} -d ${DATABASE_NAME}" ]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -44,6 +53,21 @@ services:
       - app-network
     volumes:
       - delivery_db_data:/var/lib/postgresql/data
+  minio:
+    image: minio/minio
+    container_name: minio
+    restart: unless-stopped
+    ports:
+      - "9000:9000" # API Port
+      - "9001:9001" # Console Port
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY}
+    command: server /data --console-address ":9001"
+    networks:
+      - app-network
+    volumes:
+      - minio_data:/data
 
 networks:
   app-network:
@@ -51,3 +75,4 @@ networks:
 
 volumes:
   delivery_db_data:
+  minio_data:

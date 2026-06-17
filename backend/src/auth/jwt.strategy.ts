@@ -1,6 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
+import { UsersService } from '../users/users.service';
 
 interface JwtPayload {
   sub: number;
@@ -10,7 +11,7 @@ interface JwtPayload {
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
-  constructor() {
+  constructor(private readonly usersService: UsersService) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
@@ -19,6 +20,17 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   async validate(payload: JwtPayload) {
-    return { id: payload.sub, email: payload.email, role: payload.role };
+    const user = await this.usersService.findOneWithPermissions(payload.sub);
+    if (!user || !user.active) {
+      throw new UnauthorizedException('User not found or inactive');
+    }
+    const permissions = user.roleRelation?.permissions?.map((p) => p.name) || [];
+    return {
+      id: user.id,
+      email: user.email,
+      role: user.role,
+      roleName: user.roleRelation?.name,
+      permissions,
+    };
   }
 }

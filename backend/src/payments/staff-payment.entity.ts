@@ -7,16 +7,16 @@ import {
   ManyToOne,
   JoinColumn,
 } from 'typeorm';
-import { Staff } from '../users/staff.entity';
+import { User } from '../users/users.entity';
 
 @Entity('staff_payments')
 export class StaffPayment {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @ManyToOne(() => Staff, { eager: true, onDelete: 'SET NULL' })
+  @ManyToOne(() => User, { eager: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'driverId' })
-  driver: Staff;
+  driver: User;
 
   @Column({ nullable: true })
   driverId: number;

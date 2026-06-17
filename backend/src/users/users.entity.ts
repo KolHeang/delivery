@@ -10,12 +10,12 @@ import {
 } from 'typeorm';
 import { Zone } from '../zones/zone.entity';
 import { Vehicle } from '../vehicles/vehicle.entity';
+import { Role } from '../roles/role.entity';
 
-export type StaffRole = 'admin' | 'staff' | 'driver';
 export type DriverStatus = 'available' | 'on-delivery' | 'offline';
 
-@Entity('staff')
-export class Staff {
+@Entity('users')
+export class User {
   @PrimaryGeneratedColumn()
   id: number;
 
@@ -35,7 +35,14 @@ export class Staff {
   password: string;
 
   @Column({ default: 'staff' })
-  role: StaffRole;
+  role: string;
+
+  @ManyToOne(() => Role, (role) => role.users, { nullable: true, eager: true })
+  @JoinColumn({ name: 'roleId' })
+  roleRelation: Role;
+
+  @Column({ nullable: true })
+  roleId: number;
 
   @Column({ default: true })
   active: boolean;
@@ -74,6 +81,9 @@ export class Staff {
 
   @Column({ nullable: true })
   vehicleId: number;
+
+  @Column({ nullable: true })
+  photo: string;
 
   @CreateDateColumn()
   createdAt: Date;

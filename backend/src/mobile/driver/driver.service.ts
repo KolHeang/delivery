@@ -1,19 +1,19 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Staff } from '../../users/staff.entity';
+import { User } from '../../users/users.entity';
 import { Order } from '../../orders/order.entity';
 import { UpdateOrderStatusDto } from '../../orders/dto/order.dto';
 
 @Injectable()
 export class DriverService {
   constructor(
-    @InjectRepository(Staff) private readonly staffRepo: Repository<Staff>,
+    @InjectRepository(User) private readonly userRepo: Repository<User>,
     @InjectRepository(Order) private readonly orderRepo: Repository<Order>,
-  ) {}
+  ) { }
 
   async getProfile(driverId: number) {
-    const driver = await this.staffRepo.findOne({
+    const driver = await this.userRepo.findOne({
       where: { id: driverId },
       relations: { zone: true, vehicle: true },
     });
@@ -108,7 +108,7 @@ export class DriverService {
   }
 
   async getDashboard(driverId: number) {
-    const driver = await this.staffRepo.findOne({ where: { id: driverId } });
+    const driver = await this.userRepo.findOne({ where: { id: driverId } });
     if (!driver) throw new NotFoundException('Driver not found');
 
     const totalPackage = await this.orderRepo.count({ where: { driverId } });

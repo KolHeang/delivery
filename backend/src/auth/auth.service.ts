@@ -16,11 +16,33 @@ export class AuthService {
     const isValid = await bcrypt.compare(password, user.password);
     if (!isValid) throw new UnauthorizedException('Invalid credentials');
     if (!user.active) throw new UnauthorizedException('Account is disabled');
+
+    // Fetch user with permissions
+    const userWithPerms = await this.usersService.findOneWithPermissions(user.id);
+    const permissions = userWithPerms?.roleRelation?.permissions?.map(p => p.name) || [];
+
     const { password: _, ...userWithoutPassword } = user;
     const payload = { sub: user.id, email: user.email, role: user.role };
     return {
       access_token: this.jwtService.sign(payload),
-      user: userWithoutPassword,
+      refresh_token: this.jwtService.sign(payload, { expiresIn: '30d' }),
+      user: {
+        ...userWithoutPassword,
+        permissions,
+      },
     };
+  }
+
+  async refresh(refreshToken: string) {
+    try {
+      const payload = this.jwtService.verify(refreshToken);
+      const { iat, exp, ...cleanPayload } = payload;
+      return {
+        access_token: this.jwtService.sign(cleanPayload),
+        refresh_token: this.jwtService.sign(cleanPayload, { expiresIn: '30d' }),
+      };
+    } catch {
+      throw new UnauthorizedException('Invalid or expired refresh token');
+    }
   }
 }

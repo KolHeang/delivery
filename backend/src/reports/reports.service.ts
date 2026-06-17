@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Order } from '../orders/order.entity';
-import { Staff } from '../users/staff.entity';
+import { User } from '../users/users.entity';
 import { Expense } from '../expenses/expense.entity';
 import { Income } from '../incomes/income.entity';
 
@@ -10,10 +10,10 @@ import { Income } from '../incomes/income.entity';
 export class ReportsService {
   constructor(
     @InjectRepository(Order) private orderRepo: Repository<Order>,
-    @InjectRepository(Staff) private driverRepo: Repository<Staff>,
+    @InjectRepository(User) private driverRepo: Repository<User>,
     @InjectRepository(Expense) private expenseRepo: Repository<Expense>,
     @InjectRepository(Income) private incomeRepo: Repository<Income>,
-  ) {}
+  ) { }
 
   async getRevenueReport(period: 'daily' | 'monthly' = 'monthly') {
     const groupFormat =

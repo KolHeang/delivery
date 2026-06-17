@@ -1,69 +1,86 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { isAuthenticated } from '@/lib/auth';
 import Sidebar from '@/components/layout/Sidebar';
 import Topbar from '@/components/layout/Topbar';
+import api from '@/lib/api';
+import { useLanguage } from '@/lib/LanguageContext';
+import { MdAdd, MdEdit, MdDelete, MdSecurity } from 'react-icons/md';
 
-interface RolePermission {
-  role: string;
-  permissions: {
-    manageShops: boolean;
-    manageDelivery: boolean;
-    paymentProcess: boolean;
-    accounting: boolean;
-    settings: boolean;
-  };
+interface Permission {
+  id: number;
+  name: string;
+  description: string;
 }
 
-export default function PermissionSettingsPage() {
+interface Role {
+  id: number;
+  name: string;
+  description: string;
+  permissions: Permission[];
+}
+
+export default function RolesListPage() {
   const router = useRouter();
+  const { t } = useLanguage();
+
+  const [roles, setRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState(true);
-  const [roles, setRoles] = useState<RolePermission[]>([
-    {
-      role: 'admin',
-      permissions: { manageShops: true, manageDelivery: true, paymentProcess: true, accounting: true, settings: true },
-    },
-    {
-      role: 'staff',
-      permissions: { manageShops: true, manageDelivery: true, paymentProcess: false, accounting: false, settings: false },
-    },
-  ]);
-  const [savingRole, setSavingRole] = useState<string | null>(null);
+
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await api.get('/roles');
+      setRoles(res.data);
+    } catch (err) {
+      console.error('Failed to load roles', err);
+    }
+    setLoading(false);
+  }, []);
 
   useEffect(() => {
-    if (!isAuthenticated()) { router.push('/'); return; }
-    setLoading(false);
-  }, [router]);
+    if (!isAuthenticated()) {
+      router.push('/');
+      return;
+    }
+    loadData();
+  }, [router, loadData]);
 
-  const handleToggle = (role: string, permKey: keyof RolePermission['permissions']) => {
-    setRoles(prev => prev.map(r => {
-      if (r.role === role) {
-        return {
-          ...r,
-          permissions: {
-            ...r.permissions,
-            [permKey]: !r.permissions[permKey],
-          },
-        };
-      }
-      return r;
-    }));
+  const openCreate = () => {
+    router.push('/setting/role/create');
   };
 
-  const handleSave = (role: string) => {
-    setSavingRole(role);
-    setTimeout(() => {
-      setSavingRole(null);
-      alert(`Permissions for '${role}' saved successfully!`);
-    }, 800);
+  const openEdit = (id: number) => {
+    router.push(`/setting/role/edit/${id}`);
+  };
+
+  const handleDelete = async (role: Role) => {
+    const systemRoles = ['admin', 'staff', 'driver'];
+    if (systemRoles.includes(role.name)) {
+      alert(`${t('cannotDeleteSystemRole')}: ${role.name}`);
+      return;
+    }
+
+    if (!confirm(`${t('deleteRoleConfirmPrefix')} "${role.name}"${t('deleteRoleConfirmSuffix')}`)) {
+      return;
+    }
+
+    try {
+      await api.delete(`/roles/${role.id}`);
+      await loadData();
+    } catch (err: any) {
+      console.error(err);
+      alert(err.response?.data?.message || t('errorDeletingRole'));
+    }
   };
 
   if (loading) return (
     <div className="app-layout">
       <Sidebar />
       <div className="main-content">
+        <Topbar title={t('rolesTitle')} subtitle={t('loadingRoles')} />
         <div className="loading-wrapper"><div className="spinner" /></div>
       </div>
     </div>
@@ -73,49 +90,85 @@ export default function PermissionSettingsPage() {
     <div className="app-layout">
       <Sidebar />
       <div className="main-content">
-        <Topbar title="Role Permissions" subtitle="Manage permissions and feature access for roles" />
+        <Topbar
+          title={t('rolesTitle')}
+          subtitle={t('rolesSubtitle')}
+        />
+
         <div className="page-content">
           <div className="card">
-            <div className="card-header"><span className="card-title">🛡️ System Permissions</span></div>
-            <div className="card-body">
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
-                {roles.map(r => (
-                  <div key={r.role} style={{ borderBottom: '1px solid var(--border)', paddingBottom: 24 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-                      <span className="badge badge-active" style={{ fontSize: 14, textTransform: 'uppercase', padding: '6px 12px' }}>
-                        {r.role}
-                      </span>
-                      <button
-                        className="btn btn-primary btn-sm"
-                        onClick={() => handleSave(r.role)}
-                        disabled={savingRole === r.role}
-                      >
-                        {savingRole === r.role ? 'Saving...' : 'Save Permissions'}
-                      </button>
-                    </div>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 16 }}>
-                      {Object.keys(r.permissions).map(k => {
-                        const label = k.replace(/([A-Z])/g, ' $1');
-                        const isChecked = r.permissions[k as keyof RolePermission['permissions']];
-                        return (
-                          <label key={k} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13.5 }}>
-                            <input
-                              type="checkbox"
-                              checked={isChecked}
-                              onChange={() => handleToggle(r.role, k as any)}
-                              style={{ width: 16, height: 16, cursor: 'pointer' }}
-                              disabled={r.role === 'admin'} // Admin has all rights locked
-                            />
-                            <span style={{ textTransform: 'capitalize' }}>{label}</span>
-                          </label>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ))}
-              </div>
+            <div className="card-header">
+              <span className="card-title">🛡️ {t('systemRoles')}</span>
+              <button className="btn btn-primary btn-sm" onClick={openCreate}>
+                <MdAdd size={14} /> {t('addRole')}
+              </button>
             </div>
+
+            {roles.length === 0 ? (
+              <div className="empty-state">
+                <div className="empty-state-icon">🛡️</div>
+                <div className="empty-state-title">{t('noRolesFound')}</div>
+              </div>
+            ) : (
+              <div style={{ overflowX: 'auto' }}>
+                <table>
+                  <thead>
+                    <tr>
+                      <th style={{ width: '50px' }}>#</th>
+                      <th style={{ width: '150px' }}>{t('roleName')}</th>
+                      <th>{t('roleDescription')}</th>
+                      <th style={{ width: '180px' }}>{t('permissionsCount')}</th>
+                      <th style={{ width: '120px' }}>{t('actions')}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {roles.map((d: Role, idx) => {
+                      const isSystemRole = ['admin', 'staff', 'driver'].includes(d.name);
+                      return (
+                        <tr key={d.id}>
+                          <td style={{ color: 'var(--text-muted)', fontSize: 12 }}>{idx + 1}</td>
+                          <td>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                              <MdSecurity size={16} style={{ color: 'var(--accent)' }} />
+                              <span style={{ fontWeight: 700, textTransform: 'uppercase', fontSize: 13.5 }}>
+                                {d.name}
+                              </span>
+                              {isSystemRole && (
+                                <span style={{ fontSize: '9px', background: 'rgba(59,130,246,0.12)', color: 'var(--accent)', padding: '1px 5px', borderRadius: 4, fontWeight: 600 }}>
+                                  System
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                          <td style={{ fontSize: 12.5, color: 'var(--text-muted)' }}>
+                            {d.description || '—'}
+                          </td>
+                          <td style={{ fontSize: 13, fontWeight: 600, color: d.permissions.length > 0 ? 'var(--accent)' : 'var(--text-muted)' }}>
+                            {d.permissions.length} {t('permissionsLabel').toLowerCase()}
+                          </td>
+                          <td>
+                            <div style={{ display: 'flex', gap: 4 }}>
+                              <button className="btn btn-ghost btn-icon btn-sm" onClick={() => openEdit(d.id)}>
+                                <MdEdit size={15} />
+                              </button>
+                              {!isSystemRole && (
+                                <button
+                                  className="btn btn-ghost btn-icon btn-sm"
+                                  style={{ color: 'var(--danger)' }}
+                                  onClick={() => handleDelete(d)}
+                                >
+                                  <MdDelete size={15} />
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </div>
       </div>

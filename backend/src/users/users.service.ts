@@ -4,25 +4,25 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In } from 'typeorm';
+import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
-import { Staff } from './staff.entity';
+import { User } from './users.entity';
 import { CreateUserDto, UpdateUserDto } from './dto/user.dto';
 
 @Injectable()
 export class UsersService {
   constructor(
-    @InjectRepository(Staff) private readonly repo: Repository<Staff>,
-  ) {}
+    @InjectRepository(User) private readonly repo: Repository<User>,
+  ) { }
 
-  async findAll(): Promise<Omit<Staff, 'password'>[]> {
+  async findAll(): Promise<Omit<User, 'password'>[]> {
     return this.repo.find({
       relations: { zone: true, vehicle: true },
       order: { createdAt: 'DESC' },
     });
   }
 
-  async findOne(id: number): Promise<Staff> {
+  async findOne(id: number): Promise<User> {
     const user = await this.repo.findOne({
       where: { id },
       relations: { zone: true, vehicle: true },
@@ -31,7 +31,7 @@ export class UsersService {
     return user;
   }
 
-  async findByEmail(email: string): Promise<Staff | null> {
+  async findByEmail(email: string): Promise<User | null> {
     return this.repo
       .createQueryBuilder('staff')
       .addSelect('staff.password')
@@ -40,7 +40,18 @@ export class UsersService {
       .getOne();
   }
 
-  async create(dto: CreateUserDto): Promise<Omit<Staff, 'password'>> {
+  async findOneWithPermissions(id: number): Promise<User | null> {
+    return this.repo.findOne({
+      where: { id },
+      relations: {
+        roleRelation: {
+          permissions: true,
+        },
+      },
+    });
+  }
+
+  async create(dto: CreateUserDto): Promise<Omit<User, 'password'>> {
     if (dto.email && dto.email.trim() !== '') {
       const exists = await this.repo.findOne({ where: { email: dto.email } });
       if (exists) throw new ConflictException('Email already exists');
@@ -57,11 +68,11 @@ export class UsersService {
       status: dto.status || 'offline',
     };
 
-    const user = this.repo.create(payload as Staff);
+    const user = this.repo.create(payload as User);
     return this.repo.save(user);
   }
 
-  async update(id: number, dto: UpdateUserDto): Promise<Staff> {
+  async update(id: number, dto: UpdateUserDto): Promise<User> {
     await this.findOne(id);
     const payload = { ...dto } as any;
 

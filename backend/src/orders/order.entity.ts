@@ -10,7 +10,7 @@ import {
 } from 'typeorm';
 import { Merchant } from '../merchants/merchant.entity';
 import { Customer } from '../customers/customer.entity';
-import { Staff } from '../users/staff.entity';
+import { User } from '../users/users.entity';
 import { Zone } from '../zones/zone.entity';
 
 export type OrderStatus =
@@ -111,9 +111,9 @@ export class Order {
   @Column({ nullable: true })
   customerId: number;
 
-  @ManyToOne(() => Staff, { nullable: true, eager: true })
+  @ManyToOne(() => User, { nullable: true, eager: true })
   @JoinColumn({ name: 'driverId' })
-  driver: Staff;
+  driver: User;
 
   @Column({ nullable: true })
   driverId: number;

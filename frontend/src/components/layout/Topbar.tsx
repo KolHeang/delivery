@@ -105,8 +105,12 @@ export default function Topbar({ title, subtitle }: TopbarProps) {
                 aria-haspopup="true"
                 aria-expanded={dropdownOpen}
               >
-                <div className="profile-trigger-avatar">
-                  {user.name ? user.name.charAt(0).toUpperCase() : '?'}
+                <div className="profile-trigger-avatar" style={{ overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  {user.photo ? (
+                    <img src={user.photo} alt={user.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : (
+                    user.name ? user.name.charAt(0).toUpperCase() : '?'
+                  )}
                 </div>
                 <span className="profile-trigger-name">{user.name}</span>
                 <MdKeyboardArrowDown 

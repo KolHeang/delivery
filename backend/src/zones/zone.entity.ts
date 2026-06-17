@@ -29,14 +29,14 @@ export class Zone {
   @Column({ default: true })
   active: boolean;
 
-  @ManyToOne('Staff', { nullable: true })
+  @ManyToOne('User', { nullable: true })
   @JoinColumn({ name: 'driverId' })
   driver: any;
 
   @Column({ nullable: true })
   driverId: number;
 
-  @Column({ default: 'E Express' })
+  @Column({ default: 'EBS Express' })
   branch: string;
 
   @OneToMany('SubZone', 'zone', { eager: true })

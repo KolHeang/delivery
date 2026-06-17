@@ -53,6 +53,11 @@ export class CreateMerchantDto {
   @IsOptional()
   @IsString()
   qrImageUsd?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  photo?: string;
 }
 
 export class UpdateMerchantDto {
@@ -74,4 +79,5 @@ export class UpdateMerchantDto {
   @IsOptional() @IsString() qrLinkUsd?: string;
   @IsOptional() @IsString() qrImageKhr?: string;
   @IsOptional() @IsString() qrImageUsd?: string;
+  @IsOptional() @IsString() photo?: string;
 }

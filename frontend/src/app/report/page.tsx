@@ -41,7 +41,7 @@ const OPERATION_REPORTS = [
   {
     key: '7', icon: '🧑‍💼', color: '#ec4899', bg: '#fdf2f8',
     titleKey: 'rpt7Title',
-    desc: { en: 'Pickup staff activity log', km: 'សកម្មភាពអ្នក Pickup' },
+    desc: { en: 'Pickup Useractivity log', km: 'សកម្មភាពអ្នក Pickup' },
   },
   {
     key: '8', icon: '🗃️', color: '#14b8a6', bg: '#f0fdfa',

@@ -3,7 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 
-import { Staff } from '../users/staff.entity';
+import { User } from '../users/users.entity';
 import { Merchant } from '../merchants/merchant.entity';
 import { Order } from '../orders/order.entity';
 
@@ -16,7 +16,7 @@ import { MerchantService } from './merchant/merchant.service';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Staff, Merchant, Order]),
+    TypeOrmModule.forFeature([User, Merchant, Order]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: (config: ConfigService) => ({
@@ -34,4 +34,4 @@ import { MerchantService } from './merchant/merchant.service';
   controllers: [AuthController, DriverController, MerchantController],
   providers: [AuthService, DriverService, MerchantService],
 })
-export class MobileModule {}
+export class MobileModule { }

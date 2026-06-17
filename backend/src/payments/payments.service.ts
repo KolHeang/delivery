@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { StaffPayment } from './staff-payment.entity';
 import { ShopPayment } from './shop-payment.entity';
-import { Staff } from '../users/staff.entity';
+import { User } from '../users/users.entity';
 import { Merchant } from '../merchants/merchant.entity';
 import { Order } from '../orders/order.entity';
 
@@ -12,12 +12,12 @@ export class PaymentsService {
   constructor(
     @InjectRepository(StaffPayment) private staffRepo: Repository<StaffPayment>,
     @InjectRepository(ShopPayment) private shopRepo: Repository<ShopPayment>,
-    @InjectRepository(Staff) private driverRepo: Repository<Staff>,
+    @InjectRepository(User) private driverRepo: Repository<User>,
     @InjectRepository(Merchant) private merchantRepo: Repository<Merchant>,
     @InjectRepository(Order) private orderRepo: Repository<Order>,
-  ) {}
+  ) { }
 
-  // Staff Payments
+  // UserPayments
   async createStaffPayment(
     driverId: number,
     amount: number,

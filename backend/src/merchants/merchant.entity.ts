@@ -66,6 +66,9 @@ export class Merchant {
   telegram: string;
 
   @Column({ nullable: true })
+  photo: string;
+
+  @Column({ nullable: true })
   qrLinkKhr: string;
 
   @Column({ nullable: true })

@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { typeOrmConfig } from './config/typeorm.config';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { ZonesModule } from './zones/zones.module';
@@ -17,35 +18,14 @@ import { PaymentsModule } from './payments/payments.module';
 import { SettingsModule } from './settings/settings.module';
 import { MobileModule } from './mobile/mobile.module';
 import { InvoicesModule } from './invoices/invoices.module';
+import { RolesModule } from './roles/roles.module';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
+    ConfigModule.forRoot({ isGlobal: true, envFilePath: '.env', cache: true }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
-      useFactory: (config: ConfigService) => ({
-        type: 'postgres',
-        host:
-          config.get('DB_HOST') || config.get('DATABASE_HOST') || 'localhost',
-        port: parseInt(
-          config.get('DB_PORT') || config.get('DATABASE_PORT') || '5432',
-        ),
-        username:
-          config.get('DB_USERNAME') ||
-          config.get('DATABASE_USER') ||
-          'postgres',
-        password:
-          config.get('DB_PASSWORD') ||
-          config.get('DATABASE_PASSWORD') ||
-          '123456',
-        database:
-          config.get('DB_DATABASE') ||
-          config.get('DATABASE_NAME') ||
-          'delivery_db',
-        entities: [__dirname + '/**/*.entity{.ts,.js}'],
-        synchronize: true,
-        logging: false,
-      }),
+      useFactory: typeOrmConfig,
       inject: [ConfigService],
     }),
     AuthModule,
@@ -64,6 +44,7 @@ import { InvoicesModule } from './invoices/invoices.module';
     SettingsModule,
     MobileModule,
     InvoicesModule,
+    RolesModule,
   ],
 })
-export class AppModule {}
+export class AppModule { }

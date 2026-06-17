@@ -3,24 +3,24 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
-import { Staff } from '../../users/staff.entity';
+import { User } from '../../users/users.entity';
 import { Merchant } from '../../merchants/merchant.entity';
 
 @Injectable()
 export class AuthService {
   constructor(
-    @InjectRepository(Staff) private readonly staffRepo: Repository<Staff>,
+    @InjectRepository(User) private readonly userRepo: Repository<User>,
     @InjectRepository(Merchant)
     private readonly merchantRepo: Repository<Merchant>,
     private readonly jwtService: JwtService,
-  ) {}
+  ) { }
 
   async driverLogin(email: string, password: string) {
-    const user = await this.staffRepo
-      .createQueryBuilder('staff')
-      .addSelect('staff.password')
-      .where('staff.email = :email', { email })
-      .andWhere('staff.role = :role', { role: 'driver' })
+    const user = await this.userRepo
+      .createQueryBuilder('user')
+      .addSelect('user.password')
+      .where('user.email = :email', { email })
+      .andWhere('user.role = :role', { role: 'driver' })
       .getOne();
 
     if (!user) throw new UnauthorizedException('Invalid driver credentials');
@@ -41,6 +41,7 @@ export class AuthService {
 
     return {
       access_token: this.jwtService.sign(payload),
+      refresh_token: this.jwtService.sign(payload, { expiresIn: '30d' }),
       user: userWithoutPassword,
     };
   }
@@ -77,7 +78,21 @@ export class AuthService {
 
     return {
       access_token: this.jwtService.sign(payload),
+      refresh_token: this.jwtService.sign(payload, { expiresIn: '30d' }),
       user: userWithoutPassword,
     };
+  }
+
+  async refresh(refreshToken: string) {
+    try {
+      const payload = this.jwtService.verify(refreshToken);
+      const { iat, exp, ...cleanPayload } = payload;
+      return {
+        access_token: this.jwtService.sign(cleanPayload),
+        refresh_token: this.jwtService.sign(cleanPayload, { expiresIn: '30d' }),
+      };
+    } catch {
+      throw new UnauthorizedException('Invalid or expired refresh token');
+    }
   }
 }

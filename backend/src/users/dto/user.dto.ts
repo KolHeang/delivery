@@ -74,6 +74,21 @@ export class CreateUserDto {
   @IsNumber()
   @Type(() => Number)
   salary?: number;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  photo?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  dob?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  gender?: string;
 }
 
 export class UpdateUserDto {
@@ -94,4 +109,7 @@ export class UpdateUserDto {
   @IsOptional() @IsNumber() @Type(() => Number) zoneId?: number;
   @IsOptional() @IsNumber() @Type(() => Number) vehicleId?: number;
   @IsOptional() @IsNumber() @Type(() => Number) salary?: number;
+  @IsOptional() @IsString() photo?: string;
+  @IsOptional() @IsString() dob?: string;
+  @IsOptional() @IsString() gender?: string;
 }

@@ -9,42 +9,42 @@ import { useLanguage } from '@/lib/LanguageContext';
 
 const OPERATION_REPORTS = [
   {
-    key: '1', icon: '📋', color: '#3b82f6', bg: '#eff6ff',
+    key: '1', icon: '/3d/3d_check.png', color: '#3b82f6', bg: '#eff6ff',
     titleKey: 'rpt1Title',
     desc: { en: 'Detailed daily delivery log', km: 'កំណត់ហេតុការដឹកប្រចាំថ្ងៃ' },
   },
   {
-    key: '2', icon: '🚚', color: '#10b981', bg: '#ecfdf5',
+    key: '2', icon: '/3d/3d_scooter.png', color: '#10b981', bg: '#ecfdf5',
     titleKey: 'rpt2Title',
     desc: { en: 'Delivery totals grouped by driver', km: 'ការដឹកជញ្ជូនសរុបតាមភ្នាក់ងារ' },
   },
   {
-    key: '3', icon: '📅', color: '#8b5cf6', bg: '#f5f3ff',
+    key: '3', icon: '/3d/3d_dashboard.png', color: '#8b5cf6', bg: '#f5f3ff',
     titleKey: 'rpt3Title',
     desc: { en: 'Driver performance by date', km: 'ប្រតិបត្តិការភ្នាក់ងារតាមថ្ងៃ' },
   },
   {
-    key: '4', icon: '🏪', color: '#f59e0b', bg: '#fffbeb',
+    key: '4', icon: '/3d/3d_truck.png', color: '#f59e0b', bg: '#fffbeb',
     titleKey: 'rpt4Title',
     desc: { en: 'Deliveries grouped by merchant', km: 'ការដឹកជញ្ជូនសរុបតាមអតិថិជន' },
   },
   {
-    key: '5', icon: '🗓️', color: '#06b6d4', bg: '#ecfeff',
+    key: '5', icon: '/3d/3d_barchart.png', color: '#06b6d4', bg: '#ecfeff',
     titleKey: 'rpt5Title',
     desc: { en: 'Merchant operations day by day', km: 'ប្រតិបត្តិការអតិថិជនតាមថ្ងៃ' },
   },
   {
-    key: '6', icon: '📦', color: '#6366f1', bg: '#eef2ff',
+    key: '6', icon: '/3d/3d_box.png', color: '#6366f1', bg: '#eef2ff',
     titleKey: 'rpt6Title',
     desc: { en: 'Package details & status', km: 'ព័ត៌មានលម្អិតអំពីកញ្ចប់' },
   },
   {
-    key: '7', icon: '🧑‍💼', color: '#ec4899', bg: '#fdf2f8',
+    key: '7', icon: '/3d/3d_users.png', color: '#ec4899', bg: '#fdf2f8',
     titleKey: 'rpt7Title',
     desc: { en: 'Pickup Useractivity log', km: 'សកម្មភាពអ្នក Pickup' },
   },
   {
-    key: '8', icon: '🗃️', color: '#14b8a6', bg: '#f0fdfa',
+    key: '8', icon: '/3d/3d_refresh.png', color: '#14b8a6', bg: '#f0fdfa',
     titleKey: 'rpt8Title',
     desc: { en: 'Stock in, out & remaining', km: 'ស្តុកចូល ចេញ និងនៅសល់' },
   },
@@ -52,17 +52,17 @@ const OPERATION_REPORTS = [
 
 const FINANCIAL_REPORTS = [
   {
-    key: '1', icon: '📒', color: '#2563eb', bg: '#eff6ff',
+    key: '1', icon: '/3d/3d_cash.png', color: '#2563eb', bg: '#eff6ff',
     titleKey: 'frpt1Title',
     desc: { en: 'Daily income & expense ledger', km: 'បញ្ជីចំណូល-ចំណាយប្រចាំថ្ងៃ' },
   },
   {
-    key: '2', icon: '💰', color: '#16a34a', bg: '#f0fdf4',
+    key: '2', icon: '/3d/3d_money_bag.png', color: '#16a34a', bg: '#f0fdf4',
     titleKey: 'frpt2Title',
     desc: { en: 'Daily amount collected by driver', km: 'ទឹកប្រាក់ប្រមូលប្រចាំថ្ងៃ' },
   },
   {
-    key: '3', icon: '📈', color: '#7c3aed', bg: '#f5f3ff',
+    key: '3', icon: '/3d/3d_khr_coin.png', color: '#7c3aed', bg: '#f5f3ff',
     titleKey: 'frpt3Title',
     desc: { en: 'Monthly balance & savings summary', km: 'សមតុល្យ និងប្រាក់ចំណើមប្រចាំខែ' },
   },
@@ -88,8 +88,10 @@ export default function ReportPage() {
                 width: 36, height: 36, borderRadius: 10,
                 background: 'linear-gradient(135deg,#3b82f6,#6366f1)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 18, flexShrink: 0,
-              }}>📊</div>
+                flexShrink: 0, overflow: 'hidden',
+              }}>
+                <img src="/3d/3d_barchart.png" alt="" style={{ width: '70%', height: '70%', objectFit: 'contain' }} />
+              </div>
               <div>
                 <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: 'var(--text-primary)' }}>
                   {t('operationReportTitle')}
@@ -138,9 +140,9 @@ export default function ReportPage() {
                     width: 46, height: 46, borderRadius: 12,
                     background: r.bg,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 22, flexShrink: 0,
+                    flexShrink: 0, overflow: 'hidden',
                   }}>
-                    {r.icon}
+                    <img src={r.icon} alt="" style={{ width: '75%', height: '75%', objectFit: 'contain' }} />
                   </div>
 
                   {/* Text */}
@@ -185,8 +187,10 @@ export default function ReportPage() {
                 width: 36, height: 36, borderRadius: 10,
                 background: 'linear-gradient(135deg,#10b981,#2563eb)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 18, flexShrink: 0,
-              }}>💵</div>
+                flexShrink: 0, overflow: 'hidden',
+              }}>
+                <img src="/3d/3d_cash.png" alt="" style={{ width: '70%', height: '70%', objectFit: 'contain' }} />
+              </div>
               <div>
                 <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: 'var(--text-primary)' }}>
                   {t('financialReportTitle')}
@@ -234,9 +238,9 @@ export default function ReportPage() {
                     width: 46, height: 46, borderRadius: 12,
                     background: r.bg,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 22, flexShrink: 0,
+                    flexShrink: 0, overflow: 'hidden',
                   }}>
-                    {r.icon}
+                    <img src={r.icon} alt="" style={{ width: '75%', height: '75%', objectFit: 'contain' }} />
                   </div>
 
                   <div style={{ flex: 1, minWidth: 0 }}>

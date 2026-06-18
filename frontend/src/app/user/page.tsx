@@ -129,8 +129,8 @@ export default function StaffPage() {
                       <th>{t('name')}</th>
                       <th>{t('phone')}</th>
                       <th>Role</th>
-                      <th>{t('zone')}</th>
-                      <th>{t('vehicle')}</th>
+                      <th>{t('gender')}</th>
+                      <th>{t('dob')}</th>
                       <th>{t('status')}</th>
                       <th>{t('joinDate')}</th>
                       <th>{t('salary')}</th>
@@ -175,12 +175,10 @@ export default function StaffPage() {
                           <Badge status={d.role} />
                         </td>
                         <td style={{ fontSize: 12 }}>
-                          {d.role === 'driver' ? d.zone?.name || '—' : '—'}
+                          {d.gender ? (d.gender === 'other' ? t('otherGender') : t(d.gender) || d.gender) : '—'}
                         </td>
                         <td style={{ fontSize: 12 }}>
-                          {d.role === 'driver' && d.vehicle
-                            ? `${d.vehicle.brand} ${d.vehicle.model} (${d.vehicle.plate})`
-                            : '—'}
+                          {d.dob || '—'}
                         </td>
                         <td>
                           {d.role === 'driver' ? (

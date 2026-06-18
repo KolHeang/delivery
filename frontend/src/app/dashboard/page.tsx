@@ -194,7 +194,7 @@ export default function DashboardPage() {
             {/* Area Chart */}
             <div className="card">
               <div className="card-header"><span className="card-title">📊 Daily Deliveries (Last 30 Days)</span></div>
-              <div className="card-body" style={{ height: 240 }}>
+              <div className="card-body" style={{ height: 240, minHeight: 240 }}>
                 {isMounted && chartData?.dailyData?.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                     <AreaChart data={chartData.dailyData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
@@ -225,7 +225,7 @@ export default function DashboardPage() {
             {/* Pie Chart */}
             <div className="card">
               <div className="card-header"><span className="card-title">🥧 Order Status Breakdown</span></div>
-              <div className="card-body" style={{ height: 240 }}>
+              <div className="card-body" style={{ height: 240, minHeight: 240 }}>
                 {isMounted && pieData.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                     <PieChart>

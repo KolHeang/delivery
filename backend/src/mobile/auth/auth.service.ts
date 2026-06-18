@@ -15,11 +15,11 @@ export class AuthService {
     private readonly jwtService: JwtService,
   ) { }
 
-  async driverLogin(email: string, password: string) {
+  async driverLogin(phoneOrEmail: string, password: string) {
     const user = await this.userRepo
       .createQueryBuilder('user')
       .addSelect('user.password')
-      .where('user.email = :email', { email })
+      .where('(user.email = :id OR user.phone = :id)', { id: phoneOrEmail })
       .andWhere('user.role = :role', { role: 'driver' })
       .getOne();
 
@@ -79,7 +79,10 @@ export class AuthService {
     return {
       access_token: this.jwtService.sign(payload),
       refresh_token: this.jwtService.sign(payload, { expiresIn: '30d' }),
-      user: userWithoutPassword,
+      user: {
+        ...userWithoutPassword,
+        role: 'merchant',
+      } as any,
     };
   }
 

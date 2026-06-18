@@ -22,6 +22,12 @@ export class DriverService {
     return safeDriver;
   }
 
+  async updateDriverStatus(driverId: number, status: string) {
+    await this.userRepo.update(driverId, { status: status as any });
+    return this.getProfile(driverId);
+  }
+
+
   async getTasks(driverId: number, status?: string) {
     const where: any = { driverId };
     if (status) {
@@ -150,7 +156,7 @@ export class DriverService {
       ],
       statistics: {
         pickupRequest: stats['pending'] || 0,
-        assignedParcels: stats['assigned'] || 0,
+        assignedParcels: (stats['assigned'] || 0) + (stats['picked-up'] || 0) + (stats['in-transit'] || 0),
         totalPackage: totalPackage,
         totalSuccessful: stats['delivered'] || 0,
         totalProblem: stats['problem'] || 0,

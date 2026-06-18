@@ -11,7 +11,7 @@ import {
   IsBoolean,
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
+import { Type, Transform } from 'class-transformer';
 
 export class CreateUserDto {
   @ApiProperty()
@@ -89,6 +89,16 @@ export class CreateUserDto {
   @IsOptional()
   @IsString()
   gender?: string;
+
+  @ApiProperty({ required: false, default: true })
+  @IsOptional()
+  @Transform(({ value }) => {
+    if (value === 'true') return true;
+    if (value === 'false') return false;
+    return value;
+  })
+  @IsBoolean()
+  active?: boolean;
 }
 
 export class UpdateUserDto {
@@ -99,7 +109,14 @@ export class UpdateUserDto {
     | 'admin'
     | 'staff'
     | 'driver';
-  @IsOptional() @IsBoolean() active?: boolean;
+  @IsOptional()
+  @Transform(({ value }) => {
+    if (value === 'true') return true;
+    if (value === 'false') return false;
+    return value;
+  })
+  @IsBoolean()
+  active?: boolean;
   @IsOptional() @IsString() nameKh?: string;
   @IsOptional() @IsString() phone?: string;
   @IsOptional()

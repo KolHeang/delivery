@@ -2,11 +2,13 @@ export interface User {
   id: number;
   name: string;
   email: string;
-  role: 'admin' | 'staff';
+  phone?: string;
+  role: 'admin' | 'staff' | 'driver' | 'merchant';
   active: boolean;
   photo?: string;
   permissions?: string[];
 }
+
 
 export function hasPermission(permission: string): boolean {
   const user = getUser();

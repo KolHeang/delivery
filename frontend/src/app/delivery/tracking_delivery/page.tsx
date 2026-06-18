@@ -110,7 +110,7 @@ export default function TrackingPage() {
                 <h4 style={{ fontWeight: 700, fontSize: 14, marginBottom: 20 }}>📍 Status Timeline</h4>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 24, paddingLeft: 12, position: 'relative' }}>
                   <div style={{
-                    position: 'absolute', left: 23, top: 12, bottom: 12, width: 2, background: 'var(--border)', zIndex: 1
+                    position: 'absolute', left: 23, top: 12, bottom: 12, width: 0, borderLeft: '2px dashed #cbd5e1', zIndex: 1
                   }} />
 
                   {[
@@ -124,7 +124,6 @@ export default function TrackingPage() {
                     let title = s.title;
                     let desc = s.desc;
                     let cl = 'var(--text-muted)';
-                    let bg = '#e2e8f0';
 
                     if (statusVal === 'failed' && s.key === 'delivered') {
                       title = s.optionalTitle || title;
@@ -136,17 +135,42 @@ export default function TrackingPage() {
 
                     if (isActive) {
                       cl = 'var(--text-primary)';
-                      bg = isFailed ? 'var(--danger)' : 'var(--success)';
+                    }
+
+                    let innerDotColor = '#cbd5e1';
+                    let outerRingColor = 'rgba(203, 213, 225, 0.2)';
+
+                    if (isActive) {
+                      if (isCurrent) {
+                        if (isFailed) {
+                          innerDotColor = '#ef4444'; // Red
+                          outerRingColor = 'rgba(239, 68, 68, 0.25)';
+                        } else {
+                          innerDotColor = '#f59e0b'; // Yellow/Orange
+                          outerRingColor = 'rgba(245, 158, 11, 0.25)';
+                        }
+                      } else {
+                        // Completed past steps
+                        innerDotColor = '#10b981'; // Green
+                        outerRingColor = 'rgba(16, 185, 129, 0.25)';
+                      }
+                    } else {
+                      // Disabled/upcoming steps
+                      innerDotColor = '#0ea5e9'; // Cyan/Blue
+                      outerRingColor = 'rgba(14, 165, 233, 0.15)';
                     }
 
                     return (
                       <div key={s.key} style={{ display: 'flex', gap: 16, zIndex: 2, position: 'relative' }}>
                         <div style={{
                           width: 24, height: 24, borderRadius: '50%',
-                          background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          color: '#fff', fontSize: 12, fontWeight: 'bold', flexShrink: 0
+                          background: outerRingColor, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          flexShrink: 0
                         }}>
-                          {isActive ? '✓' : ''}
+                          <div style={{
+                            width: 12, height: 12, borderRadius: '50%',
+                            background: innerDotColor
+                          }} />
                         </div>
                         <div>
                           <h5 style={{ fontWeight: 700, fontSize: 13.5, color: cl }}>{title}</h5>

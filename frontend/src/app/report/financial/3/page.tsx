@@ -20,6 +20,11 @@ export default function Frpt3Page() {
   const [rows, setRows] = useState<Row[]>([]);
   const [summary, setSummary] = useState({ totalIncome: 0, totalExpense: 0, netProfit: 0 });
   const [loading, setLoading] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   useEffect(() => { if (!isAuthenticated()) router.push('/'); }, [router]);
 
@@ -98,8 +103,8 @@ export default function Frpt3Page() {
               <div className="card" style={{ marginBottom: 18 }}>
                 <div className="card-header"><span className="card-title">📊 {t('frpt3Title')}</span></div>
                 <div className="card-body" style={{ height: 280 }}>
-                  {rows.length > 0 ? (
-                    <ResponsiveContainer width="100%" height="100%">
+                  {isMounted && rows.length > 0 ? (
+                    <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                       <BarChart data={rows} margin={{ top: 5, right: 20, left: -10, bottom: 0 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                         <XAxis dataKey="label" tick={{ fontSize: 11 }} />

@@ -223,8 +223,8 @@ export default function EditShopPage() {
                   {t('shopInfo')}
                 </div>
 
-                {/* Row 2: Name, Phone, Address */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 20 }}>
+                {/* Row 2: Name, Phone, Email, Address */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
                   <div className="form-group">
                     <label className="form-label">{t('name')} <span>*</span></label>
                     <input
@@ -244,6 +244,20 @@ export default function EditShopPage() {
                       placeholder="e.g. 012-100-200"
                       value={form.phone}
                       onChange={e => setForm({ ...form, phone: e.target.value })}
+                      required
+                    />
+                  </div>
+                </div>
+                
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+                  <div className="form-group">
+                    <label className="form-label">{t('email')} <span>*</span></label>
+                    <input
+                      type="email"
+                      className="form-control"
+                      placeholder="e.g. zando@shop.com"
+                      value={form.email}
+                      onChange={e => setForm({ ...form, email: e.target.value })}
                       required
                     />
                   </div>

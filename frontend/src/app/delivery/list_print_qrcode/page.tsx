@@ -311,7 +311,7 @@ export default function PrintInvoicePage() {
                   <th style={{ padding: '12px 10px', textAlign: 'left', fontWeight: 'bold', borderRight: '1px solid #dee2e6' }}>{lang === 'km' ? 'កាលបរិច្ឆេទ' : 'Date'}</th>
                   <th style={{ padding: '12px 10px', textAlign: 'left', fontWeight: 'bold', borderRight: '1px solid #dee2e6' }}>{lang === 'km' ? 'ឈ្មោះហាង' : 'Shop Name'}</th>
                   <th style={{ padding: '12px 10px', textAlign: 'left', fontWeight: 'bold', borderRight: '1px solid #dee2e6' }}>{lang === 'km' ? 'ឈ្មោះអតិថិជន' : 'Customer Name'}</th>
-                  <th style={{ padding: '12px 10px', textAlign: 'left', fontWeight: 'bold', borderRight: '1px solid #dee2e6' }}>{lang === 'km' ? 'តំបន់' : 'Zone'}</th>
+                  <th style={{ padding: '12px 10px', textAlign: 'left', fontWeight: 'bold', borderRight: '1px solid #dee2e6' }}>{lang === 'km' ? 'អាសយដ្ឋាន' : 'Address'}</th>
                   <th style={{ padding: '12px 10px', textAlign: 'left', fontWeight: 'bold', borderRight: '1px solid #dee2e6' }}>{lang === 'km' ? 'លេខអ្នកទទួល' : 'Receiver Phone'}</th>
                   <th style={{ padding: '12px 10px', textAlign: 'right', fontWeight: 'bold', borderRight: '1px solid #dee2e6' }}>{lang === 'km' ? 'ចំនួនប្រាក់' : 'Amount'}</th>
                   <th style={{ padding: '12px 10px', textAlign: 'left', fontWeight: 'bold', borderRight: '1px solid #dee2e6' }}>{lang === 'km' ? 'ដឹកដោយ' : 'Driver'}</th>
@@ -341,7 +341,7 @@ export default function PrintInvoicePage() {
                       </td>
                       <td style={{ padding: '12px 10px', borderRight: '1px solid #dee2e6', fontWeight: 600 }}>{o.merchant?.nameKh || o.merchant?.name || o.senderName}</td>
                       <td style={{ padding: '12px 10px', borderRight: '1px solid #dee2e6' }}>{o.receiverName || '—'}</td>
-                      <td style={{ padding: '12px 10px', borderRight: '1px solid #dee2e6' }}>{o.zone?.name || '—'}</td>
+                      <td style={{ padding: '12px 10px', borderRight: '1px solid #dee2e6' }}>{o.receiverAddress || '—'}</td>
                       <td style={{ padding: '12px 10px', borderRight: '1px solid #dee2e6' }}>{o.receiverPhone}</td>
                       <td style={{ padding: '12px 10px', textAlign: 'right', borderRight: '1px solid #dee2e6', fontWeight: 'bold', color: '#dc2626' }}>
                         {parseFloat(o.cod).toFixed(2)} ({o.codCurrency || 'USD'})

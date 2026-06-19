@@ -142,7 +142,7 @@ export default function PaymentWithStaffPage() {
       <div className="app-layout">
       <Sidebar />
       <div className="main-content" style={{ background: '#fff', minHeight: '100vh', fontFamily: 'Kantumruy Pro, sans-serif' }}>
-        <Topbar title="Payment with Staff" subtitle="ទូទាត់ប្រាក់ជាមួយបុគ្គលិកដឹកជញ្ជូន" />
+        <Topbar title="Payment with Delivery" subtitle="ទូទាត់ប្រាក់ជាមួយអ្នកដឹកជញ្ជូន" />
         
         <div style={{ padding: '20px 24px' }}>
           

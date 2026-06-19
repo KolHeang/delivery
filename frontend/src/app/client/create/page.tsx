@@ -193,8 +193,8 @@ export default function CreateShopPage() {
                   {t('shopInfo')}
                 </div>
 
-                {/* Row 2: Name, Phone, Address */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 20 }}>
+                {/* Row 2: Name, Phone, Email, Address */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
                   <div className="form-group">
                     <label className="form-label">{t('name')} <span>*</span></label>
                     <input
@@ -214,6 +214,20 @@ export default function CreateShopPage() {
                       placeholder="e.g. 012-100-200"
                       value={form.phone}
                       onChange={e => setForm({ ...form, phone: e.target.value })}
+                      required
+                    />
+                  </div>
+                </div>
+                
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+                  <div className="form-group">
+                    <label className="form-label">{t('email')} <span>*</span></label>
+                    <input
+                      type="email"
+                      className="form-control"
+                      placeholder="e.g. zando@shop.com"
+                      value={form.email}
+                      onChange={e => setForm({ ...form, email: e.target.value })}
                       required
                     />
                   </div>
@@ -284,14 +298,13 @@ export default function CreateShopPage() {
                 {/* Row 5: QR KHR and USD file uploads */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
                   <div className="form-group">
-                    <label className="form-label">{t('qrFileKhr')} <span>*</span></label>
+                    <label className="form-label">{t('qrFileKhr')}</label>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                       <input
                         type="file"
                         accept="image/*"
                         className="form-control"
                         onChange={handleFileChange('qrImageKhr')}
-                        required
                       />
                       {qrKhrPreview && (
                         <img src={qrKhrPreview} alt="QR KHR Preview" style={{ width: 80, height: 80, objectFit: 'contain', border: '1px solid #ddd', borderRadius: 4 }} />
@@ -299,14 +312,13 @@ export default function CreateShopPage() {
                     </div>
                   </div>
                   <div className="form-group">
-                    <label className="form-label">{t('qrFileUsd')} <span>*</span></label>
+                    <label className="form-label">{t('qrFileUsd')}</label>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                       <input
                         type="file"
                         accept="image/*"
                         className="form-control"
                         onChange={handleFileChange('qrImageUsd')}
-                        required
                       />
                       {qrUsdPreview && (
                         <img src={qrUsdPreview} alt="QR USD Preview" style={{ width: 80, height: 80, objectFit: 'contain', border: '1px solid #ddd', borderRadius: 4 }} />

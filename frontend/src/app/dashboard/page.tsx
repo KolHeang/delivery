@@ -264,7 +264,7 @@ export default function DashboardPage() {
                       <th>Tracking</th>
                       <th>Receiver</th>
                       <th>Merchant</th>
-                      <th>Zone</th>
+                      <th>Address</th>
                       <th>Fee</th>
                       <th>Status</th>
                     </tr>
@@ -279,7 +279,7 @@ export default function DashboardPage() {
                           <div style={{ fontWeight: 600, fontSize: 13 }}>{o.receiverPhone}</div>
                         </td>
                         <td style={{ fontSize: 12 }}>{o.merchant?.name || '—'}</td>
-                        <td style={{ fontSize: 12 }}>{o.zone?.name || '—'}</td>
+                        <td style={{ fontSize: 12 }}>{o.receiverAddress || '—'}</td>
                         <td style={{ fontWeight: 600 }}>${o.deliveryFee}</td>
                         <td><Badge status={o.status} /></td>
                       </tr>

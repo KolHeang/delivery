@@ -185,7 +185,7 @@ export default function DeliveriesPage() {
                     <th>{t('trackingCode')}</th>
                     <th>{t('sender')}</th>
                     <th>{t('receiver')}</th>
-                    <th>{t('zone')}</th>
+                    <th>{t('address')}</th>
                     <th>{t('driver')}</th>
                     <th>{t('cod')}</th>
                     <th>{t('deliveryFee')}</th>
@@ -209,7 +209,7 @@ export default function DeliveriesPage() {
                       <td>
                         <div style={{ fontWeight: 600, fontSize: 13 }}>{o.receiverPhone}</div>
                       </td>
-                      <td style={{ fontSize: 12 }}>{o.zone?.name || '—'}</td>
+                      <td style={{ fontSize: 12 }}>{o.receiverAddress || '—'}</td>
                       <td style={{ fontSize: 12 }}>
                         {o.driver ? (
                           <>
@@ -257,9 +257,7 @@ export default function DeliveriesPage() {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
             <div>
               <h4 style={{ fontWeight: 700, marginBottom: 12, color: 'var(--text-secondary)', fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Sender</h4>
-              <p style={{ fontWeight: 600 }}>{viewModal.senderName}</p>
-              <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>{viewModal.senderPhone}</p>
-              {viewModal.merchant && <p style={{ fontSize: 12, color: 'var(--accent)', marginTop: 4 }}>{viewModal.merchant.name}</p>}
+              <p style={{ fontWeight: 600 }}>{viewModal.merchant?.name || viewModal.senderName}</p>
             </div>
             <div>
               <h4 style={{ fontWeight: 700, marginBottom: 12, color: 'var(--text-secondary)', fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Receiver</h4>
@@ -272,9 +270,6 @@ export default function DeliveriesPage() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 16 }}>
             {[
               { label: 'Status', value: <Badge status={viewModal.status} /> },
-              { label: 'Size', value: viewModal.size },
-              { label: 'Weight', value: `${viewModal.weight} kg` },
-              { label: 'Zone', value: viewModal.zone?.name || '—' },
               { label: 'COD', value: formatCOD(viewModal.cod, viewModal.codCurrency || 'USD') },
               { label: 'Delivery Fee', value: `$${parseFloat(viewModal.deliveryFee).toFixed(2)}` },
               { label: 'Driver', value: viewModal.driver?.name || 'Unassigned' },

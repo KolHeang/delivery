@@ -55,7 +55,7 @@ export const translations = {
     vehiclesList: 'Vehicles List',
     paymentProcess: 'Payment Process',
     paymentWithDelivery: 'Payment with Delivery',
-    paymentWithStaff: 'Payment with Staff',
+    paymentWithStaff: 'Payment with Delivery',
     paymentWithShop: 'Payment with Shop',
     accounting: 'Accounting',
     addExpense: 'Add Expense',
@@ -383,7 +383,7 @@ export const translations = {
     type: 'Type',
 
     // ── Payment Pages ───────────────────────────────────────
-    staffPaymentTitle: 'Payment with Staff',
+    staffPaymentTitle: 'Payment with Delivery',
     staffPaymentSubtitle: 'Manage settlements, delivery collections and payouts with drivers',
     recordPayment: 'Record Payment',
     staffPayments: 'UserPayments',
@@ -561,7 +561,7 @@ export const translations = {
     vehiclesList: 'បញ្ជីយានយន្ត',
     paymentProcess: 'ការទូទាត់ប្រាក់',
     paymentWithDelivery: 'ទូទាត់ប្រាក់ជាមួយអ្នកដឹក',
-    paymentWithStaff: 'ទូទាត់ជាមួយបុគ្គលិក',
+    paymentWithStaff: 'ទូទាត់ប្រាក់ជាមួយអ្នកដឹក',
     paymentWithShop: 'ទូទាត់ប្រាក់ជាមួយហាង',
     accounting: 'គណនេយ្យ',
     addExpense: 'បន្ថែមការចំណាយ',
@@ -888,7 +888,7 @@ export const translations = {
     type: 'ប្រភេទ',
 
     // ── Payment Pages ───────────────────────────────────────
-    staffPaymentTitle: 'ទូទាត់ជាមួយបុគ្គលិក',
+    staffPaymentTitle: 'ទូទាត់ប្រាក់ជាមួយអ្នកដឹក',
     staffPaymentSubtitle: 'គ្រប់គ្រងការទូទាត់ប្រាក់ជាមួយអ្នកបើកបរ',
     recordPayment: 'កត់ត្រាការទូទាត់',
     staffPayments: 'ការទូទាត់បុគ្គលិក',

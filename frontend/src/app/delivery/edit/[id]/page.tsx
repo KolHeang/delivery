@@ -111,7 +111,7 @@ export default function EditOrderPage() {
             </div>
             <div className="card-body">
               <form onSubmit={handleSave}>
-                <div className="form-row">
+                <div className="form-row" style={{ display: 'none' }}>
                   <div className="form-group">
                     <label className="form-label">Sender Name <span>*</span></label>
                     <input className="form-control" value={form.senderName} onChange={f('senderName')} required />
@@ -138,7 +138,7 @@ export default function EditOrderPage() {
                   <input className="form-control" value={form.receiverAddress} onChange={f('receiverAddress')} required />
                 </div>
                 
-                <div className="form-row-3">
+                <div className="form-row-3" style={{ display: 'none' }}>
                   <div className="form-group">
                     <label className="form-label">Weight (kg)</label>
                     <input type="number" step="0.1" min="0" className="form-control" value={form.weight} onChange={f('weight')} />
@@ -175,21 +175,20 @@ export default function EditOrderPage() {
                   </div>
                 </div>
                 
-                <div className="form-row">
-                  <div className="form-group">
-                    <label className="form-label">{t('merchant')}</label>
-                    <select className="form-control" value={form.merchantId} onChange={f('merchantId')}>
-                      <option value="">{t('selectMerchant')}</option>
-                      {merchants.map((m: any) => <option key={m.id} value={m.id}>{m.name}{m.nameKh ? ` / ${m.nameKh}` : ''}</option>)}
-                    </select>
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">{t('customer')}</label>
-                    <select className="form-control" value={form.customerId} onChange={f('customerId')}>
-                      <option value="">{t('selectCustomer')}</option>
-                      {customers.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                    </select>
-                  </div>
+                <div className="form-group">
+                  <label className="form-label">{t('merchant')}</label>
+                  <select className="form-control" value={form.merchantId} onChange={f('merchantId')}>
+                    <option value="">{t('selectMerchant')}</option>
+                    {merchants.map((m: any) => <option key={m.id} value={m.id}>{m.name}{m.nameKh ? ` / ${m.nameKh}` : ''}</option>)}
+                  </select>
+                </div>
+                
+                <div className="form-group" style={{ display: 'none' }}>
+                  <label className="form-label">{t('customer')}</label>
+                  <select className="form-control" value={form.customerId} onChange={f('customerId')}>
+                    <option value="">{t('selectCustomer')}</option>
+                    {customers.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
                 </div>
                 
                 <div className="form-group">

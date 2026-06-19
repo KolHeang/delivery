@@ -45,7 +45,10 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    loading ? null : null; // Avoid empty block warning
+
+    // ប្រសិនបើកំពុងតែ Login ស្រាប់ហើយ មិនឲ្យដំណើរការទៅមុខទៀតទេ (ការពារចុច Double Click)
+    if (loading) return;
+
     setLoading(true);
     setError('');
     try {
@@ -53,7 +56,8 @@ export default function LoginPage() {
       setAuth(res.data.access_token, res.data.user);
       router.push('/dashboard');
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Invalid email or password');
+      // ចាប់យក Error message ពី Backend បើមាន, បើគ្មានបង្ហាញពាក្យទូទៅ
+      setError(err.response?.data?.message || 'អ៊ីមែល ឬ ពាក្យសម្ងាត់មិនត្រឹមត្រូវទេ');
     } finally {
       setLoading(false);
     }
@@ -67,7 +71,8 @@ export default function LoginPage() {
       <div className="bg-shape shape-3"></div>
       <div className="bg-shape shape-4"></div>
 
-      <style dangerouslySetInnerHTML={{__html: `
+      <style dangerouslySetInnerHTML={{
+        __html: `
         .login-page {
           background-color: #ffffff;
           display: flex;
@@ -435,14 +440,14 @@ export default function LoginPage() {
         <div className="login-card">
           {/* Floating Language Switcher */}
           <div className="lang-switcher">
-            <button 
+            <button
               className={`lang-btn ${lang === 'en' ? 'active' : ''}`}
               onClick={() => setLang('en')}
               type="button"
             >
               EN
             </button>
-            <button 
+            <button
               className={`lang-btn ${lang === 'km' ? 'active' : ''}`}
               onClick={() => setLang('km')}
               type="button"
@@ -534,8 +539,8 @@ export default function LoginPage() {
             <div className="modal-icon">🔑</div>
             <h3 className="modal-title">{t.forgotPassword}</h3>
             <p className="modal-text">{t.forgotPasswordAlert}</p>
-            <button 
-              type="button" 
+            <button
+              type="button"
               className="modal-close-btn"
               onClick={() => setShowForgotModal(false)}
             >

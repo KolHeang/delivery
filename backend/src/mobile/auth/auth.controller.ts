@@ -19,6 +19,7 @@ export class AuthController {
   @Post('driver/login')
   @ApiOperation({ summary: 'Driver login' })
   driverLogin(@Body() dto: LoginDto) {
+    // Drivers can login using email or phone, we map 'email' field from DTO to 'phoneOrEmail'
     return this.authService.driverLogin(dto.email, dto.password);
   }
 

@@ -28,6 +28,11 @@ export default function DashboardPage() {
   const [recentOrders, setRecentOrders] = useState<any[]>([]);
   const [topDrivers, setTopDrivers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // Date range filters
   const [rangeType, setRangeType] = useState('all');
@@ -172,16 +177,16 @@ export default function DashboardPage() {
 
           {/* Stats Grid */}
           <div className="stats-grid">
-            <StatsCard icon="📦" label={t('totalParcelDashboard')} value={stats?.totalOrders ?? 0} color="#2f55a5" bg="#eef2fa" />
-            <StatsCard icon="✅" label={t('totalCompleteParcel')} value={stats?.delivered ?? 0} color="#10b981" bg="#ecfdf5" />
-            <StatsCard icon="🚚" label={t('totalProcessParcel')} value={stats?.inTransit ?? 0} color="#8b5cf6" bg="#f5f3ff" />
-            <StatsCard icon="❌" label={t('totalCanceledParcel')} value={stats?.failed ?? 0} color="#ef4444" bg="#fef2f2" />
-            <StatsCard icon="🔄" label={t('totalReturnParcel')} value={stats?.returned ?? 0} color="#6b7280" bg="#f3f4f6" />
-            <StatsCard icon="💵" label={t('totalDeliveryFeeDashboard')} value={`$${(stats?.totalDeliveryFee ?? 0).toFixed(2)}`} color="#10b981" bg="#ecfdf5" />
-            <StatsCard icon="💰" label={t('amountCollectedUSD')} value={`$${(stats?.collectedCashUSD ?? 0).toFixed(2)}`} color="#2f55a5" bg="#eef2fa" />
-            <StatsCard icon="🇰🇭" label={t('amountCollectedKHR')} value={`${(stats?.collectedCashKHR ?? 0).toLocaleString()} ៛`} color="#f16222" bg="#fef4ef" />
-            <StatsCard icon="🚴" label={t('totalDrivers')} value={stats?.totalDrivers ?? 0} color="#8b5cf6" bg="#f5f3ff" />
-            <StatsCard icon="👥" label={t('totalStaff')} value={stats?.totalUser ?? 0} color="#2f55a5" bg="#eef2fa" />
+            <StatsCard icon="/3d/3d_box.png" label={t('totalParcelDashboard')} value={stats?.totalOrders ?? 0} color="#2f55a5" bg="#eef2fa" />
+            <StatsCard icon="/3d/3d_check.png" label={t('totalCompleteParcel')} value={stats?.delivered ?? 0} color="#10b981" bg="#ecfdf5" />
+            <StatsCard icon="/3d/3d_truck.png" label={t('totalProcessParcel')} value={stats?.inTransit ?? 0} color="#8b5cf6" bg="#f5f3ff" />
+            <StatsCard icon="/3d/3d_cross.png" label={t('totalCanceledParcel')} value={stats?.failed ?? 0} color="#ef4444" bg="#fef2f2" />
+            <StatsCard icon="/3d/3d_refresh.png" label={t('totalReturnParcel')} value={stats?.returned ?? 0} color="#6b7280" bg="#f3f4f6" />
+            <StatsCard icon="/3d/3d_cash.png" label={t('totalDeliveryFeeDashboard')} value={`$${(stats?.totalDeliveryFee ?? 0).toFixed(2)}`} color="#10b981" bg="#ecfdf5" />
+            <StatsCard icon="/3d/3d_money_bag.png" label={t('amountCollectedUSD')} value={`$${(stats?.collectedCashUSD ?? 0).toFixed(2)}`} color="#2f55a5" bg="#eef2fa" />
+            <StatsCard icon="/3d/3d_khr_coin.png" label={t('amountCollectedKHR')} value={`${(stats?.collectedCashKHR ?? 0).toLocaleString()} ៛`} color="#f16222" bg="#fef4ef" />
+            <StatsCard icon="/3d/3d_scooter.png" label={t('totalDrivers')} value={stats?.totalDrivers ?? 0} color="#8b5cf6" bg="#f5f3ff" />
+            <StatsCard icon="/3d/3d_users.png" label={t('totalStaff')} value={stats?.totalUser ?? 0} color="#2f55a5" bg="#eef2fa" />
           </div>
 
           {/* Charts */}

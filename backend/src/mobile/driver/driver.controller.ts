@@ -26,6 +26,16 @@ export class DriverController {
     return this.driverService.getProfile(req.user.id);
   }
 
+  @Patch('status')
+  @ApiOperation({ summary: 'Update driver online status' })
+  updateDriverStatus(
+    @Request() req: any,
+    @Body('status') status: string,
+  ) {
+    return this.driverService.updateDriverStatus(req.user.id, status);
+  }
+
+
   @Get('tasks')
   @ApiOperation({ summary: 'Get assigned tasks' })
   getTasks(@Request() req: any, @Query('status') status?: string) {

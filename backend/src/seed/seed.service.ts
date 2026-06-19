@@ -157,6 +157,20 @@ export class SeedService implements OnApplicationBootstrap {
       await this.roleRepo.save(driverRole);
     }
 
+    // Merchant Role
+    let merchantRole = await this.roleRepo.findOne({ where: { name: 'merchant' }, relations: { permissions: true } });
+    if (merchantRole) {
+      merchantRole.permissions = readPerms;
+      await this.roleRepo.save(merchantRole);
+    } else {
+      merchantRole = this.roleRepo.create({
+        name: 'merchant',
+        description: 'Merchant role for shops and owners',
+        permissions: readPerms,
+      });
+      await this.roleRepo.save(merchantRole);
+    }
+
     this.logger.log('✅ Roles and permissions successfully synchronized');
   }
 
@@ -305,12 +319,46 @@ export class SeedService implements OnApplicationBootstrap {
   }
 
   private async seedMerchants() {
-    const count = await this.merchantRepo.count();
-    if (count > 0) return;
     const zones = await this.zoneRepo.find();
     const getZoneId = (code: string) => zones.find((z) => z.code === code)?.id;
     const defaultPassword = await bcrypt.hash('123456', 10);
     const merchants = [
+      {
+        name: 'Merchant One',
+        nameKh: 'អាជីវករ ទីមួយ',
+        contact: 'Sok',
+        phone: '099-111-111',
+        email: 'merchant1@email.com',
+        address: 'Phnom Penh',
+        zoneId: getZoneId('PPC'),
+        pricingTier: 'standard',
+        balance: 100.0,
+        password: defaultPassword,
+      },
+      {
+        name: 'Merchant Two',
+        nameKh: 'អាជីវករ ទីពីរ',
+        contact: 'Sao',
+        phone: '099-222-222',
+        email: 'merchant2@email.com',
+        address: 'Phnom Penh',
+        zoneId: getZoneId('PPS'),
+        pricingTier: 'standard',
+        balance: 250.0,
+        password: defaultPassword,
+      },
+      {
+        name: 'Merchant Three',
+        nameKh: 'អាជីវករ ទីបី',
+        contact: 'Srey',
+        phone: '099-333-333',
+        email: 'merchant3@email.com',
+        address: 'Phnom Penh',
+        zoneId: getZoneId('PPN'),
+        pricingTier: 'premium',
+        balance: 500.0,
+        password: defaultPassword,
+      },
       {
         name: 'Zando Shop',
         nameKh: 'ហាងហ្សង់ដូ',
@@ -384,8 +432,18 @@ export class SeedService implements OnApplicationBootstrap {
         password: defaultPassword,
       },
     ];
-    await this.merchantRepo.save(this.merchantRepo.create(merchants as any));
-    this.logger.log('✅ Merchants seeded');
+
+    let seededCount = 0;
+    for (const m of merchants) {
+      const exists = await this.merchantRepo.findOne({ where: { email: m.email } });
+      if (!exists) {
+        await this.merchantRepo.save(this.merchantRepo.create(m as any));
+        seededCount++;
+      }
+    }
+    if (seededCount > 0) {
+      this.logger.log(`✅ ${seededCount} Merchants seeded`);
+    }
   }
 
   private async seedExpenseTypes() {

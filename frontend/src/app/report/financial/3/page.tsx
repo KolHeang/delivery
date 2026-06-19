@@ -20,6 +20,11 @@ export default function Frpt3Page() {
   const [rows, setRows] = useState<Row[]>([]);
   const [summary, setSummary] = useState({ totalIncome: 0, totalExpense: 0, netProfit: 0 });
   const [loading, setLoading] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   useEffect(() => { if (!isAuthenticated()) router.push('/'); }, [router]);
 

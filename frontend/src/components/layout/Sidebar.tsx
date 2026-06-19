@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
-import { getUser, clearAuth, hasPermission } from '@/lib/auth';
+import { usePathname } from 'next/navigation';
+import { getUser, hasPermission } from '@/lib/auth';
 import { useLanguage } from '@/lib/LanguageContext';
 import {
   MdDashboard, MdStorefront, MdPeople, MdLocalShipping,
@@ -13,7 +13,6 @@ import {
 
 export default function Sidebar() {
   const pathname = usePathname();
-  const router = useRouter();
   const { t } = useLanguage();
   const [user, setUser] = useState<any>(null);
   const [mounted, setMounted] = useState(false);
@@ -149,6 +148,8 @@ export default function Sidebar() {
     setOpenGroups(prev => ({ ...prev, [key]: !prev[key] }));
   };
 
+
+
   return (
     <aside className="sidebar" style={{ width: 260 }}>
       {/* Brand Logo */}
@@ -234,7 +235,15 @@ export default function Sidebar() {
 
                 {/* Group Sub-items */}
                 {isOpen && (
-                  <div style={{ paddingLeft: 24, marginTop: 4, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  <div style={{
+                    paddingLeft: 16,
+                    marginLeft: 20,
+                    borderLeft: '1.5px solid rgba(255, 255, 255, 0.15)',
+                    marginTop: 4,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 2
+                  }}>
                     {visibleItems.map(item => {
                       const exactActive = pathname === item.href;
 
@@ -248,8 +257,20 @@ export default function Sidebar() {
                             padding: '8px 12px',
                             opacity: exactActive ? 1 : 0.85,
                             borderRadius: 'var(--radius-sm)',
+                            position: 'relative',
                           }}
                         >
+                          <span style={{
+                            position: 'absolute',
+                            left: -19.75,
+                            top: 'calc(50% - 3px)',
+                            width: 6,
+                            height: 6,
+                            borderRadius: '50%',
+                            background: exactActive ? '#c084fc' : 'rgba(255, 255, 255, 0.25)',
+                            boxShadow: exactActive ? '0 0 6px #c084fc' : 'none',
+                            transition: 'all 0.2s ease',
+                          }} />
                           {item.label}
                         </Link>
                       );

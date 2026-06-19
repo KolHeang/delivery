@@ -1499,13 +1499,18 @@ select.form-control {
 
   .sidebar,
   .topbar,
-  .btn,
-  select,
-  input,
   .no-print,
-  [style*="borderBottom"],
   .loading-wrapper,
   .spinner {
+    display: none !important;
+  }
+
+  /* Hide buttons and form controls only outside of print container */
+  .app-layout .btn,
+  .app-layout select,
+  .app-layout input[type="text"],
+  .app-layout input[type="checkbox"],
+  .app-layout input[type="date"] {
     display: none !important;
   }
 
@@ -1581,9 +1586,52 @@ select.form-control {
     display: block !important;
     width: 100% !important;
     margin: 0 !important;
-    padding: 20px !important;
+    padding: 20px 24px !important;
     background: #ffffff !important;
     color: #000000 !important;
+  }
+
+  /* Inside receipt: make sure everything shows */
+  body.receipt-print-active .receipt-print-container * {
+    visibility: visible !important;
+    display: revert !important;
+  }
+
+  body.receipt-print-active .receipt-print-container table {
+    display: table !important;
+    width: 100% !important;
+    border-collapse: collapse !important;
+  }
+
+  body.receipt-print-active .receipt-print-container thead {
+    display: table-header-group !important;
+  }
+
+  body.receipt-print-active .receipt-print-container tbody {
+    display: table-row-group !important;
+  }
+
+  body.receipt-print-active .receipt-print-container tr {
+    display: table-row !important;
+  }
+
+  body.receipt-print-active .receipt-print-container th,
+  body.receipt-print-active .receipt-print-container td {
+    display: table-cell !important;
+    border: 1px solid #cbd5e1 !important;
+    padding: 4px 6px !important;
+    color: #000 !important;
+    background: transparent !important;
+    font-size: 10px !important;
+  }
+
+  body.receipt-print-active .receipt-print-container h2,
+  body.receipt-print-active .receipt-print-container h3,
+  body.receipt-print-active .receipt-print-container div,
+  body.receipt-print-active .receipt-print-container p,
+  body.receipt-print-active .receipt-print-container strong {
+    display: revert !important;
+    color: #000 !important;
   }
 }
 

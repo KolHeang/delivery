@@ -118,9 +118,13 @@ export default function PaymentWithStaffPage() {
   const totalDeliveryFee = selectedOrders.reduce((sum, o) => sum + parseFloat(o.deliveryFee || '0'), 0);
   const totalCodKhr = selectedOrders.filter(o => o.codCurrency === 'KHR').reduce((sum, o) => sum + parseFloat(o.cod || '0'), 0);
   const totalCodUsd = selectedOrders.filter(o => o.codCurrency === 'USD').reduce((sum, o) => sum + parseFloat(o.cod || '0'), 0);
-  
-  const payableUsd = totalDeliveryFee; 
-  const payableKhr = 0; 
+
+  // Print: use selected orders if any, otherwise print all orders
+  const printOrders = selectedIds.length > 0 ? selectedOrders : orders;
+  const printTotalFee = printOrders.reduce((sum, o) => sum + parseFloat(o.deliveryFee || '0'), 0);
+  const printCodKhr = printOrders.filter(o => o.codCurrency === 'KHR').reduce((sum, o) => sum + parseFloat(o.cod || '0'), 0);
+  const printCodUsd = printOrders.filter(o => o.codCurrency === 'USD').reduce((sum, o) => sum + parseFloat(o.cod || '0'), 0);
+  const printPayableUsd = printTotalFee;
 
   if (loading) return (
     <div className="app-layout">
@@ -175,7 +179,7 @@ export default function PaymentWithStaffPage() {
                 onClick={triggerPrintReceipt}
                 style={{ height: 34, padding: '0 16px', borderRadius: 4, background: '#fff', border: '1px solid #ced4da', display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
               >
-                <MdPrint size={16} /> បោះពុម្ព
+                <MdPrint size={16} /> បោះពុម្ព {selectedIds.length > 0 ? `(${selectedIds.length})` : `(${orders.length} ទាំងអស់)`}
               </button>
               {statusFilter === 'unpaid' && (
                 <button 
@@ -195,7 +199,13 @@ export default function PaymentWithStaffPage() {
               <thead>
                 <tr style={{ background: '#f8f9fa', borderBottom: '2px solid #dee2e6' }}>
                   <th style={{ padding: '12px 8px', textAlign: 'center', borderRight: '1px solid #dee2e6', width: 40 }}>ល.រ</th>
-                  <th style={{ padding: '12px 8px', textAlign: 'center', borderRight: '1px solid #dee2e6', width: 60 }}>ជ្រើសរើស</th>
+                  <th style={{ padding: '12px 8px', textAlign: 'center', borderRight: '1px solid #dee2e6', width: 60 }}>
+                    <input type="checkbox"
+                      checked={orders.length > 0 && selectedIds.length === orders.length}
+                      onChange={handleToggleSelectAll}
+                      style={{ width: 16, height: 16, cursor: 'pointer' }}
+                    />
+                  </th>
                   <th style={{ padding: '12px 8px', textAlign: 'left', borderRight: '1px solid #dee2e6' }}>លេខកូដ</th>
                   <th style={{ padding: '12px 8px', textAlign: 'left', borderRight: '1px solid #dee2e6' }}>កាលបរិច្ឆេទ</th>
                   <th style={{ padding: '12px 8px', textAlign: 'left', borderRight: '1px solid #dee2e6' }}>ឈ្មោះហាង</th>
@@ -301,66 +311,133 @@ export default function PaymentWithStaffPage() {
 
         </div>
       </div>
+      </div>
 
-      {/* Printable Layout Container */}
-      <div className="receipt-print-container" style={{ fontFamily: 'Kantumruy Pro, Inter, sans-serif' }}>
-          <div style={{ textAlign: 'center', marginBottom: 20 }}>
-            <h2 style={{ margin: 0, fontSize: 18 }}>{t('companyName') || 'Company Name'}</h2>
-            <p style={{ margin: '2px 0 0', fontSize: 12, color: '#475569' }}>Delivery Management System</p>
-            <h3 style={{ margin: '14px 0 0', fontSize: 14, borderBottom: '2px solid #000', paddingBottom: 6 }}>{statusFilter === 'unpaid' ? 'Settlement Quotation' : t('settlementReceipt')}</h3>
-          </div>
-          
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 16 }}>
-            <div>
-              <div><strong>{t('driverStaff')}:</strong> {selectedDriver?.name}</div>
-              {selectedDriver?.nameKh && <div><strong>ឈ្មោះខ្មែរ:</strong> {selectedDriver?.nameKh}</div>}
-              <div><strong>{t('phone')}:</strong> {selectedDriver?.phone}</div>
-            </div>
-            <div style={{ textAlign: 'right' }}>
-              <div><strong>{t('receiptNo')}:</strong> {statusFilter === 'unpaid' ? 'DRAFT' : 'SETTLED'}</div>
-              <div><strong>{t('date')}:</strong> {new Date().toLocaleDateString()}</div>
-            </div>
-          </div>
+      {/* Printable Invoice Cards — outside app-layout */}
+      <div className="receipt-print-container" style={{ fontFamily: "'Kantumruy Pro', sans-serif" }}>
+        {printOrders.map(o => {
+          const codFormatted = o.codCurrency === 'KHR' 
+            ? `${parseInt(o.cod).toLocaleString()} ៛` 
+            : `$ ${parseFloat(o.cod).toFixed(2)}`;
+          const currencySymbol = o.codCurrency === 'KHR' ? '៛' : '$';
+          const codValue = o.codCurrency === 'KHR'
+            ? parseInt(o.cod).toLocaleString()
+            : parseFloat(o.cod).toFixed(2);
 
-          <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 16, fontSize: 12 }}>
-            <thead>
-              <tr style={{ borderBottom: '2px solid #000' }}>
-                <th style={{ textAlign: 'left', padding: '6px 0', background: 'transparent', border: 'none' }}>Description</th>
-                <th style={{ textAlign: 'right', padding: '6px 0', background: 'transparent', border: 'none' }}>Amount</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
-                <td style={{ padding: '6px 0', border: 'none' }}>{t('totalDeliveryFeeLabel')}</td>
-                <td style={{ textAlign: 'right', padding: '6px 0', border: 'none' }}>${totalDeliveryFee.toFixed(2)}</td>
-              </tr>
-              <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
-                <td style={{ padding: '6px 0', border: 'none' }}>{t('totalCodUSD')}</td>
-                <td style={{ textAlign: 'right', padding: '6px 0', border: 'none' }}>${totalCodUsd.toFixed(2)}</td>
-              </tr>
-              <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
-                <td style={{ padding: '6px 0', border: 'none' }}>{t('totalCodKHR')}</td>
-                <td style={{ textAlign: 'right', padding: '6px 0', border: 'none' }}>{totalCodKhr.toLocaleString()} ៛</td>
-              </tr>
-              <tr style={{ borderBottom: '2px solid #000', fontWeight: 700 }}>
-                <td style={{ padding: '8px 0', border: 'none' }}>{t('totalSettledLabel') || 'Payable Amount'}</td>
-                <td style={{ textAlign: 'right', padding: '8px 0', border: 'none' }}>${payableUsd.toFixed(2)}</td>
-              </tr>
-            </tbody>
-          </table>
+          return (
+            <div
+              key={o.id}
+              style={{
+                padding: '16px 20px',
+                border: '1.5px solid #000',
+                background: '#fff',
+                maxWidth: 520,
+                margin: '0 auto 24px',
+                width: '100%',
+                color: '#000',
+                pageBreakAfter: 'always',
+                breakAfter: 'page',
+                breakInside: 'avoid',
+              }}
+            >
+              {/* Logo + QR Code */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                <div>
+                  <img src="/ebs-logo.png" alt="EBS" style={{ height: 42, objectFit: 'contain' }} />
+                </div>
+                <div>
+                  <img
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${o.trackingCode}`}
+                    alt="QR"
+                    style={{ width: 75, height: 75 }}
+                  />
+                </div>
+              </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 30, marginTop: 45, textAlign: 'center', fontSize: 12 }}>
-            <div>
-              <div style={{ fontWeight: 600 }}>{t('payerSignature')}</div>
-              <div style={{ marginTop: 50, borderTop: '1px solid #000', display: 'inline-block', width: '80%' }} />
-            </div>
-            <div>
-              <div style={{ fontWeight: 600 }}>{t('receiverSignature')}</div>
-              <div style={{ marginTop: 50, borderTop: '1px solid #000', display: 'inline-block', width: '80%' }} />
-            </div>
-          </div>
-        </div>
+              {/* Invoice Title */}
+              <div style={{ textAlign: 'center', margin: '8px 0 4px' }}>
+                <h2 style={{ fontSize: 20, fontWeight: 'bold', margin: 0, letterSpacing: 0.5 }}>
+                  INVOICE : {o.trackingCode}
+                </h2>
+              </div>
 
+              <hr style={{ border: 'none', borderTop: '2.5px solid #000', margin: '4px 0 0' }} />
+
+              {/* Sender / Customer row */}
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                padding: '6px 4px',
+                borderBottom: '1px solid #000',
+                fontWeight: 'bold',
+                fontSize: 13
+              }}>
+                <div>អ្នកផ្ញើ : {o.senderPhone || o.merchant?.phone || '—'}</div>
+                <div>អតិថិជន: {o.receiverName || '—'}</div>
+              </div>
+
+              {/* Main info grid */}
+              <div style={{ display: 'flex', fontSize: 12, borderBottom: '1px solid #000', minHeight: 70 }}>
+                {/* Left */}
+                <div style={{ flex: 1, padding: '8px 4px', borderRight: '1.5px solid #000', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <div style={{ display: 'flex' }}>
+                    <span style={{ fontWeight: 'bold', minWidth: 90 }}>អ្នកទទួល :</span>
+                    <span>{o.receiverPhone}</span>
+                  </div>
+                  <div style={{ display: 'flex' }}>
+                    <span style={{ fontWeight: 'bold', minWidth: 90 }}>កំបន់ :</span>
+                    <span>{o.receiverAddress || o.zone?.name || '—'}</span>
+                  </div>
+                </div>
+                {/* Right */}
+                <div style={{ flex: 1, padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ fontWeight: 'bold' }}>តម្លៃទំវាន់ :</span>
+                    <span style={{ fontWeight: 'bold' }}>{codFormatted}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ fontWeight: 'bold' }}>កាលបរិច្ឆេទ :</span>
+                    <span>{o.deliveredAt ? new Date(o.deliveredAt).toISOString().split('T')[0] : o.createdAt ? new Date(o.createdAt).toISOString().split('T')[0] : '—'}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Note */}
+              {o.note && (
+                <div style={{ fontSize: 11, padding: '4px 4px 0', color: '#333' }}>
+                  {o.note}
+                </div>
+              )}
+
+              {/* Bottom COD box */}
+              <div style={{
+                border: '1.5px solid #000',
+                margin: '12px 0 4px',
+                padding: '8px 12px',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                fontSize: 10,
+                lineHeight: 1.4
+              }}>
+                <div style={{ fontWeight: 'bold', flex: 1, paddingRight: 10 }}>
+                  ក្រុមហ៊ុនមិនទទួលបញ្ញើដែលច្បាប់ហាមឃាត់
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontWeight: 'bold' }}>តម្លៃ</span>
+                  <span style={{ fontWeight: 'bold' }}>សរុប :</span>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                    <div style={{ fontSize: 10, textAlign: 'right' }}>{currencySymbol}</div>
+                    <div style={{ borderBottom: '1.5px solid #000', padding: '0 8px 2px', fontWeight: 'bold', fontSize: 14, minWidth: 60, textAlign: 'right' }}>
+                      {codValue}
+                    </div>
+                    <div style={{ fontSize: 10, textAlign: 'right' }}>{currencySymbol === '$' ? '$' : '៛'}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })}
       </div>
     </>
   );

@@ -294,33 +294,6 @@ export default function CreateStaffPage() {
               {form.role === 'driver' ? (
                 <>
                   <div className="form-row">
-                    <div className="form-group">
-                      <label className="form-label">{t('zone')}</label>
-                      <select className="form-control" value={form.zoneId} onChange={f('zoneId')}>
-                        <option value="">{t('selectZone')}</option>
-                        {zones.map((z: any) => (
-                          <option key={z.id} value={z.id}>
-                            {z.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className="form-group">
-                      <label className="form-label">{t('vehicle')}</label>
-                      <select className="form-control" value={form.vehicleId} onChange={f('vehicleId')}>
-                        <option value="">{t('selectVehicle')}</option>
-                        {vehicles
-                          .filter(v => v.status === 'active')
-                          .map((v: any) => (
-                            <option key={v.id} value={v.id}>
-                              {v.brand} {v.model} ({v.plate})
-                            </option>
-                          ))}
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className="form-row">
                     <div className="form-group" style={{ maxWidth: '50%' }}>
                       <label className="form-label">{t('status')}</label>
                       <select className="form-control" value={form.status} onChange={f('status')}>

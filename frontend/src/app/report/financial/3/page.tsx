@@ -99,7 +99,7 @@ export default function Frpt3Page() {
                 <div className="card-header"><span className="card-title">📊 {t('frpt3Title')}</span></div>
                 <div className="card-body" style={{ height: 280 }}>
                   {rows.length > 0 ? (
-                    <ResponsiveContainer width="100%" height="100%">
+                    <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                       <BarChart data={rows} margin={{ top: 5, right: 20, left: -10, bottom: 0 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                         <XAxis dataKey="label" tick={{ fontSize: 11 }} />

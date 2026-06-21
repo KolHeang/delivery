@@ -13,7 +13,7 @@ import {
 
 export default function Sidebar() {
   const pathname = usePathname();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const [user, setUser] = useState<any>(null);
   const [mounted, setMounted] = useState(false);
 
@@ -38,6 +38,7 @@ export default function Sidebar() {
         { href: '/delivery/entry_data_item', label: t('batchEntryData'), permission: 'orders.create' },
         { href: '/delivery', label: t('listOfDelivery') },
         { href: '/delivery/list_print_qrcode', label: t('printInvoiceDelivery') },
+        { href: '/delivery/assignpickup', label: t('processForPickup'), permission: 'orders.update' },
         { href: '/delivery/assigndeliveryby', label: t('processForAssign'), permission: 'orders.update' },
         { href: '/delivery/complete', label: t('completePackage'), permission: 'orders.update' },
         { href: '/delivery/tracking_delivery', label: t('tracking') },
@@ -109,12 +110,13 @@ export default function Sidebar() {
   ];
 
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
-    shops: true,
-    delivery: true,
-    payment: true,
-    accounting: true,
-    reports: true,
-    settings: true,
+    summary: false,
+    shops: false,
+    delivery: false,
+    staff: false,
+    payment: false,
+    accounting: false,
+    settings: false,
   });
 
   // Load user client-side and set up listeners

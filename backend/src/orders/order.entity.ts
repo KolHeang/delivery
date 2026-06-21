@@ -7,14 +7,18 @@ import {
   ManyToOne,
   JoinColumn,
   BeforeInsert,
+  OneToMany,
 } from 'typeorm';
 import { Merchant } from '../merchants/merchant.entity';
 import { Customer } from '../customers/customer.entity';
 import { User } from '../users/users.entity';
 import { Zone } from '../zones/zone.entity';
+import { OrderHistory } from './order-history.entity';
 
 export type OrderStatus =
   | 'pending'
+  | 'in-warehouse'
+  | 'assigned'
   | 'picked-up'
   | 'in-transit'
   | 'delivered'
@@ -94,6 +98,12 @@ export class Order {
   pickedUpAt: Date;
 
   @Column({ type: 'timestamp', nullable: true })
+  warehouseAt: Date;       // When parcel arrived at warehouse (via-warehouse flow)
+
+  @Column({ type: 'timestamp', nullable: true })
+  assignedAt: Date;        // When delivery driver was assigned
+
+  @Column({ type: 'timestamp', nullable: true })
   deliveredAt: Date;
 
   // Relations
@@ -111,6 +121,7 @@ export class Order {
   @Column({ nullable: true })
   customerId: number;
 
+  // Delivery driver (delivers to customer)
   @ManyToOne(() => User, { nullable: true, eager: true })
   @JoinColumn({ name: 'driverId' })
   driver: User;
@@ -118,12 +129,23 @@ export class Order {
   @Column({ nullable: true })
   driverId: number;
 
+  // Pickup driver (collects parcel from merchant store → warehouse)
+  @ManyToOne(() => User, { nullable: true, eager: true })
+  @JoinColumn({ name: 'pickupDriverId' })
+  pickupDriver: User;
+
+  @Column({ nullable: true })
+  pickupDriverId: number;
+
   @ManyToOne(() => Zone, { nullable: true, eager: true })
   @JoinColumn({ name: 'zoneId' })
   zone: Zone;
 
   @Column({ nullable: true })
   zoneId: number;
+
+  @OneToMany(() => OrderHistory, (history) => history.order)
+  histories: OrderHistory[];
 
   @CreateDateColumn()
   createdAt: Date;
@@ -134,9 +156,9 @@ export class Order {
   @BeforeInsert()
   generateTrackingCode() {
     if (!this.trackingCode) {
-      const timestamp = Date.now().toString().slice(-8);
-      const random = Math.random().toString(36).substring(2, 6).toUpperCase();
-      this.trackingCode = `TRK${timestamp}${random}`;
+      const timestamp = Date.now().toString().slice(-6);
+      const random = Math.random().toString(36).substring(2, 4).toUpperCase();
+      this.trackingCode = `T${timestamp}${random}`;
     }
   }
 }

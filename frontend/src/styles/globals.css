@@ -98,6 +98,8 @@ body {
   flex-direction: column;
   min-height: 100vh;
   transition: margin-left var(--transition);
+  min-width: 0;
+  overflow-x: hidden;
 }
 
 .page-content {
@@ -550,6 +552,16 @@ tbody td {
   color: #92400e;
 }
 
+.badge-returned {
+  background: var(--neutral-light);
+  color: #374151;
+}
+
+.badge-in-warehouse {
+  background: #ccfbf1;
+  color: #0f766e;
+}
+
 .badge-assigned {
   background: #e0e7ff;
   color: #4338ca;
@@ -578,6 +590,11 @@ tbody td {
 .badge-returned {
   background: var(--neutral-light);
   color: #374151;
+}
+
+.badge-in-warehouse {
+  background: #ccfbf1;
+  color: #0f766e;
 }
 
 .badge-available {

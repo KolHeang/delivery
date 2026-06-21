@@ -8,6 +8,7 @@ import Topbar from '@/components/layout/Topbar';
 import api from '@/lib/api';
 import { MdSearch } from 'react-icons/md';
 import { useLanguage } from '@/lib/LanguageContext';
+import DateInput, { formatDateToDDMMYYYY } from '@/components/ui/DateInput';
 
 const getLocalDateString = (d: Date = new Date()) => {
   const year = d.getFullYear();
@@ -244,27 +245,22 @@ export default function CompletePackagePage() {
           {/* Filters Card */}
           <div className="card" style={{ padding: '20px', marginBottom: '20px' }}>
             <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minWidth: '200px' }}>
-                <label style={{ fontSize: '13px', fontWeight: 'bold', color: 'var(--text-main, #374151)' }}>
-                  {lang === 'km' ? 'កាលបរិច្ឆេទ (Date)' : 'Date'}
-                </label>
-                <input
-                  type="date"
-                  className="form-control"
-                  value={filterDate}
-                  onChange={e => setFilterDate(e.target.value)}
-                  style={{ height: '42px', padding: '8px 12px', borderRadius: '6px', border: '1px solid #d1d5db', backgroundColor: '#f3f4f6' }}
-                />
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minWidth: '250px' }}>
-                <label style={{ fontSize: '13px', fontWeight: 'bold', color: 'var(--text-main, #374151)' }}>
+              <DateInput
+                labelEn="Date"
+                labelKh="កាលបរិច្ឆេទ"
+                value={filterDate}
+                onChange={setFilterDate}
+                style={{ minWidth: 220 }}
+              />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: '250px' }}>
+                <label style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--text-main, #374151)' }}>
                   {lang === 'km' ? 'អ្នកដឹក៖' : 'Driver:'}
                 </label>
                 <select
                   className="form-control"
                   value={filterDriver}
                   onChange={e => setFilterDriver(e.target.value)}
-                  style={{ height: '42px', padding: '8px 12px', borderRadius: '6px', border: '1px solid #d1d5db', backgroundColor: '#fff' }}
+                  style={{ height: '38px', padding: '8px 12px', borderRadius: '6px', border: '1px solid #d1d5db', backgroundColor: '#fff' }}
                 >
                   <option value="">{lang === 'km' ? '— ជ្រើសរើសអ្នកដឹក —' : '— Select Driver —'}</option>
                   {drivers.map(d => (
@@ -278,7 +274,7 @@ export default function CompletePackagePage() {
                 className="btn btn-success"
                 onClick={handleFilterClick}
                 style={{
-                  height: '42px',
+                  height: '38px',
                   padding: '0 24px',
                   display: 'flex',
                   alignItems: 'center',
@@ -460,15 +456,13 @@ export default function CompletePackagePage() {
                             {o.receiverPhone}
                           </td>
                           <td style={{ padding: '10px 8px', border: '1px solid #e5e7eb', fontSize: '13px', color: '#4b5563' }}>
-                            {getLocalDateString(new Date(o.createdAt))}
+                            {formatDateToDDMMYYYY(o.createdAt)}
                           </td>
                           <td style={{ padding: '6px 8px', border: '1px solid #e5e7eb' }}>
-                            <input
-                              type="date"
-                              className="form-control"
+                            <DateInput
                               value={rowCompletedDate[o.id] || appliedFilters.date}
-                              onChange={e => handleCompletedDateChange(o.id, e.target.value)}
-                              style={{ width: '130px', height: '32px', padding: '2px 6px', borderRadius: '4px', border: '1px solid #d1d5db', backgroundColor: '#f3f4f6', fontSize: '12px' }}
+                              onChange={val => handleCompletedDateChange(o.id, val)}
+                              inputStyle={{ width: '130px', minWidth: '130px', height: 32, padding: '2px 6px', borderRadius: '4px', border: '1px solid #d1d5db', backgroundColor: '#f3f4f6', fontSize: '12px' }}
                             />
                           </td>
                           <td style={{ padding: '10px 8px', border: '1px solid #e5e7eb', fontSize: '12px', color: '#4b5563', maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>

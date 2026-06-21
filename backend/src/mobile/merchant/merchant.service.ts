@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, Like } from 'typeorm';
 import { Merchant } from '../../merchants/merchant.entity';
 import { Order } from '../../orders/order.entity';
 import { CreateOrderDto } from '../../orders/dto/order.dto';
@@ -35,7 +35,33 @@ export class MerchantService {
     });
   }
 
+  async generateNextTrackingCode(): Promise<string> {
+    const lastOrders = await this.orderRepo.find({
+      where: {
+        trackingCode: Like('T%'),
+      },
+      order: { id: 'DESC' },
+      take: 100,
+    });
+
+    let nextNumber = 1;
+    for (const order of lastOrders) {
+      if (order.trackingCode) {
+        const match = order.trackingCode.match(/^T(\d{6})$/);
+        if (match) {
+          nextNumber = parseInt(match[1], 10) + 1;
+          break;
+        }
+      }
+    }
+
+    return `T${String(nextNumber).padStart(6, '0')}`;
+  }
+
   async createOrder(merchantId: number, dto: CreateOrderDto) {
+    if (!dto.trackingCode) {
+      dto.trackingCode = await this.generateNextTrackingCode();
+    }
     const order = this.orderRepo.create({
       ...dto,
       merchantId, // Force the merchant ID to the logged-in merchant

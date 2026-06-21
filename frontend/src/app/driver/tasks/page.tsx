@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { isAuthenticated } from '@/lib/auth';
+import { isAuthenticated, getUser } from '@/lib/auth';
 import api from '@/lib/api';
 import { useLanguage } from '@/lib/LanguageContext';
 import {
@@ -70,6 +70,7 @@ export default function DriverTasksPage() {
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState<'active' | 'completed'>('active');
+  const [user, setUser] = useState<any>(null);
 
   // Problem Dialog state
   const [showDialog, setShowDialog] = useState(false);
@@ -94,6 +95,7 @@ export default function DriverTasksPage() {
       router.push('/driver/login');
       return;
     }
+    setUser(getUser());
     loadTasks();
   }, [router]);
 
@@ -411,13 +413,13 @@ export default function DriverTasksPage() {
                 {/* Action Buttons */}
                 {isActiveTask(task) && (
                   <div style={{ display: 'flex', gap: '10px', marginTop: '4px' }}>
-                    {task.status === 'assigned' && (
+                    {task.status === 'pending' && task.pickupDriverId === user?.id ? (
                       <button
-                        onClick={() => updateStatus(task.id, 'picked-up')}
+                        onClick={() => updateStatus(task.id, 'in-warehouse')}
                         disabled={updatingId === task.id}
                         style={{
                           flex: 1,
-                          background: '#2f55a5',
+                          background: '#10b981',
                           color: '#ffffff',
                           border: 'none',
                           padding: '12px',
@@ -429,89 +431,117 @@ export default function DriverTasksPage() {
                           alignItems: 'center',
                           justifyContent: 'center',
                           gap: '6px',
-                          boxShadow: '0 4px 6px rgba(47, 85, 165, 0.1)'
+                          boxShadow: '0 4px 6px rgba(16, 185, 129, 0.1)'
                         }}
                       >
-                        <MdLocalShipping size={18} />
-                        {updatingId === task.id ? t.updating : t.btnPickup}
+                        <MdCheckCircle size={18} />
+                        {updatingId === task.id ? t.updating : (lang === 'km' ? 'ដល់ឃ្លាំង' : 'Arrived at Warehouse')}
                       </button>
-                    )}
-
-                    {task.status === 'picked-up' && (
-                      <button
-                        onClick={() => updateStatus(task.id, 'in-transit')}
-                        disabled={updatingId === task.id}
-                        style={{
-                          flex: 1,
-                          background: '#e2e8f0',
-                          color: '#0f172a',
-                          border: '1.5px solid #cbd5e1',
-                          padding: '12px',
-                          borderRadius: '12px',
-                          fontWeight: '700',
-                          fontSize: '13px',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: '6px'
-                        }}
-                      >
-                        <MdLocalShipping size={18} style={{ color: '#2f55a5' }} />
-                        {updatingId === task.id ? t.updating : t.btnInTransit}
-                      </button>
-                    )}
-
-                    {(task.status === 'in-transit' || task.status === 'pending') && (
+                    ) : (
                       <>
-                        <button
-                          onClick={() => {
-                            setSelectedTaskId(task.id);
-                            setShowDialog(true);
-                          }}
-                          disabled={updatingId === task.id}
-                          style={{
-                            background: '#ffffff',
-                            color: '#ef4444',
-                            border: '1.5px solid #fecaca',
-                            padding: '12px',
-                            borderRadius: '12px',
-                            fontWeight: '700',
-                            fontSize: '13px',
-                            cursor: 'pointer',
-                            flex: 1,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: '6px'
-                          }}
-                        >
-                          <MdError size={18} />
-                          {t.btnProblem}
-                        </button>
-                        <button
-                          onClick={() => updateStatus(task.id, 'delivered')}
-                          disabled={updatingId === task.id}
-                          style={{
-                            background: '#10b981',
-                            color: '#ffffff',
-                            border: 'none',
-                            padding: '12px',
-                            borderRadius: '12px',
-                            fontWeight: '700',
-                            fontSize: '13px',
-                            cursor: 'pointer',
-                            flex: 1.2,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: '6px',
-                            boxShadow: '0 4px 6px rgba(16, 185, 129, 0.1)'
-                          }}
-                        >
-                          <MdCheckCircle size={18} />
-                          {updatingId === task.id ? t.updating : t.btnDeliver}
-                        </button>
+                        {task.status === 'assigned' && (
+                          <button
+                            onClick={() => updateStatus(task.id, 'picked-up')}
+                            disabled={updatingId === task.id}
+                            style={{
+                              flex: 1,
+                              background: '#2f55a5',
+                              color: '#ffffff',
+                              border: 'none',
+                              padding: '12px',
+                              borderRadius: '12px',
+                              fontWeight: '700',
+                              fontSize: '13px',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '6px',
+                              boxShadow: '0 4px 6px rgba(47, 85, 165, 0.1)'
+                            }}
+                          >
+                            <MdLocalShipping size={18} />
+                            {updatingId === task.id ? t.updating : t.btnPickup}
+                          </button>
+                        )}
+
+                        {task.status === 'picked-up' && (
+                          <button
+                            onClick={() => updateStatus(task.id, 'in-transit')}
+                            disabled={updatingId === task.id}
+                            style={{
+                              flex: 1,
+                              background: '#e2e8f0',
+                              color: '#0f172a',
+                              border: '1.5px solid #cbd5e1',
+                              padding: '12px',
+                              borderRadius: '12px',
+                              fontWeight: '700',
+                              fontSize: '13px',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '6px'
+                            }}
+                          >
+                            <MdLocalShipping size={18} style={{ color: '#2f55a5' }} />
+                            {updatingId === task.id ? t.updating : t.btnInTransit}
+                          </button>
+                        )}
+
+                        {(task.status === 'in-transit' || task.status === 'pending') && (
+                          <>
+                            <button
+                              onClick={() => {
+                                setSelectedTaskId(task.id);
+                                setShowDialog(true);
+                              }}
+                              disabled={updatingId === task.id}
+                              style={{
+                                background: '#ffffff',
+                                color: '#ef4444',
+                                border: '1.5px solid #fecaca',
+                                padding: '12px',
+                                borderRadius: '12px',
+                                fontWeight: '700',
+                                fontSize: '13px',
+                                cursor: 'pointer',
+                                flex: 1,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '6px'
+                              }}
+                            >
+                              <MdError size={18} />
+                              {t.btnProblem}
+                            </button>
+                            <button
+                              onClick={() => updateStatus(task.id, 'delivered')}
+                              disabled={updatingId === task.id}
+                              style={{
+                                background: '#10b981',
+                                color: '#ffffff',
+                                border: 'none',
+                                padding: '12px',
+                                borderRadius: '12px',
+                                fontWeight: '700',
+                                fontSize: '13px',
+                                cursor: 'pointer',
+                                flex: 1.2,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '6px',
+                                boxShadow: '0 4px 6px rgba(16, 185, 129, 0.1)'
+                              }}
+                            >
+                              <MdCheckCircle size={18} />
+                              {updatingId === task.id ? t.updating : t.btnDeliver}
+                            </button>
+                          </>
+                        )}
                       </>
                     )}
                   </div>

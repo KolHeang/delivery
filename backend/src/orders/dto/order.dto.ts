@@ -47,8 +47,17 @@ export class CreateOrderDto {
   zoneId?: number;
   @ApiProperty({ required: false })
   @IsOptional()
+  @IsNumber()
+  @Type(() => Number)
+  pickupDriverId?: number;
+  @ApiProperty({ required: false })
+  @IsOptional()
   @IsString()
   trackingCode?: string;
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  status?: string;
   @ApiProperty({ required: false, enum: ['USD', 'KHR'] })
   @IsOptional()
   @IsEnum(['USD', 'KHR'])
@@ -76,6 +85,7 @@ export class UpdateOrderDto {
   @IsOptional() @IsNumber() @Type(() => Number) receivedAmountUSD?: number;
   @IsOptional() @IsNumber() @Type(() => Number) receivedAmountKHR?: number;
   @IsOptional() @IsNumber() @Type(() => Number) driverId?: number;
+  @IsOptional() @IsNumber() @Type(() => Number) pickupDriverId?: number;
 }
 
 export class UpdateOrderStatusDto {
@@ -100,6 +110,17 @@ export class UpdateOrderStatusDto {
   status: string;
 }
 
+/** Assign a driver for direct delivery (Flow 1: pending → picked-up) */
 export class AssignDriverDto {
+  @ApiProperty() @IsNumber() @Type(() => Number) driverId: number;
+}
+
+/** Assign a pickup driver to collect from merchant → in-warehouse (Flow 2 Step 1) */
+export class AssignPickupDto {
+  @ApiProperty() @IsNumber() @Type(() => Number) driverId: number;
+}
+
+/** Assign a delivery driver from warehouse → customer (Flow 2 Step 2, or direct from office) */
+export class AssignDeliveryDto {
   @ApiProperty() @IsNumber() @Type(() => Number) driverId: number;
 }

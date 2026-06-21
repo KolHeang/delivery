@@ -6,6 +6,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { User } from '../users/users.entity';
 import { Merchant } from '../merchants/merchant.entity';
 import { Order } from '../orders/order.entity';
+import { OrderHistory } from '../orders/order-history.entity';
 
 import { AuthController } from './auth/auth.controller';
 import { AuthService } from './auth/auth.service';
@@ -16,7 +17,7 @@ import { MerchantService } from './merchant/merchant.service';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User, Merchant, Order]),
+    TypeOrmModule.forFeature([User, Merchant, Order, OrderHistory]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: (config: ConfigService) => ({

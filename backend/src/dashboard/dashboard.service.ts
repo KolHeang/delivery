@@ -57,6 +57,7 @@ export class DashboardService {
     const [
       totalOrders,
       pending,
+      inWarehouse,
       assigned,
       pickedUp,
       inTransit,
@@ -66,7 +67,8 @@ export class DashboardService {
     ] = await Promise.all([
       ordersQuery(),
       ordersQuery('pending'),
-      Promise.resolve(0),
+      ordersQuery('in-warehouse'),
+      ordersQuery('assigned'),
       ordersQuery('picked-up'),
       ordersQuery('in-transit'),
       ordersQuery('delivered'),
@@ -108,6 +110,7 @@ export class DashboardService {
       totalCustomers,
       totalMerchants,
       pending,
+      inWarehouse,
       assigned,
       pickedUp,
       inTransit,

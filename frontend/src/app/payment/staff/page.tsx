@@ -8,6 +8,21 @@ import Topbar from '@/components/layout/Topbar';
 import api from '@/lib/api';
 import { MdFilterList, MdClear, MdPrint, MdSave, MdMoreHoriz } from 'react-icons/md';
 import { useLanguage } from '@/lib/LanguageContext';
+import DateInput, { formatDateToDDMMYYYY } from '@/components/ui/DateInput';
+
+const getLocalDateString = (d: Date = new Date()) => {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const getLocalFirstDayOfMonthString = () => {
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  return `${year}-${month}-01`;
+};
 
 export default function PaymentWithStaffPage() {
   const router = useRouter();
@@ -19,11 +34,14 @@ export default function PaymentWithStaffPage() {
   // Filter States
   const [driverId, setDriverId] = useState('');
   const [statusFilter, setStatusFilter] = useState('unpaid');
+  const [startDate, setStartDate] = useState(() => getLocalFirstDayOfMonthString());
+  const [endDate, setEndDate] = useState(() => getLocalDateString());
   
   // Data States
   const [orders, setOrders] = useState<any[]>([]);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [saving, setSaving] = useState(false);
+  const [user, setUser] = useState<any>(null);
 
   const loadDrivers = async () => {
     try {
@@ -38,6 +56,7 @@ export default function PaymentWithStaffPage() {
 
   useEffect(() => {
     if (!isAuthenticated()) { router.push('/'); return; }
+    import('@/lib/auth').then((m) => setUser(m.getUser()));
     loadDrivers();
     
     // Fix print blank issue: wait for print to complete before removing the class
@@ -49,8 +68,14 @@ export default function PaymentWithStaffPage() {
   const handleFilter = async () => {
     if (!driverId) return;
     try {
-      const res = await api.get(`/orders?driverId=${driverId}&status=delivered&driverPaymentStatus=${statusFilter}`);
-      setOrders(res.data || []);
+      const res = await api.get(`/orders?driverId=${driverId}`);
+      let allOrders = res.data || [];
+      if (statusFilter === 'unpaid') {
+        allOrders = allOrders.filter(o => o.driverPaymentStatus === 'unpaid' || o.status === 'failed' || o.status === 'returned' || o.status === 'pending');
+      } else {
+        allOrders = allOrders.filter(o => o.driverPaymentStatus === 'paid');
+      }
+      setOrders(allOrders);
       setSelectedIds([]);
     } catch {
       setOrders([]);
@@ -64,12 +89,37 @@ export default function PaymentWithStaffPage() {
   const handleClear = () => {
     setDriverId(drivers[0]?.id?.toString() || '');
     setStatusFilter('unpaid');
+    setStartDate('');
+    setEndDate('');
     setSelectedIds([]);
   };
 
+  // Filter orders by date client-side
+  const deliveredOrders = orders.filter(o => o.status === 'delivered' || o.status === 'failed' || o.status === 'returned');
+  const pendingOrders = orders.filter(o => o.status !== 'delivered' && o.status !== 'failed' && o.status !== 'returned');
+
+  const filteredOrders = orders.filter(o => {
+    let dateString = o.deliveredAt;
+    if (!dateString && (o.status === 'failed' || o.status === 'returned' || o.status === 'pending')) {
+      dateString = o.updatedAt || o.createdAt;
+    }
+    const d = dateString ? new Date(dateString) : new Date(o.createdAt);
+    if (startDate) {
+      const start = new Date(startDate);
+      start.setHours(0, 0, 0, 0);
+      if (d < start) return false;
+    }
+    if (endDate) {
+      const end = new Date(endDate);
+      end.setHours(23, 59, 59, 999);
+      if (d > end) return false;
+    }
+    return true;
+  });
+
   const handleToggleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.checked) {
-      setSelectedIds(orders.map(o => o.id));
+      setSelectedIds(filteredOrders.map(o => o.id));
     } else {
       setSelectedIds([]);
     }
@@ -93,7 +143,7 @@ export default function PaymentWithStaffPage() {
     if (selectedIds.length === 0) return alert('Please select at least one order to settle.');
     if (!driverId) return;
     
-    const selectedOrders = orders.filter(o => selectedIds.includes(o.id));
+    const selectedOrders = filteredOrders.filter(o => selectedIds.includes(o.id));
     const totalDeliveryFee = selectedOrders.reduce((sum, o) => sum + parseFloat(o.deliveryFee || '0'), 0);
     
     setSaving(true);
@@ -114,13 +164,15 @@ export default function PaymentWithStaffPage() {
     setSaving(false);
   };
 
-  const selectedOrders = orders.filter(o => selectedIds.includes(o.id));
+  const selectedOrders = filteredOrders.filter(o => selectedIds.includes(o.id));
   const totalDeliveryFee = selectedOrders.reduce((sum, o) => sum + parseFloat(o.deliveryFee || '0'), 0);
   const totalCodKhr = selectedOrders.filter(o => o.codCurrency === 'KHR').reduce((sum, o) => sum + parseFloat(o.cod || '0'), 0);
   const totalCodUsd = selectedOrders.filter(o => o.codCurrency === 'USD').reduce((sum, o) => sum + parseFloat(o.cod || '0'), 0);
 
   // Print: use selected orders if any, otherwise print all orders
-  const printOrders = selectedIds.length > 0 ? selectedOrders : orders;
+  const basePrintOrders = selectedIds.length > 0 ? selectedOrders : filteredOrders;
+  const printOrders = basePrintOrders.filter(o => o.status === 'delivered' || o.status === 'failed' || o.status === 'returned');
+  
   const printTotalFee = printOrders.reduce((sum, o) => sum + parseFloat(o.deliveryFee || '0'), 0);
   const printCodKhr = printOrders.filter(o => o.codCurrency === 'KHR').reduce((sum, o) => sum + parseFloat(o.cod || '0'), 0);
   const printCodUsd = printOrders.filter(o => o.codCurrency === 'USD').reduce((sum, o) => sum + parseFloat(o.cod || '0'), 0);
@@ -148,11 +200,14 @@ export default function PaymentWithStaffPage() {
           
           {/* Action & Filter Bar */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, flexWrap: 'wrap', gap: 16 }}>
-            <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#f8f9fa', border: '1px solid #ced4da', borderRadius: 4, padding: '4px 12px' }}>
-                <span style={{ fontSize: 13, fontWeight: 600 }}>បុគ្គលិកដឹកជញ្ជូន:</span>
+            <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, paddingLeft: 2 }}>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: '#64748b' }}>បុគ្គលិកដឹកជញ្ជូន</span>
+                </div>
                 <select 
-                  style={{ border: 'none', background: 'transparent', outline: 'none', fontWeight: 600, fontSize: 14, minWidth: 200 }}
+                  className="form-control"
+                  style={{ minWidth: 200, height: 38, cursor: 'pointer' }}
                   value={driverId} 
                   onChange={e => setDriverId(e.target.value)}
                 >
@@ -161,17 +216,22 @@ export default function PaymentWithStaffPage() {
                   ))}
                 </select>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#f8f9fa', border: '1px solid #ced4da', borderRadius: 4, padding: '4px 12px' }}>
-                <span style={{ fontSize: 13, fontWeight: 600 }}>ស្ថានភាព:</span>
-                <select 
-                  style={{ border: 'none', background: 'transparent', outline: 'none', fontWeight: 600, fontSize: 14 }}
-                  value={statusFilter} 
-                  onChange={e => setStatusFilter(e.target.value)}
-                >
-                  <option value="unpaid">មិនទាន់ទូទាត់ (Unpaid)</option>
-                  <option value="paid">ទូទាត់រួច (Paid)</option>
-                </select>
-              </div>
+
+
+
+              <DateInput
+                labelEn="Start Date"
+                labelKh="ចាប់ពីថ្ងៃ"
+                value={startDate}
+                onChange={setStartDate}
+              />
+              
+              <DateInput
+                labelEn="End Date"
+                labelKh="ដល់"
+                value={endDate}
+                onChange={setEndDate}
+              />
             </div>
             
             <div style={{ display: 'flex', gap: 8 }}>
@@ -179,7 +239,7 @@ export default function PaymentWithStaffPage() {
                 onClick={triggerPrintReceipt}
                 style={{ height: 34, padding: '0 16px', borderRadius: 4, background: '#fff', border: '1px solid #ced4da', display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
               >
-                <MdPrint size={16} /> បោះពុម្ព {selectedIds.length > 0 ? `(${selectedIds.length})` : `(${orders.length} ទាំងអស់)`}
+                <MdPrint size={16} /> បោះពុម្ព {selectedIds.length > 0 ? `(${selectedIds.length})` : `(${filteredOrders.length} ទាំងអស់)`}
               </button>
               {statusFilter === 'unpaid' && (
                 <button 
@@ -201,7 +261,7 @@ export default function PaymentWithStaffPage() {
                   <th style={{ padding: '12px 8px', textAlign: 'center', borderRight: '1px solid #dee2e6', width: 40 }}>ល.រ</th>
                   <th style={{ padding: '12px 8px', textAlign: 'center', borderRight: '1px solid #dee2e6', width: 60 }}>
                     <input type="checkbox"
-                      checked={orders.length > 0 && selectedIds.length === orders.length}
+                      checked={filteredOrders.length > 0 && selectedIds.length === filteredOrders.length}
                       onChange={handleToggleSelectAll}
                       style={{ width: 16, height: 16, cursor: 'pointer' }}
                     />
@@ -216,12 +276,12 @@ export default function PaymentWithStaffPage() {
                 </tr>
               </thead>
               <tbody>
-                {orders.length === 0 ? (
+                {filteredOrders.length === 0 ? (
                   <tr>
                     <td colSpan={10} style={{ textAlign: 'center', padding: '30px 0', color: '#6c757d' }}>គ្មានទិន្នន័យ</td>
                   </tr>
                 ) : (
-                  orders.map((o, idx) => {
+                  filteredOrders.map((o, idx) => {
                     const isSelected = selectedIds.includes(o.id);
                     return (
                       <tr key={o.id} style={{ borderBottom: '1px solid #dee2e6', background: isSelected ? '#f1f5f9' : '#fff' }}>
@@ -238,7 +298,7 @@ export default function PaymentWithStaffPage() {
                           {o.trackingCode}
                         </td>
                         <td style={{ padding: '8px', borderRight: '1px solid #dee2e6' }}>
-                          {o.deliveredAt ? new Date(o.deliveredAt).toISOString().split('T')[0] : '—'}
+                          {o.deliveredAt ? formatDateToDDMMYYYY(o.deliveredAt) : '—'}
                         </td>
                         <td style={{ padding: '8px', borderRight: '1px solid #dee2e6', color: '#0d6efd', fontWeight: 600 }}>
                           {o.merchant?.name || '—'}
@@ -253,9 +313,15 @@ export default function PaymentWithStaffPage() {
                           $ {parseFloat(o.deliveryFee).toFixed(2)}
                         </td>
                         <td style={{ padding: '8px', textAlign: 'center' }}>
-                          <span style={{ background: '#16a34a', color: '#fff', padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600 }}>
-                            ជោគជ័យ
-                          </span>
+                          {o.status === 'delivered' ? (
+                            <span style={{ background: '#16a34a', color: '#fff', padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600 }}>ជោគជ័យ</span>
+                          ) : o.status === 'returned' ? (
+                            <span style={{ background: '#f59e0b', color: '#fff', padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600 }}>បង្វិលត្រឡប់</span>
+                          ) : o.status === 'failed' ? (
+                            <span style={{ background: '#ef4444', color: '#fff', padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600 }}>បរាជ័យ</span>
+                          ) : (
+                            <span style={{ background: '#64748b', color: '#fff', padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600 }}>កំពុងដឹក</span>
+                          )}
                         </td>
                       </tr>
                     );
@@ -313,131 +379,161 @@ export default function PaymentWithStaffPage() {
       </div>
       </div>
 
-      {/* Printable Invoice Cards — outside app-layout */}
-      <div className="receipt-print-container" style={{ fontFamily: "'Kantumruy Pro', sans-serif" }}>
-        {printOrders.map(o => {
-          const codFormatted = o.codCurrency === 'KHR' 
-            ? `${parseInt(o.cod).toLocaleString()} ៛` 
-            : `$ ${parseFloat(o.cod).toFixed(2)}`;
-          const currencySymbol = o.codCurrency === 'KHR' ? '៛' : '$';
-          const codValue = o.codCurrency === 'KHR'
-            ? parseInt(o.cod).toLocaleString()
-            : parseFloat(o.cod).toFixed(2);
+      {/* Printable Invoice List Table — outside app-layout (Print-only) */}
+      <div className="receipt-print-container" style={{ fontFamily: "'Kantumruy Pro', sans-serif", fontSize: 11 }}>
+        <div style={{ textAlign: 'center', marginBottom: 20 }}>
+          <h2 style={{ margin: 0, fontSize: 20, color: '#3b82f6' }}>អ៊ី អ៊ិចប្រេស</h2>
+          <p style={{ margin: 0, fontSize: 16, color: '#94a3b8' }}>E-Express</p>
+        </div>
+        
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginBottom: 10 }}>
+          <div>
+            <div><strong>ឈ្មោះអ្នកដឹកជញ្ជូន :</strong> {selectedDriver ? `${selectedDriver.name} ${selectedDriver.nameKh ? `(${selectedDriver.nameKh})` : ''}` : '—'}</div>
+            <div><strong>លេខទូរស័ព្ទ :</strong> {selectedDriver?.phone || 'N/A'}</div>
+            <div><strong>Print Date :</strong> {new Date().toLocaleString('en-US', { month: 'long', day: 'numeric', year: 'numeric', hour: 'numeric', minute: 'numeric', hour12: true })}</div>
+          </div>
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ fontSize: 14, fontWeight: 'bold' }}>វិក្កយបត្រ (សំរាប់អ្នកដឹក)</div>
+            <div><strong>លេខ :</strong> INV_DRIVER_{getLocalDateString().replace(/-/g, '')}</div>
+            <div><strong>កាលបរិច្ឆេទ :</strong> {formatDateToDDMMYYYY(getLocalDateString())}</div>
+            <div><strong>អ្នកបោះពុម្ព :</strong> {user?.name || 'Admin'}</div>
+          </div>
+        </div>
 
-          return (
-            <div
-              key={o.id}
-              style={{
-                padding: '16px 20px',
-                border: '1.5px solid #000',
-                background: '#fff',
-                maxWidth: 520,
-                margin: '0 auto 24px',
-                width: '100%',
-                color: '#000',
-                pageBreakAfter: 'always',
-                breakAfter: 'page',
-                breakInside: 'avoid',
-              }}
-            >
-              {/* Logo + QR Code */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                <div>
-                  <img src="/ebs-logo.png" alt="EBS" style={{ height: 42, objectFit: 'contain' }} />
-                </div>
-                <div>
-                  <img
-                    src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${o.trackingCode}`}
-                    alt="QR"
-                    style={{ width: 75, height: 75 }}
-                  />
-                </div>
-              </div>
+        <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #000', textAlign: 'center', fontSize: 10 }}>
+          <thead>
+            <tr style={{ background: '#a7f3d0' }}>
+              <th rowSpan={2} style={{ border: '1px solid #000', padding: 4 }}>No</th>
+              <th rowSpan={2} style={{ border: '1px solid #000', padding: 4 }}>Bill Invoice</th>
+              <th rowSpan={2} style={{ border: '1px solid #000', padding: 4 }}>អតិថិជន</th>
+              <th rowSpan={2} style={{ border: '1px solid #000', padding: 4 }}>តំបន់</th>
+              <th rowSpan={2} style={{ border: '1px solid #000', padding: 4 }}>លេខទូរស័ព្ទ</th>
+              <th rowSpan={2} style={{ border: '1px solid #000', padding: 4 }}>ទទួលអីវ៉ាន់</th>
+              <th rowSpan={2} style={{ border: '1px solid #000', padding: 4 }}>ចេញអីវ៉ាន់</th>
+              <th rowSpan={2} style={{ border: '1px solid #000', padding: 4 }}>ប្រភេទបង់លុយ</th>
+              <th colSpan={2} style={{ border: '1px solid #000', padding: 4 }}>COD</th>
+              <th colSpan={2} style={{ border: '1px solid #000', padding: 4 }}>QR ហាង</th>
+              <th colSpan={2} style={{ border: '1px solid #000', padding: 4 }}>QR ក្រុមហ៊ុន</th>
+              <th rowSpan={2} style={{ border: '1px solid #000', padding: 4 }}>សេវាដឹក(USD)</th>
+              <th rowSpan={2} style={{ border: '1px solid #000', padding: 4 }}>ទឹកប្រាក់សរុប (USD)</th>
+              <th rowSpan={2} style={{ border: '1px solid #000', padding: 4 }}>ទឹកប្រាក់សរុប (KHR)</th>
+              <th rowSpan={2} style={{ border: '1px solid #000', padding: 4 }}>Remark</th>
+              <th rowSpan={2} style={{ border: '1px solid #000', padding: 4 }}>ស្ថានភាព</th>
+            </tr>
+            <tr style={{ background: '#a7f3d0' }}>
+              <th style={{ border: '1px solid #000', padding: 4 }}>USD ($)</th>
+              <th style={{ border: '1px solid #000', padding: 4 }}>KHR (៛)</th>
+              <th style={{ border: '1px solid #000', padding: 4 }}>USD ($)</th>
+              <th style={{ border: '1px solid #000', padding: 4 }}>KHR (៛)</th>
+              <th style={{ border: '1px solid #000', padding: 4 }}>USD ($)</th>
+              <th style={{ border: '1px solid #000', padding: 4 }}>KHR (៛)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {printOrders.length === 0 ? (
+              <tr><td colSpan={17} style={{ padding: 10 }}>គ្មានទិន្នន័យ</td></tr>
+            ) : (
+              printOrders.map((o, idx) => {
+                const isCOD = o.paymentMethod === 'cod' || !o.paymentMethod;
+                const isQR = o.paymentMethod === 'qr';
+                const codUSD = o.codCurrency === 'USD' && isCOD ? parseFloat(o.cod || '0') : 0;
+                const codKHR = o.codCurrency === 'KHR' && isCOD ? parseFloat(o.cod || '0') : 0;
+                const qrShopUSD = o.codCurrency === 'USD' && isQR ? parseFloat(o.cod || '0') : 0;
+                const qrShopKHR = o.codCurrency === 'KHR' && isQR ? parseFloat(o.cod || '0') : 0;
+                const fee = parseFloat(o.deliveryFee || '0');
+                const totalUSD = codUSD + qrShopUSD;
+                const totalKHR = codKHR + qrShopKHR;
 
-              {/* Invoice Title */}
-              <div style={{ textAlign: 'center', margin: '8px 0 4px' }}>
-                <h2 style={{ fontSize: 20, fontWeight: 'bold', margin: 0, letterSpacing: 0.5 }}>
-                  INVOICE : {o.trackingCode}
-                </h2>
-              </div>
+                return (
+                  <tr key={o.id}>
+                    <td style={{ border: '1px solid #000', padding: 4 }}>{idx + 1}</td>
+                    <td style={{ border: '1px solid #000', padding: 4 }}>{o.trackingCode}</td>
+                    <td style={{ border: '1px solid #000', padding: 4 }}>{o.merchant?.name || '—'}</td>
+                    <td style={{ border: '1px solid #000', padding: 4 }}>{o.zone?.name || '—'}</td>
+                    <td style={{ border: '1px solid #000', padding: 4 }}>{o.receiverPhone}</td>
+                    <td style={{ border: '1px solid #000', padding: 4 }}>{o.createdAt ? formatDateToDDMMYYYY(o.createdAt) : '—'}</td>
+                    <td style={{ border: '1px solid #000', padding: 4 }}>{o.deliveredAt ? formatDateToDDMMYYYY(o.deliveredAt) : '—'}</td>
+                    <td style={{ border: '1px solid #000', padding: 4 }}>{isCOD ? 'COD' : 'QR + សាច់ប្រាក់'}</td>
+                    <td style={{ border: '1px solid #000', padding: 4, color: codUSD ? 'inherit' : '#9ca3af' }}>{codUSD ? `$${codUSD.toFixed(2)}` : '-'}</td>
+                    <td style={{ border: '1px solid #000', padding: 4, color: codKHR ? 'inherit' : '#9ca3af' }}>{codKHR ? `៛${codKHR.toLocaleString()}` : '-'}</td>
+                    <td style={{ border: '1px solid #000', padding: 4, color: qrShopUSD ? 'inherit' : '#9ca3af' }}>{qrShopUSD ? `$${qrShopUSD.toFixed(2)}` : '-'}</td>
+                    <td style={{ border: '1px solid #000', padding: 4, color: qrShopKHR ? 'inherit' : '#9ca3af' }}>{qrShopKHR ? `៛${qrShopKHR.toLocaleString()}` : '-'}</td>
+                    <td style={{ border: '1px solid #000', padding: 4, color: '#9ca3af' }}>-</td>
+                    <td style={{ border: '1px solid #000', padding: 4, color: '#9ca3af' }}>-</td>
+                    <td style={{ border: '1px solid #000', padding: 4 }}>${fee.toFixed(2)}</td>
+                    <td style={{ border: '1px solid #000', padding: 4 }}>${totalUSD.toFixed(2)}</td>
+                    <td style={{ border: '1px solid #000', padding: 4 }}>{totalKHR ? `៛${totalKHR.toLocaleString()}` : '៛0'}</td>
+                    <td style={{ border: '1px solid #000', padding: 4 }}>{o.note || ''}</td>
+                    <td style={{ border: '1px solid #000', padding: 4, color: o.status === 'delivered' ? '#16a34a' : o.status === 'returned' ? '#f59e0b' : o.status === 'failed' ? '#ef4444' : '#64748b' }}>
+                      {o.status === 'delivered' ? 'ជោគជ័យ' : o.status === 'returned' ? 'បង្វិលត្រឡប់' : o.status === 'failed' ? 'បរាជ័យ' : 'កំពុងដឹក'}
+                    </td>
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+          {printOrders.length > 0 && (
+            <tfoot>
+              <tr style={{ background: '#e2e8f0', fontWeight: 'bold' }}>
+                <td colSpan={8} style={{ border: '1px solid #000', padding: 4, textAlign: 'right' }}>សរុប</td>
+                <td style={{ border: '1px solid #000', padding: 4 }}>${printOrders.reduce((sum, o) => sum + (o.codCurrency === 'USD' && (o.paymentMethod === 'cod' || !o.paymentMethod) ? parseFloat(o.cod||'0') : 0), 0).toFixed(2)}</td>
+                <td style={{ border: '1px solid #000', padding: 4 }}>៛{printOrders.reduce((sum, o) => sum + (o.codCurrency === 'KHR' && (o.paymentMethod === 'cod' || !o.paymentMethod) ? parseFloat(o.cod||'0') : 0), 0).toLocaleString()}</td>
+                <td style={{ border: '1px solid #000', padding: 4 }}>${printOrders.reduce((sum, o) => sum + (o.codCurrency === 'USD' && o.paymentMethod === 'qr' ? parseFloat(o.cod||'0') : 0), 0).toFixed(2)}</td>
+                <td style={{ border: '1px solid #000', padding: 4 }}>៛{printOrders.reduce((sum, o) => sum + (o.codCurrency === 'KHR' && o.paymentMethod === 'qr' ? parseFloat(o.cod||'0') : 0), 0).toLocaleString()}</td>
+                <td style={{ border: '1px solid #000', padding: 4 }}>$0.00</td>
+                <td style={{ border: '1px solid #000', padding: 4 }}>៛0</td>
+                <td style={{ border: '1px solid #000', padding: 4 }}>${printTotalFee.toFixed(2)}</td>
+                <td style={{ border: '1px solid #000', padding: 4 }}>${printCodUsd.toFixed(2)}</td>
+                <td style={{ border: '1px solid #000', padding: 4 }}>៛{printCodKhr.toLocaleString()}</td>
+                <td colSpan={2} style={{ border: '1px solid #000', padding: 4 }}></td>
+              </tr>
+              <tr style={{ background: '#e2e8f0', fontWeight: 'bold' }}>
+                <td colSpan={15} style={{ border: '1px solid #000', padding: 4, textAlign: 'right' }}>ប្រាក់ដែលត្រូវទូទាត់សរុប</td>
+                <td style={{ border: '1px solid #000', padding: 4 }}>${printCodUsd.toFixed(2)}</td>
+                <td style={{ border: '1px solid #000', padding: 4 }}>៛{printCodKhr.toLocaleString()}</td>
+                <td colSpan={2} style={{ border: '1px solid #000', padding: 4 }}></td>
+              </tr>
+            </tfoot>
+          )}
+        </table>
 
-              <hr style={{ border: 'none', borderTop: '2.5px solid #000', margin: '4px 0 0' }} />
-
-              {/* Sender / Customer row */}
-              <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                padding: '6px 4px',
-                borderBottom: '1px solid #000',
-                fontWeight: 'bold',
-                fontSize: 13
-              }}>
-                <div>អ្នកផ្ញើ : {o.senderPhone || o.merchant?.phone || '—'}</div>
-                <div>អតិថិជន: {o.receiverName || '—'}</div>
-              </div>
-
-              {/* Main info grid */}
-              <div style={{ display: 'flex', fontSize: 12, borderBottom: '1px solid #000', minHeight: 70 }}>
-                {/* Left */}
-                <div style={{ flex: 1, padding: '8px 4px', borderRight: '1.5px solid #000', display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  <div style={{ display: 'flex' }}>
-                    <span style={{ fontWeight: 'bold', minWidth: 90 }}>អ្នកទទួល :</span>
-                    <span>{o.receiverPhone}</span>
-                  </div>
-                  <div style={{ display: 'flex' }}>
-                    <span style={{ fontWeight: 'bold', minWidth: 90 }}>កំបន់ :</span>
-                    <span>{o.receiverAddress || o.zone?.name || '—'}</span>
-                  </div>
-                </div>
-                {/* Right */}
-                <div style={{ flex: 1, padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ fontWeight: 'bold' }}>តម្លៃទំវាន់ :</span>
-                    <span style={{ fontWeight: 'bold' }}>{codFormatted}</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ fontWeight: 'bold' }}>កាលបរិច្ឆេទ :</span>
-                    <span>{o.deliveredAt ? new Date(o.deliveredAt).toISOString().split('T')[0] : o.createdAt ? new Date(o.createdAt).toISOString().split('T')[0] : '—'}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Note */}
-              {o.note && (
-                <div style={{ fontSize: 11, padding: '4px 4px 0', color: '#333' }}>
-                  {o.note}
-                </div>
-              )}
-
-              {/* Bottom COD box */}
-              <div style={{
-                border: '1.5px solid #000',
-                margin: '12px 0 4px',
-                padding: '8px 12px',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                fontSize: 10,
-                lineHeight: 1.4
-              }}>
-                <div style={{ fontWeight: 'bold', flex: 1, paddingRight: 10 }}>
-                  ក្រុមហ៊ុនមិនទទួលបញ្ញើដែលច្បាប់ហាមឃាត់
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ fontWeight: 'bold' }}>តម្លៃ</span>
-                  <span style={{ fontWeight: 'bold' }}>សរុប :</span>
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-                    <div style={{ fontSize: 10, textAlign: 'right' }}>{currencySymbol}</div>
-                    <div style={{ borderBottom: '1.5px solid #000', padding: '0 8px 2px', fontWeight: 'bold', fontSize: 14, minWidth: 60, textAlign: 'right' }}>
-                      {codValue}
-                    </div>
-                    <div style={{ fontSize: 10, textAlign: 'right' }}>{currencySymbol === '$' ? '$' : '៛'}</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          );
-        })}
+        {pendingOrders.length > 0 && (
+          <div style={{ marginTop: 20 }}>
+            <h4 style={{ margin: '0 0 8px 0', fontSize: 14 }}>Pendding Packages</h4>
+            <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #000', textAlign: 'center', fontSize: 10 }}>
+              <thead>
+                <tr style={{ background: '#22c55e', color: '#fff' }}>
+                  <th style={{ border: '1px solid #000', padding: 4 }}>No</th>
+                  <th style={{ border: '1px solid #000', padding: 4 }}>Bill Invoice</th>
+                  <th style={{ border: '1px solid #000', padding: 4 }}>Customer</th>
+                  <th style={{ border: '1px solid #000', padding: 4 }}>Bill Create</th>
+                  <th style={{ border: '1px solid #000', padding: 4 }}>Bill Finish</th>
+                  <th style={{ border: '1px solid #000', padding: 4 }}>Zone</th>
+                  <th style={{ border: '1px solid #000', padding: 4 }}>Receiver Phone</th>
+                  <th style={{ border: '1px solid #000', padding: 4 }}>COD</th>
+                  <th style={{ border: '1px solid #000', padding: 4 }}>Remark</th>
+                  <th style={{ border: '1px solid #000', padding: 4 }}>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pendingOrders.map((o, idx) => (
+                  <tr key={o.id}>
+                    <td style={{ border: '1px solid #000', padding: 4 }}>{idx + 1}</td>
+                    <td style={{ border: '1px solid #000', padding: 4 }}>{o.trackingCode}</td>
+                    <td style={{ border: '1px solid #000', padding: 4 }}>{o.merchant?.name || '—'}</td>
+                    <td style={{ border: '1px solid #000', padding: 4 }}>{o.createdAt ? formatDateToDDMMYYYY(o.createdAt) : '—'}</td>
+                    <td style={{ border: '1px solid #000', padding: 4 }}>-</td>
+                    <td style={{ border: '1px solid #000', padding: 4 }}>{o.zone?.name || '—'}</td>
+                    <td style={{ border: '1px solid #000', padding: 4 }}>{o.receiverPhone}</td>
+                    <td style={{ border: '1px solid #000', padding: 4 }}>{o.codCurrency === 'USD' ? `$${parseFloat(o.cod||'0').toFixed(2)}` : `៛${parseFloat(o.cod||'0').toLocaleString()}`}</td>
+                    <td style={{ border: '1px solid #000', padding: 4 }}>{o.note || ''}</td>
+                    <td style={{ border: '1px solid #000', padding: 4, color: '#dc2626' }}>កំពុងដំណើរការ (ផ្ញើចេញពីឃ្លាំង)</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </>
   );

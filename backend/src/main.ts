@@ -7,7 +7,7 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   app.enableCors({
-    origin: process.env.FRONTEND_URLS?.split(','),
+    origin: process.env.FRONTEND_URLS ? process.env.FRONTEND_URLS.split(',') : 'http://localhost:3000',
     credentials: true,
   });
 
@@ -31,5 +31,6 @@ async function bootstrap() {
   await app.listen(port);
   console.log(`🚀 Backend running on http://localhost:${port}`);
   console.log(`📚 Swagger: http://localhost:${port}/api/docs`);
+  // trigger restart
 }
 bootstrap();

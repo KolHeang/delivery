@@ -7,11 +7,13 @@ import Sidebar from '@/components/layout/Sidebar';
 import Topbar from '@/components/layout/Topbar';
 import api from '@/lib/api';
 import { MdAdd } from 'react-icons/md';
+import { useLanguage } from '@/lib/LanguageContext';
 
 export default function IncomeListPage() {
   const router = useRouter();
   const [incomes, setIncomes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const { t } = useLanguage();
 
   useEffect(() => {
     if (!isAuthenticated()) { router.push('/'); return; }
@@ -35,19 +37,19 @@ export default function IncomeListPage() {
       <Sidebar />
       <div className="main-content">
         <Topbar
-          title="Income List"
-          subtitle="Overview of company revenues and collections"
+          title={t('incomeList') || 'Income List'}
+          subtitle={t('incomeSubtitle') || 'Overview of company revenues and collections'}
         />
         <div className="page-content">
           <div className="card">
             <div className="card-header">
-              <span className="card-title">💵 Revenues & Collections</span>
-              <button className="btn btn-primary btn-sm" onClick={() => router.push('/income/create')}><MdAdd size={14} /> Add Income</button>
+              <span className="card-title">💵 {t('revenuesTitle') || 'Revenues & Collections'}</span>
+              <button className="btn btn-primary btn-sm" onClick={() => router.push('/income/create')}><MdAdd size={14} /> {t('addIncome') || 'Add Income'}</button>
             </div>
             {incomes.length === 0 ? (
               <div className="empty-state">
                 <div className="empty-state-icon">💸</div>
-                <div className="empty-state-title">No incomes recorded yet</div>
+                <div className="empty-state-title">{t('noIncomesRecorded') || 'No incomes recorded yet'}</div>
               </div>
             ) : (
               <div style={{ overflowX: 'auto' }}>
@@ -55,10 +57,10 @@ export default function IncomeListPage() {
                   <thead>
                     <tr>
                       <th>#</th>
-                      <th>Description</th>
-                      <th>Income Type</th>
-                      <th>Amount ($)</th>
-                      <th>Income Date</th>
+                      <th>{t('description') || 'Description'}</th>
+                      <th>{t('incomeType') || 'Income Type'}</th>
+                      <th>{t('amountUSD') || 'Amount ($)'}</th>
+                      <th>{t('incomeDate') || 'Income Date'}</th>
                     </tr>
                   </thead>
                   <tbody>

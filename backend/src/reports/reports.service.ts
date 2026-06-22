@@ -138,26 +138,32 @@ export class ReportsService {
     }));
   }
 
-  async getPickupSummary(startDate?: string, endDate?: string) {
+  async getPickupSummary(startDate?: string, endDate?: string, driverId?: string, merchantId?: string) {
+    // pickup driver = pickupDriverId (warehouse flow) OR driverId (direct flow with picked-up status)
     let q = this.orderRepo
       .createQueryBuilder('order')
-      .leftJoin('order.driver', 'driver')
-      .select('driver.id', 'id')
-      .addSelect("COALESCE(driver.name, 'Unknown Driver')", 'name')
+      .leftJoin('order.pickupDriver', 'pickupDriver')
+      .leftJoin('order.merchant', 'merchant')
+      .select('pickupDriver.id', 'id')
+      .addSelect("COALESCE(pickupDriver.name, 'Unknown Driver')", 'name')
       .addSelect('COUNT(*)', 'package')
+      .addSelect('COUNT(DISTINCT merchant.id)', 'shopCount')
       .addSelect('SUM(order.deliveryFee)', 'fee')
-      .where("order.status = 'picked-up'");
+      .where('order.pickupDriverId IS NOT NULL');
 
-    if (startDate) q = q.andWhere('order.createdAt >= :startDate', { startDate });
-    if (endDate) q = q.andWhere('order.createdAt <= :endDate', { endDate: `${endDate} 23:59:59` });
+    if (startDate) q = q.andWhere('order.warehouseAt >= :startDate', { startDate });
+    if (endDate) q = q.andWhere('order.warehouseAt <= :endDate', { endDate: `${endDate} 23:59:59` });
+    if (driverId) q = q.andWhere('pickupDriver.id = :driverId', { driverId });
+    if (merchantId) q = q.andWhere('merchant.id = :merchantId', { merchantId });
 
-    q = q.groupBy('driver.id').addGroupBy('driver.name');
+    q = q.groupBy('pickupDriver.id').addGroupBy('pickupDriver.name');
     const result = await q.getRawMany();
 
     return result.map((row) => ({
       id: row.id || Math.random(),
       name: row.name,
       package: parseInt(row.package || '0', 10),
+      shopCount: parseInt(row.shopCount || '0', 10),
       fee: parseFloat(row.fee || '0'),
     }));
   }

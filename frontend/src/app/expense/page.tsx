@@ -8,11 +8,13 @@ import Topbar from '@/components/layout/Topbar';
 import api from '@/lib/api';
 import Badge from '@/components/ui/Badge';
 import { MdAdd, MdTrendingDown } from 'react-icons/md';
+import { useLanguage } from '@/lib/LanguageContext';
 
 export default function ExpenseListPage() {
   const router = useRouter();
   const [expenses, setExpenses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const { t } = useLanguage();
 
   useEffect(() => {
     if (!isAuthenticated()) { router.push('/'); return; }
@@ -36,19 +38,19 @@ export default function ExpenseListPage() {
       <Sidebar />
       <div className="main-content">
         <Topbar
-          title="Expense List"
-          subtitle="Overview of company outlays and expenses"
+          title={t('expenseList') || 'Expense List'}
+          subtitle={t('expenseSubtitle') || 'Overview of company outlays and expenses'}
         />
         <div className="page-content">
           <div className="card">
             <div className="card-header">
-              <span className="card-title">💸 Outlays & Expenditures</span>
-              <button className="btn btn-primary btn-sm" onClick={() => router.push('/expense/create')}><MdAdd size={14} /> Add Expense</button>
+              <span className="card-title">💸 {t('outlaysTitle') || 'Outlays & Expenditures'}</span>
+              <button className="btn btn-primary btn-sm" onClick={() => router.push('/expense/create')}><MdAdd size={14} /> {t('addExpense') || 'Add Expense'}</button>
             </div>
             {expenses.length === 0 ? (
               <div className="empty-state">
                 <div className="empty-state-icon">💸</div>
-                <div className="empty-state-title">No expenses found</div>
+                <div className="empty-state-title">{t('noExpensesFound') || 'No expenses found'}</div>
               </div>
             ) : (
               <div style={{ overflowX: 'auto' }}>
@@ -56,10 +58,10 @@ export default function ExpenseListPage() {
                   <thead>
                     <tr>
                       <th>#</th>
-                      <th>Description</th>
-                      <th>Expense Type</th>
-                      <th>Amount ($)</th>
-                      <th>Expense Date</th>
+                      <th>{t('description') || 'Description'}</th>
+                      <th>{t('expenseType') || 'Expense Type'}</th>
+                      <th>{t('amountUSD') || 'Amount ($)'}</th>
+                      <th>{t('expenseDate') || 'Expense Date'}</th>
                     </tr>
                   </thead>
                   <tbody>

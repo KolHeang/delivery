@@ -45,11 +45,15 @@ export class ReportsController {
   @Get('pickup-summary')
   @ApiQuery({ name: 'startDate', required: false })
   @ApiQuery({ name: 'endDate', required: false })
+  @ApiQuery({ name: 'driverId', required: false })
+  @ApiQuery({ name: 'merchantId', required: false })
   getPickupSummary(
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
+    @Query('driverId') driverId?: string,
+    @Query('merchantId') merchantId?: string,
   ) {
-    return this.reportsService.getPickupSummary(startDate, endDate);
+    return this.reportsService.getPickupSummary(startDate, endDate, driverId, merchantId);
   }
 
   @Get('delivery-summary')

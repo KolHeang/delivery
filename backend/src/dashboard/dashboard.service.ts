@@ -43,10 +43,14 @@ export class DashboardService {
         this.merchantRepo.count(),
       ]);
 
-    const ordersQuery = (status?: string) => {
+    const ordersQuery = (status?: string | string[]) => {
       const qb = this.orderRepo.createQueryBuilder('order');
       if (status) {
-        qb.where('order.status = :status', { status });
+        if (Array.isArray(status)) {
+          qb.where('order.status IN (:...statuses)', { statuses: status });
+        } else {
+          qb.where('order.status = :status', { status });
+        }
       } else {
         qb.where('1=1');
       }
@@ -57,21 +61,32 @@ export class DashboardService {
     const [
       totalOrders,
       pending,
+      inWarehouse,
       assigned,
       pickedUp,
       inTransit,
       delivered,
       failed,
       returned,
+      broughtToWarehouse,
     ] = await Promise.all([
       ordersQuery(),
       ordersQuery('pending'),
-      Promise.resolve(0),
+      ordersQuery('in-warehouse'),
+      ordersQuery('assigned'),
       ordersQuery('picked-up'),
       ordersQuery('in-transit'),
       ordersQuery('delivered'),
       ordersQuery('failed'),
       ordersQuery('returned'),
+      ordersQuery([
+        'in-warehouse',
+        'assigned',
+        'in-transit',
+        'delivered',
+        'failed',
+        'returned',
+      ]),
     ]);
 
     const revenueQuery = this.orderRepo
@@ -84,9 +99,11 @@ export class DashboardService {
     const codQuery = this.orderRepo
       .createQueryBuilder('order')
       .select('SUM(order.cod)', 'total')
-      .where("order.status = 'delivered'");
+      .addSelect('order.codCurrency', 'currency')
+      .where("order.status = 'delivered'")
+      .groupBy('order.codCurrency');
     this.applyDateFilter(codQuery, 'order', startDate, endDate);
-    const codResult = await codQuery.getRawOne();
+    const codResults = await codQuery.getRawMany();
 
     const feeQuery = this.orderRepo
       .createQueryBuilder('order')
@@ -99,7 +116,12 @@ export class DashboardService {
       where: { status: 'available' },
     });
 
-    const collectedCashUSD = parseFloat(codResult?.total || '0');
+    const collectedCashUSD = parseFloat(
+      codResults.find((c) => c.currency === 'USD')?.total || '0',
+    );
+    const collectedCashKHR = parseFloat(
+      codResults.find((c) => c.currency === 'KHR')?.total || '0',
+    );
 
     return {
       totalOrders,
@@ -108,16 +130,18 @@ export class DashboardService {
       totalCustomers,
       totalMerchants,
       pending,
+      inWarehouse,
       assigned,
       pickedUp,
       inTransit,
       delivered,
       failed,
       returned,
+      broughtToWarehouse,
       revenue: parseFloat(revenueResult?.total || '0'),
       totalDeliveryFee: parseFloat(feeResult?.total || '0'),
       collectedCashUSD,
-      collectedCashKHR: collectedCashUSD * 4100,
+      collectedCashKHR,
       availableDrivers,
     };
   }

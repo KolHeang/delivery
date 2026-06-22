@@ -14,9 +14,11 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from 'recharts';
 import { MdHome, MdLocalPostOffice, MdSearch } from 'react-icons/md';
+import DateInput, { getLocalDateString } from '@/components/ui/DateInput';
 
 const STATUS_COLORS: Record<string, string> = {
-  pending: '#f59e0b', assigned: '#6366f1', 'picked-up': '#3b82f6', 'in-transit': '#8b5cf6',
+  pending: '#f59e0b', 'in-warehouse': '#0f766e', assigned: '#6366f1',
+  'picked-up': '#3b82f6', 'in-transit': '#8b5cf6',
   delivered: '#10b981', failed: '#ef4444', returned: '#6b7280',
 };
 
@@ -36,8 +38,8 @@ export default function DashboardPage() {
 
   // Date range filters
   const [rangeType, setRangeType] = useState('all');
-  const [customStart, setCustomStart] = useState('');
-  const [customEnd, setCustomEnd] = useState('');
+  const [customStart, setCustomStart] = useState(() => getLocalDateString());
+  const [customEnd, setCustomEnd] = useState(() => getLocalDateString());
 
   const getDates = useCallback((type: string) => {
     const today = new Date();
@@ -127,7 +129,7 @@ export default function DashboardPage() {
     <div className="app-layout">
       <Sidebar />
       <div className="main-content">
-        <Topbar title="Dashboard" subtitle="Welcome back! Here's what's happening today." />
+        <Topbar title={t('dashboard')} subtitle={t('dashboardSubtitle')} />
         <div className="page-content">
           {/* Date Filter */}
           <div className="card" style={{ marginBottom: 20, padding: '12px 16px' }}>
@@ -152,24 +154,20 @@ export default function DashboardPage() {
 
               {rangeType === 'custom' && (
                 <>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                    <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)' }}>{t('fromDate')}</span>
-                    <input
-                      type="date"
-                      className="form-control"
-                      value={customStart}
-                      onChange={e => setCustomStart(e.target.value)}
-                    />
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                    <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)' }}>{t('toDate')}</span>
-                    <input
-                      type="date"
-                      className="form-control"
-                      value={customEnd}
-                      onChange={e => setCustomEnd(e.target.value)}
-                    />
-                  </div>
+                  <DateInput
+                    labelEn="Start Date"
+                    labelKh="ចាប់ពីថ្ងៃ"
+                    value={customStart}
+                    onChange={setCustomStart}
+                    style={{ background: '#f8f9fa', borderRadius: 4 }}
+                  />
+                  <DateInput
+                    labelEn="End Date"
+                    labelKh="ដល់"
+                    value={customEnd}
+                    onChange={setCustomEnd}
+                    style={{ background: '#f8f9fa', borderRadius: 4 }}
+                  />
                 </>
               )}
             </div>
@@ -184,16 +182,118 @@ export default function DashboardPage() {
             <StatsCard icon="/3d/3d_refresh.png" label={t('totalReturnParcel')} value={stats?.returned ?? 0} color="#6b7280" bg="#f3f4f6" />
             <StatsCard icon="/3d/3d_cash.png" label={t('totalDeliveryFeeDashboard')} value={`$${(stats?.totalDeliveryFee ?? 0).toFixed(2)}`} color="#10b981" bg="#ecfdf5" />
             <StatsCard icon="/3d/3d_money_bag.png" label={t('amountCollectedUSD')} value={`$${(stats?.collectedCashUSD ?? 0).toFixed(2)}`} color="#2f55a5" bg="#eef2fa" />
-            <StatsCard icon="/3d/3d_khr_coin.png" label={t('amountCollectedKHR')} value={`${(stats?.collectedCashKHR ?? 0).toLocaleString()} ៛`} color="#f16222" bg="#fef4ef" />
+            <StatsCard icon="/3d/3d_khr_coin.png" label={t('amountCollectedKHR')} value={`${(stats?.collectedCashKHR ?? 0).toLocaleString()}៛`} color="#f16222" bg="#fef4ef" />
             <StatsCard icon="/3d/3d_scooter.png" label={t('totalDrivers')} value={stats?.totalDrivers ?? 0} color="#8b5cf6" bg="#f5f3ff" />
-            <StatsCard icon="/3d/3d_users.png" label={t('totalStaff')} value={stats?.totalUser ?? 0} color="#2f55a5" bg="#eef2fa" />
+            <StatsCard icon="/3d/3d_shop.png" label={t('totalMerchants')} value={stats?.totalMerchants ?? 0} color="#2f55a5" bg="#eef2fa" />
+          </div>
+
+          {/* Delivery Flow Status Summary */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 20, alignItems: 'stretch' }}>
+            {/* Pick-up Summary */}
+            <a href="/summary/pickup" style={{ textDecoration: 'none', display: 'flex', flexDirection: 'column', height: '100%' }}>
+              <div className="card" style={{ padding: 0, overflow: 'hidden', cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s', height: '100%', display: 'flex', flexDirection: 'column', flex: 1 }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(-3px)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 8px 24px rgba(217,119,6,0.15)'; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = ''; (e.currentTarget as HTMLElement).style.boxShadow = ''; }}>
+                <div style={{ background: 'linear-gradient(135deg, #d97706, #f59e0b)', padding: '14px 20px', display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <span style={{ fontSize: 28 }}>🏪</span>
+                  <div>
+                    <div style={{ color: '#fff', fontWeight: 800, fontSize: 15 }}>{t('pickupSummary')}</div>
+                  </div>
+                  <div style={{ marginLeft: 'auto', color: 'rgba(255,255,255,0.7)', fontSize: 18 }}>→</div>
+                </div>
+                <div style={{ padding: '14px 20px', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6, flex: 1 }}>
+                  <div style={{ textAlign: 'center', padding: '10px 2px', borderRadius: 10, background: '#fef3c7', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: '#d97706' }}>{stats?.pending ?? 0}</div>
+                    <div style={{ fontSize: 10, color: '#92400e', fontWeight: 600 }}>{t('pending')}</div>
+                  </div>
+                  <div style={{ textAlign: 'center', padding: '10px 2px', borderRadius: 10, background: '#dbeafe', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: '#1e40af' }}>{stats?.pickedUp ?? 0}</div>
+                    <div style={{ fontSize: 10, color: '#1e3a8a', fontWeight: 600 }}>{t('pickedUp')}</div>
+                  </div>
+                  <div style={{ textAlign: 'center', padding: '10px 2px', borderRadius: 10, background: '#d1fae5', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: '#059669' }}>{stats?.broughtToWarehouse ?? 0}</div>
+                    <div style={{ fontSize: 10, color: '#064e3b', fontWeight: 600 }}>{t('broughtToWarehouse')}</div>
+                  </div>
+                  <div style={{ textAlign: 'center', padding: '10px 2px', borderRadius: 10, background: '#ccfbf1', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: '#0f766e' }}>{stats?.inWarehouse ?? 0}</div>
+                    <div style={{ fontSize: 10, color: '#134e4a', fontWeight: 600 }}>{t('inWarehouse')}</div>
+                  </div>
+                </div>
+              </div>
+            </a>
+
+            {/* Delivery Summary */}
+            <a href="/summary/delivery" style={{ textDecoration: 'none', display: 'flex', flexDirection: 'column', height: '100%' }}>
+              <div className="card" style={{ padding: 0, overflow: 'hidden', cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s', height: '100%', display: 'flex', flexDirection: 'column', flex: 1 }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(-3px)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 8px 24px rgba(99,102,241,0.15)'; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = ''; (e.currentTarget as HTMLElement).style.boxShadow = ''; }}>
+                <div style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', padding: '14px 20px', display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <span style={{ fontSize: 28 }}>🚚</span>
+                  <div>
+                    <div style={{ color: '#fff', fontWeight: 800, fontSize: 15 }}>{t('deliverySummary')}</div>
+                  </div>
+                  <div style={{ marginLeft: 'auto', color: 'rgba(255,255,255,0.7)', fontSize: 18 }}>→</div>
+                </div>
+                <div style={{ padding: '14px 20px', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6, flex: 1 }}>
+                  <div style={{ textAlign: 'center', padding: '8px 2px', borderRadius: 10, background: '#e0e7ff', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: '#4338ca' }}>{stats?.assigned ?? 0}</div>
+                    <div style={{ fontSize: 10, color: '#3730a3', fontWeight: 600 }}>{t('assigned')}</div>
+                  </div>
+                  <div style={{ textAlign: 'center', padding: '8px 2px', borderRadius: 10, background: '#f3e8ff', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: '#6b21a8' }}>{stats?.inTransit ?? 0}</div>
+                    <div style={{ fontSize: 10, color: '#581c87', fontWeight: 600 }}>{t('inTransit')}</div>
+                  </div>
+                  <div style={{ textAlign: 'center', padding: '8px 2px', borderRadius: 10, background: '#ecfdf5', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: '#065f46' }}>{stats?.delivered ?? 0}</div>
+                    <div style={{ fontSize: 10, color: '#064e3b', fontWeight: 600 }}>{t('delivered')}</div>
+                  </div>
+                  <div style={{ textAlign: 'center', padding: '8px 2px', borderRadius: 10, background: '#fef2f2', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: '#991b1b' }}>{stats?.failed ?? 0}</div>
+                    <div style={{ fontSize: 10, color: '#7f1d1d', fontWeight: 600 }}>{t('failed')}</div>
+                  </div>
+                </div>
+              </div>
+            </a>
+
+            {/* Shop Summary */}
+            <a href="/summary/shop" style={{ textDecoration: 'none', display: 'flex', flexDirection: 'column', height: '100%' }}>
+              <div className="card" style={{ padding: 0, overflow: 'hidden', cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s', height: '100%', display: 'flex', flexDirection: 'column', flex: 1 }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(-3px)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 8px 24px rgba(16,185,129,0.15)'; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = ''; (e.currentTarget as HTMLElement).style.boxShadow = ''; }}>
+                <div style={{ background: 'linear-gradient(135deg, #059669, #10b981)', padding: '14px 20px', display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <span style={{ fontSize: 28 }}>🏪</span>
+                  <div>
+                    <div style={{ color: '#fff', fontWeight: 800, fontSize: 15 }}>{t('shopSummary')}</div>
+                  </div>
+                  <div style={{ marginLeft: 'auto', color: 'rgba(255,255,255,0.7)', fontSize: 18 }}>→</div>
+                </div>
+                <div style={{ padding: '14px 20px', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6, flex: 1 }}>
+                  <div style={{ textAlign: 'center', padding: '8px 2px', borderRadius: 10, background: '#ecfdf5', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: '#065f46' }}>{stats?.totalOrders ?? 0}</div>
+                    <div style={{ fontSize: 10, color: '#064e3b', fontWeight: 600 }}>{t('parcels')}</div>
+                  </div>
+                  <div style={{ textAlign: 'center', padding: '8px 2px', borderRadius: 10, background: '#ecfdf5', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: '#065f46' }}>{stats?.delivered ?? 0}</div>
+                    <div style={{ fontSize: 10, color: '#064e3b', fontWeight: 600 }}>{t('delivered')}</div>
+                  </div>
+                  <div style={{ textAlign: 'center', padding: '8px 2px', borderRadius: 10, background: '#fef2f2', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: '#ef4444' }}>{stats?.failed ?? 0}</div>
+                    <div style={{ fontSize: 10, color: '#991b1b', fontWeight: 600 }}>{t('failed')}</div>
+                  </div>
+                  <div style={{ textAlign: 'center', padding: '8px 2px', borderRadius: 10, background: '#fef2f2', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: '#991b1b' }}>{stats?.returned ?? 0}</div>
+                    <div style={{ fontSize: 10, color: '#7f1d1d', fontWeight: 600 }}>{t('returned')}</div>
+                  </div>
+                </div>
+              </div>
+            </a>
           </div>
 
           {/* Charts */}
           <div className="charts-grid">
             {/* Area Chart */}
             <div className="card">
-              <div className="card-header"><span className="card-title">📊 Daily Deliveries (Last 30 Days)</span></div>
+              <div className="card-header"><span className="card-title">📊 {t('dailyDeliveries')}</span></div>
               <div className="card-body" style={{ height: 240 }}>
                 {chartData?.dailyData?.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
@@ -224,7 +324,7 @@ export default function DashboardPage() {
 
             {/* Pie Chart */}
             <div className="card">
-              <div className="card-header"><span className="card-title">🥧 Order Status Breakdown</span></div>
+              <div className="card-header"><span className="card-title">🥧 {t('orderStatusBreakdown')}</span></div>
               <div className="card-body" style={{ height: 240 }}>
                 {pieData.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
@@ -254,24 +354,24 @@ export default function DashboardPage() {
             {/* Recent Orders */}
             <div className="card">
               <div className="card-header">
-                <span className="card-title">🕐 Recent Orders</span>
-                <a href="/orders" className="btn btn-outline btn-sm">View All</a>
+                <span className="card-title">🕐 {t('recentOrders')}</span>
+                <a href="/orders" className="btn btn-outline btn-sm">{t('viewAll')}</a>
               </div>
               <div style={{ overflowX: 'auto' }}>
                 <table>
                   <thead>
                     <tr>
-                      <th>Tracking</th>
-                      <th>Receiver</th>
-                      <th>Merchant</th>
-                      <th>Address</th>
-                      <th>Fee</th>
-                      <th>Status</th>
+                      <th>{t('trackingCode')}</th>
+                      <th>{t('receiver')}</th>
+                      <th>{t('merchant')}</th>
+                      <th>{t('address')}</th>
+                      <th>{t('fee')}</th>
+                      <th>{t('status')}</th>
                     </tr>
                   </thead>
                   <tbody>
                     {recentOrders.length === 0 ? (
-                      <tr><td colSpan={6} className="text-center text-muted" style={{ padding: 32 }}>No orders yet</td></tr>
+                      <tr><td colSpan={6} className="text-center text-muted" style={{ padding: 32 }}>{t('noDataFound')}</td></tr>
                     ) : recentOrders.map((o: any) => (
                       <tr key={o.id}>
                         <td><code style={{ fontSize: 12 }}>{o.trackingCode}</code></td>
@@ -292,7 +392,7 @@ export default function DashboardPage() {
             {/* Top Drivers */}
             <div className="card">
               <div className="card-header">
-                <span className="card-title">🏆 Top Drivers</span>
+                <span className="card-title">🏆 {t('topDriversTitle')}</span>
               </div>
               <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
                 {topDrivers.length === 0 ? (
@@ -310,11 +410,11 @@ export default function DashboardPage() {
                     </div>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontWeight: 600, fontSize: 13 }}>{d.name}</div>
-                      <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{d.zone?.name || 'No zone'}</div>
+                      <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{d.zone?.name || t('noZone')}</div>
                     </div>
                     <div style={{ textAlign: 'right' }}>
                       <div style={{ fontWeight: 700, fontSize: 14 }}>{d.totalDeliveries}</div>
-                      <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>deliveries</div>
+                      <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{t('deliveriesLabel')}</div>
                     </div>
                   </div>
                 ))}

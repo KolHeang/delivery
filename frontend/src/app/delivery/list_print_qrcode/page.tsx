@@ -9,6 +9,14 @@ import api from '@/lib/api';
 import { MdPrint, MdSearch, MdClose, MdBookmark } from 'react-icons/md';
 import { useLanguage } from '@/lib/LanguageContext';
 import Modal from '@/components/ui/Modal';
+import DateInput, { getLocalDateString, formatDateToDDMMYYYY } from '@/components/ui/DateInput';
+
+const getLocalFirstDayOfMonthString = () => {
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  return `${year}-${month}-01`;
+};
 
 const formatCOD = (cod: any, currency: string) => {
   if (currency === 'KHR') return `${parseInt(cod).toLocaleString()} ៛`;
@@ -55,11 +63,12 @@ export default function PrintInvoicePage() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [merchantFilter, setMerchantFilter] = useState('');
   const [driverFilter, setDriverFilter] = useState('');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  const [startDate, setStartDate] = useState(() => getLocalFirstDayOfMonthString());
+  const [endDate, setEndDate] = useState(() => getLocalDateString());
   const [filteredOrders, setFilteredOrders] = useState<any[]>([]);
   const { lang, t } = useLanguage();
   const [showPrintModal, setShowPrintModal] = useState(false);
+  const [isDirectMode, setIsDirectMode] = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated()) { router.push('/'); return; }
@@ -74,19 +83,29 @@ export default function PrintInvoicePage() {
         setMerchants(mRes.data || []);
         setDrivers(dRes.data || []);
         
-        // Pre-select single ID from query parameter if provided
+        // Pre-select single ID or comma-separated list of IDs from query parameter if provided
         const params = new URLSearchParams(window.location.search);
         const singleId = params.get('id');
         if (singleId) {
-          const parsedId = parseInt(singleId);
-          setSelectedIds([parsedId]);
-          const matchedOrder = orderData.find((o: any) => o.id === parsedId);
-          if (matchedOrder) {
-            setSearch(matchedOrder.trackingCode || '');
+          setIsDirectMode(true);
+          if (singleId.includes(',')) {
+            const parsedIds = singleId.split(',').map(x => parseInt(x)).filter(x => !isNaN(x));
+            setSelectedIds(parsedIds);
+            const matchedOrders = orderData.filter((o: any) => parsedIds.includes(o.id));
+            setOrders(matchedOrders);
+          } else {
+            const parsedId = parseInt(singleId);
+            setSelectedIds([parsedId]);
+            const matchedOrder = orderData.find((o: any) => o.id === parsedId);
+            if (matchedOrder) {
+              setSearch(matchedOrder.trackingCode || '');
+            }
+            setOrders(orderData);
           }
         } else {
           // select all by default
           setSelectedIds(orderData.map((o: any) => o.id));
+          setOrders(orderData);
         }
       })
       .catch(() => {})
@@ -165,18 +184,36 @@ export default function PrintInvoicePage() {
     </div>
   );
 
-  const selectedOrders = orders.filter(o => selectedIds.includes(o.id));
+  const selectedOrders = filteredOrders.filter(o => selectedIds.includes(o.id));
 
   return (
     <div className="app-layout">
-      {/* Hide Sidebar & Topbar during print */}
+      {/* Hide Sidebar & Topbar during print, and conditionally on screen if in direct preview */}
       <style dangerouslySetInnerHTML={{ __html: `
         @media screen {
-          .print-only-container {
-            display: none !important;
+          .no-print {
+            display: flex !important;
           }
+          ${isDirectMode ? `
+            .sidebar, .topbar, .filter-section, .table-container, .select-all-bar {
+              display: none !important;
+            }
+            .main-content {
+              margin-left: 0 !important;
+            }
+            .print-only-container {
+              display: block !important;
+            }
+          ` : `
+            .print-only-container {
+              display: none !important;
+            }
+          `}
         }
         @media print {
+          .no-print {
+            display: none !important;
+          }
           .sidebar, .topbar, .filter-section, .table-container, .select-all-bar {
             display: none !important;
           }
@@ -195,23 +232,51 @@ export default function PrintInvoicePage() {
             border: 1.5px solid #000 !important;
             box-shadow: none !important;
             margin-bottom: 20px !important;
-            page-break-after: always !important;
-            break-after: page !important;
           }
         }
       `}} />
 
       <Sidebar />
       <div className="main-content">
-        <Topbar title={t('printInvoiceDelivery')} subtitle={lang === 'km' ? 'បង្កើតវិក្កយបត្រកញ្ចប់ព័ត៌មាន និងកូដ QR អាចបោះពុម្ពបាន' : 'Generate printable package invoices and QR codes'} />
+        {isDirectMode ? (
+          <div className="no-print" style={{ 
+            display: 'flex', 
+            justifyContent: 'center', 
+            gap: 16, 
+            padding: '16px 24px', 
+            background: '#fff',
+            borderBottom: '1px solid #e2e8f0',
+            position: 'sticky',
+            top: 0,
+            zIndex: 100,
+            boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+          }}>
+            <button 
+              className="btn btn-success" 
+              onClick={confirmPrint}
+              style={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 6 }}
+            >
+              <MdPrint size={18} /> {lang === 'km' ? 'បោះពុម្ពវិក្កយបត្រ' : 'Print Invoice'}
+            </button>
+            <button 
+              className="btn btn-outline" 
+              onClick={() => router.push('/delivery')}
+              style={{ fontWeight: 'bold' }}
+            >
+              {lang === 'km' ? 'ត្រឡប់ក្រោយ' : 'Go Back'}
+            </button>
+          </div>
+        ) : (
+          <Topbar title="" subtitle="" />
+        )}
         <div className="page-content">
           
-          {/* Filters Section */}
           <div className="card filter-section" style={{ marginBottom: 20, padding: '16px 20px', background: '#f8fafc' }}>
-            <div style={{ display: 'flex', gap: 16, alignItems: 'flex-end', flexWrap: 'wrap' }}>
-              
+            {/* Row 1: dropdowns + dates */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12, marginBottom: 12 }}>
+
               {/* Driver Filter */}
-              <div className="form-group" style={{ marginBottom: 0, flex: 1, minWidth: 200 }}>
+              <div className="form-group" style={{ marginBottom: 0 }}>
                 <label className="form-label" style={{ fontWeight: 'bold', fontSize: 13, marginBottom: 6, display: 'block', color: '#1e293b' }}>{lang === 'km' ? 'អ្នកដឹក' : 'Driver'}</label>
                 <select className="form-control" value={driverFilter} onChange={e => setDriverFilter(e.target.value)} style={{ background: '#fff', border: '1px solid #cbd5e1' }}>
                   <option value="">{lang === 'km' ? '-- ទាំងអស់ --' : '-- All --'}</option>
@@ -224,7 +289,7 @@ export default function PrintInvoicePage() {
               </div>
 
               {/* Shop Filter */}
-              <div className="form-group" style={{ marginBottom: 0, flex: 1, minWidth: 200 }}>
+              <div className="form-group" style={{ marginBottom: 0 }}>
                 <label className="form-label" style={{ fontWeight: 'bold', fontSize: 13, marginBottom: 6, display: 'block', color: '#1e293b' }}>{lang === 'km' ? 'ហាង' : 'Shop'}</label>
                 <select className="form-control" value={merchantFilter} onChange={e => setMerchantFilter(e.target.value)} style={{ background: '#fff', border: '1px solid #cbd5e1' }}>
                   <option value="">{lang === 'km' ? '-- ទាំងអស់ --' : '-- All --'}</option>
@@ -236,30 +301,31 @@ export default function PrintInvoicePage() {
                 </select>
               </div>
 
-              {/* Green Filter Button */}
-              <button 
-                className="btn" 
-                style={{ 
-                  background: '#15803d', 
-                  color: '#fff', 
-                  height: 38, 
-                  padding: '0 20px', 
-                  borderRadius: 4, 
-                  fontWeight: 'bold',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 6,
-                  cursor: 'pointer',
-                  border: 'none'
-                }}
-              >
-                <span>🔍</span> {lang === 'km' ? 'ស្វែងរក' : 'Filter'}
-              </button>
+              {/* Start Date */}
+              <DateInput
+                labelEn="Start Date"
+                labelKh="ចាប់ផ្តើម"
+                value={startDate}
+                onChange={setStartDate}
+              />
+
+              {/* End Date */}
+              <DateInput
+                labelEn="End Date"
+                labelKh="បញ្ចប់"
+                value={endDate}
+                onChange={setEndDate}
+              />
+
+            </div>
+
+            {/* Row 2: buttons */}
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', flexWrap: 'wrap', alignItems: 'center' }}>
 
               {/* Print Button */}
               <button 
                 onClick={handlePrint}
-                disabled={selectedIds.length === 0}
+                disabled={selectedOrders.length === 0}
                 className="btn" 
                 style={{ 
                   background: 'var(--accent)',
@@ -271,15 +337,16 @@ export default function PrintInvoicePage() {
                   display: 'flex',
                   alignItems: 'center',
                   gap: 6,
-                  cursor: selectedIds.length === 0 ? 'not-allowed' : 'pointer',
+                  cursor: selectedOrders.length === 0 ? 'not-allowed' : 'pointer',
                   border: 'none'
                 }}
               >
-                <MdPrint size={18} /> {lang === 'km' ? `បោះពុម្ពដែលបានជ្រើសរើស (${selectedIds.length})` : `Print Selected (${selectedIds.length})`}
+                <MdPrint size={18} /> {lang === 'km' ? `បោះពុម្ពដែលបានជ្រើសរើស (${selectedOrders.length})` : `Print Selected (${selectedOrders.length})`}
               </button>
 
             </div>
           </div>
+
 
           {/* Select All Checkbox Bar */}
           <div className="select-all-bar" style={{ 
@@ -337,7 +404,7 @@ export default function PrintInvoicePage() {
                       </td>
                       <td style={{ padding: '12px 10px', borderRight: '1px solid #dee2e6', fontWeight: '500' }}>{o.trackingCode}</td>
                       <td style={{ padding: '12px 10px', borderRight: '1px solid #dee2e6' }}>
-                        {o.createdAt ? new Date(o.createdAt).toISOString().split('T')[0] : '—'}
+                        {o.createdAt ? formatDateToDDMMYYYY(o.createdAt) : '—'}
                       </td>
                       <td style={{ padding: '12px 10px', borderRight: '1px solid #dee2e6', fontWeight: 600 }}>{o.merchant?.nameKh || o.merchant?.name || o.senderName}</td>
                       <td style={{ padding: '12px 10px', borderRight: '1px solid #dee2e6' }}>{o.receiverName || '—'}</td>
@@ -384,7 +451,23 @@ export default function PrintInvoicePage() {
             {/* Logo and QR Code header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-                <img src="/ebs-logo.png" alt="EBS" style={{ height: 42, objectFit: 'contain' }} />
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <div style={{
+                    width: 32, height: 32, borderRadius: 8,
+                    background: '#000',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    color: '#fff', fontSize: 16,
+                    flexShrink: 0,
+                    WebkitPrintColorAdjust: 'exact',
+                    printColorAdjust: 'exact'
+                  }}>
+                    📦
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                    <span style={{ fontSize: 16, fontWeight: 800, color: '#000', letterSpacing: '0.5px', lineHeight: 1.1 }}>EBS<span style={{ color: '#555' }}>Express</span></span>
+                    <span style={{ fontSize: 9, color: '#555', marginTop: 1, letterSpacing: '0.2px' }}>Delivery System</span>
+                  </div>
+                </div>
               </div>
               {/* Real QR Code using api.qrserver.com */}
               <div style={{ textAlign: 'center' }}>
@@ -418,9 +501,6 @@ export default function PrintInvoicePage() {
               <div>
                 {lang === 'km' ? 'ឈ្មោះហាង' : 'Shop Name'} : {o.senderPhone || o.merchant?.phone}
               </div>
-              <div>
-                {lang === 'km' ? 'អតិថិជន' : 'Customer'}: {o.receiverName}
-              </div>
             </div>
 
             {/* Main Grid: Left vs Right */}
@@ -443,7 +523,7 @@ export default function PrintInvoicePage() {
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <span>{lang === 'km' ? 'កាលបរិច្ឆេទ' : 'Date'} :</span>
-                  <span>{o.createdAt ? new Date(o.createdAt).toISOString().split('T')[0] : ''}</span>
+                  <span>{o.createdAt ? formatDateToDDMMYYYY(o.createdAt) : ''}</span>
                 </div>
               </div>
             </div>

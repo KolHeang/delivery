@@ -6,12 +6,14 @@ import { isAuthenticated } from '@/lib/auth';
 import Sidebar from '@/components/layout/Sidebar';
 import Topbar from '@/components/layout/Topbar';
 import api from '@/lib/api';
+import { useLanguage } from '@/lib/LanguageContext';
 
 export default function AddIncomePage() {
   const router = useRouter();
   const [types, setTypes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const { t } = useLanguage();
   const [form, setForm] = useState({
     description: '',
     amount: '',
@@ -34,7 +36,7 @@ export default function AddIncomePage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.description || !form.amount || !form.typeId) return alert('Fill required fields');
+    if (!form.description || !form.amount || !form.typeId) return alert(t('required') || 'Fill required fields');
     setSaving(true);
     try {
       const payload = {
@@ -46,7 +48,7 @@ export default function AddIncomePage() {
       await api.post('/incomes', payload);
       router.push('/income');
     } catch {
-      alert('Failed to add income');
+      alert(t('failedToAddIncome') || 'Failed to add income');
     }
     setSaving(false);
   };
@@ -64,18 +66,18 @@ export default function AddIncomePage() {
     <div className="app-layout">
       <Sidebar />
       <div className="main-content">
-        <Topbar title="Add Income" subtitle="Record a new company revenue entry" />
+        <Topbar title={t('addIncome') || 'Add Income'} subtitle={t('addIncomeSubtitle') || 'Record a new company revenue entry'} />
         <div className="page-content">
           <div className="card">
-            <div className="card-header"><span className="card-title">💰 Income Details</span></div>
+            <div className="card-header"><span className="card-title">💰 {t('incomeDetails') || 'Income Details'}</span></div>
             <div className="card-body">
               <form onSubmit={handleSubmit}>
                 <div className="form-group">
-                  <label className="form-label">Description / Source <span>*</span></label>
+                  <label className="form-label">{t('descOrSource') || 'Description / Source'} <span>*</span></label>
                   <input
                     type="text"
                     className="form-control"
-                    placeholder="e.g. Delivery fees week 24, Sponsor payment"
+                    placeholder={t('placeholderDescIncome') || 'e.g. Delivery fees week 24, Sponsor payment'}
                     value={form.description}
                     onChange={e => setForm({ ...form, description: e.target.value })}
                     required
@@ -83,7 +85,7 @@ export default function AddIncomePage() {
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">Income Category / Type <span>*</span></label>
+                  <label className="form-label">{t('incomeCategory') || 'Income Category / Type'} <span>*</span></label>
                   <select
                     className="form-control"
                     value={form.typeId}
@@ -98,7 +100,7 @@ export default function AddIncomePage() {
 
                 <div className="form-row">
                   <div className="form-group">
-                    <label className="form-label">Amount ($) <span>*</span></label>
+                    <label className="form-label">{t('amountUSD') || 'Amount ($)'} <span>*</span></label>
                     <input
                       type="number"
                       step="0.01"
@@ -111,7 +113,7 @@ export default function AddIncomePage() {
                     />
                   </div>
                   <div className="form-group">
-                    <label className="form-label">Date <span>*</span></label>
+                    <label className="form-label">{t('dateLabel') || 'Date'} <span>*</span></label>
                     <input
                       type="date"
                       className="form-control"
@@ -124,10 +126,10 @@ export default function AddIncomePage() {
 
                 <div style={{ marginTop: 20, display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
                   <button type="button" className="btn btn-outline" onClick={() => router.push('/income')}>
-                    Cancel
+                    {t('cancel') || 'Cancel'}
                   </button>
                   <button type="submit" className="btn btn-primary" disabled={saving}>
-                    {saving ? 'Saving...' : 'Add Income'}
+                    {saving ? t('saving') || 'Saving...' : t('addIncome') || 'Add Income'}
                   </button>
                 </div>
               </form>

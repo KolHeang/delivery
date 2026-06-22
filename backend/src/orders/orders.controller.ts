@@ -17,6 +17,8 @@ import {
   UpdateOrderDto,
   UpdateOrderStatusDto,
   AssignDriverDto,
+  AssignPickupDto,
+  AssignDeliveryDto,
 } from './dto/order.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
@@ -50,10 +52,25 @@ export class OrdersController {
     });
   }
 
+  /** Pending orders with no driver — for direct delivery (Flow 1 assign page) */
   @Get('unassigned')
   @RequirePermissions('orders.read')
   findUnassigned() {
     return this.ordersService.findUnassigned();
+  }
+
+  /** Pending orders with no pickup driver — for pickup assignment (Flow 2 Step 1) */
+  @Get('pending-pickup')
+  @RequirePermissions('orders.read')
+  findPendingForPickup() {
+    return this.ordersService.findPendingForPickup();
+  }
+
+  /** Orders at warehouse waiting for delivery assignment (Flow 2 Step 2) */
+  @Get('in-warehouse')
+  @RequirePermissions('orders.read')
+  findInWarehouse() {
+    return this.ordersService.findInWarehouse();
   }
 
   @Get('stats')
@@ -65,7 +82,14 @@ export class OrdersController {
   @Get('tracking/:code')
   @RequirePermissions('orders.read')
   findByTracking(@Param('code') code: string) {
+    console.log("Tracking requested for code:", code);
     return this.ordersService.findByTracking(code);
+  }
+
+  @Get('phone/:phone')
+  @RequirePermissions('orders.read')
+  findByPhone(@Param('phone') phone: string) {
+    return this.ordersService.findByPhone(phone);
   }
 
   @Get(':id')
@@ -95,6 +119,10 @@ export class OrdersController {
     return this.ordersService.updateStatus(id, dto);
   }
 
+  /**
+   * Flow 1 — Direct delivery:
+   * pending → assign driver → picked-up (driver goes merchant→customer directly)
+   */
   @Post(':id/assign')
   @RequirePermissions('orders.update')
   assignDriver(
@@ -102,6 +130,32 @@ export class OrdersController {
     @Body() dto: AssignDriverDto,
   ) {
     return this.ordersService.assignDriver(id, dto);
+  }
+
+  /**
+   * Flow 2 Step 1 — Via warehouse:
+   * pending → assign pickup driver → in-warehouse
+   */
+  @Post(':id/assign-pickup')
+  @RequirePermissions('orders.update')
+  assignPickup(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: AssignPickupDto,
+  ) {
+    return this.ordersService.assignPickup(id, dto);
+  }
+
+  /**
+   * Flow 2 Step 2 — Via warehouse OR direct from office:
+   * in-warehouse | pending → assign delivery driver → assigned
+   */
+  @Post(':id/assign-delivery')
+  @RequirePermissions('orders.update')
+  assignDelivery(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: AssignDeliveryDto,
+  ) {
+    return this.ordersService.assignDelivery(id, dto);
   }
 
   @Delete(':id')

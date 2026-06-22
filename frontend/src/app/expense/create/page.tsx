@@ -6,12 +6,14 @@ import { isAuthenticated } from '@/lib/auth';
 import Sidebar from '@/components/layout/Sidebar';
 import Topbar from '@/components/layout/Topbar';
 import api from '@/lib/api';
+import { useLanguage } from '@/lib/LanguageContext';
 
 export default function AddExpensePage() {
   const router = useRouter();
   const [types, setTypes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const { t } = useLanguage();
   const [form, setForm] = useState({
     description: '',
     amount: '',
@@ -34,7 +36,7 @@ export default function AddExpensePage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.description || !form.amount || !form.typeId) return alert('Fill required fields');
+    if (!form.description || !form.amount || !form.typeId) return alert(t('required') || 'Fill required fields');
     setSaving(true);
     try {
       const payload = {
@@ -46,7 +48,7 @@ export default function AddExpensePage() {
       await api.post('/expenses', payload);
       router.push('/expense');
     } catch {
-      alert('Failed to add expense');
+      alert(t('failedToCreateCategory') || 'Failed to add expense');
     }
     setSaving(false);
   };
@@ -64,18 +66,18 @@ export default function AddExpensePage() {
     <div className="app-layout">
       <Sidebar />
       <div className="main-content">
-        <Topbar title="Add Expense" subtitle="Record a new company expenditure" />
+        <Topbar title={t('addExpense') || 'Add Expense'} subtitle={t('addExpenseSubtitle') || 'Record a new company expenditure'} />
         <div className="page-content">
           <div className="card">
-            <div className="card-header"><span className="card-title">💸 Expense Details</span></div>
+            <div className="card-header"><span className="card-title">💸 {t('expenseDetails') || 'Expense Details'}</span></div>
             <div className="card-body">
               <form onSubmit={handleSubmit}>
                 <div className="form-group">
-                  <label className="form-label">Description / Item <span>*</span></label>
+                  <label className="form-label">{t('descOrItem') || 'Description / Item'} <span>*</span></label>
                   <input
                     type="text"
                     className="form-control"
-                    placeholder="e.g. Weekly office supplies, fuel reimbursement"
+                    placeholder={t('placeholderDescExpense') || 'e.g. Weekly office supplies, fuel reimbursement'}
                     value={form.description}
                     onChange={e => setForm({ ...form, description: e.target.value })}
                     required
@@ -83,7 +85,7 @@ export default function AddExpensePage() {
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">Expense Category / Type <span>*</span></label>
+                  <label className="form-label">{t('expenseCategory') || 'Expense Category / Type'} <span>*</span></label>
                   <select
                     className="form-control"
                     value={form.typeId}
@@ -98,7 +100,7 @@ export default function AddExpensePage() {
 
                 <div className="form-row">
                   <div className="form-group">
-                    <label className="form-label">Amount ($) <span>*</span></label>
+                    <label className="form-label">{t('amountUSD') || 'Amount ($)'} <span>*</span></label>
                     <input
                       type="number"
                       step="0.01"
@@ -111,7 +113,7 @@ export default function AddExpensePage() {
                     />
                   </div>
                   <div className="form-group">
-                    <label className="form-label">Date <span>*</span></label>
+                    <label className="form-label">{t('dateLabel') || 'Date'} <span>*</span></label>
                     <input
                       type="date"
                       className="form-control"
@@ -124,10 +126,10 @@ export default function AddExpensePage() {
 
                 <div style={{ marginTop: 20, display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
                   <button type="button" className="btn btn-outline" onClick={() => router.push('/expense')}>
-                    Cancel
+                    {t('cancel') || 'Cancel'}
                   </button>
                   <button type="submit" className="btn btn-primary" disabled={saving}>
-                    {saving ? 'Saving...' : 'Add Expense'}
+                    {saving ? t('saving') || 'Saving...' : t('addExpense') || 'Add Expense'}
                   </button>
                 </div>
               </form>

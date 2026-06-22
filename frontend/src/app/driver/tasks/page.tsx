@@ -33,8 +33,11 @@ const taskTranslations = {
     updating: 'Updating...',
     dialogTitle: 'Select Status',
     dialogDesc: 'Please choose the status update for this parcel:',
+    remarkLabel: 'Reason / Remark',
+    remarkPlaceholder: 'Enter reason (e.g. why it is failed, returned or postponed)...',
     btnFailed: 'Delivery Failed',
     btnReturned: 'Return Package',
+    btnPostpone: 'Postpone to Tomorrow',
     btnCancel: 'Cancel',
     customer: 'Customer',
     merchant: 'Merchant',
@@ -56,8 +59,11 @@ const taskTranslations = {
     updating: 'កំពុងធ្វើបច្ចុប្បន្នភាព...',
     dialogTitle: 'ជ្រើសរើសស្ថានភាព',
     dialogDesc: 'សូមជ្រើសរើសការផ្លាស់ប្តូរស្ថានភាពកញ្ចប់អីវ៉ាន់នេះ៖',
+    remarkLabel: 'មូលហេតុ / ហេតុផល',
+    remarkPlaceholder: 'បញ្ជាក់មូលហេតុ (ឧ. ហេតុអ្វីមិនជោគជ័យ ត្រឡប់ ឬពន្យារពេល)...',
     btnFailed: 'ដឹកជញ្ជូនមិនបានសម្រេច',
     btnReturned: 'ប្រគល់អីវ៉ាន់ត្រឡប់មកវិញ',
+    btnPostpone: 'លើកថ្ងៃដឹកទៅស្អែក',
     btnCancel: 'បោះបង់',
     customer: 'អតិថិជន',
     merchant: 'ហាង/អ្នកផ្ញើ',
@@ -77,6 +83,7 @@ export default function DriverTasksPage() {
   // Problem Dialog state
   const [showDialog, setShowDialog] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
+  const [remark, setRemark] = useState('');
 
   const t = taskTranslations[lang] || taskTranslations['en'];
 
@@ -101,11 +108,11 @@ export default function DriverTasksPage() {
     loadTasks();
   }, [router]);
 
-  const updateStatus = async (id: number, newStatus: string) => {
+  const updateStatus = async (id: number, newStatus: string, note?: string) => {
     setUpdatingId(id);
     setShowDialog(false);
     try {
-      await api.patch(`/mobile/driver/tasks/${id}/status`, { status: newStatus });
+      await api.patch(`/mobile/driver/tasks/${id}/status`, { status: newStatus, note });
       // Reload task list
       const res = await api.get('/mobile/driver/tasks');
       setTasks(res.data);
@@ -421,11 +428,11 @@ export default function DriverTasksPage() {
                     {/* Role: Pickup Driver */}
                     {isPickupTask && task.status === 'pending' && (
                       <button
-                        onClick={() => updateStatus(task.id, 'picked-up')}
+                        onClick={() => updateStatus(task.id, 'in-warehouse')}
                         disabled={updatingId === task.id}
                         style={{
                           flex: 1,
-                          background: '#2f55a5',
+                          background: '#10b981',
                           color: '#ffffff',
                           border: 'none',
                           padding: '12px',
@@ -437,15 +444,15 @@ export default function DriverTasksPage() {
                           alignItems: 'center',
                           justifyContent: 'center',
                           gap: '6px',
-                          boxShadow: '0 4px 6px rgba(47, 85, 165, 0.1)'
+                          boxShadow: '0 4px 6px rgba(16, 185, 129, 0.1)'
                         }}
                       >
-                        <MdLocalShipping size={18} />
-                        {updatingId === task.id ? t.updating : t.btnPickup}
+                        <MdCheckCircle size={18} />
+                        {updatingId === task.id ? t.updating : (lang === 'km' ? 'ដល់ឃ្លាំង' : 'Arrived at Warehouse')}
                       </button>
                     )}
 
-                    {isPickupTask && task.status === 'picked-up' && !isDeliveryTask && (
+                    {/* {isPickupTask && task.status === 'picked-up' && !isDeliveryTask && (
                       <div style={{
                         flex: 1,
                         display: 'flex',
@@ -464,7 +471,7 @@ export default function DriverTasksPage() {
                         <MdCheckCircle size={18} />
                         {t.waitingHubReceive}
                       </div>
-                    )}
+                    )} */}
 
                     {/* Role: Delivery Driver */}
                     {isDeliveryTask && (
@@ -525,6 +532,7 @@ export default function DriverTasksPage() {
                             <button
                               onClick={() => {
                                 setSelectedTaskId(task.id);
+                                setRemark('');
                                 setShowDialog(true);
                               }}
                               disabled={updatingId === task.id}
@@ -611,9 +619,33 @@ export default function DriverTasksPage() {
               {t.dialogDesc}
             </p>
 
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ fontSize: '13px', fontWeight: '700', color: '#475569', display: 'block', marginBottom: '6px' }}>
+                {t.remarkLabel} <span style={{ color: '#ef4444' }}>*</span>
+              </label>
+              <textarea
+                value={remark}
+                onChange={e => setRemark(e.target.value)}
+                placeholder={t.remarkPlaceholder}
+                rows={3}
+                style={{
+                  width: '100%',
+                  padding: '10px 12px',
+                  borderRadius: '10px',
+                  border: '1.5px solid #cbd5e1',
+                  fontSize: '13px',
+                  outline: 'none',
+                  resize: 'none',
+                  boxSizing: 'border-box',
+                  fontFamily: 'inherit'
+                }}
+              />
+            </div>
+
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               <button
-                onClick={() => selectedTaskId && updateStatus(selectedTaskId, 'failed')}
+                onClick={() => selectedTaskId && remark.trim() && updateStatus(selectedTaskId, 'failed', remark)}
+                disabled={!remark.trim()}
                 style={{
                   background: '#ef4444',
                   color: '#ffffff',
@@ -622,13 +654,15 @@ export default function DriverTasksPage() {
                   borderRadius: '12px',
                   fontSize: '13.5px',
                   fontWeight: '700',
-                  cursor: 'pointer'
+                  cursor: !remark.trim() ? 'not-allowed' : 'pointer',
+                  opacity: !remark.trim() ? 0.6 : 1
                 }}
               >
                 {t.btnFailed}
               </button>
               <button
-                onClick={() => selectedTaskId && updateStatus(selectedTaskId, 'returned')}
+                onClick={() => selectedTaskId && remark.trim() && updateStatus(selectedTaskId, 'returned', remark)}
+                disabled={!remark.trim()}
                 style={{
                   background: '#6b7280',
                   color: '#ffffff',
@@ -637,10 +671,28 @@ export default function DriverTasksPage() {
                   borderRadius: '12px',
                   fontSize: '13.5px',
                   fontWeight: '700',
-                  cursor: 'pointer'
+                  cursor: !remark.trim() ? 'not-allowed' : 'pointer',
+                  opacity: !remark.trim() ? 0.6 : 1
                 }}
               >
                 {t.btnReturned}
+              </button>
+              <button
+                onClick={() => selectedTaskId && remark.trim() && updateStatus(selectedTaskId, 'assigned', remark)}
+                disabled={!remark.trim()}
+                style={{
+                  background: '#3b82f6',
+                  color: '#ffffff',
+                  border: 'none',
+                  padding: '12px',
+                  borderRadius: '12px',
+                  fontSize: '13.5px',
+                  fontWeight: '700',
+                  cursor: !remark.trim() ? 'not-allowed' : 'pointer',
+                  opacity: !remark.trim() ? 0.6 : 1
+                }}
+              >
+                {t.btnPostpone}
               </button>
               <button
                 onClick={() => {

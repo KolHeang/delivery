@@ -347,6 +347,7 @@ export default function DriverDashboardPage() {
         </div>
 
         {/* Picked Up (Waiting Hub) */}
+        {/* {/* {stats.pickedUpWaiting !== undefined && (
         <div style={{
           backgroundColor: '#ffffff',
           borderRadius: '16px',
@@ -373,9 +374,10 @@ export default function DriverDashboardPage() {
             <div style={{ fontSize: '16px', fontWeight: '800', color: '#0f172a', marginTop: '2px' }}>{stats.pickedUpWaiting ?? 0}</div>
           </div>
         </div>
+        )} */}
 
         {/* Brought to Warehouse */}
-        <div style={{
+        {/* <div style={{
           backgroundColor: '#ffffff',
           borderRadius: '16px',
           padding: '16px',
@@ -400,7 +402,7 @@ export default function DriverDashboardPage() {
             <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '600' }}>{t.broughtToHub}</div>
             <div style={{ fontSize: '16px', fontWeight: '800', color: '#0f172a', marginTop: '2px' }}>{stats.broughtToHub ?? 0}</div>
           </div>
-        </div>
+        </div> */}
 
         {/* Problem/Failed */}
         <div style={{

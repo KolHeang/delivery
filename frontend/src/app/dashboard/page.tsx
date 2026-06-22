@@ -201,7 +201,7 @@ export default function DashboardPage() {
                   </div>
                   <div style={{ marginLeft: 'auto', color: 'rgba(255,255,255,0.7)', fontSize: 18 }}>→</div>
                 </div>
-                <div style={{ padding: '14px 20px', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6, flex: 1 }}>
+                <div style={{ padding: '14px 20px', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6, flex: 1 }}>
                   <div style={{ textAlign: 'center', padding: '10px 2px', borderRadius: 10, background: '#fef3c7', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
                     <div style={{ fontSize: 18, fontWeight: 800, color: '#d97706' }}>{stats?.pending ?? 0}</div>
                     <div style={{ fontSize: 10, color: '#92400e', fontWeight: 600 }}>{t('pending')}</div>
@@ -209,10 +209,6 @@ export default function DashboardPage() {
                   <div style={{ textAlign: 'center', padding: '10px 2px', borderRadius: 10, background: '#dbeafe', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
                     <div style={{ fontSize: 18, fontWeight: 800, color: '#1e40af' }}>{stats?.pickedUp ?? 0}</div>
                     <div style={{ fontSize: 10, color: '#1e3a8a', fontWeight: 600 }}>{t('pickedUp')}</div>
-                  </div>
-                  <div style={{ textAlign: 'center', padding: '10px 2px', borderRadius: 10, background: '#d1fae5', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
-                    <div style={{ fontSize: 18, fontWeight: 800, color: '#059669' }}>{stats?.broughtToWarehouse ?? 0}</div>
-                    <div style={{ fontSize: 10, color: '#064e3b', fontWeight: 600 }}>{t('broughtToWarehouse')}</div>
                   </div>
                   <div style={{ textAlign: 'center', padding: '10px 2px', borderRadius: 10, background: '#ccfbf1', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
                     <div style={{ fontSize: 18, fontWeight: 800, color: '#0f766e' }}>{stats?.inWarehouse ?? 0}</div>

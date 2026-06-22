@@ -100,6 +100,33 @@ export default function TrackingPage() {
 
   const tLocal = trackingTranslations[lang] || trackingTranslations['en'];
 
+  const getStatusLabel = (status: string) => {
+    const labels: any = {
+      en: {
+        'pending': 'Package Registered',
+        'in-warehouse': 'Arrived at Warehouse',
+        'assigned': 'Driver Assigned',
+        'picked-up': 'Picked Up',
+        'in-transit': 'In Transit',
+        'delivered': 'Delivered Successfully',
+        'failed': 'Delivery Failed',
+        'returned': 'Returned Package',
+      },
+      km: {
+        'pending': 'បានចុះឈ្មោះកញ្ចប់អីវ៉ាន់',
+        'in-warehouse': 'អីវ៉ាន់ដល់ឃ្លាំង',
+        'assigned': 'បានចាត់តាំងអ្នកដឹក',
+        'picked-up': 'បានទទួលកញ្ចប់អីវ៉ាន់',
+        'in-transit': 'កំពុងដឹកជញ្ជូន',
+        'delivered': 'ដឹកជញ្ជូនជោគជ័យ',
+        'failed': 'ដឹកជញ្ជូនបរាជ័យ',
+        'returned': 'បានប្រគល់ត្រឡប់មកវិញ',
+      }
+    };
+    const langKey = lang === 'km' ? 'km' : 'en';
+    return labels[langKey][status] || status;
+  };
+
   const handleTrack = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!code) return;
@@ -603,28 +630,88 @@ export default function TrackingPage() {
               {order.histories && order.histories.length > 0 && (
                 <div className="card" style={{ padding: 24 }}>
                   <h4 style={{ fontWeight: 700, fontSize: 14, marginBottom: 20 }}>📋 {tLocal.detailedHistory}</h4>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 16, paddingLeft: 8 }}>
                     {[...order.histories]
                       .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-                      .map((h: any) => (
-                        <div key={h.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f8fafc', padding: '12px 16px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                          <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-                            <Badge status={h.status} />
-                            {h.note && <span style={{ color: 'var(--text-secondary)', fontSize: 12.5 }}>({h.note})</span>}
+                      .map((h: any, idx: number) => {
+                        const isLast = idx === order.histories.length - 1;
+                        let pointColor = '#cbd5e1';
+                        if (h.status === 'delivered') pointColor = '#10b981';
+                        else if (h.status === 'failed') pointColor = '#ef4444';
+                        else if (h.status === 'returned') pointColor = '#6b7280';
+                        else if (['in-transit', 'picked-up', 'assigned'].includes(h.status)) pointColor = '#f59e0b';
+                        else if (h.status === 'in-warehouse') pointColor = '#10b981';
+                        else pointColor = '#3b82f6';
+                        
+                        return (
+                          <div key={h.id} style={{ display: 'flex', gap: 16, position: 'relative' }}>
+                            {/* Vertical Line */}
+                            {!isLast && (
+                              <div style={{
+                                position: 'absolute',
+                                left: 7,
+                                top: 20,
+                                bottom: -20,
+                                width: '2px',
+                                background: '#e2e8f0',
+                                zIndex: 1
+                              }} />
+                            )}
+                            
+                            {/* Bullet Point */}
+                            <div style={{
+                              width: 16,
+                              height: 16,
+                              borderRadius: '50%',
+                              backgroundColor: '#fff',
+                              border: `3px solid ${pointColor}`,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              flexShrink: 0,
+                              zIndex: 2,
+                              marginTop: 4
+                            }} />
+
+                            {/* Content Block */}
+                            <div style={{ flex: 1, paddingBottom: isLast ? 0 : 20 }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 8 }}>
+                                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                                  <Badge status={h.status} label={getStatusLabel(h.status)} />
+                                </div>
+                                <div style={{ color: 'var(--text-muted)', fontSize: 11.5, display: 'flex', alignItems: 'center', gap: 4 }}>
+                                  <MdAccessTime size={13.5} style={{ color: '#94a3b8' }} />
+                                  <span>{new Date(h.createdAt).toLocaleString(lang === 'km' ? 'kh-KH' : 'en-US', {
+                                    month: 'short',
+                                    day: 'numeric',
+                                    year: 'numeric',
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                    hour12: true,
+                                  })}</span>
+                                </div>
+                              </div>
+
+                              {/* Note / Remarks */}
+                              {h.note && (
+                                <div style={{ 
+                                  marginTop: 8, 
+                                  padding: '8px 12px', 
+                                  background: h.status === 'failed' || h.status === 'returned' ? '#fef2f2' : '#f8fafc',
+                                  borderLeft: `3px solid ${h.status === 'failed' || h.status === 'returned' ? '#ef4444' : '#cbd5e1'}`,
+                                  borderRadius: '0 6px 6px 0', 
+                                  fontSize: 12.5, 
+                                  color: '#334155',
+                                  fontWeight: 500,
+                                  maxWidth: '90%'
+                                }}>
+                                  📝 {lang === 'km' ? 'សម្គាល់៖' : 'Remark:'} {h.note}
+                                </div>
+                              )}
+                            </div>
                           </div>
-                          <div style={{ color: 'var(--text-muted)', fontSize: 12, display: 'flex', alignItems: 'center', gap: 4 }}>
-                            <MdAccessTime size={14} />
-                            <span>{new Date(h.createdAt).toLocaleString(lang === 'km' ? 'kh-KH' : 'en-US', {
-                              month: 'short',
-                              day: 'numeric',
-                              year: 'numeric',
-                              hour: '2-digit',
-                              minute: '2-digit',
-                              hour12: true,
-                            })}</span>
-                          </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                   </div>
                 </div>
               )}

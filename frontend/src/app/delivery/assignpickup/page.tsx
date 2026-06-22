@@ -364,7 +364,7 @@ export default function AssignPickupPage() {
                               {d.name} {d.nameKh && <span style={{ fontWeight: 500, fontSize: 13 }}>({d.nameKh})</span>}
                             </div>
                             <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
-                              📍 {d.zone?.name || 'No zone'}
+                              📍 {d.zone?.name || t('noZone')}
                             </div>
                           </div>
                           <div style={{ textAlign: 'right' }}>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, Fragment } from 'react';
+import { useEffect, useState, Fragment, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { isAuthenticated } from '@/lib/auth';
 import Sidebar from '@/components/layout/Sidebar';
@@ -17,6 +17,28 @@ const getLocalDateString = (d: Date = new Date()) => {
   return `${year}-${month}-${day}`;
 };
 
+const getKhmerDateString = (date: Date = new Date()) => {
+  const days = ['អាទិត្យ', 'ចន្ទ', 'អង្គារ', 'ពុធ', 'ព្រហស្បតិ៍', 'សុក្រ', 'សៅរ៍'];
+  const months = [
+    'មករា', 'កុម្ភៈ', 'មីនា', 'មេសា', 'ឧសភា', 'មិថុនា',
+    'កក្កដា', 'សីហា', 'កញ្ញា', 'តុលា', 'វិច្ឆិកា', 'ធ្នូ'
+  ];
+  const khmerNums = ['០', '១', '២', '៣', '៤', '៥', '៦', '៧', '៨', '៩'];
+  const toKhmerNum = (num: number) => {
+    return String(num).split('').map(char => {
+      const idx = parseInt(char);
+      return isNaN(idx) ? char : khmerNums[idx];
+    }).join('');
+  };
+
+  const dayName = days[date.getDay()];
+  const day = toKhmerNum(date.getDate());
+  const monthName = months[date.getMonth()];
+  const year = toKhmerNum(date.getFullYear());
+
+  return `ថ្ងៃ ${dayName} ទី ${day} ខែ ${monthName} ឆ្នាំ ${year}`;
+};
+
 export default function PaymentWithShopPage() {
   const router = useRouter();
   const { lang, t } = useLanguage();
@@ -28,7 +50,7 @@ export default function PaymentWithShopPage() {
 
   // Filters State
   const [merchantFilter, setMerchantFilter] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('unpaid');
 
   const [startDate, setStartDate] = useState(() => {
     const d = new Date();
@@ -47,17 +69,38 @@ export default function PaymentWithShopPage() {
   // Interactive UI State
   const [expandedMerchantId, setExpandedMerchantId] = useState<number | null>(null);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [orgInfo, setOrgInfo] = useState<any>({
+    name: 'E-Express',
+    phone: '011609414',
+    address: 'Phnom Penh',
+  });
+  const originalFilterRef = useRef<string | null>(null);
+  const isPrintingDetailRef = useRef<boolean>(false);
+
   const [confirmMerchantId, setConfirmMerchantId] = useState<number | null>(null);
+  const [selectedMerchantIds, setSelectedMerchantIds] = useState<number[]>([]);
+
+  useEffect(() => {
+    setSelectedMerchantIds([]);
+  }, [statusFilter, merchantFilter, startDate, endDate]);
 
   const loadData = async () => {
     setLoading(true);
     try {
-      const [merchantRes, orderRes] = await Promise.all([
+      const [merchantRes, orderRes, orgRes] = await Promise.all([
         api.get('/merchants'),
         api.get('/orders'),
+        api.get('/settings/organisation').catch(() => null),
       ]);
       setMerchants(merchantRes.data || []);
       setOrders(orderRes.data || []);
+      if (orgRes && orgRes.data) {
+        setOrgInfo({
+          name: orgRes.data.name || 'E-Express',
+          phone: orgRes.data.phone || '011609414',
+          address: orgRes.data.address || 'Phnom Penh',
+        });
+      }
     } catch (err) {
       console.error('Error loading payments data:', err);
     } finally {
@@ -72,7 +115,14 @@ export default function PaymentWithShopPage() {
     }
     loadData();
 
-    const handleAfterPrint = () => document.body.classList.remove('receipt-print-active');
+    const handleAfterPrint = () => {
+      document.body.classList.remove('receipt-print-active');
+      if (isPrintingDetailRef.current) {
+        setMerchantFilter(originalFilterRef.current || '');
+        isPrintingDetailRef.current = false;
+        originalFilterRef.current = null;
+      }
+    };
     window.addEventListener('afterprint', handleAfterPrint);
     return () => window.removeEventListener('afterprint', handleAfterPrint);
   }, [router]);
@@ -100,10 +150,10 @@ export default function PaymentWithShopPage() {
         });
       }
 
-      // Filtered orders for payouts (status: delivered, matching shop payout status: unpaid)
+      // Filtered orders for payouts (status: delivered, matching shop payout status)
       const paymentOrders = mOrders.filter(o => 
         o.status === 'delivered' && 
-        o.merchantPaymentStatus === 'unpaid'
+        o.merchantPaymentStatus === statusFilter
       );
 
       // Package counts stats (all orders)
@@ -119,9 +169,9 @@ export default function PaymentWithShopPage() {
       const pendingCount = mOrders.filter(o => o.status === 'pending').length;
 
       // Apply order status filter if not empty (affects detailed list)
-      if (statusFilter) {
-        mOrders = mOrders.filter(o => o.status === statusFilter);
-      }
+      // if (statusFilter) {
+      //   mOrders = mOrders.filter(o => o.status === statusFilter);
+      // }
 
       // Financial statistics (delivered orders only)
       const totalUSD = paymentOrders.filter(o => o.codCurrency === 'USD').reduce((sum, o) => sum + parseFloat(o.cod || 0), 0);
@@ -156,8 +206,8 @@ export default function PaymentWithShopPage() {
     .filter(row => {
       // Filter by selected merchant dropdown
       if (merchantFilter && String(row.merchant.id) !== merchantFilter) return false;
-      // Only show merchants with relevant payments or orders
-      return row.paymentOrders.length > 0 || row.orders.length > 0;
+      // Only show merchants with relevant payments
+      return row.paymentOrders.length > 0;
     });
 
   // Toggle expanded details row
@@ -165,35 +215,56 @@ export default function PaymentWithShopPage() {
     setExpandedMerchantId(prev => (prev === id ? null : id));
   };
 
-  // Checkbox Confirm click
-  const handleToggleConfirm = (mId: number, checked: boolean) => {
+  const eligibleMerchants = groupedData.filter(row => row.paymentOrders.length > 0 && !row.hasUnsettledDriver);
+
+  const handleToggleSelectAll = (checked: boolean) => {
     if (checked) {
-      setConfirmMerchantId(mId);
-      setShowConfirmModal(true);
+      setSelectedMerchantIds(eligibleMerchants.map(row => row.merchant.id));
+    } else {
+      setSelectedMerchantIds([]);
+    }
+  };
+
+  const handleToggleSelectMerchant = (mId: number, checked: boolean) => {
+    if (checked) {
+      setSelectedMerchantIds(prev => [...prev, mId]);
+    } else {
+      setSelectedMerchantIds(prev => prev.filter(id => id !== mId));
     }
   };
 
   // Save/Confirm action inside Modal
   const handleConfirmSettlement = async () => {
-    if (!confirmMerchantId) return;
-    const item = groupedData.find(g => g.merchant.id === confirmMerchantId);
-    if (!item || item.paymentOrders.length === 0) return;
+    const merchantIdsToSettle = confirmMerchantId ? [confirmMerchantId] : selectedMerchantIds;
+    if (merchantIdsToSettle.length === 0) return;
 
     setSaving(true);
     try {
-      const orderIds = item.paymentOrders.map(o => o.id);
-      await api.post('/payments/shop', {
-        merchantId: confirmMerchantId,
-        amount: item.financials.payableUSD,
-        date: new Date().toISOString(),
-        reference: `SETTLE-SHOP-${Date.now().toString().slice(-6)}`,
-        note: `Settle shop payout. USD: $${item.financials.payableUSD.toFixed(2)}, KHR: ${item.financials.payableKHR.toLocaleString()} KHR`,
-        orderIds,
-      });
+      for (const mId of merchantIdsToSettle) {
+        const item = groupedData.find(g => g.merchant.id === mId);
+        if (!item || item.paymentOrders.length === 0) continue;
 
-      alert(lang === 'km' ? 'រក្សាទុកការទូទាត់បានជោគជ័យ!' : 'Payment settled successfully!');
+        const orderIds = item.paymentOrders.map(o => o.id);
+        await api.post('/payments/shop', {
+          merchantId: mId,
+          amount: item.financials.payableUSD,
+          date: new Date().toISOString(),
+          reference: `SETTLE-SHOP-${Date.now().toString().slice(-6)}`,
+          note: lang === 'km' 
+            ? `ទូទាត់ប្រាក់ហាង។ USD: $${item.financials.payableUSD.toFixed(2)}, KHR: ${item.financials.payableKHR.toLocaleString()} KHR`
+            : `Settle shop payout. USD: $${item.financials.payableUSD.toFixed(2)}, KHR: ${item.financials.payableKHR.toLocaleString()} KHR`,
+          orderIds,
+        });
+      }
+
+      alert(
+        lang === 'km' 
+          ? `រក្សាទុកការទូទាត់បានជោគជ័យសម្រាប់ ${merchantIdsToSettle.length} ហាង!` 
+          : `Successfully settled payment for ${merchantIdsToSettle.length} shops!`
+      );
       setShowConfirmModal(false);
       setConfirmMerchantId(null);
+      setSelectedMerchantIds([]);
       await loadData();
     } catch (err: any) {
       alert(lang === 'km' ? 'មានបញ្ហាក្នុងការទូទាត់' : 'Error settling payment: ' + (err.response?.data?.message || err.message));
@@ -207,6 +278,16 @@ export default function PaymentWithShopPage() {
     setTimeout(() => {
       window.print();
     }, 100);
+  };
+
+  const handlePrintMerchantDetail = (merchantId: number) => {
+    originalFilterRef.current = merchantFilter;
+    isPrintingDetailRef.current = true;
+    setMerchantFilter(String(merchantId));
+    document.body.classList.add('receipt-print-active');
+    setTimeout(() => {
+      window.print();
+    }, 200);
   };
 
   // QR Link Builders
@@ -247,7 +328,7 @@ export default function PaymentWithShopPage() {
         <Sidebar />
         <div className="main-content" style={{ background: '#f3f4f6', minHeight: '100vh' }}>
           
-          <Topbar title="Payment with Shop" subtitle="ទូទាត់ប្រាក់ជាមួយហាង" />
+          <Topbar title={lang === 'km' ? 'ទូទាត់ប្រាក់ជាមួយហាង' : 'Payment with Shop'} subtitle={lang === 'km' ? 'គ្រប់គ្រងការទូទាត់ប្រាក់ជាមួយហាង' : 'Manage payout settlement with merchant shops'} />
 
           <div style={{ padding: '20px' }}>
             
@@ -307,7 +388,7 @@ export default function PaymentWithShopPage() {
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                   <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#4b5563' }}>
-                    {lang === 'km' ? 'ស្ថានភាព' : 'Status'}
+                    {lang === 'km' ? 'ស្ថានភាពទូទាត់' : 'Payment Status'}
                   </span>
                   <select
                     className="form-control"
@@ -315,15 +396,8 @@ export default function PaymentWithShopPage() {
                     onChange={e => setStatusFilter(e.target.value)}
                     style={{ width: '200px', height: '38px', padding: '6px 12px', borderRadius: '4px', border: '1px solid #d1d5db', backgroundColor: '#fff' }}
                   >
-                    <option value="">{lang === 'km' ? 'ជ្រើសរើសស្ថានភាព' : 'Select Status'}</option>
-                    <option value="pending">{lang === 'km' ? 'កំពុងរង់ចាំ (Pending)' : 'Pending'}</option>
-                    <option value="in-warehouse">{lang === 'km' ? 'ក្នុងឃ្លាំង (In-Warehouse)' : 'In-Warehouse'}</option>
-                    <option value="assigned">{lang === 'km' ? 'បានចាត់តាំង (Assigned)' : 'Assigned'}</option>
-                    <option value="picked-up">{lang === 'km' ? 'បានយក (Picked-Up)' : 'Picked-Up'}</option>
-                    <option value="in-transit">{lang === 'km' ? 'កំពុងដឹកជញ្ជូន (In-Transit)' : 'In-Transit'}</option>
-                    <option value="delivered">{lang === 'km' ? 'បានបញ្ជូន (Delivered)' : 'Delivered'}</option>
-                    <option value="failed">{lang === 'km' ? 'បរាជ័យ (Failed)' : 'Failed'}</option>
-                    <option value="returned">{lang === 'km' ? 'ត្រឡប់មកវិញ (Returned)' : 'Returned'}</option>
+                    <option value="unpaid">{lang === 'km' ? 'មិនទាន់ទូទាត់' : 'Unpaid'}</option>
+                    <option value="paid">{lang === 'km' ? 'ទូទាត់រួច' : 'Paid'}</option>
                   </select>
                 </div>
 
@@ -343,26 +417,53 @@ export default function PaymentWithShopPage() {
                 />
               </div>
 
-              <button
-                className="btn btn-outline"
-                onClick={triggerPrintReceipt}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  height: '38px',
-                  padding: '0 16px',
-                  fontSize: '13px',
-                  fontWeight: '600',
-                  borderRadius: '4px',
-                  borderColor: '#d1d5db',
-                  backgroundColor: '#fff',
-                  cursor: 'pointer'
-                }}
-              >
-                <MdPrint size={18} />
-                <span>{lang === 'km' ? 'បោះពុម្ព' : 'Print'}</span>
-              </button>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                {statusFilter === 'unpaid' && selectedMerchantIds.length > 0 && (
+                  <button
+                    className="btn btn-primary"
+                    onClick={() => {
+                      setConfirmMerchantId(null);
+                      setShowConfirmModal(true);
+                    }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      height: '38px',
+                      padding: '0 16px',
+                      fontSize: '13px',
+                      fontWeight: '600',
+                      borderRadius: '4px',
+                      color: '#fff',
+                      backgroundColor: '#10b981',
+                      borderColor: '#10b981',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <span>{lang === 'km' ? `ទូទាត់ដែលបានជ្រើសរើស (${selectedMerchantIds.length})` : `Settle Selected (${selectedMerchantIds.length})`}</span>
+                  </button>
+                )}
+                <button
+                  className="btn btn-outline"
+                  onClick={triggerPrintReceipt}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    height: '38px',
+                    padding: '0 16px',
+                    fontSize: '13px',
+                    fontWeight: '600',
+                    borderRadius: '4px',
+                    borderColor: '#d1d5db',
+                    backgroundColor: '#fff',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <MdPrint size={18} />
+                  <span>{lang === 'km' ? 'បោះពុម្ព' : 'Print'}</span>
+                </button>
+              </div>
             </div>
 
             {/* Merchant Payment Grid Card */}
@@ -371,20 +472,32 @@ export default function PaymentWithShopPage() {
                 <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #dee2e6' }}>
                   <thead>
                     <tr style={{ backgroundColor: '#f8f9fa', borderBottom: '2px solid #dee2e6' }}>
-                      <th style={{ padding: '12px 8px', border: '1px solid #dee2e6', textAlign: 'center', fontSize: '13px', width: '40px' }}>ល.រ</th>
-                      <th style={{ padding: '12px 8px', border: '1px solid #dee2e6', textAlign: 'left', fontSize: '13px', width: '220px' }}>អតិថិជន</th>
-                      <th style={{ padding: '12px 8px', border: '1px solid #dee2e6', textAlign: 'left', fontSize: '13px', width: '200px' }}>ចំនួនកញ្ចប់</th>
-                      <th style={{ padding: '12px 8px', border: '1px solid #dee2e6', textAlign: 'left', fontSize: '13px', width: '160px' }}>ទឹកប្រាក់សរុបរួម</th>
-                      <th style={{ padding: '12px 8px', border: '1px solid #dee2e6', textAlign: 'left', fontSize: '13px', width: '160px' }}>ទឹកប្រាក់ (QR ហាង)</th>
-                      <th style={{ padding: '12px 8px', border: '1px solid #dee2e6', textAlign: 'left', fontSize: '13px' }}>ទឹកប្រាក់ (POD)</th>
-                      <th style={{ padding: '12px 8px', border: '1px solid #dee2e6', textAlign: 'center', fontSize: '13px', width: '180px' }}>បញ្ជាក់ (✓/X)</th>
+                      <th style={{ padding: '12px 8px', border: '1px solid #dee2e6', textAlign: 'center', fontSize: '13px', width: '40px' }}>{lang === 'km' ? 'ល.រ' : 'No.'}</th>
+                      <th style={{ padding: '12px 8px', border: '1px solid #dee2e6', textAlign: 'left', fontSize: '13px', width: '220px' }}>{lang === 'km' ? 'អតិថិជន' : 'Customer'}</th>
+                      <th style={{ padding: '12px 8px', border: '1px solid #dee2e6', textAlign: 'left', fontSize: '13px', width: '200px' }}>{lang === 'km' ? 'ចំនួនកញ្ចប់' : 'Parcels'}</th>
+                      <th style={{ padding: '12px 8px', border: '1px solid #dee2e6', textAlign: 'left', fontSize: '13px', width: '160px' }}>{lang === 'km' ? 'ទឹកប្រាក់សរុបរួម' : 'Total Amount'}</th>
+                      <th style={{ padding: '12px 8px', border: '1px solid #dee2e6', textAlign: 'left', fontSize: '13px', width: '160px' }}>{lang === 'km' ? 'ទឹកប្រាក់ (QR ហាង)' : 'Amount (Shop QR)'}</th>
+                      <th style={{ padding: '12px 8px', border: '1px solid #dee2e6', textAlign: 'left', fontSize: '13px' }}>{lang === 'km' ? 'ទឹកប្រាក់ (POD)' : 'Amount (POD)'}</th>
+                      <th style={{ padding: '12px 8px', border: '1px solid #dee2e6', textAlign: 'center', fontSize: '13px', width: '180px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                          <span>{lang === 'km' ? 'បញ្ជាក់ (✓/X)' : 'Confirm (✓/X)'}</span>
+                          {statusFilter === 'unpaid' && eligibleMerchants.length > 0 && (
+                            <input
+                              type="checkbox"
+                              checked={eligibleMerchants.length > 0 && selectedMerchantIds.length === eligibleMerchants.length}
+                              onChange={e => handleToggleSelectAll(e.target.checked)}
+                              style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                            />
+                          )}
+                        </div>
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
                     {groupedData.length === 0 ? (
                       <tr>
                         <td colSpan={7} style={{ textAlign: 'center', padding: '32px', color: '#6b7280', fontSize: '14px' }}>
-                          No data available in table
+                          {lang === 'km' ? 'គ្មានទិន្នន័យក្នុងតារាងទេ' : 'No data available in table'}
                         </td>
                       </tr>
                     ) : (
@@ -416,10 +529,10 @@ export default function PaymentWithShopPage() {
                                 </div>
                                 <div style={{ marginTop: '8px' }}>
                                   <span
-                                    onClick={() => toggleDetailRow(m.id)}
+                                    onClick={() => handlePrintMerchantDetail(m.id)}
                                     style={{ color: '#2563eb', cursor: 'pointer', fontWeight: 'bold', textDecoration: 'underline' }}
                                   >
-                                    Click Detail
+                                    {lang === 'km' ? 'មើលលម្អិត' : 'View Detail'}
                                   </span>
                                 </div>
                               </td>
@@ -427,43 +540,43 @@ export default function PaymentWithShopPage() {
                               {/* 3. Package counts */}
                               <td style={{ padding: '12px 8px', border: '1px solid #dee2e6', fontSize: '13px' }}>
                                 <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                                  <li>• សរុប ៖ {stats.totalCount} ({stats.newCount} ថ្មី) / ({stats.oldCount} ចាស់)</li>
-                                  <li style={{ color: '#16a34a', fontWeight: '600' }}>• ជោគជ័យ ៖ {stats.successCount}</li>
-                                  <li style={{ color: '#2563eb' }}>• កំពុងដំណើរការ ៖ {stats.inProgressCount}</li>
-                                  <li style={{ color: '#dc2626' }}>• បោះបង់ ៖ {stats.failedCount}</li>
-                                  <li style={{ color: '#7c3aed' }}>• ត្រឡប់ ៖ {stats.returnedCount}</li>
-                                  <li style={{ color: '#eab308' }}>• ក្នុងស្តុក ៖ {stats.pendingCount}</li>
+                                  <li>• {lang === 'km' ? 'សរុប ៖' : 'Total:'} {stats.totalCount} ({stats.newCount} {lang === 'km' ? 'ថ្មី' : 'New'}) / ({stats.oldCount} {lang === 'km' ? 'ចាស់' : 'Old'})</li>
+                                  <li style={{ color: '#16a34a', fontWeight: '600' }}>• {lang === 'km' ? 'ជោគជ័យ ៖' : 'Success:'} {stats.successCount}</li>
+                                  <li style={{ color: '#2563eb' }}>• {lang === 'km' ? 'កំពុងដំណើរការ ៖' : 'In Transit:'} {stats.inProgressCount}</li>
+                                  <li style={{ color: '#dc2626' }}>• {lang === 'km' ? 'បោះបង់ ៖' : 'Cancelled:'} {stats.failedCount}</li>
+                                  <li style={{ color: '#7c3aed' }}>• {lang === 'km' ? 'ត្រឡប់ ៖' : 'Returned:'} {stats.returnedCount}</li>
+                                  <li style={{ color: '#eab308' }}>• {lang === 'km' ? 'ក្នុងស្តុក ៖' : 'In Stock:'} {stats.pendingCount}</li>
                                 </ul>
                               </td>
 
                               {/* 4. Total overall amount */}
                               <td style={{ padding: '12px 8px', border: '1px solid #dee2e6', fontSize: '13px' }}>
                                 <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                                  <li>• សរុប ៖ $ {financials.totalUSD.toFixed(2)}</li>
-                                  <li>• ដុល្លារ ៖ $ {financials.totalUSD.toFixed(2)}</li>
-                                  <li>• ខ្មែរ ៖ {financials.totalKHR.toLocaleString()} រៀល</li>
+                                  <li>• {lang === 'km' ? 'សរុប ៖' : 'Total:'} $ {financials.totalUSD.toFixed(2)}</li>
+                                  <li>• {lang === 'km' ? 'ដុល្លារ ៖' : 'USD:'} $ {financials.totalUSD.toFixed(2)}</li>
+                                  <li>• {lang === 'km' ? 'ខ្មែរ ៖' : 'KHR:'} {financials.totalKHR.toLocaleString()} {lang === 'km' ? 'រៀល' : 'KHR'}</li>
                                 </ul>
                               </td>
 
                               {/* 5. Shop QR payments (bank) */}
                               <td style={{ padding: '12px 8px', border: '1px solid #dee2e6', fontSize: '13px' }}>
                                 <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                                  <li>• សរុប ៖ $ {financials.qrUSD.toFixed(2)}</li>
-                                  <li>• ដុល្លារ ៖ $ {financials.qrUSD.toFixed(2)}</li>
-                                  <li>• ខ្មែរ ៖ {financials.qrKHR.toLocaleString()} រៀល</li>
+                                  <li>• {lang === 'km' ? 'សរុប ៖' : 'Total:'} $ {financials.qrUSD.toFixed(2)}</li>
+                                  <li>• {lang === 'km' ? 'ដុល្លារ ៖' : 'USD:'} $ {financials.qrUSD.toFixed(2)}</li>
+                                  <li>• {lang === 'km' ? 'ខ្មែរ ៖' : 'KHR:'} {financials.qrKHR.toLocaleString()} {lang === 'km' ? 'រៀល' : 'KHR'}</li>
                                 </ul>
                               </td>
 
                               {/* 6. Pay on Delivery payments (cash) */}
                               <td style={{ padding: '12px 8px', border: '1px solid #dee2e6', fontSize: '13px' }}>
                                 <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                  <li>• សរុប ៖ $ {financials.podUSD.toFixed(2)}</li>
-                                  <li>• ដុល្លារ ៖ $ {financials.podUSD.toFixed(2)}</li>
-                                  <li>• ខ្មែរ ៖ {financials.podKHR.toLocaleString()} រៀល</li>
+                                  <li>• {lang === 'km' ? 'សរុប ៖' : 'Total:'} $ {financials.podUSD.toFixed(2)}</li>
+                                  <li>• {lang === 'km' ? 'ដុល្លារ ៖' : 'USD:'} $ {financials.podUSD.toFixed(2)}</li>
+                                  <li>• {lang === 'km' ? 'ខ្មែរ ៖' : 'KHR:'} {financials.podKHR.toLocaleString()} {lang === 'km' ? 'រៀល' : 'KHR'}</li>
                                   <div style={{ height: '1px', background: '#dee2e6', margin: '4px 0' }} />
-                                  <li style={{ color: '#2563eb', fontWeight: 'bold' }}>• ប្រាក់ទូទាត់ជាដុល្លារ ៖ $ {financials.payableUSD.toFixed(2)}</li>
-                                  <li style={{ color: '#2563eb', fontWeight: 'bold' }}>• ប្រាក់ទូទាត់ជាខ្មែរ ៖ {financials.payableKHR.toLocaleString()} ៛</li>
-                                  <li style={{ color: '#dc2626' }}>• សេវាដឹកត្រូវទទួល ៖ $ {financials.deliveryFee.toFixed(2)}</li>
+                                  <li style={{ color: '#2563eb', fontWeight: 'bold' }}>• {lang === 'km' ? 'ប្រាក់ទូទាត់ជាដុល្លារ ៖' : 'Payable USD:'} $ {financials.payableUSD.toFixed(2)}</li>
+                                  <li style={{ color: '#2563eb', fontWeight: 'bold' }}>• {lang === 'km' ? 'ប្រាក់ទូទាត់ជាខ្មែរ ៖' : 'Payable KHR:'} {financials.payableKHR.toLocaleString()} {lang === 'km' ? '៛' : 'KHR'}</li>
+                                  <li style={{ color: '#dc2626' }}>• {lang === 'km' ? 'សេវាដឹកត្រូវទទួល ៖' : 'Delivery Fee:'} $ {financials.deliveryFee.toFixed(2)}</li>
                                   
                                   {/* Dynamic payment links */}
                                   <div style={{ display: 'flex', gap: '6px', fontSize: '12px', marginTop: '6px', flexWrap: 'wrap' }}>
@@ -517,15 +630,15 @@ export default function PaymentWithShopPage() {
                                   <span style={{ display: 'inline-block', padding: '6px 10px', background: '#fee2e2', color: '#dc2626', borderRadius: '4px', fontSize: '12px', fontWeight: 'bold' }}>
                                     {lang === 'km' ? 'មិនទាន់ធ្វើការទូទាត់ជាមួយអ្នកដឹក' : 'Not settled with Driver'}
                                   </span>
-                                ) : row.paymentOrders.length > 0 ? (
+                                ) : (statusFilter === 'unpaid' && row.paymentOrders.length > 0) ? (
                                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
                                     <input
                                       type="checkbox"
-                                      checked={false}
-                                      onChange={e => handleToggleConfirm(m.id, e.target.checked)}
+                                      checked={selectedMerchantIds.includes(m.id)}
+                                      onChange={e => handleToggleSelectMerchant(m.id, e.target.checked)}
                                       style={{ width: '22px', height: '22px', cursor: 'pointer' }}
                                     />
-                                    <span style={{ fontSize: '12px', fontWeight: '600' }}>Is Confirm</span>
+                                    <span style={{ fontSize: '12px', fontWeight: '600' }}>{lang === 'km' ? 'បញ្ជាក់' : 'Is Confirm'}</span>
                                   </div>
                                 ) : (
                                   <span style={{ display: 'inline-block', padding: '6px 12px', background: '#dcfce7', color: '#15803d', borderRadius: '4px', fontSize: '12px', fontWeight: 'bold' }}>
@@ -556,14 +669,14 @@ export default function PaymentWithShopPage() {
                                       </tr>
                                     </thead>
                                     <tbody>
-                                      {row.orders.length === 0 ? (
+                                      {row.paymentOrders.length === 0 ? (
                                         <tr>
                                           <td colSpan={7} style={{ textAlign: 'center', padding: '12px', color: '#6b7280' }}>
-                                            No orders matching status filter
+                                            {lang === 'km' ? 'មិនមានការបញ្ជាទិញត្រូវនឹងតម្រងស្ថានភាពទេ' : 'No orders matching status filter'}
                                           </td>
                                         </tr>
                                       ) : (
-                                        row.orders.map((o: any) => (
+                                        row.paymentOrders.map((o: any) => (
                                           <tr key={o.id} style={{ borderBottom: '1px solid #e5e7eb' }}>
                                             <td style={{ padding: '8px 6px', border: '1px solid #e5e7eb' }}><code>{o.trackingCode}</code></td>
                                             <td style={{ padding: '8px 6px', border: '1px solid #e5e7eb' }}>{getLocalDateString(new Date(o.createdAt))}</td>
@@ -630,10 +743,12 @@ export default function PaymentWithShopPage() {
             boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)'
           }}>
             <h3 style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '12px', color: '#111827' }}>
-              {lang === 'km' ? 'បញ្ជាក់ប្រតិបត្តិការ' : 'Confirm Operation'}
+              {lang === 'km' ? 'បញ្ជាក់ការទូទាត់' : 'Confirm Payment'}
             </h3>
             <p style={{ fontSize: '15px', color: '#4b5563', marginBottom: '24px', lineHeight: '1.5' }}>
-              {lang === 'km' ? 'តើលោកអ្នកប្រាកដទេ មុនពេលប្រតិបត្ដិការនេះ?' : 'Are you sure before this operation?'}
+              {lang === 'km' 
+                ? `តើអ្នកប្រាកដជាចង់រក្សាទុកការទូទាត់សម្រាប់ហាងចំនួន ${confirmMerchantId ? 1 : selectedMerchantIds.length} នេះមែនទេ?`
+                : `Are you sure you want to settle payment for ${confirmMerchantId ? 1 : selectedMerchantIds.length} shops?`}
             </p>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
               <button
@@ -671,31 +786,55 @@ export default function PaymentWithShopPage() {
 
       {/* Printable Receipt Layout Container (Print-only) */}
       {(() => {
-        const isUnpaid = !merchantFilter || (groupedData.length > 0 && groupedData[0].paymentOrders.length > 0);
         return (
           <div className="receipt-print-container" style={{ fontFamily: 'Kantumruy Pro, Inter, sans-serif' }}>
-            <div style={{ textAlign: 'center', marginBottom: 20 }}>
-              <h2 style={{ margin: 0, fontSize: 18 }}>{t('companyName') || 'EBS Digital Solutions'}</h2>
-              <p style={{ margin: '2px 0 0', fontSize: 12, color: '#475569' }}>Delivery Management System</p>
-              <h3 style={{ margin: '14px 0 0', fontSize: 14, borderBottom: '2px solid #000', paddingBottom: 6 }}>
-                {isUnpaid ? 'Settlement Quotation' : t('settlementReceipt')}
-              </h3>
-            </div>
-            
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 16 }}>
-              <div>
-                <div><strong>Date:</strong> {getLocalDateString()}</div>
-                <div><strong>Status:</strong> {statusFilter ? statusFilter.toUpperCase() : 'ALL'}</div>
-              </div>
-              <div style={{ textAlign: 'right' }}>
-                <div><strong>Receipt No:</strong> {isUnpaid ? 'DRAFT' : 'SETTLED'}</div>
-              </div>
-            </div>
+            {/* Header Layout (Matches template) */}
+            {(() => {
+              const hasMerchant = merchantFilter && groupedData.length > 0;
+              const activeMerchant = hasMerchant ? groupedData[0].merchant : null;
+              
+              return (
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20, borderBottom: '2px solid #000', paddingBottom: 15 }}>
+                  {/* Left side: Company Info */}
+                  <div style={{ fontSize: 11, lineHeight: '1.6', flex: 1 }}>
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 6 }}>
+                      <div style={{
+                        width: 28, height: 28, borderRadius: 6,
+                        background: '#2563eb',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        color: '#fff', fontSize: 15
+                      }}>
+                        📦
+                      </div>
+                      <span style={{ fontSize: 14, fontWeight: '800', color: '#1e3a8a', fontStyle: 'italic' }}>
+                        {orgInfo.name}
+                      </span>
+                    </div>
+                    <div><strong>{lang === 'km' ? 'អាសយដ្ឋាន៖' : 'Address:'}</strong> {orgInfo.address}</div>
+                    <div><strong>{lang === 'km' ? 'ទូរស័ព្ទ៖' : 'Phone:'}</strong> {orgInfo.phone}</div>
+                  </div>
+
+                  {/* Center side: Title */}
+                  <div style={{ textAlign: 'center', alignSelf: 'center', flex: 1.2 }}>
+                    <h2 style={{ margin: 0, fontSize: 18, fontWeight: 'bold', fontFamily: 'Kantumruy Pro, sans-serif', color: '#000' }}>
+                      {lang === 'km' ? 'របាយការណ៍ទូទាត់ប្រចាំថ្ងៃ' : 'Daily Settlement Report'}
+                    </h2>
+                  </div>
+
+                  {/* Right side: Merchant & Date Info */}
+                  <div style={{ fontSize: 11, textAlign: 'right', lineHeight: '1.6', flex: 1 }}>
+                    <div><strong>{lang === 'km' ? 'ឈ្មោះហាង៖' : 'Shop Name:'}</strong> <span style={{ fontStyle: 'italic', fontWeight: 'bold' }}>{hasMerchant ? (lang === 'km' && activeMerchant.nameKh ? activeMerchant.nameKh : activeMerchant.name) : (lang === 'km' ? 'ទាំងអស់' : 'All Shops')}</span></div>
+                    <div><strong>{lang === 'km' ? 'ទូរស័ព្ទ៖' : 'Phone:'}</strong> {hasMerchant ? activeMerchant.phone : '—'}</div>
+                    <div><strong>{lang === 'km' ? 'កាលបរិច្ឆេទ៖' : 'Date:'}</strong> {formatDateToDDMMYYYY(new Date().toISOString())}</div>
+                  </div>
+                </div>
+              );
+            })()}
 
             {merchantFilter && groupedData.length > 0 ? (
               (() => {
                 const row = groupedData[0];
-                const deliveredOrders = row.orders.filter((o: any) => o.status === 'delivered');
+                const deliveredOrders = row.paymentOrders;
                 const inTransitOrders = row.orders.filter((o: any) => o.status === 'in-transit' || o.status === 'picked-up' || o.status === 'pending');
                 const returnedOrders = row.orders.filter((o: any) => o.status === 'returned' || o.status === 'failed');
 
@@ -708,25 +847,30 @@ export default function PaymentWithShopPage() {
 
                 return (
                   <>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 16, fontSize: 12 }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 16, fontSize: 11 }}>
                       <thead>
                         <tr style={{ backgroundColor: '#f8f9fa' }}>
-                          <th rowSpan={2} style={{ padding: '6px 4px', textAlign: 'center', border: '1px solid #000' }}>ល.រ</th>
-                          <th rowSpan={2} style={{ padding: '6px 4px', textAlign: 'center', border: '1px solid #000' }}>កាលបរិច្ឆេទ</th>
-                          <th rowSpan={2} style={{ padding: '6px 4px', textAlign: 'center', border: '1px solid #000' }}>បរិយាយ</th>
-                          <th colSpan={2} style={{ padding: '6px 4px', textAlign: 'center', border: '1px solid #000' }}>ទឹកប្រាក់ដើមមាន<br/>(ដុល្លារ / ៛)</th>
-                          <th colSpan={2} style={{ padding: '6px 4px', textAlign: 'center', border: '1px solid #000' }}>ទឹកប្រាក់ទទួលបាន<br/>(ដុល្លារ / ៛)</th>
-                          <th rowSpan={2} style={{ padding: '6px 4px', textAlign: 'center', border: '1px solid #000' }}>សេវាដឹក</th>
-                          <th rowSpan={2} style={{ padding: '6px 4px', textAlign: 'center', border: '1px solid #000' }}>ផ្សេងៗ</th>
+                          <th rowSpan={2} style={{ padding: '6px 4px', textAlign: 'center', border: '1px solid #000', fontWeight: 'bold' }}>{lang === 'km' ? 'ល.រ' : 'No.'}</th>
+                          <th rowSpan={2} style={{ padding: '6px 4px', textAlign: 'center', border: '1px solid #000', fontWeight: 'bold' }}>{lang === 'km' ? 'កាលបរិច្ឆេទ' : 'Date'}</th>
+                          <th rowSpan={2} style={{ padding: '6px 4px', textAlign: 'center', border: '1px solid #000', fontWeight: 'bold' }}>{lang === 'km' ? 'បរិយាយ' : 'Description'}</th>
+                          <th colSpan={2} style={{ padding: '6px 4px', textAlign: 'center', border: '1px solid #000', fontWeight: 'bold' }}>{lang === 'km' ? <>ទឹកប្រាក់ដើមមាន<br/>(ដុល្លារ / ខ្មែរ)</> : <>Original Amount<br/>(USD / KHR)</>}</th>
+                          <th colSpan={2} style={{ padding: '6px 4px', textAlign: 'center', border: '1px solid #000', fontWeight: 'bold' }}>{lang === 'km' ? <>ទឹកប្រាក់ទទួលបាន<br/>(ដុល្លារ / ខ្មែរ)</> : <>Received Amount<br/>(USD / KHR)</>}</th>
+                          <th rowSpan={2} style={{ padding: '6px 4px', textAlign: 'center', border: '1px solid #000', fontWeight: 'bold' }}>{lang === 'km' ? 'សេវាដឹក' : 'Delivery Fee'}</th>
+                          <th rowSpan={2} style={{ padding: '6px 4px', textAlign: 'center', border: '1px solid #000', fontWeight: 'bold' }}>{lang === 'km' ? 'ផ្សេងៗ' : 'Remark'}</th>
                         </tr>
-                        <tr></tr>
+                        <tr>
+                          <th style={{ border: '1px solid #000', borderTop: 'none', padding: '2px', fontSize: '9px', fontWeight: 'normal', textAlign: 'center' }}>{lang === 'km' ? 'ដុល្លារ' : 'USD'}</th>
+                          <th style={{ border: '1px solid #000', borderTop: 'none', padding: '2px', fontSize: '9px', fontWeight: 'normal', textAlign: 'center' }}>{lang === 'km' ? 'ខ្មែរ' : 'KHR'}</th>
+                          <th style={{ border: '1px solid #000', borderTop: 'none', padding: '2px', fontSize: '9px', fontWeight: 'normal', textAlign: 'center' }}>{lang === 'km' ? 'ដុល្លារ' : 'USD'}</th>
+                          <th style={{ border: '1px solid #000', borderTop: 'none', padding: '2px', fontSize: '9px', fontWeight: 'normal', textAlign: 'center' }}>{lang === 'km' ? 'ខ្មែរ' : 'KHR'}</th>
+                        </tr>
                       </thead>
                       <tbody>
                         {/* Delivered Section */}
                         {deliveredOrders.length > 0 && (
                           <>
                             <tr>
-                              <td colSpan={9} style={{ backgroundColor: '#2ecc71', color: '#fff', fontWeight: 'bold', padding: '6px', border: '1px solid #000' }}>អីវ៉ាន់ដឹកបានជោគជ័យ</td>
+                              <td colSpan={9} style={{ backgroundColor: '#2ecc71', color: '#fff', fontWeight: 'bold', padding: '6px', border: '1px solid #000' }}>{lang === 'km' ? 'អីវ៉ាន់ដែលបានជោគជ័យ' : 'Delivered Packages'}</td>
                             </tr>
                             {deliveredOrders.map((o: any, idx: number) => {
                               const isUSD = o.codCurrency === 'USD';
@@ -736,21 +880,21 @@ export default function PaymentWithShopPage() {
                                   <td style={{ textAlign: 'center', padding: '6px 4px', border: '1px solid #000' }}>{idx + 1}</td>
                                   <td style={{ padding: '6px 4px', border: '1px solid #000', textAlign: 'center' }}>{formatDateToDDMMYYYY(o.createdAt)}</td>
                                   <td style={{ padding: '6px 4px', border: '1px solid #000' }}>{o.trackingCode} {o.receiverPhone ? `(${o.receiverPhone})` : ''}</td>
-                                  <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000', borderRight: '1px dashed #000', width: '60px' }}>$ {isUSD ? codVal.toFixed(2) : '0.00'}</td>
-                                  <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000', borderLeft: 'none', width: '70px' }}>{!isUSD ? codVal.toLocaleString() : '0'} ៛</td>
-                                  <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000', borderRight: '1px dashed #000', width: '60px' }}>$ {isUSD ? codVal.toFixed(2) : '0.00'}</td>
-                                  <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000', borderLeft: 'none', width: '70px' }}>{!isUSD ? codVal.toLocaleString() : '0'} ៛</td>
+                                  <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000' }}>{isUSD ? `$ ${codVal.toFixed(2)}` : '$ 0'}</td>
+                                  <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000' }}>{!isUSD ? `${codVal.toLocaleString()} ៛` : '0 ៛'}</td>
+                                  <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000' }}>{isUSD ? `$ ${codVal.toFixed(2)}` : '$ 0.00'}</td>
+                                  <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000' }}>{!isUSD ? `${codVal.toLocaleString()} ៛` : '0 ៛'}</td>
                                   <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000' }}>$ {parseFloat(o.deliveryFee || 0).toFixed(2)}</td>
                                   <td style={{ padding: '6px 4px', border: '1px solid #000', textAlign: 'center' }}></td>
                                 </tr>
                               );
                             })}
                             <tr>
-                              <td colSpan={3} style={{ textAlign: 'right', fontWeight: 'bold', padding: '6px 4px', border: '1px solid #000' }}>សរុប</td>
-                              <td style={{ textAlign: 'right', fontWeight: 'bold', padding: '6px 4px', border: '1px solid #000', borderRight: '1px dashed #000' }}>$ {delUSD.toFixed(2)}</td>
-                              <td style={{ textAlign: 'right', fontWeight: 'bold', padding: '6px 4px', border: '1px solid #000', borderLeft: 'none' }}>{delKHR.toLocaleString()} ៛</td>
-                              <td style={{ textAlign: 'right', fontWeight: 'bold', padding: '6px 4px', border: '1px solid #000', borderRight: '1px dashed #000' }}>$ {delUSD.toFixed(2)}</td>
-                              <td style={{ textAlign: 'right', fontWeight: 'bold', padding: '6px 4px', border: '1px solid #000', borderLeft: 'none' }}>{delKHR.toLocaleString()} ៛</td>
+                              <td colSpan={3} style={{ textAlign: 'right', fontWeight: 'bold', padding: '6px 4px', border: '1px solid #000' }}>{lang === 'km' ? 'សរុប' : 'Total'}</td>
+                              <td style={{ textAlign: 'right', fontWeight: 'bold', padding: '6px 4px', border: '1px solid #000' }}>$ {delUSD.toFixed(2)}</td>
+                              <td style={{ textAlign: 'right', fontWeight: 'bold', padding: '6px 4px', border: '1px solid #000' }}>{delKHR.toLocaleString()} {lang === 'km' ? 'រៀល' : 'KHR'}</td>
+                              <td style={{ textAlign: 'right', fontWeight: 'bold', padding: '6px 4px', border: '1px solid #000' }}>$ {delUSD.toFixed(2)}</td>
+                              <td style={{ textAlign: 'right', fontWeight: 'bold', padding: '6px 4px', border: '1px solid #000' }}>{delKHR.toLocaleString()} {lang === 'km' ? 'រៀល' : 'KHR'}</td>
                               <td style={{ textAlign: 'right', fontWeight: 'bold', padding: '6px 4px', border: '1px solid #000' }}>$ {delFee.toFixed(2)}</td>
                               <td style={{ border: '1px solid #000' }}></td>
                             </tr>
@@ -761,7 +905,7 @@ export default function PaymentWithShopPage() {
                         {inTransitOrders.length > 0 && (
                           <>
                             <tr>
-                              <td colSpan={9} style={{ backgroundColor: '#1abc9c', color: '#fff', fontWeight: 'bold', padding: '6px', border: '1px solid #000' }}>អីវ៉ាន់កំពុងដឹក</td>
+                              <td colSpan={9} style={{ backgroundColor: '#1abc9c', color: '#fff', fontWeight: 'bold', padding: '6px', border: '1px solid #000' }}>{lang === 'km' ? 'អីវ៉ាន់កំពុងដឹក' : 'In Transit Packages'}</td>
                             </tr>
                             {inTransitOrders.map((o: any, idx: number) => {
                               const isUSD = o.codCurrency === 'USD';
@@ -771,12 +915,12 @@ export default function PaymentWithShopPage() {
                                   <td style={{ textAlign: 'center', padding: '6px 4px', border: '1px solid #000' }}>{idx + 1}</td>
                                   <td style={{ padding: '6px 4px', border: '1px solid #000', textAlign: 'center' }}>{formatDateToDDMMYYYY(o.createdAt)}</td>
                                   <td style={{ padding: '6px 4px', border: '1px solid #000' }}>{o.trackingCode} {o.receiverPhone ? `(${o.receiverPhone})` : ''}</td>
-                                  <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000', borderRight: '1px dashed #000', width: '60px' }}>$ {isUSD ? codVal.toFixed(2) : '0.00'}</td>
-                                  <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000', borderLeft: 'none', width: '70px' }}>{!isUSD ? codVal.toLocaleString() : '0'} ៛</td>
-                                  <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000', borderRight: '1px dashed #000', width: '60px' }}></td>
-                                  <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000', borderLeft: 'none', width: '70px' }}></td>
+                                  <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000' }}>{isUSD ? `$ ${codVal.toFixed(2)}` : '$ 0'}</td>
+                                  <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000' }}>{!isUSD ? `${codVal.toLocaleString()} ៛` : '0'}</td>
+                                  <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000' }}></td>
+                                  <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000' }}></td>
                                   <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000' }}>$ {parseFloat(o.deliveryFee || 0).toFixed(2)}</td>
-                                  <td style={{ padding: '6px 4px', border: '1px solid #000', textAlign: 'center' }}>{o.status}</td>
+                                  <td style={{ padding: '6px 4px', border: '1px solid #000', textAlign: 'center' }}>{o.note || (o.status === 'returned' ? (lang === 'km' ? 'ត្រឡប់' : 'Returned') : (lang === 'km' ? 'មិនជោគជ័យ' : 'Failed'))}</td>
                                 </tr>
                               );
                             })}
@@ -787,7 +931,7 @@ export default function PaymentWithShopPage() {
                         {returnedOrders.length > 0 && (
                           <>
                             <tr>
-                              <td colSpan={9} style={{ backgroundColor: '#e74c3c', color: '#fff', fontWeight: 'bold', padding: '6px', border: '1px solid #000' }}>អីវ៉ាន់ត្រឡប់ទៅហាង</td>
+                              <td colSpan={9} style={{ backgroundColor: '#e74c3c', color: '#fff', fontWeight: 'bold', padding: '6px', border: '1px solid #000' }}>{lang === 'km' ? 'អីវ៉ាន់ត្រឡប់ទៅហាង' : 'Returned Packages'}</td>
                             </tr>
                             {returnedOrders.map((o: any, idx: number) => {
                               const isUSD = o.codCurrency === 'USD';
@@ -797,12 +941,12 @@ export default function PaymentWithShopPage() {
                                   <td style={{ textAlign: 'center', padding: '6px 4px', border: '1px solid #000' }}>{idx + 1}</td>
                                   <td style={{ padding: '6px 4px', border: '1px solid #000', textAlign: 'center' }}>{formatDateToDDMMYYYY(o.createdAt)}</td>
                                   <td style={{ padding: '6px 4px', border: '1px solid #000' }}>{o.trackingCode} {o.receiverPhone ? `(${o.receiverPhone})` : ''}</td>
-                                  <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000', borderRight: '1px dashed #000', width: '60px' }}>$ {isUSD ? codVal.toFixed(2) : '0.00'}</td>
-                                  <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000', borderLeft: 'none', width: '70px' }}>{!isUSD ? codVal.toLocaleString() : '0'} ៛</td>
-                                  <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000', borderRight: '1px dashed #000', width: '60px' }}></td>
-                                  <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000', borderLeft: 'none', width: '70px' }}></td>
+                                  <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000' }}>{isUSD ? `$ ${codVal.toFixed(2)}` : '$ 0'}</td>
+                                  <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000' }}>{!isUSD ? `${codVal.toLocaleString()} ៛` : '0 ៛'}</td>
+                                  <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000' }}></td>
+                                  <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000' }}></td>
                                   <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000' }}>$ {parseFloat(o.deliveryFee || 0).toFixed(2)}</td>
-                                  <td style={{ padding: '6px 4px', border: '1px solid #000', textAlign: 'center' }}>ភ្ញៀវសុំថយ</td>
+                                  <td style={{ padding: '6px 4px', border: '1px solid #000', textAlign: 'center' }}>{o.note || (o.status === 'returned' ? (lang === 'km' ? 'ត្រឡប់' : 'Returned') : (lang === 'km' ? 'មិនជោគជ័យ' : 'Failed'))}</td>
                                 </tr>
                               );
                             })}
@@ -812,60 +956,79 @@ export default function PaymentWithShopPage() {
                     </table>
 
                     {/* Financial summaries Box */}
-                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
-                      <table style={{ borderCollapse: 'collapse', fontSize: 12 }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', marginTop: 20 }}>
+                      <table style={{ borderCollapse: 'collapse', fontSize: 11, width: '280px', border: '1px solid #000' }}>
                         <tbody>
                           <tr>
-                            <td style={{ padding: '6px 12px', border: '1px solid #000', textAlign: 'right' }}>ប្រាក់សរុប</td>
-                            <td style={{ padding: '6px 12px', border: '1px solid #000', fontWeight: 'bold' }}>$ {delUSD.toFixed(2)} / {delKHR.toLocaleString()} ៛</td>
+                            <td style={{ padding: '6px 12px', border: '1px solid #000', textAlign: 'right' }}>{lang === 'km' ? 'ប្រាក់សរុប' : 'Total Amount'}</td>
+                            <td style={{ padding: '6px 12px', border: '1px solid #000', fontWeight: 'bold', textAlign: 'right' }}>$ {delUSD.toFixed(2)} / {delKHR.toLocaleString()} {lang === 'km' ? 'រៀល' : 'KHR'}</td>
                           </tr>
                           <tr>
-                            <td style={{ padding: '6px 12px', border: '1px solid #000', textAlign: 'right' }}>សេវាដឹក</td>
-                            <td style={{ padding: '6px 12px', border: '1px solid #000', fontWeight: 'bold' }}>$ {delFee.toFixed(2)}</td>
+                            <td style={{ padding: '6px 12px', border: '1px solid #000', textAlign: 'right' }}>{lang === 'km' ? 'សេវាដឹក' : 'Delivery Fee'}</td>
+                            <td style={{ padding: '6px 12px', border: '1px solid #000', fontWeight: 'bold', textAlign: 'right' }}>$ {delFee.toFixed(2)}</td>
                           </tr>
                           <tr>
-                            <td style={{ padding: '6px 12px', border: '1px solid #000', textAlign: 'right' }}>ប្រាក់ត្រូវទទួលបាន</td>
-                            <td style={{ padding: '6px 12px', border: '1px solid #000', fontWeight: 'bold', color: '#dc2626' }}>${payableUSD.toFixed(2)} / {payableKHR.toLocaleString()} ៛</td>
+                            <td style={{ padding: '6px 12px', border: '1px solid #000', textAlign: 'right' }}>{lang === 'km' ? 'ប្រាក់ត្រូវទទួលបាន' : 'Net Payable'}</td>
+                            <td style={{ padding: '6px 12px', border: '1px solid #000', fontWeight: 'bold', color: '#dc2626', textAlign: 'right' }}>$ {payableUSD.toFixed(2)} / {payableKHR.toLocaleString()} {lang === 'km' ? 'រៀល' : 'KHR'}</td>
                           </tr>
                         </tbody>
                       </table>
+                      
+                      {/* Khmer Date */}
+                      <div style={{ marginTop: 8, fontSize: 11, fontWeight: 'bold', fontStyle: 'italic', color: '#000' }}>
+                        {lang === 'km' ? getKhmerDateString(new Date()) : new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                      </div>
+                    </div>
+
+                    {/* Signatures */}
+                    <div style={{ marginTop: 30, display: 'flex', justifyContent: 'space-between', paddingLeft: 30 }}>
+                      <div style={{ textAlign: 'center' }}>
+                        <div style={{ fontSize: 12, fontWeight: 'bold', marginBottom: 40 }}>{lang === 'km' ? 'បានឃើញ និងឯកភាព' : 'Approved By'}</div>
+                        <div style={{ fontSize: 12, color: '#000' }}>..........................................</div>
+                      </div>
                     </div>
                   </>
                 );
               })()
             ) : (
-              <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 16, fontSize: 12 }}>
-                <thead>
-                  <tr style={{ borderBottom: '2px solid #000' }}>
-                    <th style={{ textAlign: 'left', padding: '6px 0', background: 'transparent', border: 'none' }}>Merchant Shop</th>
-                    <th style={{ textAlign: 'right', padding: '6px 0', background: 'transparent', border: 'none' }}>Net Payable Amount</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {groupedData.map((row) => (
-                    <tr key={row.merchant.id} style={{ borderBottom: '1px solid #cbd5e1' }}>
-                      <td style={{ padding: '6px 0', border: 'none' }}>
-                        {row.merchant.name} ({row.merchant.phone})
-                      </td>
-                      <td style={{ textAlign: 'right', padding: '6px 0', border: 'none', fontWeight: 'bold' }}>
-                        ${row.financials.payableUSD.toFixed(2)} / {row.financials.payableKHR.toLocaleString()} ៛
-                      </td>
+              /* Summary list for all merchants */
+              <>
+                <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 16, fontSize: 11 }}>
+                  <thead>
+                    <tr style={{ borderBottom: '2px solid #000', backgroundColor: '#f8f9fa' }}>
+                      <th style={{ textAlign: 'left', padding: '8px 6px', border: '1px solid #000', fontWeight: 'bold' }}>{lang === 'km' ? 'ហាងអតិថិជន' : 'Merchant Shop'}</th>
+                      <th style={{ textAlign: 'right', padding: '8px 6px', border: '1px solid #000', fontWeight: 'bold' }}>{lang === 'km' ? 'ទឹកប្រាក់ត្រូវទូទាត់សរុប' : 'Net Payable Amount'}</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
+                  </thead>
+                  <tbody>
+                    {groupedData.map((row) => (
+                      <tr key={row.merchant.id} style={{ borderBottom: '1px solid #cbd5e1' }}>
+                        <td style={{ padding: '8px 6px', border: '1px solid #000' }}>
+                          {row.merchant.name} {row.merchant.nameKh ? `(${row.merchant.nameKh})` : ''} ({row.merchant.phone})
+                        </td>
+                        <td style={{ textAlign: 'right', padding: '8px 6px', border: '1px solid #000', fontWeight: 'bold' }}>
+                          ${row.financials.payableUSD.toFixed(2)} / {row.financials.payableKHR.toLocaleString()} {lang === 'km' ? 'រៀល' : 'KHR'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 30, marginTop: 45, textAlign: 'center', fontSize: 12 }}>
-              <div>
-                <div style={{ fontWeight: 600 }}>Authorized Signature</div>
-                <div style={{ marginTop: 50, borderTop: '1px solid #000', display: 'inline-block', width: '80%' }} />
-              </div>
-              <div>
-                <div style={{ fontWeight: 600 }}>Merchant Signature</div>
-                <div style={{ marginTop: 50, borderTop: '1px solid #000', display: 'inline-block', width: '80%' }} />
-              </div>
-            </div>
+                {/* Localized Date for Summary Print */}
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 15 }}>
+                  <div style={{ fontSize: 11, fontWeight: 'bold', fontStyle: 'italic', color: '#000' }}>
+                    {lang === 'km' ? getKhmerDateString(new Date()) : new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                  </div>
+                </div>
+
+                <div style={{ marginTop: 30, display: 'flex', justifyContent: 'space-between', paddingLeft: 30 }}>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: 12, fontWeight: 'bold', marginBottom: 40 }}>{lang === 'km' ? 'បានឃើញ និងឯកភាព' : 'Approved By'}</div>
+                    <div style={{ fontSize: 12, color: '#000' }}>..........................................</div>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         );
       })()}

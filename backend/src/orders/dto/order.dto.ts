@@ -117,6 +117,11 @@ export class UpdateOrderStatusDto {
     'returned',
   ])
   status: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  note?: string;
 }
 
 /** Assign a driver for direct delivery (Flow 1: pending → picked-up) */

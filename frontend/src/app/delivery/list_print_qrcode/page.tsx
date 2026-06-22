@@ -377,7 +377,7 @@ export default function PrintInvoicePage() {
                   <th style={{ padding: '12px 10px', textAlign: 'left', fontWeight: 'bold', borderRight: '1px solid #dee2e6' }}>{lang === 'km' ? 'លេខបញ្ជូន' : 'Delivery Number'}</th>
                   <th style={{ padding: '12px 10px', textAlign: 'left', fontWeight: 'bold', borderRight: '1px solid #dee2e6' }}>{lang === 'km' ? 'កាលបរិច្ឆេទ' : 'Date'}</th>
                   <th style={{ padding: '12px 10px', textAlign: 'left', fontWeight: 'bold', borderRight: '1px solid #dee2e6' }}>{lang === 'km' ? 'ឈ្មោះហាង' : 'Shop Name'}</th>
-                  <th style={{ padding: '12px 10px', textAlign: 'left', fontWeight: 'bold', borderRight: '1px solid #dee2e6' }}>{lang === 'km' ? 'ឈ្មោះអតិថិជន' : 'Customer Name'}</th>
+                  {/* <th style={{ padding: '12px 10px', textAlign: 'left', fontWeight: 'bold', borderRight: '1px solid #dee2e6' }}>{lang === 'km' ? 'ឈ្មោះអតិថិជន' : 'Customer Name'}</th> */}
                   <th style={{ padding: '12px 10px', textAlign: 'left', fontWeight: 'bold', borderRight: '1px solid #dee2e6' }}>{lang === 'km' ? 'អាសយដ្ឋាន' : 'Address'}</th>
                   <th style={{ padding: '12px 10px', textAlign: 'left', fontWeight: 'bold', borderRight: '1px solid #dee2e6' }}>{lang === 'km' ? 'លេខអ្នកទទួល' : 'Receiver Phone'}</th>
                   <th style={{ padding: '12px 10px', textAlign: 'right', fontWeight: 'bold', borderRight: '1px solid #dee2e6' }}>{lang === 'km' ? 'ចំនួនប្រាក់' : 'Amount'}</th>
@@ -388,7 +388,7 @@ export default function PrintInvoicePage() {
               <tbody>
                 {filteredOrders.length === 0 ? (
                   <tr>
-                    <td colSpan={11} style={{ textAlign: 'center', padding: '30px 0', color: '#64748b' }}>{lang === 'km' ? 'គ្មានទិន្នន័យ' : 'No Data'}</td>
+                    <td colSpan={10} style={{ textAlign: 'center', padding: '30px 0', color: '#64748b' }}>{lang === 'km' ? 'គ្មានទិន្នន័យ' : 'No Data'}</td>
                   </tr>
                 ) : (
                   filteredOrders.map((o, idx) => (
@@ -407,7 +407,7 @@ export default function PrintInvoicePage() {
                         {o.createdAt ? formatDateToDDMMYYYY(o.createdAt) : '—'}
                       </td>
                       <td style={{ padding: '12px 10px', borderRight: '1px solid #dee2e6', fontWeight: 600 }}>{o.merchant?.nameKh || o.merchant?.name || o.senderName}</td>
-                      <td style={{ padding: '12px 10px', borderRight: '1px solid #dee2e6' }}>{o.receiverName || '—'}</td>
+                      {/* <td style={{ padding: '12px 10px', borderRight: '1px solid #dee2e6' }}>{o.receiverName || '—'}</td> */}
                       <td style={{ padding: '12px 10px', borderRight: '1px solid #dee2e6' }}>{o.receiverAddress || '—'}</td>
                       <td style={{ padding: '12px 10px', borderRight: '1px solid #dee2e6' }}>{o.receiverPhone}</td>
                       <td style={{ padding: '12px 10px', textAlign: 'right', borderRight: '1px solid #dee2e6', fontWeight: 'bold', color: '#dc2626' }}>

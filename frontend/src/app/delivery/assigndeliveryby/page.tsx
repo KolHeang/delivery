@@ -453,7 +453,7 @@ export default function AssignDeliveryPage() {
                             </div>
                             <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
                               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                                📍 {d.zone?.name || 'No zone'}
+                                📍 {d.zone?.name || t('noZone')}
                               </span>
                             </div>
                           </div>

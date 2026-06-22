@@ -30,7 +30,7 @@ export default function BatchEntryPage() {
   const [deliveryFee, setDeliveryFee] = useState('0');
 
   const [rows, setRows] = useState<any[]>([
-    { receiverName: '', receiverAddress: '', receiverPhone: '', deliveryFee: '0', codUSD: '0', codKHR: '0', pickupId: '', driverId: '', note: '' }
+    { receiverName: '-', receiverAddress: '', receiverPhone: '', deliveryFee: '0', codUSD: '0', codKHR: '0', pickupId: '', driverId: '', note: '' }
   ]);
 
   useEffect(() => {
@@ -67,7 +67,7 @@ export default function BatchEntryPage() {
   const addRow = () => {
     setRows(prev => [
       ...prev,
-      { receiverName: '', receiverAddress: '', receiverPhone: '', deliveryFee: deliveryFee || '0', codUSD: '0', codKHR: '0', pickupId: '', driverId: '', note: '' }
+      { receiverName: '-', receiverAddress: '', receiverPhone: '', deliveryFee: deliveryFee || '0', codUSD: '0', codKHR: '0', pickupId: '', driverId: '', note: '' }
     ]);
   };
 
@@ -91,9 +91,6 @@ export default function BatchEntryPage() {
     // Validation
     for (let i = 0; i < rows.length; i++) {
       const r = rows[i];
-      if (!r.receiverName) {
-        return alert(`Please fill Receiver Name in Row #${i + 1}`);
-      }
       if (!r.receiverAddress) {
         return alert(`Please fill Location/Zone in Row #${i + 1}`);
       }
@@ -232,37 +229,36 @@ export default function BatchEntryPage() {
           {/* Grid list */}
           <div className="card">
             <div style={{ overflowX: 'auto', padding: '16px' }}>
-              <table style={{ minWidth: 1280 }}>
+               <table style={{ minWidth: 1030, width: '100%' }}>
                 <thead>
                   <tr>
-                    <th style={{ width: 50 }}>ល.រ</th>
-                    <th style={{ width: 160 }}>{t('receiverNameCol')}</th>
-                    <th style={{ width: 220 }}>{t('receiverAddressCol')}</th>
-                    <th style={{ width: 130 }}>{t('receiverPhoneColRequired')}</th>
-                    <th style={{ width: 90 }}>{t('deliveryFee')}</th>
-                    <th style={{ width: 100 }}>{t('amountUSD')}</th>
-                    <th style={{ width: 110 }}>{t('amountKHR')}</th>
-                    <th style={{ width: 160 }}>{t('pickupPerson')}</th>
-                    <th style={{ width: 160 }}>{t('deliveryPerson')}</th>
-                    <th style={{ minWidth: 140 }}>{t('note')}</th>
-                    <th style={{ width: 80, textAlign: 'center' }}>{t('actions')}</th>
+                    <th style={{ width: 40, padding: '8px 6px' }}>ល.រ</th>
+                    <th style={{ width: 160, display: 'none' }}>{t('receiverNameCol')}</th>
+                    <th style={{ width: 180, padding: '8px 6px' }}>{t('receiverAddressCol')}</th>
+                    <th style={{ width: 120, padding: '8px 6px' }}>{t('receiverPhoneColRequired')}</th>
+                    <th style={{ width: 70, padding: '8px 6px' }}>{t('deliveryFee')}</th>
+                    <th style={{ width: 80, padding: '8px 6px' }}>{t('amountUSD')}</th>
+                    <th style={{ width: 90, padding: '8px 6px' }}>{t('amountKHR')}</th>
+                    <th style={{ width: 140, padding: '8px 6px' }}>{t('pickupPerson')}</th>
+                    <th style={{ width: 140, padding: '8px 6px' }}>{t('deliveryPerson')}</th>
+                    <th style={{ width: 120, padding: '8px 6px' }}>{t('note')}</th>
+                    <th style={{ width: 60, padding: '8px 6px', textAlign: 'center' }}>{t('actions')}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {rows.map((row, idx) => (
                     <tr key={idx}>
-                      <td style={{ fontSize: 13, fontWeight: 'bold', color: 'var(--text-muted)' }}>{idx + 1}</td>
-                      <td>
+                      <td style={{ padding: '8px 6px', fontSize: 13, fontWeight: 'bold', color: 'var(--text-muted)' }}>{idx + 1}</td>
+                      <td style={{ display: 'none' }}>
                         <input
                           type="text"
                           className="form-control"
                           placeholder="Receiver Name"
-                          value={row.receiverName || ''}
+                          value={row.receiverName || '-'}
                           onChange={e => handleRowChange(idx, 'receiverName', e.target.value)}
-                          required
                         />
                       </td>
-                      <td>
+                      <td style={{ padding: '8px 6px' }}>
                         <input
                           type="text"
                           className="form-control"
@@ -272,7 +268,7 @@ export default function BatchEntryPage() {
                           required
                         />
                       </td>
-                      <td>
+                      <td style={{ padding: '8px 6px' }}>
                         <input
                           type="text"
                           className="form-control"
@@ -282,7 +278,7 @@ export default function BatchEntryPage() {
                           required
                         />
                       </td>
-                      <td>
+                      <td style={{ padding: '8px 6px' }}>
                         <input
                           type="number"
                           step="0.01"
@@ -293,7 +289,7 @@ export default function BatchEntryPage() {
                           required
                         />
                       </td>
-                      <td>
+                      <td style={{ padding: '8px 6px' }}>
                         <input
                           type="number"
                           step="0.01"
@@ -304,7 +300,7 @@ export default function BatchEntryPage() {
                           required
                         />
                       </td>
-                      <td>
+                      <td style={{ padding: '8px 6px' }}>
                         <input
                           type="number"
                           step="100"
@@ -315,7 +311,7 @@ export default function BatchEntryPage() {
                           required
                         />
                       </td>
-                      <td>
+                      <td style={{ padding: '8px 6px' }}>
                         <select
                           className="form-control"
                           value={row.pickupId}
@@ -329,7 +325,7 @@ export default function BatchEntryPage() {
                           ))}
                         </select>
                       </td>
-                      <td>
+                      <td style={{ padding: '8px 6px' }}>
                         <select
                           className="form-control"
                           value={row.driverId}
@@ -343,7 +339,7 @@ export default function BatchEntryPage() {
                           ))}
                         </select>
                       </td>
-                      <td>
+                      <td style={{ padding: '8px 6px' }}>
                         <input
                           type="text"
                           className="form-control"
@@ -352,7 +348,7 @@ export default function BatchEntryPage() {
                           onChange={e => handleRowChange(idx, 'note', e.target.value)}
                         />
                       </td>
-                      <td>
+                      <td style={{ padding: '8px 6px' }}>
                         <div style={{ display: 'flex', justifyContent: 'center' }}>
                           <button
                             type="button"

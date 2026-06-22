@@ -92,6 +92,19 @@ export default function DeliveriesPage() {
   };
 
   const getStatusLabel = (status: string) => {
+    if (lang === 'en') {
+      switch (status) {
+        case 'pending': return 'Pending';
+        case 'in-warehouse': return 'In Warehouse';
+        case 'assigned': return 'Assigned';
+        case 'picked-up': return 'Picked Up';
+        case 'in-transit': return 'In Transit';
+        case 'delivered': return 'Delivered';
+        case 'failed': return 'Failed';
+        case 'returned': return 'Returned';
+        default: return status;
+      }
+    }
     switch (status) {
       case 'pending': return 'រង់ចាំ';
       case 'in-warehouse': return 'ក្នុងឃ្លាំង';
@@ -230,9 +243,9 @@ export default function DeliveriesPage() {
                 <div className="form-group" style={{ marginBottom: 0 }}>
                   <label className="form-label" style={{ fontSize: 11, marginBottom: 4 }}>Status</label>
                   <select className="form-control" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
-                    <option value="all">Select Status</option>
-                    {STATUS_OPTIONS.filter(s => s !== 'all').map(s => (
-                      <option key={s} value={s} style={{ textTransform: 'capitalize' }}>{s}</option>
+                    <option value="all">{lang === 'km' ? 'ជ្រើសរើសស្ថានភាព' : 'Select Status'}</option>
+                    {['pending', 'in-warehouse', 'in-transit', 'delivered', 'failed', 'returned'].map(s => (
+                      <option key={s} value={s}>{getStatusLabel(s)}</option>
                     ))}
                   </select>
                 </div>
@@ -295,7 +308,7 @@ export default function DeliveriesPage() {
                     <MdPrint size={14} /> {lang === 'km' ? 'QR បោះពុម្ព' : 'Print QR'} ({selectedIds.length})
                   </button>
                 )}
-                {selectedIds.length > 0 && selectedIds.some(id => orders.find(o => o.id === id)?.status === 'picked-up') && (
+                {/* {selectedIds.length > 0 && selectedIds.some(id => orders.find(o => o.id === id)?.status === 'picked-up') && (
                   <button 
                     className="btn btn-sm" 
                     onClick={handleBatchReceive}
@@ -303,7 +316,7 @@ export default function DeliveriesPage() {
                   >
                     📥 {lang === 'km' ? 'ទទួលចូលឃ្លាំង' : 'Manual Receive'} ({selectedIds.filter(id => orders.find(o => o.id === id)?.status === 'picked-up').length})
                   </button>
-                )}
+                )} */}
                 <button id="create-order-btn" className="btn btn-primary btn-sm" onClick={openCreate}><MdAdd size={14} /> {t('batchEntryData')}</button>
               </div>
             </div>
@@ -455,33 +468,34 @@ export default function DeliveriesPage() {
                             </div>
                           </div>
                         </td>
-                        <td style={{ fontSize: 12, fontWeight: 600, color: o.status === 'delivered' ? 'var(--success, #10b981)' : 'inherit' }}>
-                          <div>{getStatusLabel(o.status)}</div>
-                          {o.status === 'picked-up' && (
-                            <button
-                              onClick={() => handleStatusChange(o.id, 'in-warehouse')}
-                              style={{
-                                marginTop: 6,
-                                padding: '3px 8px',
-                                fontSize: '10.5px',
-                                fontWeight: 700,
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '3px',
-                                backgroundColor: '#0f766e',
-                                color: '#fff',
-                                borderRadius: '6px',
-                                cursor: 'pointer',
-                                border: 'none',
-                                boxShadow: '0 2px 4px rgba(15, 118, 110, 0.2)',
-                                transition: 'all 0.2s',
-                              }}
-                              onMouseEnter={e => e.currentTarget.style.backgroundColor = '#0d5c56'}
-                              onMouseLeave={e => e.currentTarget.style.backgroundColor = '#0f766e'}
-                            >
-                              📥 {lang === 'km' ? 'ទទួលចូលឃ្លាំង' : 'Receive'}
-                            </button>
-                          )}
+                        <td>
+                          <select
+                            className="form-control"
+                            value={o.status}
+                            onChange={e => handleStatusChange(o.id, e.target.value)}
+                            style={{ 
+                              height: '32px', 
+                              padding: '2px 6px', 
+                              fontSize: '12px', 
+                              minWidth: '130px',
+                              fontWeight: 600,
+                              color: o.status === 'delivered' ? 'var(--success, #10b981)' : o.status === 'failed' ? 'var(--danger, #ef4444)' : 'inherit'
+                            }}
+                          >
+                            {Array.from(new Set([
+                              o.status,
+                              'pending',
+                              'in-warehouse',
+                              'in-transit',
+                              'delivered',
+                              'failed',
+                              'returned'
+                            ])).map(s => (
+                              <option key={s} value={s}>
+                                {getStatusLabel(s)}
+                              </option>
+                            ))}
+                          </select>
                         </td>
                         <td>
                           <Badge 
@@ -490,10 +504,12 @@ export default function DeliveriesPage() {
                           />
                         </td>
                         <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                          {o.merchant?.name || 'admin'}
+                          {o.merchant?.nameKh || o.merchant?.name || o.senderName || 'admin'}
                         </td>
                         <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                          admin
+                          {['delivered', 'failed', 'returned'].includes(o.status) 
+                            ? (o.driver?.nameKh || o.driver?.name || 'admin') 
+                            : '—'}
                         </td>
                         <td>
                           <div style={{ display: 'flex', gap: 4 }}>
@@ -553,19 +569,90 @@ export default function DeliveriesPage() {
           )}
           {viewModal.histories && viewModal.histories.length > 0 && (
             <div style={{ marginTop: 20, borderTop: '1px solid var(--border)', paddingTop: 16 }}>
-              <h4 style={{ fontWeight: 700, marginBottom: 12, color: 'var(--text-secondary)', fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Status History</h4>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {[...viewModal.histories].sort((a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()).map((h: any) => (
-                  <div key={h.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12.5, background: '#f8fafc', padding: '8px 12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                      <Badge status={h.status} />
-                      {h.note && <span style={{ color: 'var(--text-secondary)', fontSize: 11 }}>({h.note})</span>}
-                    </div>
-                    <div style={{ color: 'var(--text-muted)', fontSize: 11 }}>
-                      {new Date(h.createdAt).toLocaleString()}
-                    </div>
-                  </div>
-                ))}
+              <h4 style={{ fontWeight: 700, marginBottom: 16, color: 'var(--text-secondary)', fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                📋 {lang === 'km' ? 'ប្រវត្តិស្ថានភាពលម្អិត' : 'Detailed Status History'}
+              </h4>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16, paddingLeft: 8 }}>
+                {[...viewModal.histories]
+                  .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                  .map((h: any, idx: number) => {
+                    const isLast = idx === viewModal.histories.length - 1;
+                    let pointColor = '#cbd5e1';
+                    if (h.status === 'delivered') pointColor = '#10b981';
+                    else if (h.status === 'failed') pointColor = '#ef4444';
+                    else if (h.status === 'returned') pointColor = '#6b7280';
+                    else if (['in-transit', 'picked-up', 'assigned'].includes(h.status)) pointColor = '#f59e0b';
+                    else if (h.status === 'in-warehouse') pointColor = '#10b981';
+                    else pointColor = '#3b82f6';
+                    
+                    return (
+                      <div key={h.id} style={{ display: 'flex', gap: 16, position: 'relative' }}>
+                        {/* Vertical Line */}
+                        {!isLast && (
+                          <div style={{
+                            position: 'absolute',
+                            left: 7,
+                            top: 20,
+                            bottom: -20,
+                            width: '2px',
+                            background: '#e2e8f0',
+                            zIndex: 1
+                          }} />
+                        )}
+                        
+                        {/* Bullet Point */}
+                        <div style={{
+                          width: 16,
+                          height: 16,
+                          borderRadius: '50%',
+                          backgroundColor: '#fff',
+                          border: `3px solid ${pointColor}`,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          flexShrink: 0,
+                          zIndex: 2,
+                          marginTop: 4
+                        }} />
+
+                        {/* Content Block */}
+                        <div style={{ flex: 1, paddingBottom: isLast ? 0 : 20 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 8 }}>
+                            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                              <Badge status={h.status} label={getStatusLabel(h.status)} />
+                            </div>
+                            <div style={{ color: 'var(--text-muted)', fontSize: 11.5 }}>
+                              <span>{new Date(h.createdAt).toLocaleString(lang === 'km' ? 'kh-KH' : 'en-US', {
+                                month: 'short',
+                                day: 'numeric',
+                                year: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                                hour12: true,
+                              })}</span>
+                            </div>
+                          </div>
+
+                          {/* Note / Remarks */}
+                          {h.note && (
+                            <div style={{ 
+                              marginTop: 8, 
+                              padding: '8px 12px', 
+                              background: h.status === 'failed' || h.status === 'returned' ? '#fef2f2' : '#f8fafc',
+                              borderLeft: `3px solid ${h.status === 'failed' || h.status === 'returned' ? '#ef4444' : '#cbd5e1'}`,
+                              borderRadius: '0 6px 6px 0', 
+                              fontSize: 12.5, 
+                              color: '#334155',
+                              fontWeight: 500,
+                              maxWidth: '90%'
+                            }}>
+                              📝 {lang === 'km' ? 'សម្គាល់៖' : 'Remark:'} {h.note}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
               </div>
             </div>
           )}

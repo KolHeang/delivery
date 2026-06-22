@@ -13,7 +13,8 @@ import {
   MdLocalShipping,
   MdLogout,
   MdAdd,
-  MdFormatListBulleted
+  MdFormatListBulleted,
+  MdRefresh
 } from 'react-icons/md';
 
 const merchantDashboardTranslations = {
@@ -24,8 +25,12 @@ const merchantDashboardTranslations = {
     balanceDesc: 'Pending payout/disbursement balance',
     statsTitle: 'Parcels Statistics',
     totalParcel: 'Total Parcels',
+    pendingPickup: 'Pending Pickup',
+    pickedUpWaiting: 'Picked Up (Waiting Hub)',
+    receivedAtWarehouse: 'Received at Hub',
+    inTransit: 'Out for Delivery',
     totalDelivered: 'Delivered Packages',
-    totalTransit: 'In Transit / Pending',
+    totalProblem: 'Problem / Failed',
     totalReturn: 'Returned Packages',
     createOrderBtn: 'Create New Parcel',
     viewOrdersBtn: 'View My Orders',
@@ -39,8 +44,12 @@ const merchantDashboardTranslations = {
     balanceDesc: 'សមតុល្យទឹកប្រាក់ដែលអាចដកបាន',
     statsTitle: 'ស្ថិតិកញ្ចប់អីវ៉ាន់',
     totalParcel: 'កញ្ចប់អីវ៉ាន់សរុប',
+    pendingPickup: 'រង់ចាំប្រមូល',
+    pickedUpWaiting: 'ប្រមូលរួច - រង់ចាំការស្កេន',
+    receivedAtWarehouse: 'បានដល់ឃ្លាំង',
+    inTransit: 'កំពុងដឹកជញ្ជូន',
     totalDelivered: 'ដឹកជញ្ជូនជោគជ័យ',
-    totalTransit: 'កំពុងដឹកជញ្ជូន / រង់ចាំ',
+    totalProblem: 'មានបញ្ហា / បរាជ័យ',
     totalReturn: 'កញ្ចប់អីវ៉ាន់ត្រឡប់មកវិញ',
     createOrderBtn: 'បង្កើតការផ្ញើថ្មី',
     viewOrdersBtn: 'មើលការផ្ញើរបស់ខ្ញុំ',
@@ -255,7 +264,91 @@ export default function MerchantDashboardPage() {
           </div>
         </div>
 
-        {/* In transit / Pending */}
+        {/* Pending Pickup */}
+        <div style={{
+          backgroundColor: '#ffffff',
+          borderRadius: '16px',
+          padding: '16px',
+          border: '1px solid #e2e8f0',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px'
+        }}>
+          <div style={{
+            width: '40px',
+            height: '40px',
+            borderRadius: '12px',
+            backgroundColor: '#fef4ef',
+            color: '#f16222',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}>
+            <MdLocalShipping size={20} />
+          </div>
+          <div>
+            <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '600' }}>{t.pendingPickup}</div>
+            <div style={{ fontSize: '16px', fontWeight: '800', color: '#0f172a', marginTop: '2px' }}>{stats.pendingPickup ?? 0}</div>
+          </div>
+        </div>
+
+        {/* Picked Up (Waiting Hub) */}
+        <div style={{
+          backgroundColor: '#ffffff',
+          borderRadius: '16px',
+          padding: '16px',
+          border: '1px solid #e2e8f0',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px'
+        }}>
+          <div style={{
+            width: '40px',
+            height: '40px',
+            borderRadius: '12px',
+            backgroundColor: '#fffbeb',
+            color: '#d97706',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}>
+            <MdLocalShipping size={20} />
+          </div>
+          <div>
+            <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '600' }}>{t.pickedUpWaiting}</div>
+            <div style={{ fontSize: '16px', fontWeight: '800', color: '#0f172a', marginTop: '2px' }}>{stats.pickedUpWaiting ?? 0}</div>
+          </div>
+        </div>
+
+        {/* Received at Hub */}
+        <div style={{
+          backgroundColor: '#ffffff',
+          borderRadius: '16px',
+          padding: '16px',
+          border: '1px solid #e2e8f0',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px'
+        }}>
+          <div style={{
+            width: '40px',
+            height: '40px',
+            borderRadius: '12px',
+            backgroundColor: '#f0fdfa',
+            color: '#0d9488',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}>
+            <MdCheckCircle size={20} />
+          </div>
+          <div>
+            <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '600' }}>{t.receivedAtWarehouse}</div>
+            <div style={{ fontSize: '16px', fontWeight: '800', color: '#0f172a', marginTop: '2px' }}>{stats.receivedAtWarehouse ?? 0}</div>
+          </div>
+        </div>
+
+        {/* Out for Delivery */}
         <div style={{
           backgroundColor: '#ffffff',
           borderRadius: '16px',
@@ -278,12 +371,12 @@ export default function MerchantDashboardPage() {
             <MdLocalShipping size={20} />
           </div>
           <div>
-            <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '600' }}>{t.totalTransit}</div>
-            <div style={{ fontSize: '16px', fontWeight: '800', color: '#0f172a', marginTop: '2px' }}>{stats.totalTransit ?? 0}</div>
+            <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '600' }}>{t.inTransit}</div>
+            <div style={{ fontSize: '16px', fontWeight: '800', color: '#0f172a', marginTop: '2px' }}>{stats.inTransit ?? 0}</div>
           </div>
         </div>
 
-        {/* Returned packages */}
+        {/* Problem/Failed */}
         <div style={{
           backgroundColor: '#ffffff',
           borderRadius: '16px',
@@ -304,6 +397,34 @@ export default function MerchantDashboardPage() {
             justifyContent: 'center'
           }}>
             <MdError size={20} />
+          </div>
+          <div>
+            <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '600' }}>{t.totalProblem}</div>
+            <div style={{ fontSize: '16px', fontWeight: '800', color: '#0f172a', marginTop: '2px' }}>{stats.totalProblem ?? 0}</div>
+          </div>
+        </div>
+
+        {/* Returned packages */}
+        <div style={{
+          backgroundColor: '#ffffff',
+          borderRadius: '16px',
+          padding: '16px',
+          border: '1px solid #e2e8f0',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px'
+        }}>
+          <div style={{
+            width: '40px',
+            height: '40px',
+            borderRadius: '12px',
+            backgroundColor: '#f3f4f6',
+            color: '#6b7280',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}>
+            <MdRefresh size={20} />
           </div>
           <div>
             <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '600' }}>{t.totalReturn}</div>

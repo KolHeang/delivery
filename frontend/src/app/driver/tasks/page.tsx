@@ -38,6 +38,7 @@ const taskTranslations = {
     btnCancel: 'Cancel',
     customer: 'Customer',
     merchant: 'Merchant',
+    waitingHubReceive: 'Waiting for Hub Receive',
   },
   km: {
     title: 'ភារកិច្ចរបស់ខ្ញុំ',
@@ -60,6 +61,7 @@ const taskTranslations = {
     btnCancel: 'បោះបង់',
     customer: 'អតិថិជន',
     merchant: 'ហាង/អ្នកផ្ញើ',
+    waitingHubReceive: 'បានប្រមូល - រង់ចាំការទទួលចូលឃ្លាំង',
   }
 };
 
@@ -255,8 +257,11 @@ export default function DriverTasksPage() {
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            {filteredTasks.map((task) => (
-              <div key={task.id} style={{
+            {filteredTasks.map((task) => {
+              const isPickupTask = task.pickupDriverId === user?.id;
+              const isDeliveryTask = task.driverId === user?.id;
+              return (
+                <div key={task.id} style={{
                 backgroundColor: '#ffffff',
                 borderRadius: '20px',
                 padding: '20px',
@@ -412,14 +417,15 @@ export default function DriverTasksPage() {
 
                 {/* Action Buttons */}
                 {isActiveTask(task) && (
-                  <div style={{ display: 'flex', gap: '10px', marginTop: '4px' }}>
-                    {task.status === 'pending' && task.pickupDriverId === user?.id ? (
+                  <div style={{ display: 'flex', gap: '10px', marginTop: '4px', width: '100%' }}>
+                    {/* Role: Pickup Driver */}
+                    {isPickupTask && task.status === 'pending' && (
                       <button
-                        onClick={() => updateStatus(task.id, 'in-warehouse')}
+                        onClick={() => updateStatus(task.id, 'picked-up')}
                         disabled={updatingId === task.id}
                         style={{
                           flex: 1,
-                          background: '#10b981',
+                          background: '#2f55a5',
                           color: '#ffffff',
                           border: 'none',
                           padding: '12px',
@@ -431,17 +437,41 @@ export default function DriverTasksPage() {
                           alignItems: 'center',
                           justifyContent: 'center',
                           gap: '6px',
-                          boxShadow: '0 4px 6px rgba(16, 185, 129, 0.1)'
+                          boxShadow: '0 4px 6px rgba(47, 85, 165, 0.1)'
                         }}
                       >
-                        <MdCheckCircle size={18} />
-                        {updatingId === task.id ? t.updating : (lang === 'km' ? 'ដល់ឃ្លាំង' : 'Arrived at Warehouse')}
+                        <MdLocalShipping size={18} />
+                        {updatingId === task.id ? t.updating : t.btnPickup}
                       </button>
-                    ) : (
+                    )}
+
+                    {isPickupTask && task.status === 'picked-up' && !isDeliveryTask && (
+                      <div style={{
+                        flex: 1,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px',
+                        padding: '12px',
+                        borderRadius: '12px',
+                        backgroundColor: '#ecfdf5',
+                        border: '1px solid #a7f3d0',
+                        color: '#047857',
+                        fontWeight: '700',
+                        fontSize: '13px',
+                        textAlign: 'center'
+                      }}>
+                        <MdCheckCircle size={18} />
+                        {t.waitingHubReceive}
+                      </div>
+                    )}
+
+                    {/* Role: Delivery Driver */}
+                    {isDeliveryTask && (
                       <>
                         {task.status === 'assigned' && (
                           <button
-                            onClick={() => updateStatus(task.id, 'picked-up')}
+                            onClick={() => updateStatus(task.id, 'in-transit')}
                             disabled={updatingId === task.id}
                             style={{
                               flex: 1,
@@ -461,7 +491,7 @@ export default function DriverTasksPage() {
                             }}
                           >
                             <MdLocalShipping size={18} />
-                            {updatingId === task.id ? t.updating : t.btnPickup}
+                            {updatingId === task.id ? t.updating : t.btnInTransit}
                           </button>
                         )}
 
@@ -547,7 +577,8 @@ export default function DriverTasksPage() {
                   </div>
                 )}
               </div>
-            ))}
+            );
+            })}
           </div>
         )}
       </div>

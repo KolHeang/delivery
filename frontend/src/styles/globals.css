@@ -387,10 +387,11 @@ body {
 }
 
 .stats-card-value {
-  font-size: 26px;
+  font-size: 24px;
   font-weight: 800;
   line-height: 1;
   margin-bottom: 4px;
+  white-space: nowrap;
 }
 
 .stats-card-label {

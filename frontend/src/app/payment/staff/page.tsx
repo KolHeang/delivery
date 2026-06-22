@@ -71,9 +71,9 @@ export default function PaymentWithStaffPage() {
       const res = await api.get(`/orders?driverId=${driverId}`);
       let allOrders = res.data || [];
       if (statusFilter === 'unpaid') {
-        allOrders = allOrders.filter(o => o.driverPaymentStatus === 'unpaid' || o.status === 'failed' || o.status === 'returned' || o.status === 'pending');
+        allOrders = allOrders.filter((o: any) => o.driverPaymentStatus === 'unpaid' || o.status === 'failed' || o.status === 'returned' || o.status === 'pending');
       } else {
-        allOrders = allOrders.filter(o => o.driverPaymentStatus === 'paid');
+        allOrders = allOrders.filter((o: any) => o.driverPaymentStatus === 'paid');
       }
       setOrders(allOrders);
       setSelectedIds([]);
@@ -95,10 +95,10 @@ export default function PaymentWithStaffPage() {
   };
 
   // Filter orders by date client-side
-  const deliveredOrders = orders.filter(o => o.status === 'delivered' || o.status === 'failed' || o.status === 'returned');
-  const pendingOrders = orders.filter(o => o.status !== 'delivered' && o.status !== 'failed' && o.status !== 'returned');
+  const deliveredOrders = orders.filter((o: any) => o.status === 'delivered' || o.status === 'failed' || o.status === 'returned');
+  const pendingOrders = orders.filter((o: any) => o.status !== 'delivered' && o.status !== 'failed' && o.status !== 'returned');
 
-  const filteredOrders = orders.filter(o => {
+  const filteredOrders = orders.filter((o: any) => {
     let dateString = o.deliveredAt;
     if (!dateString && (o.status === 'failed' || o.status === 'returned' || o.status === 'pending')) {
       dateString = o.updatedAt || o.createdAt;
@@ -119,7 +119,7 @@ export default function PaymentWithStaffPage() {
 
   const handleToggleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.checked) {
-      setSelectedIds(filteredOrders.map(o => o.id));
+      setSelectedIds(filteredOrders.map((o: any) => o.id));
     } else {
       setSelectedIds([]);
     }
@@ -143,8 +143,8 @@ export default function PaymentWithStaffPage() {
     if (selectedIds.length === 0) return alert('Please select at least one order to settle.');
     if (!driverId) return;
     
-    const selectedOrders = filteredOrders.filter(o => selectedIds.includes(o.id));
-    const totalDeliveryFee = selectedOrders.reduce((sum, o) => sum + parseFloat(o.deliveryFee || '0'), 0);
+    const selectedOrders = filteredOrders.filter((o: any) => selectedIds.includes(o.id));
+    const totalDeliveryFee = selectedOrders.reduce((sum, o: any) => sum + parseFloat(o.deliveryFee || '0'), 0);
     
     setSaving(true);
     try {
@@ -164,18 +164,18 @@ export default function PaymentWithStaffPage() {
     setSaving(false);
   };
 
-  const selectedOrders = filteredOrders.filter(o => selectedIds.includes(o.id));
-  const totalDeliveryFee = selectedOrders.reduce((sum, o) => sum + parseFloat(o.deliveryFee || '0'), 0);
-  const totalCodKhr = selectedOrders.filter(o => o.codCurrency === 'KHR').reduce((sum, o) => sum + parseFloat(o.cod || '0'), 0);
-  const totalCodUsd = selectedOrders.filter(o => o.codCurrency === 'USD').reduce((sum, o) => sum + parseFloat(o.cod || '0'), 0);
+  const selectedOrders = filteredOrders.filter((o: any) => selectedIds.includes(o.id));
+  const totalDeliveryFee = selectedOrders.reduce((sum, o: any) => sum + parseFloat(o.deliveryFee || '0'), 0);
+  const totalCodKhr = selectedOrders.filter((o: any) => o.codCurrency === 'KHR').reduce((sum, o: any) => sum + parseFloat(o.cod || '0'), 0);
+  const totalCodUsd = selectedOrders.filter((o: any) => o.codCurrency === 'USD').reduce((sum, o: any) => sum + parseFloat(o.cod || '0'), 0);
 
   // Print: use selected orders if any, otherwise print all orders
   const basePrintOrders = selectedIds.length > 0 ? selectedOrders : filteredOrders;
-  const printOrders = basePrintOrders.filter(o => o.status === 'delivered' || o.status === 'failed' || o.status === 'returned');
+  const printOrders = basePrintOrders.filter((o: any) => o.status === 'delivered' || o.status === 'failed' || o.status === 'returned');
   
-  const printTotalFee = printOrders.reduce((sum, o) => sum + parseFloat(o.deliveryFee || '0'), 0);
-  const printCodKhr = printOrders.filter(o => o.codCurrency === 'KHR').reduce((sum, o) => sum + parseFloat(o.cod || '0'), 0);
-  const printCodUsd = printOrders.filter(o => o.codCurrency === 'USD').reduce((sum, o) => sum + parseFloat(o.cod || '0'), 0);
+  const printTotalFee = printOrders.reduce((sum, o: any) => sum + parseFloat(o.deliveryFee || '0'), 0);
+  const printCodKhr = printOrders.filter((o: any) => o.codCurrency === 'KHR').reduce((sum, o: any) => sum + parseFloat(o.cod || '0'), 0);
+  const printCodUsd = printOrders.filter((o: any) => o.codCurrency === 'USD').reduce((sum, o: any) => sum + parseFloat(o.cod || '0'), 0);
   const printPayableUsd = printTotalFee;
 
   if (loading) return (

@@ -36,27 +36,43 @@ export class MerchantService {
   }
 
   async generateNextTrackingCode(): Promise<string> {
-    const lastOrders = await this.orderRepo.find({
-      where: {
-        trackingCode: Like('T%'),
-      },
-      order: { id: 'DESC' },
-      take: 100,
-    });
+    try {
+      const result = await this.orderRepo.query("SELECT nextval('tracking_code_seq') as nextval");
+      const nextval = parseInt(result[0].nextval, 10);
+      return `T${String(nextval).padStart(6, '0')}`;
+    } catch (err) {
+      await this.orderRepo.query("CREATE SEQUENCE IF NOT EXISTS tracking_code_seq START WITH 1");
+      const lastOrders = await this.orderRepo.find({
+        where: {
+          trackingCode: Like('T%'),
+        },
+        order: { id: 'DESC' },
+        take: 100,
+      });
 
-    let nextNumber = 1;
-    for (const order of lastOrders) {
-      if (order.trackingCode) {
-        const match = order.trackingCode.match(/^T(\d{6})$/);
-        if (match) {
-          nextNumber = parseInt(match[1], 10) + 1;
-          break;
+      let maxNumber = 0;
+      for (const order of lastOrders) {
+        if (order.trackingCode) {
+          const match = order.trackingCode.match(/^T(\d{6})$/);
+          if (match) {
+            const num = parseInt(match[1], 10);
+            if (num > maxNumber) {
+              maxNumber = num;
+            }
+          }
         }
       }
-    }
 
-    return `T${String(nextNumber).padStart(6, '0')}`;
+      if (maxNumber > 0) {
+        await this.orderRepo.query(`SELECT setval('tracking_code_seq', ${maxNumber})`);
+      }
+
+      const result = await this.orderRepo.query("SELECT nextval('tracking_code_seq') as nextval");
+      const nextval = parseInt(result[0].nextval, 10);
+      return `T${String(nextval).padStart(6, '0')}`;
+    }
   }
+
 
   async createOrder(merchantId: number, dto: CreateOrderDto) {
     if (!dto.trackingCode) {
@@ -144,13 +160,14 @@ export class MerchantService {
       },
       statistics: {
         totalParcel: totalParcel,
+        pendingPickup: stats['pending'] || 0,
+        pickedUpWaiting: stats['picked-up'] || 0,
+        receivedAtWarehouse:
+          totalParcel - (stats['pending'] || 0) - (stats['picked-up'] || 0),
+        inTransit: (stats['assigned'] || 0) + (stats['in-transit'] || 0),
         totalDelivered: stats['delivered'] || 0,
+        totalProblem: stats['failed'] || stats['problem'] || 0,
         totalReturn: (stats['returned'] || 0) + (stats['rejected'] || 0),
-        totalTransit:
-          (stats['in-transit'] || 0) +
-          (stats['pending'] || 0) +
-          (stats['assigned'] || 0) +
-          (stats['picked-up'] || 0),
       },
     };
   }

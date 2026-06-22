@@ -136,27 +136,43 @@ export class OrdersService {
   }
 
   async generateNextTrackingCode(): Promise<string> {
-    const lastOrders = await this.repo.find({
-      where: {
-        trackingCode: Like('T%'),
-      },
-      order: { id: 'DESC' },
-      take: 100,
-    });
+    try {
+      const result = await this.repo.query("SELECT nextval('tracking_code_seq') as nextval");
+      const nextval = parseInt(result[0].nextval, 10);
+      return `T${String(nextval).padStart(6, '0')}`;
+    } catch (err) {
+      await this.repo.query("CREATE SEQUENCE IF NOT EXISTS tracking_code_seq START WITH 1");
+      const lastOrders = await this.repo.find({
+        where: {
+          trackingCode: Like('T%'),
+        },
+        order: { id: 'DESC' },
+        take: 100,
+      });
 
-    let nextNumber = 1;
-    for (const order of lastOrders) {
-      if (order.trackingCode) {
-        const match = order.trackingCode.match(/^T(\d{6})$/);
-        if (match) {
-          nextNumber = parseInt(match[1], 10) + 1;
-          break;
+      let maxNumber = 0;
+      for (const order of lastOrders) {
+        if (order.trackingCode) {
+          const match = order.trackingCode.match(/^T(\d{6})$/);
+          if (match) {
+            const num = parseInt(match[1], 10);
+            if (num > maxNumber) {
+              maxNumber = num;
+            }
+          }
         }
       }
-    }
 
-    return `T${String(nextNumber).padStart(6, '0')}`;
+      if (maxNumber > 0) {
+        await this.repo.query(`SELECT setval('tracking_code_seq', ${maxNumber})`);
+      }
+
+      const result = await this.repo.query("SELECT nextval('tracking_code_seq') as nextval");
+      const nextval = parseInt(result[0].nextval, 10);
+      return `T${String(nextval).padStart(6, '0')}`;
+    }
   }
+
 
   async create(dto: CreateOrderDto): Promise<Order> {
     if (!dto.trackingCode) {
@@ -165,6 +181,9 @@ export class OrdersService {
     const order = this.repo.create(dto as any) as any as Order;
     if (order.status === 'picked-up' && !order.pickedUpAt) {
       order.pickedUpAt = new Date();
+    }
+    if (dto.createdAt) {
+      order.createdAt = new Date(dto.createdAt);
     }
     const savedOrder = await this.repo.save(order) as any as Order;
     await this.addHistory(savedOrder.id, savedOrder.status, savedOrder.note);
@@ -177,8 +196,14 @@ export class OrdersService {
     if (dto.status === 'picked-up' && !order.pickedUpAt) {
       updates.pickedUpAt = new Date();
     }
+    if (dto.status === 'in-warehouse' && !order.warehouseAt) {
+      updates.warehouseAt = new Date();
+    }
     if (dto.status === 'delivered' && !order.deliveredAt) {
       updates.deliveredAt = new Date();
+    }
+    if (dto.createdAt) {
+      updates.createdAt = new Date(dto.createdAt);
     }
     await this.repo.update(id, updates);
     if (dto.status && dto.status !== order.status) {
@@ -191,6 +216,7 @@ export class OrdersService {
     const order = await this.findOne(id);
     const updates: Partial<Order> = { status: dto.status as any };
     if (dto.status === 'picked-up') updates.pickedUpAt = new Date();
+    if (dto.status === 'in-warehouse') updates.warehouseAt = new Date();
     if (dto.status === 'delivered') updates.deliveredAt = new Date();
     await this.repo.update(id, updates);
     if (dto.status !== order.status) {

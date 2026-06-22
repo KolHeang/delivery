@@ -182,16 +182,16 @@ export default function DashboardPage() {
             <StatsCard icon="/3d/3d_refresh.png" label={t('totalReturnParcel')} value={stats?.returned ?? 0} color="#6b7280" bg="#f3f4f6" />
             <StatsCard icon="/3d/3d_cash.png" label={t('totalDeliveryFeeDashboard')} value={`$${(stats?.totalDeliveryFee ?? 0).toFixed(2)}`} color="#10b981" bg="#ecfdf5" />
             <StatsCard icon="/3d/3d_money_bag.png" label={t('amountCollectedUSD')} value={`$${(stats?.collectedCashUSD ?? 0).toFixed(2)}`} color="#2f55a5" bg="#eef2fa" />
-            <StatsCard icon="/3d/3d_khr_coin.png" label={t('amountCollectedKHR')} value={`${(stats?.collectedCashKHR ?? 0).toLocaleString()} ៛`} color="#f16222" bg="#fef4ef" />
+            <StatsCard icon="/3d/3d_khr_coin.png" label={t('amountCollectedKHR')} value={`${(stats?.collectedCashKHR ?? 0).toLocaleString()}៛`} color="#f16222" bg="#fef4ef" />
             <StatsCard icon="/3d/3d_scooter.png" label={t('totalDrivers')} value={stats?.totalDrivers ?? 0} color="#8b5cf6" bg="#f5f3ff" />
-            <StatsCard icon="/3d/3d_users.png" label={t('totalStaff')} value={stats?.totalUser ?? 0} color="#2f55a5" bg="#eef2fa" />
+            <StatsCard icon="/3d/3d_shop.png" label={t('totalMerchants')} value={stats?.totalMerchants ?? 0} color="#2f55a5" bg="#eef2fa" />
           </div>
 
           {/* Delivery Flow Status Summary */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 20 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 20, alignItems: 'stretch' }}>
             {/* Pick-up Summary */}
-            <a href="/summary/pickup" style={{ textDecoration: 'none' }}>
-              <div className="card" style={{ padding: 0, overflow: 'hidden', cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s' }}
+            <a href="/summary/pickup" style={{ textDecoration: 'none', display: 'flex', flexDirection: 'column', height: '100%' }}>
+              <div className="card" style={{ padding: 0, overflow: 'hidden', cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s', height: '100%', display: 'flex', flexDirection: 'column', flex: 1 }}
                 onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(-3px)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 8px 24px rgba(217,119,6,0.15)'; }}
                 onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = ''; (e.currentTarget as HTMLElement).style.boxShadow = ''; }}>
                 <div style={{ background: 'linear-gradient(135deg, #d97706, #f59e0b)', padding: '14px 20px', display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -201,22 +201,30 @@ export default function DashboardPage() {
                   </div>
                   <div style={{ marginLeft: 'auto', color: 'rgba(255,255,255,0.7)', fontSize: 18 }}>→</div>
                 </div>
-                <div style={{ padding: '14px 20px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                  <div style={{ textAlign: 'center', padding: '10px', borderRadius: 10, background: '#fef3c7' }}>
-                    <div style={{ fontSize: 22, fontWeight: 800, color: '#d97706' }}>{stats?.pending ?? 0}</div>
-                    <div style={{ fontSize: 11, color: '#92400e', fontWeight: 600 }}>{t('pending')}</div>
+                <div style={{ padding: '14px 20px', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6, flex: 1 }}>
+                  <div style={{ textAlign: 'center', padding: '10px 2px', borderRadius: 10, background: '#fef3c7', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: '#d97706' }}>{stats?.pending ?? 0}</div>
+                    <div style={{ fontSize: 10, color: '#92400e', fontWeight: 600 }}>{t('pending')}</div>
                   </div>
-                  <div style={{ textAlign: 'center', padding: '10px', borderRadius: 10, background: '#ccfbf1' }}>
-                    <div style={{ fontSize: 22, fontWeight: 800, color: '#0f766e' }}>{stats?.inWarehouse ?? 0}</div>
-                    <div style={{ fontSize: 11, color: '#134e4a', fontWeight: 600 }}>{t('inWarehouse')}</div>
+                  <div style={{ textAlign: 'center', padding: '10px 2px', borderRadius: 10, background: '#dbeafe', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: '#1e40af' }}>{stats?.pickedUp ?? 0}</div>
+                    <div style={{ fontSize: 10, color: '#1e3a8a', fontWeight: 600 }}>{t('pickedUp')}</div>
+                  </div>
+                  <div style={{ textAlign: 'center', padding: '10px 2px', borderRadius: 10, background: '#d1fae5', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: '#059669' }}>{stats?.broughtToWarehouse ?? 0}</div>
+                    <div style={{ fontSize: 10, color: '#064e3b', fontWeight: 600 }}>{t('broughtToWarehouse')}</div>
+                  </div>
+                  <div style={{ textAlign: 'center', padding: '10px 2px', borderRadius: 10, background: '#ccfbf1', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: '#0f766e' }}>{stats?.inWarehouse ?? 0}</div>
+                    <div style={{ fontSize: 10, color: '#134e4a', fontWeight: 600 }}>{t('inWarehouse')}</div>
                   </div>
                 </div>
               </div>
             </a>
 
             {/* Delivery Summary */}
-            <a href="/summary/delivery" style={{ textDecoration: 'none' }}>
-              <div className="card" style={{ padding: 0, overflow: 'hidden', cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s' }}
+            <a href="/summary/delivery" style={{ textDecoration: 'none', display: 'flex', flexDirection: 'column', height: '100%' }}>
+              <div className="card" style={{ padding: 0, overflow: 'hidden', cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s', height: '100%', display: 'flex', flexDirection: 'column', flex: 1 }}
                 onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(-3px)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 8px 24px rgba(99,102,241,0.15)'; }}
                 onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = ''; (e.currentTarget as HTMLElement).style.boxShadow = ''; }}>
                 <div style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', padding: '14px 20px', display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -226,17 +234,21 @@ export default function DashboardPage() {
                   </div>
                   <div style={{ marginLeft: 'auto', color: 'rgba(255,255,255,0.7)', fontSize: 18 }}>→</div>
                 </div>
-                <div style={{ padding: '14px 20px', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
-                  <div style={{ textAlign: 'center', padding: '8px 4px', borderRadius: 10, background: '#e0e7ff' }}>
-                    <div style={{ fontSize: 20, fontWeight: 800, color: '#4338ca' }}>{stats?.assigned ?? 0}</div>
+                <div style={{ padding: '14px 20px', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6, flex: 1 }}>
+                  <div style={{ textAlign: 'center', padding: '8px 2px', borderRadius: 10, background: '#e0e7ff', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: '#4338ca' }}>{stats?.assigned ?? 0}</div>
                     <div style={{ fontSize: 10, color: '#3730a3', fontWeight: 600 }}>{t('assigned')}</div>
                   </div>
-                  <div style={{ textAlign: 'center', padding: '8px 4px', borderRadius: 10, background: '#ecfdf5' }}>
-                    <div style={{ fontSize: 20, fontWeight: 800, color: '#065f46' }}>{stats?.delivered ?? 0}</div>
+                  <div style={{ textAlign: 'center', padding: '8px 2px', borderRadius: 10, background: '#f3e8ff', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: '#6b21a8' }}>{stats?.inTransit ?? 0}</div>
+                    <div style={{ fontSize: 10, color: '#581c87', fontWeight: 600 }}>{t('inTransit')}</div>
+                  </div>
+                  <div style={{ textAlign: 'center', padding: '8px 2px', borderRadius: 10, background: '#ecfdf5', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: '#065f46' }}>{stats?.delivered ?? 0}</div>
                     <div style={{ fontSize: 10, color: '#064e3b', fontWeight: 600 }}>{t('delivered')}</div>
                   </div>
-                  <div style={{ textAlign: 'center', padding: '8px 4px', borderRadius: 10, background: '#fef2f2' }}>
-                    <div style={{ fontSize: 20, fontWeight: 800, color: '#991b1b' }}>{stats?.failed ?? 0}</div>
+                  <div style={{ textAlign: 'center', padding: '8px 2px', borderRadius: 10, background: '#fef2f2', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: '#991b1b' }}>{stats?.failed ?? 0}</div>
                     <div style={{ fontSize: 10, color: '#7f1d1d', fontWeight: 600 }}>{t('failed')}</div>
                   </div>
                 </div>
@@ -244,8 +256,8 @@ export default function DashboardPage() {
             </a>
 
             {/* Shop Summary */}
-            <a href="/summary/shop" style={{ textDecoration: 'none' }}>
-              <div className="card" style={{ padding: 0, overflow: 'hidden', cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s' }}
+            <a href="/summary/shop" style={{ textDecoration: 'none', display: 'flex', flexDirection: 'column', height: '100%' }}>
+              <div className="card" style={{ padding: 0, overflow: 'hidden', cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s', height: '100%', display: 'flex', flexDirection: 'column', flex: 1 }}
                 onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(-3px)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 8px 24px rgba(16,185,129,0.15)'; }}
                 onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = ''; (e.currentTarget as HTMLElement).style.boxShadow = ''; }}>
                 <div style={{ background: 'linear-gradient(135deg, #059669, #10b981)', padding: '14px 20px', display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -255,17 +267,21 @@ export default function DashboardPage() {
                   </div>
                   <div style={{ marginLeft: 'auto', color: 'rgba(255,255,255,0.7)', fontSize: 18 }}>→</div>
                 </div>
-                <div style={{ padding: '14px 20px', display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
-                  <div style={{ textAlign: 'center', padding: '8px 4px', borderRadius: 10, background: '#ecfdf5' }}>
-                    <div style={{ fontSize: 20, fontWeight: 800, color: '#065f46' }}>{stats?.totalMerchants ?? 0}</div>
-                    <div style={{ fontSize: 10, color: '#064e3b', fontWeight: 600 }}>{t('shops')}</div>
+                <div style={{ padding: '14px 20px', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6, flex: 1 }}>
+                  <div style={{ textAlign: 'center', padding: '8px 2px', borderRadius: 10, background: '#ecfdf5', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: '#065f46' }}>{stats?.totalOrders ?? 0}</div>
+                    <div style={{ fontSize: 10, color: '#064e3b', fontWeight: 600 }}>{t('parcels')}</div>
                   </div>
-                  <div style={{ textAlign: 'center', padding: '8px 4px', borderRadius: 10, background: '#ecfdf5' }}>
-                    <div style={{ fontSize: 20, fontWeight: 800, color: '#065f46' }}>{stats?.delivered ?? 0}</div>
+                  <div style={{ textAlign: 'center', padding: '8px 2px', borderRadius: 10, background: '#ecfdf5', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: '#065f46' }}>{stats?.delivered ?? 0}</div>
                     <div style={{ fontSize: 10, color: '#064e3b', fontWeight: 600 }}>{t('delivered')}</div>
                   </div>
-                  <div style={{ textAlign: 'center', padding: '8px 4px', borderRadius: 10, background: '#fef2f2' }}>
-                    <div style={{ fontSize: 20, fontWeight: 800, color: '#991b1b' }}>{stats?.returned ?? 0}</div>
+                  <div style={{ textAlign: 'center', padding: '8px 2px', borderRadius: 10, background: '#fef2f2', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: '#ef4444' }}>{stats?.failed ?? 0}</div>
+                    <div style={{ fontSize: 10, color: '#991b1b', fontWeight: 600 }}>{t('failed')}</div>
+                  </div>
+                  <div style={{ textAlign: 'center', padding: '8px 2px', borderRadius: 10, background: '#fef2f2', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: '#991b1b' }}>{stats?.returned ?? 0}</div>
                     <div style={{ fontSize: 10, color: '#7f1d1d', fontWeight: 600 }}>{t('returned')}</div>
                   </div>
                 </div>

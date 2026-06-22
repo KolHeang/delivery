@@ -27,6 +27,8 @@ const dashboardTranslations = {
     statsTitle: 'My Statistics',
     totalPackage: 'Total Packages',
     pickupRequest: 'Pending Pickups',
+    pickedUpWaiting: 'Picked Up (Waiting Hub)',
+    broughtToHub: 'Brought to Warehouse',
     assignedParcels: 'Assigned Parcels',
     totalSuccessful: 'Successful Deliveries',
     totalProblem: 'Problem / Failed',
@@ -43,6 +45,8 @@ const dashboardTranslations = {
     statsTitle: 'ស្ថិតិរបស់ខ្ញុំ',
     totalPackage: 'កញ្ចប់អីវ៉ាន់សរុប',
     pickupRequest: 'រង់ចាំទទួល',
+    pickedUpWaiting: 'ប្រមូលបាន (រង់ចាំការស្កេន)',
+    broughtToHub: 'បាននាំចូលឃ្លាំង',
     assignedParcels: 'បានចាត់តាំង',
     totalSuccessful: 'ដឹកជញ្ជូនជោគជ័យ',
     totalProblem: 'មានបញ្ហា / បរាជ័យ',
@@ -339,6 +343,62 @@ export default function DriverDashboardPage() {
           <div>
             <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '600' }}>{t.pickupRequest}</div>
             <div style={{ fontSize: '16px', fontWeight: '800', color: '#0f172a', marginTop: '2px' }}>{stats.pickupRequest ?? 0}</div>
+          </div>
+        </div>
+
+        {/* Picked Up (Waiting Hub) */}
+        <div style={{
+          backgroundColor: '#ffffff',
+          borderRadius: '16px',
+          padding: '16px',
+          border: '1px solid #e2e8f0',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px'
+        }}>
+          <div style={{
+            width: '40px',
+            height: '40px',
+            borderRadius: '12px',
+            backgroundColor: '#fffbeb',
+            color: '#d97706',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}>
+            <MdLocalShipping size={20} />
+          </div>
+          <div>
+            <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '600' }}>{t.pickedUpWaiting}</div>
+            <div style={{ fontSize: '16px', fontWeight: '800', color: '#0f172a', marginTop: '2px' }}>{stats.pickedUpWaiting ?? 0}</div>
+          </div>
+        </div>
+
+        {/* Brought to Warehouse */}
+        <div style={{
+          backgroundColor: '#ffffff',
+          borderRadius: '16px',
+          padding: '16px',
+          border: '1px solid #e2e8f0',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px'
+        }}>
+          <div style={{
+            width: '40px',
+            height: '40px',
+            borderRadius: '12px',
+            backgroundColor: '#f0fdfa',
+            color: '#0d9488',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}>
+            <MdCheckCircle size={20} />
+          </div>
+          <div>
+            <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '600' }}>{t.broughtToHub}</div>
+            <div style={{ fontSize: '16px', fontWeight: '800', color: '#0f172a', marginTop: '2px' }}>{stats.broughtToHub ?? 0}</div>
           </div>
         </div>
 

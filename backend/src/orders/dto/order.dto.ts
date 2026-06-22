@@ -62,6 +62,10 @@ export class CreateOrderDto {
   @IsOptional()
   @IsEnum(['USD', 'KHR'])
   codCurrency?: string;
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  createdAt?: string;
 }
 
 export class UpdateOrderDto {
@@ -86,12 +90,15 @@ export class UpdateOrderDto {
   @IsOptional() @IsNumber() @Type(() => Number) receivedAmountKHR?: number;
   @IsOptional() @IsNumber() @Type(() => Number) driverId?: number;
   @IsOptional() @IsNumber() @Type(() => Number) pickupDriverId?: number;
+  @IsOptional() @IsString() createdAt?: string;
 }
 
 export class UpdateOrderStatusDto {
   @ApiProperty({
     enum: [
       'pending',
+      'in-warehouse',
+      'assigned',
       'picked-up',
       'in-transit',
       'delivered',
@@ -101,6 +108,8 @@ export class UpdateOrderStatusDto {
   })
   @IsEnum([
     'pending',
+    'in-warehouse',
+    'assigned',
     'picked-up',
     'in-transit',
     'delivered',

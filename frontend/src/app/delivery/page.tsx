@@ -196,6 +196,24 @@ export default function DeliveriesPage() {
     try { await api.patch(`/orders/${id}/status`, { status }); await load(); } catch {}
   };
 
+  const handleBatchReceive = async () => {
+    const pickedUpIds = selectedIds.filter(id => orders.find(o => o.id === id)?.status === 'picked-up');
+    if (pickedUpIds.length === 0) return;
+    if (!confirm(lang === 'km' ? `ទទួលកញ្ចប់អីវ៉ាន់ចំនួន ${pickedUpIds.length} ចូលឃ្លាំង?` : `Receive ${pickedUpIds.length} parcel(s) into warehouse?`)) return;
+    setLoading(true);
+    try {
+      await Promise.all(pickedUpIds.map(id => api.patch(`/orders/${id}/status`, { status: 'in-warehouse' })));
+      setSelectedIds(prev => prev.filter(id => !pickedUpIds.includes(id)));
+      await load();
+      alert(lang === 'km' ? 'បានទទួលចូលឃ្លាំងដោយជោគជ័យ!' : 'Received into warehouse successfully!');
+    } catch (err) {
+      console.error(err);
+      alert('Failed to receive some orders.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
 
 
   return (
@@ -275,6 +293,15 @@ export default function DeliveriesPage() {
                     style={{ display: 'flex', alignItems: 'center', gap: 4 }}
                   >
                     <MdPrint size={14} /> {lang === 'km' ? 'QR បោះពុម្ព' : 'Print QR'} ({selectedIds.length})
+                  </button>
+                )}
+                {selectedIds.length > 0 && selectedIds.some(id => orders.find(o => o.id === id)?.status === 'picked-up') && (
+                  <button 
+                    className="btn btn-sm" 
+                    onClick={handleBatchReceive}
+                    style={{ display: 'flex', alignItems: 'center', gap: 4, backgroundColor: '#0f766e', color: '#ffffff', border: 'none' }}
+                  >
+                    📥 {lang === 'km' ? 'ទទួលចូលឃ្លាំង' : 'Manual Receive'} ({selectedIds.filter(id => orders.find(o => o.id === id)?.status === 'picked-up').length})
                   </button>
                 )}
                 <button id="create-order-btn" className="btn btn-primary btn-sm" onClick={openCreate}><MdAdd size={14} /> {t('batchEntryData')}</button>
@@ -429,7 +456,32 @@ export default function DeliveriesPage() {
                           </div>
                         </td>
                         <td style={{ fontSize: 12, fontWeight: 600, color: o.status === 'delivered' ? 'var(--success, #10b981)' : 'inherit' }}>
-                          {getStatusLabel(o.status)}
+                          <div>{getStatusLabel(o.status)}</div>
+                          {o.status === 'picked-up' && (
+                            <button
+                              onClick={() => handleStatusChange(o.id, 'in-warehouse')}
+                              style={{
+                                marginTop: 6,
+                                padding: '3px 8px',
+                                fontSize: '10.5px',
+                                fontWeight: 700,
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '3px',
+                                backgroundColor: '#0f766e',
+                                color: '#fff',
+                                borderRadius: '6px',
+                                cursor: 'pointer',
+                                border: 'none',
+                                boxShadow: '0 2px 4px rgba(15, 118, 110, 0.2)',
+                                transition: 'all 0.2s',
+                              }}
+                              onMouseEnter={e => e.currentTarget.style.backgroundColor = '#0d5c56'}
+                              onMouseLeave={e => e.currentTarget.style.backgroundColor = '#0f766e'}
+                            >
+                              📥 {lang === 'km' ? 'ទទួលចូលឃ្លាំង' : 'Receive'}
+                            </button>
+                          )}
                         </td>
                         <td>
                           <Badge 

@@ -26,8 +26,7 @@ export default function BatchEntryPage() {
   const [saving, setSaving] = useState(false);
   const { t } = useLanguage();
   const [selectedMerchantId, setSelectedMerchantId] = useState('');
-  const [startDate, setStartDate] = useState(() => getLocalFirstDayOfMonthString());
-  const [endDate, setEndDate] = useState(() => getLocalDateString());
+  const [parcelDate, setParcelDate] = useState(() => getLocalDateString());
   const [deliveryFee, setDeliveryFee] = useState('0');
 
   const [rows, setRows] = useState<any[]>([
@@ -57,7 +56,7 @@ export default function BatchEntryPage() {
       
       // Update any rows that have default/unset delivery fee
       setRows(prev => prev.map(row => {
-        if (!row.deliveryFee || row.deliveryFee === '0') {
+        if (!row.deliveryFee || parseFloat(row.deliveryFee) === 0) {
           return { ...row, deliveryFee: fee };
         }
         return row;
@@ -106,11 +105,18 @@ export default function BatchEntryPage() {
     setSaving(true);
     try {
       const merchant = merchants.find(m => m.id.toString() === selectedMerchantId);
-      const promises: Promise<any>[] = [];
 
-      rows.forEach(r => {
+      for (const r of rows) {
         const codUSDNum = parseFloat(r.codUSD) || 0;
         const codKHRNum = parseFloat(r.codKHR) || 0;
+
+        const customDate = new Date();
+        if (parcelDate) {
+          const [year, month, day] = parcelDate.split('-').map(Number);
+          customDate.setFullYear(year);
+          customDate.setMonth(month - 1);
+          customDate.setDate(day);
+        }
 
         const basePayload = {
           senderName: merchant?.name || 'Shop',
@@ -126,44 +132,45 @@ export default function BatchEntryPage() {
           pickupDriverId: r.pickupId ? parseInt(r.pickupId) : undefined,
           driverId: r.driverId ? parseInt(r.driverId) : undefined,
           status: r.driverId ? 'picked-up' : 'pending',
+          createdAt: customDate.toISOString(),
         };
 
         if (codUSDNum > 0 && codKHRNum > 0) {
           // Add USD order (with delivery fee)
-          promises.push(api.post('/orders', {
+          await api.post('/orders', {
             ...basePayload,
             cod: codUSDNum,
             codCurrency: 'USD',
             deliveryFee: parseFloat(r.deliveryFee) || 0,
-          }));
+          });
           // Add KHR order (with 0 delivery fee to avoid double charging)
-          promises.push(api.post('/orders', {
+          await api.post('/orders', {
             ...basePayload,
             cod: codKHRNum,
             codCurrency: 'KHR',
             deliveryFee: 0,
-          }));
+          });
         } else if (codKHRNum > 0) {
-          promises.push(api.post('/orders', {
+          await api.post('/orders', {
             ...basePayload,
             cod: codKHRNum,
             codCurrency: 'KHR',
             deliveryFee: parseFloat(r.deliveryFee) || 0,
-          }));
+          });
         } else {
-          promises.push(api.post('/orders', {
+          await api.post('/orders', {
             ...basePayload,
             cod: codUSDNum || 0,
             codCurrency: 'USD',
             deliveryFee: parseFloat(r.deliveryFee) || 0,
-          }));
+          });
         }
-      });
+      }
 
-      await Promise.all(promises);
       router.push('/delivery');
-    } catch {
-      alert('Error saving batch deliveries');
+    } catch (err: any) {
+      console.error('Batch save failed', err);
+      alert('Error saving batch deliveries: ' + (err.response?.data?.message || err.message));
     }
     setSaving(false);
   };
@@ -202,17 +209,10 @@ export default function BatchEntryPage() {
               </div>
 
               <DateInput
-                labelEn="Start Date"
-                labelKh="កាលបរិច្ឆេទចាប់ផ្តើម"
-                value={startDate}
-                onChange={setStartDate}
-              />
-
-              <DateInput
-                labelEn="End Date"
-                labelKh="កាលបរិច្ឆេទបញ្ចប់"
-                value={endDate}
-                onChange={setEndDate}
+                labelEn="Parcel Date"
+                labelKh="កាលបរិច្ឆេទបញ្ចូល"
+                value={parcelDate}
+                onChange={setParcelDate}
               />
 
               <div className="form-group" style={{ marginBottom: 0, display: 'none' }}>

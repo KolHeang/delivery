@@ -33,7 +33,7 @@ export class DriverService {
   async getTasks(driverId: number, status?: string) {
     if (status) {
       return this.orderRepo.find({
-        where: { driverId, status },
+        where: { driverId, status: status as any },
         relations: { customer: true, merchant: true, zone: true },
         order: { createdAt: 'DESC' },
       });
@@ -42,7 +42,7 @@ export class DriverService {
     return this.orderRepo.find({
       where: [
         { driverId, status: In(['assigned', 'picked-up', 'in-transit', 'pending'] as any) },
-        { pickupDriverId: driverId, status: 'pending' }
+        { pickupDriverId: driverId, status: In(['pending', 'picked-up'] as any) }
       ],
       relations: { customer: true, merchant: true, zone: true },
       order: { createdAt: 'DESC' },
@@ -144,8 +144,14 @@ export class DriverService {
     const driver = await this.userRepo.findOne({ where: { id: driverId } });
     if (!driver) throw new NotFoundException('Driver not found');
 
-    const totalPackage = await this.orderRepo.count({ where: { driverId } });
+    const totalPackage = await this.orderRepo.count({
+      where: [
+        { driverId },
+        { pickupDriverId: driverId }
+      ]
+    });
 
+    // Delivery stats (assigned to this driver as the delivery driver)
     const statusCounts = await this.orderRepo
       .createQueryBuilder('order')
       .select('order.status', 'status')
@@ -158,6 +164,27 @@ export class DriverService {
       (acc, curr) => ({ ...acc, [curr.status]: parseInt(curr.count) }),
       {} as Record<string, number>,
     );
+
+    // Pickup stats (assigned to this driver as the pickup driver)
+    const pickupStatusCounts = await this.orderRepo
+      .createQueryBuilder('order')
+      .select('order.status', 'status')
+      .addSelect('COUNT(*)', 'count')
+      .where('order.pickupDriverId = :driverId', { driverId })
+      .groupBy('order.status')
+      .getRawMany();
+
+    const pickupStats = pickupStatusCounts.reduce(
+      (acc, curr) => ({ ...acc, [curr.status]: parseInt(curr.count) }),
+      {} as Record<string, number>,
+    );
+
+    const broughtToHub = await this.orderRepo.count({
+      where: {
+        pickupDriverId: driverId,
+        status: In(['in-warehouse', 'assigned', 'in-transit', 'delivered', 'failed', 'returned'] as any),
+      },
+    });
 
     const codCollected = await this.orderRepo
       .createQueryBuilder('order')
@@ -182,11 +209,13 @@ export class DriverService {
         { currency: 'USD', balance: codPendingUSD },
       ],
       statistics: {
-        pickupRequest: stats['pending'] || 0,
-        assignedParcels: (stats['assigned'] || 0) + (stats['picked-up'] || 0) + (stats['in-transit'] || 0),
+        pickupRequest: pickupStats['pending'] || 0,
+        pickedUpWaiting: pickupStats['picked-up'] || 0,
+        broughtToHub: broughtToHub,
+        assignedParcels: (stats['assigned'] || 0) + (stats['in-transit'] || 0),
         totalPackage: totalPackage,
         totalSuccessful: stats['delivered'] || 0,
-        totalProblem: stats['problem'] || 0,
+        totalProblem: stats['failed'] || stats['problem'] || 0,
         totalReturn: (stats['returned'] || 0) + (stats['rejected'] || 0),
       },
     };

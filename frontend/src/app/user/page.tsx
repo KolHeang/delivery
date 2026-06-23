@@ -9,6 +9,7 @@ import Badge from '@/components/ui/Badge';
 import api from '@/lib/api';
 import { MdAdd, MdSearch, MdEdit, MdDelete } from 'react-icons/md';
 import { useLanguage } from '@/lib/LanguageContext';
+import Pagination from '@/components/ui/Pagination';
 
 
 
@@ -20,28 +21,50 @@ export default function StaffPage() {
   const [items, setItems] = useState<any[]>([]);
   const [filtered, setFiltered] = useState<any[]>([]);
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [totalItems, setTotalItems] = useState(0);
   const [zones, setZones] = useState<any[]>([]);
   const [vehicles, setVehicles] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
-
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+      setCurrentPage(1);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search]);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
       const [r, z, v] = await Promise.all([
-        api.get('/users'),
+        api.get('/users', {
+          params: {
+            page: currentPage,
+            limit: pageSize,
+            search: debouncedSearch || undefined,
+          },
+        }),
         api.get('/zones'),
         api.get('/vehicles')
       ]);
-      setItems(r.data);
+      if (r.data && r.data.data !== undefined) {
+        setItems(r.data.data);
+        setTotalItems(r.data.total);
+      } else {
+        setItems(r.data);
+        setTotalItems(r.data.length);
+      }
       setZones(z.data);
       setVehicles(v.data);
     } catch (err) {
       console.error(err);
     }
     setLoading(false);
-  }, []);
+  }, [currentPage, pageSize, debouncedSearch]);
 
   useEffect(() => {
     if (!isAuthenticated()) {
@@ -52,20 +75,8 @@ export default function StaffPage() {
   }, [router, load]);
 
   useEffect(() => {
-    const q = search.toLowerCase();
-    setFiltered(
-      q
-        ? items.filter(
-          i =>
-            i.name?.toLowerCase().includes(q) ||
-            i.nameKh?.toLowerCase().includes(q) ||
-            i.phone?.includes(q) ||
-            i.email?.toLowerCase().includes(q) ||
-            i.role?.toLowerCase().includes(q)
-        )
-        : items
-    );
-  }, [items, search]);
+    setFiltered(items);
+  }, [items]);
 
   const openCreate = () => { router.push('/user/create'); };
   const openEdit = (i: any) => { router.push(`/user/edit/${i.id}`); };
@@ -87,7 +98,7 @@ export default function StaffPage() {
     <div className="app-layout">
       <Sidebar />
       <div className="main-content">
-        <Topbar title={t('staffTitle')} subtitle={`${filtered.length} ${t('staffList')}`} />
+        <Topbar title={t('staffTitle')} subtitle={`${totalItems} ${t('staffList')}`} />
         <div className="page-content">
 
           <div className="card" style={{ marginBottom: 16 }}>
@@ -121,98 +132,107 @@ export default function StaffPage() {
                 <div className="empty-state-title">{t('noStaffFound')}</div>
               </div>
             ) : (
-              <div style={{ overflowX: 'auto' }}>
-                <table>
-                  <thead>
-                    <tr>
-                      <th>#</th>
-                      <th>{t('name')}</th>
-                      <th>{t('phone')}</th>
-                      <th>Role</th>
-                      <th>{t('gender')}</th>
-                      <th>{t('dob')}</th>
-                      <th>{t('status')}</th>
-                      <th>{t('joinDate')}</th>
-                      <th>{t('salary')}</th>
-                      <th>{t('actions')}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filtered.map((d: any, idx) => (
-                      <tr key={d.id}>
-                        <td style={{ color: 'var(--text-muted)', fontSize: 12 }}>{idx + 1}</td>
-                        <td>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                            <div className="sidebar-avatar" style={{ width: 32, height: 32, fontSize: 13, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                              {d.photo ? (
-                                <img src={d.photo} alt={d.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                              ) : (
-                                d.name ? d.name.charAt(0).toUpperCase() : 'S'
-                              )}
-                            </div>
-                            <div>
-                              <div style={{ fontWeight: 700 }}>
-                                {d.name}
-                                {d.id === currentUser?.id && (
-                                  <span style={{ fontSize: 10, color: 'var(--accent)', marginLeft: 6 }}>
-                                    (You)
-                                  </span>
+              <>
+                <div style={{ overflowX: 'auto' }}>
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>#</th>
+                        <th>{t('name')}</th>
+                        <th>{t('phone')}</th>
+                        <th>Role</th>
+                        <th>{t('gender')}</th>
+                        <th>{t('dob')}</th>
+                        <th>{t('status')}</th>
+                        <th>{t('joinDate')}</th>
+                        <th>{t('salary')}</th>
+                        <th>{t('actions')}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filtered.map((d: any, idx) => (
+                        <tr key={d.id}>
+                          <td style={{ color: 'var(--text-muted)', fontSize: 12 }}>{(currentPage - 1) * pageSize + idx + 1}</td>
+                          <td>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                              <div className="sidebar-avatar" style={{ width: 32, height: 32, fontSize: 13, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                {d.photo ? (
+                                  <img src={d.photo} alt={d.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                ) : (
+                                  d.name ? d.name.charAt(0).toUpperCase() : 'S'
                                 )}
                               </div>
-                              {d.nameKh && (
-                                <div style={{ fontSize: 12, color: 'var(--accent)', fontWeight: 600 }}>
-                                  {d.nameKh}
+                              <div>
+                                <div style={{ fontWeight: 700 }}>
+                                  {d.name}
+                                  {d.id === currentUser?.id && (
+                                    <span style={{ fontSize: 10, color: 'var(--accent)', marginLeft: 6 }}>
+                                      (You)
+                                    </span>
+                                  )}
                                 </div>
-                              )}
-                              <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-                                {d.email || '—'}
+                                {d.nameKh && (
+                                  <div style={{ fontSize: 12, color: 'var(--accent)', fontWeight: 600 }}>
+                                    {d.nameKh}
+                                  </div>
+                                )}
+                                <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                                  {d.email || '—'}
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        </td>
-                        <td style={{ fontSize: 12 }}>{d.phone || '—'}</td>
-                        <td>
-                          <Badge status={d.role} />
-                        </td>
-                        <td style={{ fontSize: 12 }}>
-                          {d.gender ? (d.gender === 'other' ? t('otherGender') : t(d.gender) || d.gender) : '—'}
-                        </td>
-                        <td style={{ fontSize: 12 }}>
-                          {d.dob || '—'}
-                        </td>
-                        <td>
-                          {d.role === 'driver' ? (
-                            <Badge status={d.status} />
-                          ) : (
-                            <Badge status={d.active ? 'active' : 'inactive'} />
-                          )}
-                        </td>
-                        <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>{d.joinDate || '—'}</td>
-                        <td style={{ fontSize: 12, fontWeight: 600 }}>
-                          {d.salary !== undefined && d.salary !== null
-                            ? `$${parseFloat(d.salary).toFixed(2)}`
-                            : '—'}
-                        </td>
-                        <td>
-                          <div style={{ display: 'flex', gap: 4 }}>
-                            <button className="btn btn-ghost btn-icon btn-sm" onClick={() => openEdit(d)}>
-                              <MdEdit size={15} />
-                            </button>
-                            <button
-                              className="btn btn-ghost btn-icon btn-sm"
-                              style={{ color: 'var(--danger)' }}
-                              onClick={() => del(d.id)}
-                              disabled={d.id === currentUser?.id}
-                            >
-                              <MdDelete size={15} />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                          </td>
+                          <td style={{ fontSize: 12 }}>{d.phone || '—'}</td>
+                          <td>
+                            <Badge status={d.role} />
+                          </td>
+                          <td style={{ fontSize: 12 }}>
+                            {d.gender ? (d.gender === 'other' ? t('otherGender') : t(d.gender) || d.gender) : '—'}
+                          </td>
+                          <td style={{ fontSize: 12 }}>
+                            {d.dob || '—'}
+                          </td>
+                          <td>
+                            {d.role === 'driver' ? (
+                              <Badge status={d.status} />
+                            ) : (
+                              <Badge status={d.active ? 'active' : 'inactive'} />
+                            )}
+                          </td>
+                          <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>{d.joinDate || '—'}</td>
+                          <td style={{ fontSize: 12, fontWeight: 600 }}>
+                            {d.salary !== undefined && d.salary !== null
+                              ? `$${parseFloat(d.salary).toFixed(2)}`
+                              : '—'}
+                          </td>
+                          <td>
+                            <div style={{ display: 'flex', gap: 4 }}>
+                              <button className="btn btn-ghost btn-icon btn-sm" onClick={() => openEdit(d)}>
+                                <MdEdit size={15} />
+                              </button>
+                              <button
+                                className="btn btn-ghost btn-icon btn-sm"
+                                style={{ color: 'var(--danger)' }}
+                                onClick={() => del(d.id)}
+                                disabled={d.id === currentUser?.id}
+                              >
+                                <MdDelete size={15} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <Pagination
+                  currentPage={currentPage}
+                  totalItems={totalItems}
+                  pageSize={pageSize}
+                  onPageChange={setCurrentPage}
+                  onPageSizeChange={setPageSize}
+                />
+              </>
             )}
           </div>
 

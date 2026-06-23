@@ -4,10 +4,11 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, ILike } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { User } from './users.entity';
 import { CreateUserDto, UpdateUserDto } from './dto/user.dto';
+import { paginateRepo } from '../config/pagination';
 
 @Injectable()
 export class UsersService {
@@ -15,8 +16,20 @@ export class UsersService {
     @InjectRepository(User) private readonly repo: Repository<User>,
   ) { }
 
-  async findAll(): Promise<Omit<User, 'password'>[]> {
-    return this.repo.find({
+  async findAll(query?: { page?: number; limit?: number; search?: string }): Promise<any> {
+    let where: any = {};
+    if (query?.search) {
+      const term = `%${query.search}%`;
+      where = [
+        { name: ILike(term) },
+        { nameKh: ILike(term) },
+        { phone: ILike(term) },
+        { email: ILike(term) },
+        { role: ILike(term) },
+      ];
+    }
+    return paginateRepo(this.repo, query || {}, {
+      where,
       relations: { zone: true, vehicle: true },
       order: { createdAt: 'DESC' },
     });

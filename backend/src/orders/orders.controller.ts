@@ -34,21 +34,39 @@ export class OrdersController {
 
   @Get()
   @RequirePermissions('orders.read')
+  @ApiQuery({ name: 'page', required: false })
+  @ApiQuery({ name: 'limit', required: false })
+  @ApiQuery({ name: 'search', required: false })
   @ApiQuery({ name: 'status', required: false })
   @ApiQuery({ name: 'driverId', required: false })
+  @ApiQuery({ name: 'merchantId', required: false })
   @ApiQuery({ name: 'driverPaymentStatus', required: false })
   @ApiQuery({ name: 'merchantPaymentStatus', required: false })
+  @ApiQuery({ name: 'startDate', required: false })
+  @ApiQuery({ name: 'endDate', required: false })
   findAll(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('search') search?: string,
     @Query('status') status?: string,
     @Query('driverId') driverId?: string,
+    @Query('merchantId') merchantId?: string,
     @Query('driverPaymentStatus') driverPaymentStatus?: string,
     @Query('merchantPaymentStatus') merchantPaymentStatus?: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
   ) {
     return this.ordersService.findAll({
+      page: page ? +page : undefined,
+      limit: limit ? +limit : undefined,
+      search,
       status,
       driverId: driverId ? +driverId : undefined,
+      merchantId: merchantId ? +merchantId : undefined,
       driverPaymentStatus,
       merchantPaymentStatus,
+      startDate,
+      endDate,
     });
   }
 

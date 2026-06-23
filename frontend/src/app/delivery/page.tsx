@@ -11,6 +11,7 @@ import api from '@/lib/api';
 import { MdAdd, MdSearch, MdEdit, MdDelete, MdVisibility, MdFilterList, MdPrint } from 'react-icons/md';
 import { useLanguage } from '@/lib/LanguageContext';
 import DateInput, { formatDateToDDMMYYYY, getLocalDateString } from '@/components/ui/DateInput';
+import Pagination from '@/components/ui/Pagination';
 
 const getLocalFirstDayOfMonthString = () => {
   const d = new Date();
@@ -34,6 +35,8 @@ export default function DeliveriesPage() {
   const [filtered, setFiltered] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [totalItems, setTotalItems] = useState(0);
   const [statusFilter, setStatusFilter] = useState('all');
   const [startDate, setStartDate] = useState(() => getLocalFirstDayOfMonthString());
   const [endDate, setEndDate] = useState(() => getLocalDateString());
@@ -41,6 +44,16 @@ export default function DeliveriesPage() {
   const [merchantFilter, setMerchantFilter] = useState('');
   const [viewModal, setViewModal] = useState<any>(null);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+      setCurrentPage(1);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search]);
 
   const handleUpdatePickupDriver = async (orderId: number, driverId: string) => {
     try {
@@ -144,11 +157,28 @@ export default function DeliveriesPage() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await api.get('/orders');
-      setOrders(res.data);
+      const res = await api.get('/orders', {
+        params: {
+          page: currentPage,
+          limit: pageSize,
+          search: debouncedSearch || undefined,
+          status: statusFilter !== 'all' ? statusFilter : undefined,
+          driverId: driverFilter || undefined,
+          merchantId: merchantFilter || undefined,
+          startDate: startDate || undefined,
+          endDate: endDate || undefined,
+        }
+      });
+      if (res.data && res.data.data !== undefined) {
+        setOrders(res.data.data);
+        setTotalItems(res.data.total);
+      } else {
+        setOrders(res.data);
+        setTotalItems(res.data.length);
+      }
     } catch {}
     setLoading(false);
-  }, []);
+  }, [currentPage, pageSize, debouncedSearch, statusFilter, driverFilter, merchantFilter, startDate, endDate]);
 
   useEffect(() => {
     if (!isAuthenticated()) { router.push('/'); return; }
@@ -163,35 +193,8 @@ export default function DeliveriesPage() {
   }, [router, load]);
 
   useEffect(() => {
-    let list = orders;
-    if (statusFilter !== 'all') list = list.filter(o => o.status === statusFilter);
-    if (driverFilter) list = list.filter(o => o.driverId === parseInt(driverFilter));
-    if (merchantFilter) list = list.filter(o => o.merchantId === parseInt(merchantFilter));
-    if (startDate) {
-      const start = new Date(startDate);
-      start.setHours(0, 0, 0, 0);
-      list = list.filter(o => new Date(o.createdAt) >= start);
-    }
-    if (endDate) {
-      const end = new Date(endDate);
-      end.setHours(23, 59, 59, 999);
-      list = list.filter(o => new Date(o.createdAt) <= end);
-    }
-    if (search) {
-      const q = search.toLowerCase();
-      list = list.filter(o =>
-        o.trackingCode?.toLowerCase().includes(q) ||
-        o.receiverName?.toLowerCase().includes(q) ||
-        o.receiverPhone?.includes(q) ||
-        o.receiverAddress?.toLowerCase().includes(q) ||
-        o.merchant?.name?.toLowerCase().includes(q) ||
-        o.merchant?.nameKh?.toLowerCase().includes(q) ||
-        o.driver?.name?.toLowerCase().includes(q) ||
-        o.driver?.nameKh?.toLowerCase().includes(q)
-      );
-    }
-    setFiltered(list);
-  }, [orders, search, statusFilter, driverFilter, merchantFilter, startDate, endDate]);
+    setFiltered(orders);
+  }, [orders]);
 
   const openCreate = () => { router.push('/delivery/entry_data_item'); };
   const openEdit = (o: any) => {
@@ -233,7 +236,7 @@ export default function DeliveriesPage() {
     <div className="app-layout">
       <Sidebar />
       <div className="main-content">
-        <Topbar title={t('deliveryPageTitle')} subtitle={`${filtered.length} ${t('deliveryPageSubtitle')}`} />
+        <Topbar title={t('deliveryPageTitle')} subtitle={`${totalItems} ${t('deliveryPageSubtitle')}`} />
         <div className="page-content">
           {/* Filters */}
           <div className="card" style={{ marginBottom: 16 }}>
@@ -242,7 +245,7 @@ export default function DeliveriesPage() {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
                 <div className="form-group" style={{ marginBottom: 0 }}>
                   <label className="form-label" style={{ fontSize: 11, marginBottom: 4 }}>Status</label>
-                  <select className="form-control" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
+                  <select className="form-control" value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setCurrentPage(1); }}>
                     <option value="all">{lang === 'km' ? 'ជ្រើសរើសស្ថានភាព' : 'Select Status'}</option>
                     {['pending', 'in-warehouse', 'in-transit', 'delivered', 'failed', 'returned'].map(s => (
                       <option key={s} value={s}>{getStatusLabel(s)}</option>
@@ -253,24 +256,24 @@ export default function DeliveriesPage() {
                   labelEn="Start Date"
                   labelKh="កាលបរិច្ឆេទបញ្ជូល"
                   value={startDate}
-                  onChange={setStartDate}
+                  onChange={val => { setStartDate(val); setCurrentPage(1); }}
                 />
                 <DateInput
                   labelEn="End Date"
                   labelKh="កាលបរិច្ឆេទបញ្ចប់"
                   value={endDate}
-                  onChange={setEndDate}
+                  onChange={val => { setEndDate(val); setCurrentPage(1); }}
                 />
                 <div className="form-group" style={{ marginBottom: 0 }}>
                   <label className="form-label" style={{ fontSize: 11, marginBottom: 4 }}>អ្នកដឹក</label>
-                  <select className="form-control" value={driverFilter} onChange={e => setDriverFilter(e.target.value)}>
+                  <select className="form-control" value={driverFilter} onChange={e => { setDriverFilter(e.target.value); setCurrentPage(1); }}>
                     <option value="">-- {t('all') || 'All'} --</option>
                     {drivers.map(d => <option key={d.id} value={d.id}>{d.name} {d.nameKh ? `(${d.nameKh})` : ''}</option>)}
                   </select>
                 </div>
                 <div className="form-group" style={{ marginBottom: 0 }}>
                   <label className="form-label" style={{ fontSize: 11, marginBottom: 4 }}>ហាង</label>
-                  <select className="form-control" value={merchantFilter} onChange={e => setMerchantFilter(e.target.value)}>
+                  <select className="form-control" value={merchantFilter} onChange={e => { setMerchantFilter(e.target.value); setCurrentPage(1); }}>
                     <option value="">-- {t('all') || 'All'} --</option>
                     {merchants.map(m => <option key={m.id} value={m.id}>{m.name} {m.nameKh ? `(${m.nameKh})` : ''}</option>)}
                   </select>
@@ -329,201 +332,210 @@ export default function DeliveriesPage() {
                 <div className="empty-state-text">Create your first order to get started</div>
               </div>
             ) : (
-              <div className="table-responsive" style={{ overflowX: 'auto' }}>
-                <table style={{ minWidth: 1600 }}>
-                <thead>
-                  <tr>
-                    <th>ល.រ</th>
-                    <th>លេខ</th>
-                    <th style={{ textAlign: 'center', width: 40 }}>
-                      <input
-                        type="checkbox"
-                        checked={filtered.length > 0 && filtered.every(item => selectedIds.includes(item.id))}
-                        onChange={handleSelectAll}
-                        style={{ cursor: 'pointer', width: 16, height: 16 }}
-                      />
-                    </th>
-                    <th>កាលបរិច្ឆេទ</th>
-                    <th>ឈ្មោះហាង</th>
-                    <th>អាសយដ្ឋានអ្នកទទួល</th>
-                    <th>លេខទូរស័ព្ទ</th>
-                    <th>ចំនួន$</th>
-                    <th>ចំនួន៛</th>
-                    <th style={{ minWidth: 130 }}>អ្នកយកកញ្ចប់</th>
-                    <th style={{ minWidth: 130 }}>អ្នកដឹក</th>
-                    <th style={{ textAlign: 'center', width: 80 }}>ស្ថានភាពដឹក ✓ ✕</th>
-                    <th>ស្ថានភាព</th>
-                    <th>ស្ថានភាពទូទាត់</th>
-                    <th>បញ្ចូលដោយ</th>
-                    <th>បញ្ចប់ដោយ</th>
-                    <th>ធ្វើបច្ចុប្បន្នភាព</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filtered.map((o: any, idx) => {
-                    const isSelected = selectedIds.includes(o.id);
-                    return (
-                      <tr key={o.id} style={{ backgroundColor: isSelected ? '#eff6ff' : 'transparent', transition: 'background-color 0.15s ease' }}>
-                        <td style={{ color: 'var(--text-muted)', fontSize: 12 }}>{idx + 1}</td>
-                        <td>
-                          <span 
-                            style={{ color: '#2563eb', cursor: 'pointer', fontWeight: 600, textDecoration: 'underline' }}
-                            onClick={() => openEdit(o)}
-                          >
-                            {o.trackingCode}
-                          </span>
-                        </td>
-                        <td style={{ textAlign: 'center' }}>
-                          <input
-                            type="checkbox"
-                            checked={isSelected}
-                            onChange={() => toggleSelectRow(o.id)}
-                            style={{ cursor: 'pointer', width: 16, height: 16 }}
-                          />
-                        </td>
-                        <td style={{ fontSize: 11, whiteSpace: 'nowrap' }}>{formatDateTime(o.createdAt)}</td>
-                        <td>
-                          <span style={{ color: '#2563eb', cursor: 'pointer', textDecoration: 'underline' }} onClick={() => router.push(`/client?search=${o.merchant?.name || ''}`)}>
-                            {o.merchant?.nameKh || o.merchant?.name || '—'}
-                          </span>
-                        </td>
-                        <td style={{ fontSize: 12 }}>{o.receiverAddress || '—'}</td>
-                        <td style={{ fontWeight: 600 }}>{o.receiverPhone}</td>
-                        <td>
-                          <span style={{ color: 'var(--danger, #ef4444)', textDecoration: 'underline', fontWeight: 600 }}>
-                            {o.codCurrency === 'USD' ? `$${parseFloat(o.cod || 0).toFixed(2)}` : '$0.00'}
-                          </span>
-                        </td>
-                        <td>
-                          <span style={{ color: 'var(--danger, #ef4444)', textDecoration: 'underline', fontWeight: 600 }}>
-                            {o.codCurrency === 'KHR' ? `៛${parseInt(o.cod || 0).toLocaleString()}` : '៛0'}
-                          </span>
-                        </td>
-                        <td>
-                          <select
-                            className="form-control"
-                            value={o.pickupDriverId || ''}
-                            onChange={e => handleUpdatePickupDriver(o.id, e.target.value)}
-                            style={{ height: '32px', padding: '2px 6px', fontSize: '12px', minWidth: '120px' }}
-                          >
-                            <option value="">--ជ្រើសរើស--</option>
-                            {drivers.map(d => (
-                              <option key={d.id} value={d.id}>
-                                {d.nameKh || d.name}
-                              </option>
-                            ))}
-                          </select>
-                        </td>
-                        <td>
-                          <select
-                            className="form-control"
-                            value={o.driverId || ''}
-                            onChange={e => handleUpdateDeliveryDriver(o.id, e.target.value)}
-                            style={{ height: '32px', padding: '2px 6px', fontSize: '12px', minWidth: '120px' }}
-                          >
-                            <option value="">--ជ្រើសរើស--</option>
-                            {drivers.map(d => (
-                              <option key={d.id} value={d.id}>
-                                {d.nameKh || d.name}
-                              </option>
-                            ))}
-                          </select>
-                        </td>
-                        <td style={{ textAlign: 'center' }}>
-                          <div 
-                            onClick={() => handleToggleDeliveryStatus(o.id, o.status)}
-                            style={{
-                              width: 50,
-                              height: 24,
-                              borderRadius: 12,
-                              background: o.status === 'delivered' ? 'var(--success, #10b981)' : '#e5e7eb',
-                              position: 'relative',
-                              cursor: 'pointer',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              padding: '0 4px',
-                              boxSizing: 'border-box',
-                              transition: 'background-color 0.2s',
-                              userSelect: 'none'
-                            }}
-                          >
+              <>
+                <div className="table-responsive" style={{ overflowX: 'auto' }}>
+                  <table style={{ minWidth: 1600 }}>
+                  <thead>
+                    <tr>
+                      <th>ល.រ</th>
+                      <th>លេខ</th>
+                      <th style={{ textAlign: 'center', width: 40 }}>
+                        <input
+                          type="checkbox"
+                          checked={filtered.length > 0 && filtered.every(item => selectedIds.includes(item.id))}
+                          onChange={handleSelectAll}
+                          style={{ cursor: 'pointer', width: 16, height: 16 }}
+                        />
+                      </th>
+                      <th>កាលបរិច្ឆេទ</th>
+                      <th>ឈ្មោះហាង</th>
+                      <th>អាសយដ្ឋានអ្នកទទួល</th>
+                      <th>លេខទូរស័ព្ទ</th>
+                      <th>ចំនួន$</th>
+                      <th>ចំនួន៛</th>
+                      <th style={{ minWidth: 130 }}>អ្នកយកកញ្ចប់</th>
+                      <th style={{ minWidth: 130 }}>អ្នកដឹក</th>
+                      <th style={{ textAlign: 'center', width: 80 }}>ស្ថានភាពដឹក ✓ ✕</th>
+                      <th>ស្ថានភាព</th>
+                      <th>ស្ថានភាពទូទាត់</th>
+                      <th>បញ្ចូលដោយ</th>
+                      <th>បញ្ចប់ដោយ</th>
+                      <th>ធ្វើបច្ចុប្បន្នភាព</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filtered.map((o: any, idx) => {
+                      const isSelected = selectedIds.includes(o.id);
+                      return (
+                        <tr key={o.id} style={{ backgroundColor: isSelected ? '#eff6ff' : 'transparent', transition: 'background-color 0.15s ease' }}>
+                          <td style={{ color: 'var(--text-muted)', fontSize: 12 }}>{(currentPage - 1) * pageSize + idx + 1}</td>
+                          <td>
+                            <span 
+                              style={{ color: '#2563eb', cursor: 'pointer', fontWeight: 600, textDecoration: 'underline' }}
+                              onClick={() => openEdit(o)}
+                            >
+                              {o.trackingCode}
+                            </span>
+                          </td>
+                          <td style={{ textAlign: 'center' }}>
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => toggleSelectRow(o.id)}
+                              style={{ cursor: 'pointer', width: 16, height: 16 }}
+                            />
+                          </td>
+                          <td style={{ fontSize: 11, whiteSpace: 'nowrap' }}>{formatDateTime(o.createdAt)}</td>
+                          <td>
+                            <span style={{ color: '#2563eb', cursor: 'pointer', textDecoration: 'underline' }} onClick={() => router.push(`/client?search=${o.merchant?.name || ''}`)}>
+                              {o.merchant?.nameKh || o.merchant?.name || '—'}
+                            </span>
+                          </td>
+                          <td style={{ fontSize: 12 }}>{o.receiverAddress || '—'}</td>
+                          <td style={{ fontWeight: 600 }}>{o.receiverPhone}</td>
+                          <td>
+                            <span style={{ color: 'var(--danger, #ef4444)', textDecoration: 'underline', fontWeight: 600 }}>
+                              {o.codCurrency === 'USD' ? `$${parseFloat(o.cod || 0).toFixed(2)}` : '$0.00'}
+                            </span>
+                          </td>
+                          <td>
+                            <span style={{ color: 'var(--danger, #ef4444)', textDecoration: 'underline', fontWeight: 600 }}>
+                              {o.codCurrency === 'KHR' ? `៛${parseInt(o.cod || 0).toLocaleString()}` : '៛0'}
+                            </span>
+                          </td>
+                          <td>
+                            <select
+                              className="form-control"
+                              value={o.pickupDriverId || ''}
+                              onChange={e => handleUpdatePickupDriver(o.id, e.target.value)}
+                              style={{ height: '32px', padding: '2px 6px', fontSize: '12px', minWidth: '120px' }}
+                            >
+                              <option value="">--ជ្រើសរើស--</option>
+                              {drivers.map(d => (
+                                <option key={d.id} value={d.id}>
+                                  {d.nameKh || d.name}
+                                </option>
+                              ))}
+                            </select>
+                          </td>
+                          <td>
+                            <select
+                              className="form-control"
+                              value={o.driverId || ''}
+                              onChange={e => handleUpdateDeliveryDriver(o.id, e.target.value)}
+                              style={{ height: '32px', padding: '2px 6px', fontSize: '12px', minWidth: '120px' }}
+                            >
+                              <option value="">--ជ្រើសរើស--</option>
+                              {drivers.map(d => (
+                                <option key={d.id} value={d.id}>
+                                  {d.nameKh || d.name}
+                                </option>
+                              ))}
+                            </select>
+                          </td>
+                          <td style={{ textAlign: 'center' }}>
                             <div 
+                              onClick={() => handleToggleDeliveryStatus(o.id, o.status)}
                               style={{
-                                width: 16,
-                                height: 16,
-                                borderRadius: '50%',
-                                background: '#fff',
-                                position: 'absolute',
-                                left: o.status === 'delivered' ? 30 : 4,
-                                transition: 'left 0.2s',
-                                display: 'flex',
+                                width: 50,
+                                height: 24,
+                                borderRadius: 12,
+                                background: o.status === 'delivered' ? 'var(--success, #10b981)' : '#e5e7eb',
+                                position: 'relative',
+                                cursor: 'pointer',
+                                display: 'inline-flex',
                                 alignItems: 'center',
-                                justifyContent: 'center',
-                                fontSize: 9,
-                                fontWeight: 'bold',
-                                color: o.status === 'delivered' ? '#10b981' : '#9ca3af'
+                                padding: '0 4px',
+                                boxSizing: 'border-box',
+                                transition: 'background-color 0.2s',
+                                userSelect: 'none'
                               }}
                             >
-                              {o.status === 'delivered' ? '✓' : '✕'}
+                              <div 
+                                style={{
+                                  width: 16,
+                                  height: 16,
+                                  borderRadius: '50%',
+                                  background: '#fff',
+                                  position: 'absolute',
+                                  left: o.status === 'delivered' ? 30 : 4,
+                                  transition: 'left 0.2s',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  fontSize: 9,
+                                  fontWeight: 'bold',
+                                  color: o.status === 'delivered' ? '#10b981' : '#9ca3af'
+                                }}
+                              >
+                                {o.status === 'delivered' ? '✓' : '✕'}
+                              </div>
                             </div>
-                          </div>
-                        </td>
-                        <td>
-                          <select
-                            className="form-control"
-                            value={o.status}
-                            onChange={e => handleStatusChange(o.id, e.target.value)}
-                            style={{ 
-                              height: '32px', 
-                              padding: '2px 6px', 
-                              fontSize: '12px', 
-                              minWidth: '130px',
-                              fontWeight: 600,
-                              color: o.status === 'delivered' ? 'var(--success, #10b981)' : o.status === 'failed' ? 'var(--danger, #ef4444)' : 'inherit'
-                            }}
-                          >
-                            {Array.from(new Set([
-                              o.status,
-                              'pending',
-                              'in-warehouse',
-                              'in-transit',
-                              'delivered',
-                              'failed',
-                              'returned'
-                            ])).map(s => (
-                              <option key={s} value={s}>
-                                {getStatusLabel(s)}
-                              </option>
-                            ))}
-                          </select>
-                        </td>
-                        <td>
-                          <Badge 
-                            status={o.paymentStatus === 'paid' ? 'paid' : 'pending'} 
-                            label={o.paymentStatus === 'paid' ? 'បង់លុយហើយ' : 'មិនទាន់បង់'} 
-                          />
-                        </td>
-                        <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                          {o.merchant?.nameKh || o.merchant?.name || o.senderName || 'admin'}
-                        </td>
-                        <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                          {['delivered', 'failed', 'returned'].includes(o.status) 
-                            ? (o.driver?.nameKh || o.driver?.name || 'admin') 
-                            : '—'}
-                        </td>
-                        <td>
-                          <div style={{ display: 'flex', gap: 4 }}>
-                            <button className="btn btn-ghost btn-icon btn-sm" onClick={() => setViewModal(o)} title="View"><MdVisibility size={15} /></button>
-                            <button className="btn btn-ghost btn-icon btn-sm" onClick={() => openEdit(o)} title="Edit"><MdEdit size={15} /></button>
-                            <button className="btn btn-ghost btn-icon btn-sm" style={{ color: 'var(--danger)' }} onClick={() => handleDelete(o.id)} title="Delete"><MdDelete size={15} /></button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-              </div>
+                          </td>
+                          <td>
+                            <select
+                              className="form-control"
+                              value={o.status}
+                              onChange={e => handleStatusChange(o.id, e.target.value)}
+                              style={{ 
+                                height: '32px', 
+                                padding: '2px 6px', 
+                                fontSize: '12px', 
+                                minWidth: '130px',
+                                fontWeight: 600,
+                                color: o.status === 'delivered' ? 'var(--success, #10b981)' : o.status === 'failed' ? 'var(--danger, #ef4444)' : 'inherit'
+                              }}
+                            >
+                              {Array.from(new Set([
+                                o.status,
+                                'pending',
+                                'in-warehouse',
+                                'in-transit',
+                                'delivered',
+                                'failed',
+                                'returned'
+                              ])).map(s => (
+                                <option key={s} value={s}>
+                                  {getStatusLabel(s)}
+                                </option>
+                              ))}
+                            </select>
+                          </td>
+                          <td>
+                            <Badge 
+                              status={o.paymentStatus === 'paid' ? 'paid' : 'pending'} 
+                              label={o.paymentStatus === 'paid' ? 'បង់លុយហើយ' : 'មិនទាន់បង់'} 
+                            />
+                          </td>
+                          <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                            {o.merchant?.nameKh || o.merchant?.name || o.senderName || 'admin'}
+                          </td>
+                          <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                            {['delivered', 'failed', 'returned'].includes(o.status) 
+                              ? (o.driver?.nameKh || o.driver?.name || 'admin') 
+                              : '—'}
+                          </td>
+                          <td>
+                            <div style={{ display: 'flex', gap: 4 }}>
+                              <button className="btn btn-ghost btn-icon btn-sm" onClick={() => setViewModal(o)} title="View"><MdVisibility size={15} /></button>
+                              <button className="btn btn-ghost btn-icon btn-sm" onClick={() => openEdit(o)} title="Edit"><MdEdit size={15} /></button>
+                              <button className="btn btn-ghost btn-icon btn-sm" style={{ color: 'var(--danger)' }} onClick={() => handleDelete(o.id)} title="Delete"><MdDelete size={15} /></button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+                </div>
+                <Pagination
+                  currentPage={currentPage}
+                  totalItems={totalItems}
+                  pageSize={pageSize}
+                  onPageChange={setCurrentPage}
+                  onPageSizeChange={setPageSize}
+                />
+              </>
             )}
           </div>
         </div>

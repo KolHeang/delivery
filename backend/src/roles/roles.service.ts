@@ -4,6 +4,7 @@ import { Repository, In } from 'typeorm';
 import { Role } from './role.entity';
 import { Permission } from './permission.entity';
 import { User } from '../users/users.entity';
+import { paginateRepo } from '../config/pagination';
 
 @Injectable()
 export class RolesService {
@@ -55,12 +56,13 @@ export class RolesService {
     return this.roleRepo.save(role);
   }
 
-  async findAllRoles(): Promise<Role[]> {
-    return this.roleRepo.find({
+  async findAllRoles(query?: { page?: number; limit?: number }): Promise<any> {
+    return paginateRepo(this.roleRepo, query || {}, {
       relations: { permissions: true },
       order: { name: 'ASC' },
     });
   }
+
 
   async findOneRole(id: number): Promise<Role> {
     const role = await this.roleRepo.findOne({

@@ -1,8 +1,9 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, UseGuards, ParseIntPipe } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, UseGuards, ParseIntPipe, Query } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiProperty } from '@nestjs/swagger';
 import { RolesService } from './roles.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { IsString, IsOptional, IsArray, IsNumber } from 'class-validator';
+
 
 class CreatePermissionDto {
   @ApiProperty({ example: 'orders.create' })
@@ -88,8 +89,14 @@ export class RolesController {
 
   @Get()
   @ApiOperation({ summary: 'Get all roles' })
-  findAllRoles() {
-    return this.rolesService.findAllRoles();
+  findAllRoles(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.rolesService.findAllRoles({
+      page: page ? +page : undefined,
+      limit: limit ? +limit : undefined,
+    });
   }
 
   @Get(':id')

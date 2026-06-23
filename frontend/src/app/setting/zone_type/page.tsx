@@ -9,12 +9,16 @@ import api from '@/lib/api';
 import { MdAdd, MdEdit, MdDelete, MdMoreHoriz, MdClose, MdBookmark } from 'react-icons/md';
 import { useLanguage } from '@/lib/LanguageContext';
 import Modal from '@/components/ui/Modal';
+import Pagination from '@/components/ui/Pagination';
 
 export default function ZonesPage() {
   const router = useRouter();
   const { lang, t } = useLanguage();
   const [items, setItems] = useState<any[]>([]);
+  const [totalItems, setTotalItems] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   // Subzone state management
   const [activeDropdownId, setActiveDropdownId] = useState<number | null>(null);
@@ -25,11 +29,19 @@ export default function ZonesPage() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const r = await api.get('/zones');
-      setItems(r.data || []);
+      const r = await api.get('/zones', {
+        params: { page: currentPage, limit: pageSize }
+      });
+      if (r.data && r.data.data !== undefined) {
+        setItems(r.data.data || []);
+        setTotalItems(r.data.total || 0);
+      } else {
+        setItems(r.data || []);
+        setTotalItems(r.data?.length || 0);
+      }
     } catch {}
     setLoading(false);
-  }, []);
+  }, [currentPage, pageSize]);
 
   useEffect(() => {
     if (!isAuthenticated()) { router.push('/'); return; }
@@ -90,7 +102,7 @@ export default function ZonesPage() {
 
       <Sidebar />
       <div className="main-content">
-        <Topbar title={t('zoneType') || 'Zone Type'} subtitle={`${items.length} ${lang === 'km' ? 'តំបន់ត្រូវបានកំណត់' : 'zones configured'}`} />
+        <Topbar title={t('zoneType') || 'Zone Type'} subtitle={`${totalItems} ${lang === 'km' ? 'តំបន់ត្រូវបានកំណត់' : 'zones configured'}`} />
         <div className="page-content">
           <div className="card">
             <div className="card-header">
@@ -107,148 +119,157 @@ export default function ZonesPage() {
                 <div className="empty-state-title">{lang === 'km' ? 'មិនទាន់មានតំបន់ត្រូវបានកំណត់' : 'No zones configured'}</div>
               </div>
             ) : (
-              <div style={{ overflowX: 'auto' }}>
-                <table>
-                  <thead>
-                    <tr>
-                      <th style={{ width: '60px' }}>{lang === 'km' ? 'ល.រ' : 'No.'}</th>
-                      <th>{lang === 'km' ? 'ឈ្មោះតំបន់' : 'Zone Name'}</th>
-                      <th>{lang === 'km' ? 'ឈ្មោះភ្នាក់ងារ' : 'Agent Name'}</th>
-                      <th>{lang === 'km' ? 'ប្រភេទតំបន់រង' : 'Subzone Types'}</th>
-                      <th style={{ width: '100px', textAlign: 'center' }}>{lang === 'km' ? 'សកម្មភាព' : 'Actions'}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {items.map((z: any, i) => (
-                      <tr key={z.id}>
-                        <td style={{ verticalAlign: 'top', paddingTop: '16px', color: '#1e293b', fontSize: 14 }}>{i + 1}</td>
-                        <td style={{ verticalAlign: 'top', paddingTop: '16px', fontWeight: 700 }}>{z.name}</td>
-                        <td style={{ verticalAlign: 'top', paddingTop: '16px' }}>
-                          {z.driver ? (
-                            <span style={{ fontWeight: 600 }}>{z.driver.nameKh || z.driver.name}</span>
-                          ) : (
-                            ''
-                          )}
-                        </td>
-                        <td style={{ verticalAlign: 'top', paddingTop: '12px', paddingBottom: '12px' }}>
-                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                            {z.subZones && z.subZones.map((sz: any) => (
-                              <span
-                                key={sz.id}
+              <>
+                <div style={{ overflowX: 'auto' }}>
+                  <table>
+                    <thead>
+                      <tr>
+                        <th style={{ width: '60px' }}>{lang === 'km' ? 'ល.រ' : 'No.'}</th>
+                        <th>{lang === 'km' ? 'ឈ្មោះតំបន់' : 'Zone Name'}</th>
+                        <th>{lang === 'km' ? 'ឈ្មោះភ្នាក់ងារ' : 'Agent Name'}</th>
+                        <th>{lang === 'km' ? 'ប្រភេទតំបន់រង' : 'Subzone Types'}</th>
+                        <th style={{ width: '100px', textAlign: 'center' }}>{lang === 'km' ? 'សកម្មភាព' : 'Actions'}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {items.map((z: any, i) => (
+                        <tr key={z.id}>
+                          <td style={{ verticalAlign: 'top', paddingTop: '16px', color: '#1e293b', fontSize: 14 }}>{(currentPage - 1) * pageSize + i + 1}</td>
+                          <td style={{ verticalAlign: 'top', paddingTop: '16px', fontWeight: 700 }}>{z.name}</td>
+                          <td style={{ verticalAlign: 'top', paddingTop: '16px' }}>
+                            {z.driver ? (
+                              <span style={{ fontWeight: 600 }}>{z.driver.nameKh || z.driver.name}</span>
+                            ) : (
+                              ''
+                            )}
+                          </td>
+                          <td style={{ verticalAlign: 'top', paddingTop: '12px', paddingBottom: '12px' }}>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                              {z.subZones && z.subZones.map((sz: any) => (
+                                <span
+                                  key={sz.id}
+                                  style={{
+                                    background: '#e28a35',
+                                    color: '#ffffff',
+                                    padding: '2px 8px',
+                                    borderRadius: 4,
+                                    fontSize: '12px',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: 4,
+                                    fontWeight: 500,
+                                    userSelect: 'none'
+                                  }}
+                                >
+                                  {sz.name}
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      delSubZone(sz.id, sz.name);
+                                    }}
+                                    style={{
+                                      background: 'none',
+                                      border: 'none',
+                                      color: 'rgba(255, 255, 255, 0.8)',
+                                      cursor: 'pointer',
+                                      padding: 0,
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      fontSize: '10px',
+                                      lineHeight: 1,
+                                      marginLeft: 2,
+                                      transition: 'color 0.2s'
+                                    }}
+                                    onMouseEnter={(e) => e.currentTarget.style.color = '#fff'}
+                                    onMouseLeave={(e) => e.currentTarget.style.color = 'rgba(255, 255, 255, 0.8)'}
+                                  >
+                                    x
+                                  </button>
+                                </span>
+                              ))}
+                            </div>
+                          </td>
+                          <td style={{ verticalAlign: 'top', paddingTop: '16px', textAlign: 'center' }}>
+                            <div style={{ display: 'flex', gap: 14, justifyContent: 'center', alignItems: 'center' }}>
+                              {/* Add Subzone */}
+                              <button
+                                onClick={() => setSubzoneModal(z)}
+                                title={lang === 'km' ? 'បន្ថែមតំបន់រង' : 'Add Subzone'}
                                 style={{
-                                  background: '#e28a35',
-                                  color: '#ffffff',
-                                  padding: '2px 8px',
-                                  borderRadius: 4,
-                                  fontSize: '12px',
+                                  border: 'none',
+                                  background: 'none',
+                                  padding: 0,
+                                  cursor: 'pointer',
                                   display: 'inline-flex',
                                   alignItems: 'center',
-                                  gap: 4,
-                                  fontWeight: 500,
-                                  userSelect: 'none'
+                                  justifyContent: 'center',
+                                  color: '#64748b',
+                                  outline: 'none',
+                                  transition: 'color 0.15s ease'
                                 }}
+                                onMouseEnter={(e) => e.currentTarget.style.color = '#0f172a'}
+                                onMouseLeave={(e) => e.currentTarget.style.color = '#64748b'}
                               >
-                                {sz.name}
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    delSubZone(sz.id, sz.name);
-                                  }}
-                                  style={{
-                                    background: 'none',
-                                    border: 'none',
-                                    color: 'rgba(255, 255, 255, 0.8)',
-                                    cursor: 'pointer',
-                                    padding: 0,
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    fontSize: '10px',
-                                    lineHeight: 1,
-                                    marginLeft: 2,
-                                    transition: 'color 0.2s'
-                                  }}
-                                  onMouseEnter={(e) => e.currentTarget.style.color = '#fff'}
-                                  onMouseLeave={(e) => e.currentTarget.style.color = 'rgba(255, 255, 255, 0.8)'}
-                                >
-                                  x
-                                </button>
-                              </span>
-                            ))}
-                          </div>
-                        </td>
-                        <td style={{ verticalAlign: 'top', paddingTop: '16px', textAlign: 'center' }}>
-                          <div style={{ display: 'flex', gap: 14, justifyContent: 'center', alignItems: 'center' }}>
-                            {/* Add Subzone */}
-                            <button
-                              onClick={() => setSubzoneModal(z)}
-                              title={lang === 'km' ? 'បន្ថែមតំបន់រង' : 'Add Subzone'}
-                              style={{
-                                border: 'none',
-                                background: 'none',
-                                padding: 0,
-                                cursor: 'pointer',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                color: '#64748b',
-                                outline: 'none',
-                                transition: 'color 0.15s ease'
-                              }}
-                              onMouseEnter={(e) => e.currentTarget.style.color = '#0f172a'}
-                              onMouseLeave={(e) => e.currentTarget.style.color = '#64748b'}
-                            >
-                              <MdAdd size={20} />
-                            </button>
-                            {/* Edit */}
-                            <button
-                              onClick={() => openEdit(z)}
-                              title={lang === 'km' ? 'កែប្រែ' : 'Edit'}
-                              style={{
-                                border: 'none',
-                                background: 'none',
-                                padding: 0,
-                                cursor: 'pointer',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                color: '#64748b',
-                                outline: 'none',
-                                transition: 'color 0.15s ease'
-                              }}
-                              onMouseEnter={(e) => e.currentTarget.style.color = '#0f172a'}
-                              onMouseLeave={(e) => e.currentTarget.style.color = '#64748b'}
-                            >
-                              <MdEdit size={20} />
-                            </button>
-                            {/* Delete */}
-                            <button
-                              onClick={() => del(z.id)}
-                              title={lang === 'km' ? 'លុប' : 'Delete'}
-                              style={{
-                                border: 'none',
-                                background: 'none',
-                                padding: 0,
-                                cursor: 'pointer',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                color: '#ef4444',
-                                outline: 'none',
-                                transition: 'opacity 0.15s ease'
-                              }}
-                              onMouseEnter={(e) => e.currentTarget.style.opacity = '0.7'}
-                              onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
-                            >
-                              <MdDelete size={20} />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                                <MdAdd size={20} />
+                              </button>
+                              {/* Edit */}
+                              <button
+                                onClick={() => openEdit(z)}
+                                title={lang === 'km' ? 'កែប្រែ' : 'Edit'}
+                                style={{
+                                  border: 'none',
+                                  background: 'none',
+                                  padding: 0,
+                                  cursor: 'pointer',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  color: '#64748b',
+                                  outline: 'none',
+                                  transition: 'color 0.15s ease'
+                                }}
+                                onMouseEnter={(e) => e.currentTarget.style.color = '#0f172a'}
+                                onMouseLeave={(e) => e.currentTarget.style.color = '#64748b'}
+                              >
+                                <MdEdit size={20} />
+                              </button>
+                              {/* Delete */}
+                              <button
+                                onClick={() => del(z.id)}
+                                title={lang === 'km' ? 'លុប' : 'Delete'}
+                                style={{
+                                  border: 'none',
+                                  background: 'none',
+                                  padding: 0,
+                                  cursor: 'pointer',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  color: '#ef4444',
+                                  outline: 'none',
+                                  transition: 'opacity 0.15s ease'
+                                }}
+                                onMouseEnter={(e) => e.currentTarget.style.opacity = '0.7'}
+                                onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
+                              >
+                                <MdDelete size={20} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <Pagination
+                  currentPage={currentPage}
+                  totalItems={totalItems}
+                  pageSize={pageSize}
+                  onPageChange={setCurrentPage}
+                  onPageSizeChange={setPageSize}
+                />
+              </>
             )}
           </div>
         </div>

@@ -4,7 +4,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Like } from 'typeorm';
+import { Repository, Like, ILike, Between, MoreThanOrEqual, LessThanOrEqual } from 'typeorm';
 import { Order } from './order.entity';
 import { OrderHistory } from './order-history.entity';
 import {
@@ -15,6 +15,8 @@ import {
   AssignPickupDto,
   AssignDeliveryDto,
 } from './dto/order.dto';
+import { paginateRepo } from '../config/pagination';
+
 
 @Injectable()
 export class OrdersService {
@@ -43,22 +45,57 @@ export class OrdersService {
     }
   }
 
-  findAll(filters?: {
+  async findAll(query?: {
+    page?: number;
+    limit?: number;
+    search?: string;
     status?: string;
     driverId?: number;
     merchantId?: number;
     driverPaymentStatus?: string;
     merchantPaymentStatus?: string;
-  }): Promise<Order[]> {
-    const where: any = {};
-    if (filters?.status) where.status = filters.status;
-    if (filters?.driverId) where.driverId = filters.driverId;
-    if (filters?.merchantId) where.merchantId = filters.merchantId;
-    if (filters?.driverPaymentStatus)
-      where.driverPaymentStatus = filters.driverPaymentStatus;
-    if (filters?.merchantPaymentStatus)
-      where.merchantPaymentStatus = filters.merchantPaymentStatus;
-    return this.repo.find({
+    startDate?: string;
+    endDate?: string;
+  }): Promise<any> {
+    const baseWhere: any = {};
+    if (query?.status) baseWhere.status = query.status;
+    if (query?.driverId) baseWhere.driverId = query.driverId;
+    if (query?.merchantId) baseWhere.merchantId = query.merchantId;
+    if (query?.driverPaymentStatus)
+      baseWhere.driverPaymentStatus = query.driverPaymentStatus;
+    if (query?.merchantPaymentStatus)
+      baseWhere.merchantPaymentStatus = query.merchantPaymentStatus;
+
+    if (query?.startDate && query?.endDate) {
+      const start = new Date(query.startDate);
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(query.endDate);
+      end.setHours(23, 59, 59, 999);
+      baseWhere.createdAt = Between(start, end);
+    } else if (query?.startDate) {
+      const start = new Date(query.startDate);
+      start.setHours(0, 0, 0, 0);
+      baseWhere.createdAt = MoreThanOrEqual(start);
+    } else if (query?.endDate) {
+      const end = new Date(query.endDate);
+      end.setHours(23, 59, 59, 999);
+      baseWhere.createdAt = LessThanOrEqual(end);
+    }
+
+    let where: any = baseWhere;
+    if (query?.search) {
+      const term = ILike(`%${query.search}%`);
+      where = [
+        { ...baseWhere, trackingCode: term },
+        { ...baseWhere, receiverName: term },
+        { ...baseWhere, receiverPhone: term },
+        { ...baseWhere, receiverAddress: term },
+        { ...baseWhere, merchant: { name: term } },
+        { ...baseWhere, driver: { name: term } },
+      ];
+    }
+
+    return paginateRepo(this.repo, query || {}, {
       where,
       relations: this.relations,
       order: { createdAt: 'DESC' },

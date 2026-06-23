@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Income } from './income.entity';
 import { IncomeType } from './income-type.entity';
+import { paginateRepo } from '../config/pagination';
 
 @Injectable()
 export class IncomesService {
@@ -43,8 +44,8 @@ export class IncomesService {
     return this.incomeRepo.save(income);
   }
 
-  async findAll() {
-    return this.incomeRepo.find({
+  async findAll(query?: { page?: number; limit?: number }) {
+    return paginateRepo(this.incomeRepo, query || {}, {
       relations: { type: true },
       order: { date: 'DESC', createdAt: 'DESC' },
     });

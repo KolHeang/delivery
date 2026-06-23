@@ -6,6 +6,7 @@ import { ShopPayment } from './shop-payment.entity';
 import { User } from '../users/users.entity';
 import { Merchant } from '../merchants/merchant.entity';
 import { Order } from '../orders/order.entity';
+import { Organisation } from '../settings/organisation.entity';
 
 @Injectable()
 export class PaymentsService {
@@ -15,6 +16,7 @@ export class PaymentsService {
     @InjectRepository(User) private driverRepo: Repository<User>,
     @InjectRepository(Merchant) private merchantRepo: Repository<Merchant>,
     @InjectRepository(Order) private orderRepo: Repository<Order>,
+    @InjectRepository(Organisation) private orgRepo: Repository<Organisation>,
   ) { }
 
   // UserPayments
@@ -68,6 +70,22 @@ export class PaymentsService {
     reference?: string,
     note?: string,
     orderIds?: number[],
+    telegramReport?: {
+      totalCount: number;
+      newCount: number;
+      oldCount: number;
+      successCount: number;
+      inProgressCount: number;
+      failedCount: number;
+      returnedCount: number;
+      pendingCount: number;
+      totalUSD: number;
+      totalKHR: number;
+      deliveryFee: number;
+      payableUSD: number;
+      payableKHR: number;
+      detailUrl?: string;
+    },
   ) {
     const merchant = await this.merchantRepo.findOne({
       where: { id: merchantId },
@@ -80,6 +98,7 @@ export class PaymentsService {
       date,
       reference,
       note,
+      orderIds,
     });
     const saved = await this.shopRepo.save(payment);
 
@@ -95,6 +114,35 @@ export class PaymentsService {
         .whereInIds(orderIds)
         .andWhere('merchantId = :merchantId', { merchantId })
         .execute();
+    }
+
+    // Send Telegram Notification
+    const targetChatId = merchant.telegram || process.env.CHAT_ID;
+    if (targetChatId && telegramReport) {
+      const d = date ? new Date(date) : new Date();
+      const day = String(d.getDate()).padStart(2, '0');
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const year = d.getFullYear();
+      const formattedDate = `${day}/${month}/${year}`;
+
+      const text = `📦 <b>របាយការណ៍ដឹកជញ្ជូនប្រចាំថ្ងៃ</b>\n\n` +
+        `- ឈ្មោះហាង: ${merchant.nameKh || merchant.name}\n` +
+        `- កាលបរិច្ឆេទ: ${formattedDate}\n` +
+        `- លេខទូរស័ព្ទ: ${merchant.phone}\n` +
+        `- សរុបចំនួនកញ្ចប់ (ថ្មី/ចាស់): ${telegramReport.newCount || 0} / ${telegramReport.oldCount || 0}\n` +
+        `- ដឹកជោគជ័យ: ${telegramReport.successCount || 0} កញ្ចប់\n` +
+        `- កំពុងដឹក: ${telegramReport.inProgressCount || 0} កញ្ចប់\n` +
+        `- មានបញ្ហា: ${telegramReport.failedCount || 0} កញ្ចប់\n` +
+        `- ឥវ៉ាន់ត្រឡប់: ${telegramReport.returnedCount || 0} កញ្ចប់\n` +
+        `- នៅក្នុងស្តុក: ${telegramReport.pendingCount || 0} កញ្ចប់\n` +
+        `- 🚚 សេវាដឹកត្រូវទទួល: $ ${parseFloat(telegramReport.deliveryFee as any || 0).toFixed(2)}\n\n` +
+        `💵 <b>Total Amount: $ ${parseFloat(telegramReport.totalUSD as any || 0).toFixed(2)}</b>\n` +
+        `<b>USD:</b> $ ${parseFloat(telegramReport.payableUSD as any || 0).toFixed(2)} USD\n` +
+        `<b>KHR:</b> ${(telegramReport.payableKHR || 0).toLocaleString()} រៀល\n` +
+        `-------------------------\n` +
+        `របាយការណ៍លម្អិត ចុចត្រង់នេះ: <a href="${telegramReport.detailUrl || ''}">Click Detail</a>`;
+
+      await this.sendTelegramMessage(targetChatId.trim(), text);
     }
 
     return saved;
@@ -202,6 +250,75 @@ export class PaymentsService {
       totalCodKHR: parseFloat(codKhrResult?.total || '0'),
       totalDeliveryFee: parseFloat(deliveryFeeResult?.total || '0'),
       totalSettled: parseFloat(settledResult?.total || '0'),
+    };
+  }
+
+  async sendTelegramMessage(chatId: string, text: string) {
+    const token = process.env.TELEGRAM_BOT_TOKEN;
+    if (!token) {
+      console.warn('TELEGRAM_BOT_TOKEN is not defined in environment variables');
+      return;
+    }
+
+    // Normalize username/chat ID
+    let targetChatId = chatId.trim();
+    if (!targetChatId.match(/^-?\d+$/) && !targetChatId.startsWith('@')) {
+      targetChatId = `@${targetChatId}`;
+    }
+
+    try {
+      const response = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          chat_id: targetChatId,
+          text: text,
+          parse_mode: 'HTML',
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`Telegram API responded with error: ${response.status} ${errorText}`);
+      } else {
+        console.log(`Telegram message sent successfully to ${targetChatId}`);
+      }
+    } catch (err) {
+      console.error('Failed to send Telegram message:', err);
+    }
+  }
+
+  async getPublicInvoice(merchantId: number, reference: string) {
+    const payment = await this.shopRepo.findOne({
+      where: { merchantId, reference },
+      relations: { merchant: true },
+    });
+    if (!payment) throw new NotFoundException('Payment settlement not found');
+
+    let orders: any[] = [];
+    if (payment.orderIds && payment.orderIds.length > 0) {
+      orders = await this.orderRepo.createQueryBuilder('order')
+        .whereInIds(payment.orderIds)
+        .leftJoinAndSelect('order.merchant', 'merchant')
+        .leftJoinAndSelect('order.driver', 'driver')
+        .getMany();
+    }
+
+    let orgInfo = await this.orgRepo.findOne({ where: {} });
+    if (!orgInfo) {
+      orgInfo = {
+        name: 'E-Express',
+        phone: '011609414',
+        address: 'Phnom Penh',
+      } as any;
+    }
+
+    return {
+      payment,
+      orders,
+      orgInfo,
     };
   }
 }

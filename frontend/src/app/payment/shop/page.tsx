@@ -80,6 +80,8 @@ export default function PaymentWithShopPage() {
   const [confirmMerchantId, setConfirmMerchantId] = useState<number | null>(null);
   const [selectedMerchantIds, setSelectedMerchantIds] = useState<number[]>([]);
 
+  const hasAutoPrintedRef = useRef(false);
+
   useEffect(() => {
     setSelectedMerchantIds([]);
   }, [statusFilter, merchantFilter, startDate, endDate]);
@@ -210,6 +212,60 @@ export default function PaymentWithShopPage() {
       return row.paymentOrders.length > 0;
     });
 
+  // 1. Hook to read query parameters and set states once data is loaded
+  useEffect(() => {
+    if (loading) return;
+
+    const params = new URLSearchParams(window.location.search);
+    const mId = params.get('merchantId');
+    const status = params.get('status');
+    const start = params.get('startDate');
+    const end = params.get('endDate');
+
+    if (mId) {
+      setMerchantFilter(mId);
+      if (status) {
+        setStatusFilter(status);
+      } else {
+        setStatusFilter('paid');
+      }
+      if (start) {
+        setStartDate(start);
+      }
+      if (end) {
+        setEndDate(end);
+      }
+    }
+  }, [loading]);
+
+  // 2. Hook to trigger print once DOM has updated with the correct states and data
+  useEffect(() => {
+    if (loading) return;
+
+    const params = new URLSearchParams(window.location.search);
+    const mId = params.get('merchantId');
+    const print = params.get('print') === 'true';
+    const status = params.get('status') || 'paid';
+    const start = params.get('startDate');
+    const end = params.get('endDate');
+
+    if (mId && print && !hasAutoPrintedRef.current) {
+      const filterMatches = merchantFilter === mId && statusFilter === status;
+      const startMatches = !start || startDate === start;
+      const endMatches = !end || endDate === end;
+      const dataReady = groupedData.length > 0 && String(groupedData[0].merchant.id) === mId;
+
+      if (filterMatches && startMatches && endMatches && dataReady) {
+        hasAutoPrintedRef.current = true;
+        document.body.classList.add('receipt-print-active');
+        const timer = setTimeout(() => {
+          window.print();
+        }, 300);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [loading, merchantFilter, statusFilter, startDate, endDate, groupedData]);
+
   // Toggle expanded details row
   const toggleDetailRow = (id: number) => {
     setExpandedMerchantId(prev => (prev === id ? null : id));
@@ -245,15 +301,34 @@ export default function PaymentWithShopPage() {
         if (!item || item.paymentOrders.length === 0) continue;
 
         const orderIds = item.paymentOrders.map(o => o.id);
+        const reference = `SETTLE-SHOP-${Date.now().toString().slice(-6)}`;
+        const detailUrl = `${window.location.origin}/report_payment_customer?client_id=${mId}&reference=${reference}`;
+
         await api.post('/payments/shop', {
           merchantId: mId,
           amount: item.financials.payableUSD,
           date: new Date().toISOString(),
-          reference: `SETTLE-SHOP-${Date.now().toString().slice(-6)}`,
+          reference,
           note: lang === 'km' 
             ? `ទូទាត់ប្រាក់ហាង។ USD: $${item.financials.payableUSD.toFixed(2)}, KHR: ${item.financials.payableKHR.toLocaleString()} KHR`
             : `Settle shop payout. USD: $${item.financials.payableUSD.toFixed(2)}, KHR: ${item.financials.payableKHR.toLocaleString()} KHR`,
           orderIds,
+          telegramReport: {
+            totalCount: item.stats.totalCount,
+            newCount: item.stats.newCount,
+            oldCount: item.stats.oldCount,
+            successCount: item.stats.successCount,
+            inProgressCount: item.stats.inProgressCount,
+            failedCount: item.stats.failedCount,
+            returnedCount: item.stats.returnedCount,
+            pendingCount: item.stats.pendingCount,
+            totalUSD: item.financials.totalUSD,
+            totalKHR: item.financials.totalKHR,
+            deliveryFee: item.financials.deliveryFee,
+            payableUSD: item.financials.payableUSD,
+            payableKHR: item.financials.payableKHR,
+            detailUrl,
+          },
         });
       }
 

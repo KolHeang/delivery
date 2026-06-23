@@ -5,6 +5,7 @@ import { ShopPayment } from './shop-payment.entity';
 import { User } from '../users/users.entity';
 import { Merchant } from '../merchants/merchant.entity';
 import { Order } from '../orders/order.entity';
+import { Organisation } from '../settings/organisation.entity';
 import { PaymentsService } from './payments.service';
 import { PaymentsController } from './payments.controller';
 
@@ -16,6 +17,7 @@ import { PaymentsController } from './payments.controller';
       User,
       Merchant,
       Order,
+      Organisation,
     ]),
   ],
   providers: [PaymentsService],

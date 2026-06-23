@@ -8,6 +8,7 @@ import Topbar from '@/components/layout/Topbar';
 import api from '@/lib/api';
 import { useLanguage } from '@/lib/LanguageContext';
 import { MdAdd, MdEdit, MdDelete, MdSecurity } from 'react-icons/md';
+import Pagination from '@/components/ui/Pagination';
 
 interface Permission {
   id: number;
@@ -27,18 +28,29 @@ export default function RolesListPage() {
   const { t } = useLanguage();
 
   const [roles, setRoles] = useState<Role[]>([]);
+  const [totalItems, setTotalItems] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await api.get('/roles');
-      setRoles(res.data);
+      const res = await api.get('/roles', {
+        params: { page: currentPage, limit: pageSize }
+      });
+      if (res.data && res.data.data !== undefined) {
+        setRoles(res.data.data || []);
+        setTotalItems(res.data.total || 0);
+      } else {
+        setRoles(res.data || []);
+        setTotalItems(res.data?.length || 0);
+      }
     } catch (err) {
       console.error('Failed to load roles', err);
     }
     setLoading(false);
-  }, []);
+  }, [currentPage, pageSize]);
 
   useEffect(() => {
     if (!isAuthenticated()) {
@@ -110,64 +122,73 @@ export default function RolesListPage() {
                 <div className="empty-state-title">{t('noRolesFound')}</div>
               </div>
             ) : (
-              <div style={{ overflowX: 'auto' }}>
-                <table>
-                  <thead>
-                    <tr>
-                      <th style={{ width: '50px' }}>#</th>
-                      <th style={{ width: '150px' }}>{t('roleName')}</th>
-                      <th>{t('roleDescription')}</th>
-                      <th style={{ width: '180px' }}>{t('permissionsCount')}</th>
-                      <th style={{ width: '120px' }}>{t('actions')}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {roles.map((d: Role, idx) => {
-                      const isSystemRole = ['admin', 'staff', 'driver'].includes(d.name);
-                      return (
-                        <tr key={d.id}>
-                          <td style={{ color: 'var(--text-muted)', fontSize: 12 }}>{idx + 1}</td>
-                          <td>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                              <MdSecurity size={16} style={{ color: 'var(--accent)' }} />
-                              <span style={{ fontWeight: 700, textTransform: 'uppercase', fontSize: 13.5 }}>
-                                {d.name}
-                              </span>
-                              {isSystemRole && (
-                                <span style={{ fontSize: '9px', background: 'rgba(59,130,246,0.12)', color: 'var(--accent)', padding: '1px 5px', borderRadius: 4, fontWeight: 600 }}>
-                                  System
+              <>
+                <div style={{ overflowX: 'auto' }}>
+                  <table>
+                    <thead>
+                      <tr>
+                        <th style={{ width: '50px' }}>#</th>
+                        <th style={{ width: '150px' }}>{t('roleName')}</th>
+                        <th>{t('roleDescription')}</th>
+                        <th style={{ width: '180px' }}>{t('permissionsCount')}</th>
+                        <th style={{ width: '120px' }}>{t('actions')}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {roles.map((d: Role, idx) => {
+                        const isSystemRole = ['admin', 'staff', 'driver'].includes(d.name);
+                        return (
+                          <tr key={d.id}>
+                            <td style={{ color: 'var(--text-muted)', fontSize: 12 }}>{(currentPage - 1) * pageSize + idx + 1}</td>
+                            <td>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                <MdSecurity size={16} style={{ color: 'var(--accent)' }} />
+                                <span style={{ fontWeight: 700, textTransform: 'uppercase', fontSize: 13.5 }}>
+                                  {d.name}
                                 </span>
-                              )}
-                            </div>
-                          </td>
-                          <td style={{ fontSize: 12.5, color: 'var(--text-muted)' }}>
-                            {d.description || '—'}
-                          </td>
-                          <td style={{ fontSize: 13, fontWeight: 600, color: d.permissions.length > 0 ? 'var(--accent)' : 'var(--text-muted)' }}>
-                            {d.permissions.length} {t('permissionsLabel').toLowerCase()}
-                          </td>
-                          <td>
-                            <div style={{ display: 'flex', gap: 4 }}>
-                              <button className="btn btn-ghost btn-icon btn-sm" onClick={() => openEdit(d.id)}>
-                                <MdEdit size={15} />
-                              </button>
-                              {!isSystemRole && (
-                                <button
-                                  className="btn btn-ghost btn-icon btn-sm"
-                                  style={{ color: 'var(--danger)' }}
-                                  onClick={() => handleDelete(d)}
-                                >
-                                  <MdDelete size={15} />
+                                {isSystemRole && (
+                                  <span style={{ fontSize: '9px', background: 'rgba(59,130,246,0.12)', color: 'var(--accent)', padding: '1px 5px', borderRadius: 4, fontWeight: 600 }}>
+                                    System
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+                            <td style={{ fontSize: 12.5, color: 'var(--text-muted)' }}>
+                              {d.description || '—'}
+                            </td>
+                            <td style={{ fontSize: 13, fontWeight: 600, color: d.permissions.length > 0 ? 'var(--accent)' : 'var(--text-muted)' }}>
+                              {d.permissions.length} {t('permissionsLabel').toLowerCase()}
+                            </td>
+                            <td>
+                              <div style={{ display: 'flex', gap: 4 }}>
+                                <button className="btn btn-ghost btn-icon btn-sm" onClick={() => openEdit(d.id)}>
+                                  <MdEdit size={15} />
                                 </button>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+                                {!isSystemRole && (
+                                  <button
+                                    className="btn btn-ghost btn-icon btn-sm"
+                                    style={{ color: 'var(--danger)' }}
+                                    onClick={() => handleDelete(d)}
+                                  >
+                                    <MdDelete size={15} />
+                                  </button>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+                <Pagination
+                  currentPage={currentPage}
+                  totalItems={totalItems}
+                  pageSize={pageSize}
+                  onPageChange={setCurrentPage}
+                  onPageSizeChange={setPageSize}
+                />
+              </>
             )}
           </div>
         </div>

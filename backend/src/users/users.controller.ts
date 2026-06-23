@@ -10,6 +10,7 @@ import {
   ParseIntPipe,
   UseInterceptors,
   UploadedFile,
+  Query,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiConsumes } from '@nestjs/swagger';
 import { UsersService } from './users.service';
@@ -34,8 +35,16 @@ export class UsersController {
   @Get()
   @RequirePermissions('users.read')
   @ApiOperation({ summary: 'Get all users' })
-  findAll() {
-    return this.usersService.findAll();
+  findAll(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('search') search?: string,
+  ) {
+    return this.usersService.findAll({
+      page: page ? +page : undefined,
+      limit: limit ? +limit : undefined,
+      search,
+    });
   }
 
   @Get(':id')

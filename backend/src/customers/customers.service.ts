@@ -1,8 +1,9 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, ILike } from 'typeorm';
 import { Customer } from './customer.entity';
 import { CreateCustomerDto, UpdateCustomerDto } from './dto/customer.dto';
+import { paginateRepo } from '../config/pagination';
 
 @Injectable()
 export class CustomersService {
@@ -10,8 +11,20 @@ export class CustomersService {
     @InjectRepository(Customer) private readonly repo: Repository<Customer>,
   ) {}
 
-  findAll(): Promise<Customer[]> {
-    return this.repo.find({ order: { name: 'ASC' } });
+  async findAll(query?: { page?: number; limit?: number; search?: string }): Promise<any> {
+    let where: any = {};
+    if (query?.search) {
+      const term = `%${query.search}%`;
+      where = [
+        { name: ILike(term) },
+        { phone: ILike(term) },
+        { email: ILike(term) },
+      ];
+    }
+    return paginateRepo(this.repo, query || {}, {
+      where,
+      order: { name: 'ASC' },
+    });
   }
 
   async findOne(id: number): Promise<Customer> {

@@ -42,7 +42,7 @@ export class DriverService {
     return this.orderRepo.find({
       where: [
         { driverId, status: In(['assigned', 'picked-up', 'in-transit', 'pending'] as any) },
-        { pickupDriverId: driverId, status: In(['pending', 'picked-up'] as any) }
+        { pickupDriverId: driverId, status: 'pending' }
       ],
       relations: { customer: true, merchant: true, zone: true },
       order: { createdAt: 'DESC' },
@@ -67,6 +67,7 @@ export class DriverService {
     if (dto.status === 'picked-up') updates.pickedUpAt = new Date();
     if (dto.status === 'delivered') updates.deliveredAt = new Date();
     if (dto.status === 'in-warehouse') updates.warehouseAt = new Date();
+    if (dto.note) updates.note = dto.note;
 
     await this.orderRepo.update(orderId, updates);
 
@@ -75,7 +76,7 @@ export class DriverService {
         const history = this.historyRepo.create({
           orderId,
           status: dto.status,
-          note: order.note || undefined,
+          note: dto.note || order.note || undefined,
         });
         await this.historyRepo.save(history);
       } catch (err) {

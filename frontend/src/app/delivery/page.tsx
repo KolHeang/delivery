@@ -11,6 +11,7 @@ import api from '@/lib/api';
 import { MdAdd, MdSearch, MdEdit, MdDelete, MdVisibility, MdFilterList, MdPrint } from 'react-icons/md';
 import { useLanguage } from '@/lib/LanguageContext';
 import DateInput, { formatDateToDDMMYYYY, getLocalDateString } from '@/components/ui/DateInput';
+import Pagination from '@/components/ui/Pagination';
 
 const getLocalFirstDayOfMonthString = () => {
   const d = new Date();
@@ -34,6 +35,8 @@ export default function DeliveriesPage() {
   const [filtered, setFiltered] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [totalItems, setTotalItems] = useState(0);
   const [statusFilter, setStatusFilter] = useState('all');
   const [startDate, setStartDate] = useState(() => getLocalFirstDayOfMonthString());
   const [endDate, setEndDate] = useState(() => getLocalDateString());
@@ -41,6 +44,16 @@ export default function DeliveriesPage() {
   const [merchantFilter, setMerchantFilter] = useState('');
   const [viewModal, setViewModal] = useState<any>(null);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+      setCurrentPage(1);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search]);
 
   const handleUpdatePickupDriver = async (orderId: number, driverId: string) => {
     try {
@@ -92,6 +105,19 @@ export default function DeliveriesPage() {
   };
 
   const getStatusLabel = (status: string) => {
+    if (lang === 'en') {
+      switch (status) {
+        case 'pending': return 'Pending';
+        case 'in-warehouse': return 'In Warehouse';
+        case 'assigned': return 'Assigned';
+        case 'picked-up': return 'Picked Up';
+        case 'in-transit': return 'In Transit';
+        case 'delivered': return 'Delivered';
+        case 'failed': return 'Failed';
+        case 'returned': return 'Returned';
+        default: return status;
+      }
+    }
     switch (status) {
       case 'pending': return 'រង់ចាំ';
       case 'in-warehouse': return 'ក្នុងឃ្លាំង';
@@ -131,11 +157,28 @@ export default function DeliveriesPage() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await api.get('/orders');
-      setOrders(res.data);
+      const res = await api.get('/orders', {
+        params: {
+          page: currentPage,
+          limit: pageSize,
+          search: debouncedSearch || undefined,
+          status: statusFilter !== 'all' ? statusFilter : undefined,
+          driverId: driverFilter || undefined,
+          merchantId: merchantFilter || undefined,
+          startDate: startDate || undefined,
+          endDate: endDate || undefined,
+        }
+      });
+      if (res.data && res.data.data !== undefined) {
+        setOrders(res.data.data);
+        setTotalItems(res.data.total);
+      } else {
+        setOrders(res.data);
+        setTotalItems(res.data.length);
+      }
     } catch {}
     setLoading(false);
-  }, []);
+  }, [currentPage, pageSize, debouncedSearch, statusFilter, driverFilter, merchantFilter, startDate, endDate]);
 
   useEffect(() => {
     if (!isAuthenticated()) { router.push('/'); return; }
@@ -150,35 +193,8 @@ export default function DeliveriesPage() {
   }, [router, load]);
 
   useEffect(() => {
-    let list = orders;
-    if (statusFilter !== 'all') list = list.filter(o => o.status === statusFilter);
-    if (driverFilter) list = list.filter(o => o.driverId === parseInt(driverFilter));
-    if (merchantFilter) list = list.filter(o => o.merchantId === parseInt(merchantFilter));
-    if (startDate) {
-      const start = new Date(startDate);
-      start.setHours(0, 0, 0, 0);
-      list = list.filter(o => new Date(o.createdAt) >= start);
-    }
-    if (endDate) {
-      const end = new Date(endDate);
-      end.setHours(23, 59, 59, 999);
-      list = list.filter(o => new Date(o.createdAt) <= end);
-    }
-    if (search) {
-      const q = search.toLowerCase();
-      list = list.filter(o =>
-        o.trackingCode?.toLowerCase().includes(q) ||
-        o.receiverName?.toLowerCase().includes(q) ||
-        o.receiverPhone?.includes(q) ||
-        o.receiverAddress?.toLowerCase().includes(q) ||
-        o.merchant?.name?.toLowerCase().includes(q) ||
-        o.merchant?.nameKh?.toLowerCase().includes(q) ||
-        o.driver?.name?.toLowerCase().includes(q) ||
-        o.driver?.nameKh?.toLowerCase().includes(q)
-      );
-    }
-    setFiltered(list);
-  }, [orders, search, statusFilter, driverFilter, merchantFilter, startDate, endDate]);
+    setFiltered(orders);
+  }, [orders]);
 
   const openCreate = () => { router.push('/delivery/entry_data_item'); };
   const openEdit = (o: any) => {
@@ -220,7 +236,7 @@ export default function DeliveriesPage() {
     <div className="app-layout">
       <Sidebar />
       <div className="main-content">
-        <Topbar title={t('deliveryPageTitle')} subtitle={`${filtered.length} ${t('deliveryPageSubtitle')}`} />
+        <Topbar title={t('deliveryPageTitle')} subtitle={`${totalItems} ${t('deliveryPageSubtitle')}`} />
         <div className="page-content">
           {/* Filters */}
           <div className="card" style={{ marginBottom: 16 }}>
@@ -229,10 +245,10 @@ export default function DeliveriesPage() {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
                 <div className="form-group" style={{ marginBottom: 0 }}>
                   <label className="form-label" style={{ fontSize: 11, marginBottom: 4 }}>Status</label>
-                  <select className="form-control" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
-                    <option value="all">Select Status</option>
-                    {STATUS_OPTIONS.filter(s => s !== 'all').map(s => (
-                      <option key={s} value={s} style={{ textTransform: 'capitalize' }}>{s}</option>
+                  <select className="form-control" value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setCurrentPage(1); }}>
+                    <option value="all">{lang === 'km' ? 'ជ្រើសរើសស្ថានភាព' : 'Select Status'}</option>
+                    {['pending', 'in-warehouse', 'in-transit', 'delivered', 'failed', 'returned'].map(s => (
+                      <option key={s} value={s}>{getStatusLabel(s)}</option>
                     ))}
                   </select>
                 </div>
@@ -240,24 +256,24 @@ export default function DeliveriesPage() {
                   labelEn="Start Date"
                   labelKh="កាលបរិច្ឆេទបញ្ជូល"
                   value={startDate}
-                  onChange={setStartDate}
+                  onChange={val => { setStartDate(val); setCurrentPage(1); }}
                 />
                 <DateInput
                   labelEn="End Date"
                   labelKh="កាលបរិច្ឆេទបញ្ចប់"
                   value={endDate}
-                  onChange={setEndDate}
+                  onChange={val => { setEndDate(val); setCurrentPage(1); }}
                 />
                 <div className="form-group" style={{ marginBottom: 0 }}>
                   <label className="form-label" style={{ fontSize: 11, marginBottom: 4 }}>អ្នកដឹក</label>
-                  <select className="form-control" value={driverFilter} onChange={e => setDriverFilter(e.target.value)}>
+                  <select className="form-control" value={driverFilter} onChange={e => { setDriverFilter(e.target.value); setCurrentPage(1); }}>
                     <option value="">-- {t('all') || 'All'} --</option>
                     {drivers.map(d => <option key={d.id} value={d.id}>{d.name} {d.nameKh ? `(${d.nameKh})` : ''}</option>)}
                   </select>
                 </div>
                 <div className="form-group" style={{ marginBottom: 0 }}>
                   <label className="form-label" style={{ fontSize: 11, marginBottom: 4 }}>ហាង</label>
-                  <select className="form-control" value={merchantFilter} onChange={e => setMerchantFilter(e.target.value)}>
+                  <select className="form-control" value={merchantFilter} onChange={e => { setMerchantFilter(e.target.value); setCurrentPage(1); }}>
                     <option value="">-- {t('all') || 'All'} --</option>
                     {merchants.map(m => <option key={m.id} value={m.id}>{m.name} {m.nameKh ? `(${m.nameKh})` : ''}</option>)}
                   </select>
@@ -295,7 +311,7 @@ export default function DeliveriesPage() {
                     <MdPrint size={14} /> {lang === 'km' ? 'QR បោះពុម្ព' : 'Print QR'} ({selectedIds.length})
                   </button>
                 )}
-                {selectedIds.length > 0 && selectedIds.some(id => orders.find(o => o.id === id)?.status === 'picked-up') && (
+                {/* {selectedIds.length > 0 && selectedIds.some(id => orders.find(o => o.id === id)?.status === 'picked-up') && (
                   <button 
                     className="btn btn-sm" 
                     onClick={handleBatchReceive}
@@ -303,7 +319,7 @@ export default function DeliveriesPage() {
                   >
                     📥 {lang === 'km' ? 'ទទួលចូលឃ្លាំង' : 'Manual Receive'} ({selectedIds.filter(id => orders.find(o => o.id === id)?.status === 'picked-up').length})
                   </button>
-                )}
+                )} */}
                 <button id="create-order-btn" className="btn btn-primary btn-sm" onClick={openCreate}><MdAdd size={14} /> {t('batchEntryData')}</button>
               </div>
             </div>
@@ -316,198 +332,210 @@ export default function DeliveriesPage() {
                 <div className="empty-state-text">Create your first order to get started</div>
               </div>
             ) : (
-              <div className="table-responsive" style={{ overflowX: 'auto' }}>
-                <table style={{ minWidth: 1600 }}>
-                <thead>
-                  <tr>
-                    <th>ល.រ</th>
-                    <th>លេខ</th>
-                    <th style={{ textAlign: 'center', width: 40 }}>
-                      <input
-                        type="checkbox"
-                        checked={filtered.length > 0 && filtered.every(item => selectedIds.includes(item.id))}
-                        onChange={handleSelectAll}
-                        style={{ cursor: 'pointer', width: 16, height: 16 }}
-                      />
-                    </th>
-                    <th>កាលបរិច្ឆេទ</th>
-                    <th>ឈ្មោះហាង</th>
-                    <th>អាសយដ្ឋានអ្នកទទួល</th>
-                    <th>លេខទូរស័ព្ទ</th>
-                    <th>ចំនួន$</th>
-                    <th>ចំនួន៛</th>
-                    <th style={{ minWidth: 130 }}>អ្នកយកកញ្ចប់</th>
-                    <th style={{ minWidth: 130 }}>អ្នកដឹក</th>
-                    <th style={{ textAlign: 'center', width: 80 }}>ស្ថានភាពដឹក ✓ ✕</th>
-                    <th>ស្ថានភាព</th>
-                    <th>ស្ថានភាពទូទាត់</th>
-                    <th>បញ្ចូលដោយ</th>
-                    <th>បញ្ចប់ដោយ</th>
-                    <th>ធ្វើបច្ចុប្បន្នភាព</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filtered.map((o: any, idx) => {
-                    const isSelected = selectedIds.includes(o.id);
-                    return (
-                      <tr key={o.id} style={{ backgroundColor: isSelected ? '#eff6ff' : 'transparent', transition: 'background-color 0.15s ease' }}>
-                        <td style={{ color: 'var(--text-muted)', fontSize: 12 }}>{idx + 1}</td>
-                        <td>
-                          <span 
-                            style={{ color: '#2563eb', cursor: 'pointer', fontWeight: 600, textDecoration: 'underline' }}
-                            onClick={() => openEdit(o)}
-                          >
-                            {o.trackingCode}
-                          </span>
-                        </td>
-                        <td style={{ textAlign: 'center' }}>
-                          <input
-                            type="checkbox"
-                            checked={isSelected}
-                            onChange={() => toggleSelectRow(o.id)}
-                            style={{ cursor: 'pointer', width: 16, height: 16 }}
-                          />
-                        </td>
-                        <td style={{ fontSize: 11, whiteSpace: 'nowrap' }}>{formatDateTime(o.createdAt)}</td>
-                        <td>
-                          <span style={{ color: '#2563eb', cursor: 'pointer', textDecoration: 'underline' }} onClick={() => router.push(`/client?search=${o.merchant?.name || ''}`)}>
-                            {o.merchant?.nameKh || o.merchant?.name || '—'}
-                          </span>
-                        </td>
-                        <td style={{ fontSize: 12 }}>{o.receiverAddress || '—'}</td>
-                        <td style={{ fontWeight: 600 }}>{o.receiverPhone}</td>
-                        <td>
-                          <span style={{ color: 'var(--danger, #ef4444)', textDecoration: 'underline', fontWeight: 600 }}>
-                            {o.codCurrency === 'USD' ? `$${parseFloat(o.cod || 0).toFixed(2)}` : '$0.00'}
-                          </span>
-                        </td>
-                        <td>
-                          <span style={{ color: 'var(--danger, #ef4444)', textDecoration: 'underline', fontWeight: 600 }}>
-                            {o.codCurrency === 'KHR' ? `៛${parseInt(o.cod || 0).toLocaleString()}` : '៛0'}
-                          </span>
-                        </td>
-                        <td>
-                          <select
-                            className="form-control"
-                            value={o.pickupDriverId || ''}
-                            onChange={e => handleUpdatePickupDriver(o.id, e.target.value)}
-                            style={{ height: '32px', padding: '2px 6px', fontSize: '12px', minWidth: '120px' }}
-                          >
-                            <option value="">--ជ្រើសរើស--</option>
-                            {drivers.map(d => (
-                              <option key={d.id} value={d.id}>
-                                {d.nameKh || d.name}
-                              </option>
-                            ))}
-                          </select>
-                        </td>
-                        <td>
-                          <select
-                            className="form-control"
-                            value={o.driverId || ''}
-                            onChange={e => handleUpdateDeliveryDriver(o.id, e.target.value)}
-                            style={{ height: '32px', padding: '2px 6px', fontSize: '12px', minWidth: '120px' }}
-                          >
-                            <option value="">--ជ្រើសរើស--</option>
-                            {drivers.map(d => (
-                              <option key={d.id} value={d.id}>
-                                {d.nameKh || d.name}
-                              </option>
-                            ))}
-                          </select>
-                        </td>
-                        <td style={{ textAlign: 'center' }}>
-                          <div 
-                            onClick={() => handleToggleDeliveryStatus(o.id, o.status)}
-                            style={{
-                              width: 50,
-                              height: 24,
-                              borderRadius: 12,
-                              background: o.status === 'delivered' ? 'var(--success, #10b981)' : '#e5e7eb',
-                              position: 'relative',
-                              cursor: 'pointer',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              padding: '0 4px',
-                              boxSizing: 'border-box',
-                              transition: 'background-color 0.2s',
-                              userSelect: 'none'
-                            }}
-                          >
-                            <div 
-                              style={{
-                                width: 16,
-                                height: 16,
-                                borderRadius: '50%',
-                                background: '#fff',
-                                position: 'absolute',
-                                left: o.status === 'delivered' ? 30 : 4,
-                                transition: 'left 0.2s',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                fontSize: 9,
-                                fontWeight: 'bold',
-                                color: o.status === 'delivered' ? '#10b981' : '#9ca3af'
-                              }}
+              <>
+                <div className="table-responsive" style={{ overflowX: 'auto' }}>
+                  <table style={{ minWidth: 1600 }}>
+                  <thead>
+                    <tr>
+                      <th>ល.រ</th>
+                      <th>លេខ</th>
+                      <th style={{ textAlign: 'center', width: 40 }}>
+                        <input
+                          type="checkbox"
+                          checked={filtered.length > 0 && filtered.every(item => selectedIds.includes(item.id))}
+                          onChange={handleSelectAll}
+                          style={{ cursor: 'pointer', width: 16, height: 16 }}
+                        />
+                      </th>
+                      <th>កាលបរិច្ឆេទ</th>
+                      <th>ឈ្មោះហាង</th>
+                      <th>អាសយដ្ឋានអ្នកទទួល</th>
+                      <th>លេខទូរស័ព្ទ</th>
+                      <th>ចំនួន$</th>
+                      <th>ចំនួន៛</th>
+                      <th style={{ minWidth: 130 }}>អ្នកយកកញ្ចប់</th>
+                      <th style={{ minWidth: 130 }}>អ្នកដឹក</th>
+                      <th style={{ textAlign: 'center', width: 80 }}>ស្ថានភាពដឹក ✓ ✕</th>
+                      <th>ស្ថានភាព</th>
+                      <th>ស្ថានភាពទូទាត់</th>
+                      <th>បញ្ចូលដោយ</th>
+                      <th>បញ្ចប់ដោយ</th>
+                      <th>ធ្វើបច្ចុប្បន្នភាព</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filtered.map((o: any, idx) => {
+                      const isSelected = selectedIds.includes(o.id);
+                      return (
+                        <tr key={o.id} style={{ backgroundColor: isSelected ? '#eff6ff' : 'transparent', transition: 'background-color 0.15s ease' }}>
+                          <td style={{ color: 'var(--text-muted)', fontSize: 12 }}>{(currentPage - 1) * pageSize + idx + 1}</td>
+                          <td>
+                            <span 
+                              style={{ color: '#2563eb', cursor: 'pointer', fontWeight: 600, textDecoration: 'underline' }}
+                              onClick={() => openEdit(o)}
                             >
-                              {o.status === 'delivered' ? '✓' : '✕'}
-                            </div>
-                          </div>
-                        </td>
-                        <td style={{ fontSize: 12, fontWeight: 600, color: o.status === 'delivered' ? 'var(--success, #10b981)' : 'inherit' }}>
-                          <div>{getStatusLabel(o.status)}</div>
-                          {o.status === 'picked-up' && (
-                            <button
-                              onClick={() => handleStatusChange(o.id, 'in-warehouse')}
+                              {o.trackingCode}
+                            </span>
+                          </td>
+                          <td style={{ textAlign: 'center' }}>
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => toggleSelectRow(o.id)}
+                              style={{ cursor: 'pointer', width: 16, height: 16 }}
+                            />
+                          </td>
+                          <td style={{ fontSize: 11, whiteSpace: 'nowrap' }}>{formatDateTime(o.createdAt)}</td>
+                          <td>
+                            <span style={{ color: '#2563eb', cursor: 'pointer', textDecoration: 'underline' }} onClick={() => router.push(`/client?search=${o.merchant?.name || ''}`)}>
+                              {o.merchant?.nameKh || o.merchant?.name || '—'}
+                            </span>
+                          </td>
+                          <td style={{ fontSize: 12 }}>{o.receiverAddress || '—'}</td>
+                          <td style={{ fontWeight: 600 }}>{o.receiverPhone}</td>
+                          <td>
+                            <span style={{ color: 'var(--danger, #ef4444)', textDecoration: 'underline', fontWeight: 600 }}>
+                              {o.codCurrency === 'USD' ? `$${parseFloat(o.cod || 0).toFixed(2)}` : '$0.00'}
+                            </span>
+                          </td>
+                          <td>
+                            <span style={{ color: 'var(--danger, #ef4444)', textDecoration: 'underline', fontWeight: 600 }}>
+                              {o.codCurrency === 'KHR' ? `៛${parseInt(o.cod || 0).toLocaleString()}` : '៛0'}
+                            </span>
+                          </td>
+                          <td>
+                            <select
+                              className="form-control"
+                              value={o.pickupDriverId || ''}
+                              onChange={e => handleUpdatePickupDriver(o.id, e.target.value)}
+                              style={{ height: '32px', padding: '2px 6px', fontSize: '12px', minWidth: '120px' }}
+                            >
+                              <option value="">--ជ្រើសរើស--</option>
+                              {drivers.map(d => (
+                                <option key={d.id} value={d.id}>
+                                  {d.nameKh || d.name}
+                                </option>
+                              ))}
+                            </select>
+                          </td>
+                          <td>
+                            <select
+                              className="form-control"
+                              value={o.driverId || ''}
+                              onChange={e => handleUpdateDeliveryDriver(o.id, e.target.value)}
+                              style={{ height: '32px', padding: '2px 6px', fontSize: '12px', minWidth: '120px' }}
+                            >
+                              <option value="">--ជ្រើសរើស--</option>
+                              {drivers.map(d => (
+                                <option key={d.id} value={d.id}>
+                                  {d.nameKh || d.name}
+                                </option>
+                              ))}
+                            </select>
+                          </td>
+                          <td style={{ textAlign: 'center' }}>
+                            <div 
+                              onClick={() => handleToggleDeliveryStatus(o.id, o.status)}
                               style={{
-                                marginTop: 6,
-                                padding: '3px 8px',
-                                fontSize: '10.5px',
-                                fontWeight: 700,
+                                width: 50,
+                                height: 24,
+                                borderRadius: 12,
+                                background: o.status === 'delivered' ? 'var(--success, #10b981)' : '#e5e7eb',
+                                position: 'relative',
+                                cursor: 'pointer',
                                 display: 'inline-flex',
                                 alignItems: 'center',
-                                gap: '3px',
-                                backgroundColor: '#0f766e',
-                                color: '#fff',
-                                borderRadius: '6px',
-                                cursor: 'pointer',
-                                border: 'none',
-                                boxShadow: '0 2px 4px rgba(15, 118, 110, 0.2)',
-                                transition: 'all 0.2s',
+                                padding: '0 4px',
+                                boxSizing: 'border-box',
+                                transition: 'background-color 0.2s',
+                                userSelect: 'none'
                               }}
-                              onMouseEnter={e => e.currentTarget.style.backgroundColor = '#0d5c56'}
-                              onMouseLeave={e => e.currentTarget.style.backgroundColor = '#0f766e'}
                             >
-                              📥 {lang === 'km' ? 'ទទួលចូលឃ្លាំង' : 'Receive'}
-                            </button>
-                          )}
-                        </td>
-                        <td>
-                          <Badge 
-                            status={o.paymentStatus === 'paid' ? 'paid' : 'pending'} 
-                            label={o.paymentStatus === 'paid' ? 'បង់លុយហើយ' : 'មិនទាន់បង់'} 
-                          />
-                        </td>
-                        <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                          {o.merchant?.name || 'admin'}
-                        </td>
-                        <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                          admin
-                        </td>
-                        <td>
-                          <div style={{ display: 'flex', gap: 4 }}>
-                            <button className="btn btn-ghost btn-icon btn-sm" onClick={() => setViewModal(o)} title="View"><MdVisibility size={15} /></button>
-                            <button className="btn btn-ghost btn-icon btn-sm" onClick={() => openEdit(o)} title="Edit"><MdEdit size={15} /></button>
-                            <button className="btn btn-ghost btn-icon btn-sm" style={{ color: 'var(--danger)' }} onClick={() => handleDelete(o.id)} title="Delete"><MdDelete size={15} /></button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-              </div>
+                              <div 
+                                style={{
+                                  width: 16,
+                                  height: 16,
+                                  borderRadius: '50%',
+                                  background: '#fff',
+                                  position: 'absolute',
+                                  left: o.status === 'delivered' ? 30 : 4,
+                                  transition: 'left 0.2s',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  fontSize: 9,
+                                  fontWeight: 'bold',
+                                  color: o.status === 'delivered' ? '#10b981' : '#9ca3af'
+                                }}
+                              >
+                                {o.status === 'delivered' ? '✓' : '✕'}
+                              </div>
+                            </div>
+                          </td>
+                          <td>
+                            <select
+                              className="form-control"
+                              value={o.status}
+                              onChange={e => handleStatusChange(o.id, e.target.value)}
+                              style={{ 
+                                height: '32px', 
+                                padding: '2px 6px', 
+                                fontSize: '12px', 
+                                minWidth: '130px',
+                                fontWeight: 600,
+                                color: o.status === 'delivered' ? 'var(--success, #10b981)' : o.status === 'failed' ? 'var(--danger, #ef4444)' : 'inherit'
+                              }}
+                            >
+                              {Array.from(new Set([
+                                o.status,
+                                'pending',
+                                'in-warehouse',
+                                'in-transit',
+                                'delivered',
+                                'failed',
+                                'returned'
+                              ])).map(s => (
+                                <option key={s} value={s}>
+                                  {getStatusLabel(s)}
+                                </option>
+                              ))}
+                            </select>
+                          </td>
+                          <td>
+                            <Badge 
+                              status={o.paymentStatus === 'paid' ? 'paid' : 'pending'} 
+                              label={o.paymentStatus === 'paid' ? 'បង់លុយហើយ' : 'មិនទាន់បង់'} 
+                            />
+                          </td>
+                          <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                            {o.merchant?.nameKh || o.merchant?.name || o.senderName || 'admin'}
+                          </td>
+                          <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                            {['delivered', 'failed', 'returned'].includes(o.status) 
+                              ? (o.driver?.nameKh || o.driver?.name || 'admin') 
+                              : '—'}
+                          </td>
+                          <td>
+                            <div style={{ display: 'flex', gap: 4 }}>
+                              <button className="btn btn-ghost btn-icon btn-sm" onClick={() => setViewModal(o)} title="View"><MdVisibility size={15} /></button>
+                              <button className="btn btn-ghost btn-icon btn-sm" onClick={() => openEdit(o)} title="Edit"><MdEdit size={15} /></button>
+                              <button className="btn btn-ghost btn-icon btn-sm" style={{ color: 'var(--danger)' }} onClick={() => handleDelete(o.id)} title="Delete"><MdDelete size={15} /></button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+                </div>
+                <Pagination
+                  currentPage={currentPage}
+                  totalItems={totalItems}
+                  pageSize={pageSize}
+                  onPageChange={setCurrentPage}
+                  onPageSizeChange={setPageSize}
+                />
+              </>
             )}
           </div>
         </div>
@@ -553,19 +581,90 @@ export default function DeliveriesPage() {
           )}
           {viewModal.histories && viewModal.histories.length > 0 && (
             <div style={{ marginTop: 20, borderTop: '1px solid var(--border)', paddingTop: 16 }}>
-              <h4 style={{ fontWeight: 700, marginBottom: 12, color: 'var(--text-secondary)', fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Status History</h4>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {[...viewModal.histories].sort((a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()).map((h: any) => (
-                  <div key={h.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12.5, background: '#f8fafc', padding: '8px 12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                      <Badge status={h.status} />
-                      {h.note && <span style={{ color: 'var(--text-secondary)', fontSize: 11 }}>({h.note})</span>}
-                    </div>
-                    <div style={{ color: 'var(--text-muted)', fontSize: 11 }}>
-                      {new Date(h.createdAt).toLocaleString()}
-                    </div>
-                  </div>
-                ))}
+              <h4 style={{ fontWeight: 700, marginBottom: 16, color: 'var(--text-secondary)', fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                📋 {lang === 'km' ? 'ប្រវត្តិស្ថានភាពលម្អិត' : 'Detailed Status History'}
+              </h4>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16, paddingLeft: 8 }}>
+                {[...viewModal.histories]
+                  .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                  .map((h: any, idx: number) => {
+                    const isLast = idx === viewModal.histories.length - 1;
+                    let pointColor = '#cbd5e1';
+                    if (h.status === 'delivered') pointColor = '#10b981';
+                    else if (h.status === 'failed') pointColor = '#ef4444';
+                    else if (h.status === 'returned') pointColor = '#6b7280';
+                    else if (['in-transit', 'picked-up', 'assigned'].includes(h.status)) pointColor = '#f59e0b';
+                    else if (h.status === 'in-warehouse') pointColor = '#10b981';
+                    else pointColor = '#3b82f6';
+                    
+                    return (
+                      <div key={h.id} style={{ display: 'flex', gap: 16, position: 'relative' }}>
+                        {/* Vertical Line */}
+                        {!isLast && (
+                          <div style={{
+                            position: 'absolute',
+                            left: 7,
+                            top: 20,
+                            bottom: -20,
+                            width: '2px',
+                            background: '#e2e8f0',
+                            zIndex: 1
+                          }} />
+                        )}
+                        
+                        {/* Bullet Point */}
+                        <div style={{
+                          width: 16,
+                          height: 16,
+                          borderRadius: '50%',
+                          backgroundColor: '#fff',
+                          border: `3px solid ${pointColor}`,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          flexShrink: 0,
+                          zIndex: 2,
+                          marginTop: 4
+                        }} />
+
+                        {/* Content Block */}
+                        <div style={{ flex: 1, paddingBottom: isLast ? 0 : 20 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 8 }}>
+                            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                              <Badge status={h.status} label={getStatusLabel(h.status)} />
+                            </div>
+                            <div style={{ color: 'var(--text-muted)', fontSize: 11.5 }}>
+                              <span>{new Date(h.createdAt).toLocaleString(lang === 'km' ? 'kh-KH' : 'en-US', {
+                                month: 'short',
+                                day: 'numeric',
+                                year: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                                hour12: true,
+                              })}</span>
+                            </div>
+                          </div>
+
+                          {/* Note / Remarks */}
+                          {h.note && (
+                            <div style={{ 
+                              marginTop: 8, 
+                              padding: '8px 12px', 
+                              background: h.status === 'failed' || h.status === 'returned' ? '#fef2f2' : '#f8fafc',
+                              borderLeft: `3px solid ${h.status === 'failed' || h.status === 'returned' ? '#ef4444' : '#cbd5e1'}`,
+                              borderRadius: '0 6px 6px 0', 
+                              fontSize: 12.5, 
+                              color: '#334155',
+                              fontWeight: 500,
+                              maxWidth: '90%'
+                            }}>
+                              📝 {lang === 'km' ? 'សម្គាល់៖' : 'Remark:'} {h.note}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
               </div>
             </div>
           )}

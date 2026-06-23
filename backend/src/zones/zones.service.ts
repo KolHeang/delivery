@@ -5,6 +5,8 @@ import { Zone } from './zone.entity';
 import { SubZone } from './subzone.entity';
 import { CreateZoneDto, UpdateZoneDto } from './dto/zone.dto';
 
+import { paginateRepo } from '../config/pagination';
+
 @Injectable()
 export class ZonesService {
   constructor(
@@ -13,9 +15,9 @@ export class ZonesService {
     private readonly subZoneRepo: Repository<SubZone>,
   ) {}
 
-  findAll(): Promise<Zone[]> {
-    return this.repo.find({
-      relations: { driver: true },
+  async findAll(query?: { page?: number; limit?: number }): Promise<any> {
+    return paginateRepo(this.repo, query || {}, {
+      relations: { driver: true, subZones: true },
       order: { name: 'ASC' },
     });
   }

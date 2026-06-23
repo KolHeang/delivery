@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Vehicle } from './vehicle.entity';
 import { CreateVehicleDto, UpdateVehicleDto } from './dto/vehicle.dto';
+import { paginateRepo } from '../config/pagination';
 
 @Injectable()
 export class VehiclesService {
@@ -10,8 +11,10 @@ export class VehiclesService {
     @InjectRepository(Vehicle) private readonly repo: Repository<Vehicle>,
   ) {}
 
-  findAll(): Promise<Vehicle[]> {
-    return this.repo.find({ order: { createdAt: 'DESC' } });
+  async findAll(query?: { page?: number; limit?: number }): Promise<any> {
+    return paginateRepo(this.repo, query || {}, {
+      order: { createdAt: 'DESC' },
+    });
   }
 
   async findOne(id: number): Promise<Vehicle> {

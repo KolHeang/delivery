@@ -7,6 +7,7 @@ import {
   Body,
   Param,
   UseGuards,
+  Query,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { IncomesService } from './incomes.service';
@@ -55,8 +56,14 @@ export class IncomesController {
   }
 
   @Get()
-  findAll() {
-    return this.incomesService.findAll();
+  findAll(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.incomesService.findAll({
+      page: page ? +page : undefined,
+      limit: limit ? +limit : undefined,
+    });
   }
 
   @Get(':id')

@@ -10,6 +10,7 @@ import {
   ParseIntPipe,
   UseInterceptors,
   UploadedFiles,
+  Query,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiConsumes } from '@nestjs/swagger';
 import { MerchantsService } from './merchants.service';
@@ -29,8 +30,16 @@ export class MerchantsController {
     private readonly minioService: MinioService,
   ) {}
 
-  @Get() findAll() {
-    return this.merchantsService.findAll();
+  @Get() findAll(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('search') search?: string,
+  ) {
+    return this.merchantsService.findAll({
+      page: page ? +page : undefined,
+      limit: limit ? +limit : undefined,
+      search,
+    });
   }
   
   @Get(':id') findOne(@Param('id', ParseIntPipe) id: number) {

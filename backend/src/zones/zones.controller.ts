@@ -8,6 +8,7 @@ import {
   Body,
   UseGuards,
   ParseIntPipe,
+  Query,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { ZonesService } from './zones.service';
@@ -21,8 +22,14 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 export class ZonesController {
   constructor(private readonly zonesService: ZonesService) {}
 
-  @Get() findAll() {
-    return this.zonesService.findAll();
+  @Get() findAll(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.zonesService.findAll({
+      page: page ? +page : undefined,
+      limit: limit ? +limit : undefined,
+    });
   }
   @Get(':id') findOne(@Param('id', ParseIntPipe) id: number) {
     return this.zonesService.findOne(id);

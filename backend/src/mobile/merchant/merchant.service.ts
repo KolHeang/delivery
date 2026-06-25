@@ -4,6 +4,8 @@ import { Repository, Like } from 'typeorm';
 import { Merchant } from '../../merchants/merchant.entity';
 import { Order } from '../../orders/order.entity';
 import { CreateOrderDto } from '../../orders/dto/order.dto';
+import { PickupRequest } from '../../orders/pickup-request.entity';
+import { CreatePickupRequestDto } from '../../orders/dto/pickup-request.dto';
 
 @Injectable()
 export class MerchantService {
@@ -11,6 +13,8 @@ export class MerchantService {
     @InjectRepository(Merchant)
     private readonly merchantRepo: Repository<Merchant>,
     @InjectRepository(Order) private readonly orderRepo: Repository<Order>,
+    @InjectRepository(PickupRequest)
+    private readonly pickupRequestRepo: Repository<PickupRequest>,
   ) {}
 
   async getProfile(merchantId: number) {
@@ -148,6 +152,11 @@ export class MerchantService {
       .groupBy('order.status')
       .getRawMany();
 
+    const [pickupPendingCount, pickupPickedUpCount] = await Promise.all([
+      this.pickupRequestRepo.count({ where: { merchantId, status: 'pending' } }),
+      this.pickupRequestRepo.count({ where: { merchantId, status: 'picked-up' } }),
+    ]);
+
     const stats = statusCounts.reduce(
       (acc, curr) => ({ ...acc, [curr.status]: parseInt(curr.count) }),
       {} as Record<string, number>,
@@ -168,7 +177,41 @@ export class MerchantService {
         totalDelivered: stats['delivered'] || 0,
         totalProblem: stats['failed'] || stats['problem'] || 0,
         totalReturn: (stats['returned'] || 0) + (stats['rejected'] || 0),
+        pickupRequestsPending: pickupPendingCount,
+        pickupRequestsPickedUp: pickupPickedUpCount,
       },
     };
+  }
+
+  async createPickupRequest(merchantId: number, dto: CreatePickupRequestDto) {
+    const merchant = await this.merchantRepo.findOne({ where: { id: merchantId } });
+    if (!merchant) throw new NotFoundException('Merchant not found');
+
+    const pickupRequest = this.pickupRequestRepo.create({
+      merchantId,
+      declaredQuantity: dto.declaredQuantity,
+      pickupAddress: dto.pickupAddress || merchant.address || '',
+      pickupTime: new Date(dto.pickupTime),
+      status: 'pending',
+    });
+
+    return this.pickupRequestRepo.save(pickupRequest);
+  }
+
+  async getPickupRequests(merchantId: number) {
+    return this.pickupRequestRepo.find({
+      where: { merchantId },
+      relations: { pickupDriver: true },
+      order: { createdAt: 'DESC' },
+    });
+  }
+
+  async getPickupRequest(merchantId: number, id: number) {
+    const request = await this.pickupRequestRepo.findOne({
+      where: { id, merchantId },
+      relations: { pickupDriver: true, orders: true },
+    });
+    if (!request) throw new NotFoundException(`Pickup request #${id} not found`);
+    return request;
   }
 }

@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { getUser, isAuthenticated } from '@/lib/auth';
-import { MdDashboard, MdFormatListBulleted, MdAddCircle, MdPerson } from 'react-icons/md';
+import { MdDashboard, MdFormatListBulleted, MdAddCircle, MdPerson, MdInventory2 } from 'react-icons/md';
 
 export default function MerchantLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -86,65 +86,46 @@ export default function MerchantLayout({ children }: { children: React.ReactNode
             boxShadow: '0 -4px 12px rgba(15, 23, 42, 0.03)'
           }}>
             <Link href="/merchant/dashboard" style={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              textDecoration: 'none',
-              color: pathname === '/merchant/dashboard' ? '#2f55a5' : '#64748b',
-              gap: '4px',
-              fontSize: '11px',
-              fontWeight: pathname === '/merchant/dashboard' ? '700' : '500',
-              transition: 'color 0.2s ease',
-              width: '25%'
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+              textDecoration: 'none', color: pathname === '/merchant/dashboard' ? '#2f55a5' : '#64748b',
+              gap: '4px', fontSize: '11px', fontWeight: pathname === '/merchant/dashboard' ? '700' : '500',
+              transition: 'color 0.2s ease', width: '20%'
             }}>
               <MdDashboard size={22} />
               <span>Dashboard</span>
             </Link>
             <Link href="/merchant/orders" style={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              textDecoration: 'none',
-              color: pathname === '/merchant/orders' ? '#2f55a5' : '#64748b',
-              gap: '4px',
-              fontSize: '11px',
-              fontWeight: pathname === '/merchant/orders' ? '700' : '500',
-              transition: 'color 0.2s ease',
-              width: '25%'
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+              textDecoration: 'none', color: pathname.startsWith('/merchant/orders') && pathname !== '/merchant/orders/create' ? '#2f55a5' : '#64748b',
+              gap: '4px', fontSize: '11px', fontWeight: (pathname.startsWith('/merchant/orders') && pathname !== '/merchant/orders/create') ? '700' : '500',
+              transition: 'color 0.2s ease', width: '20%'
             }}>
               <MdFormatListBulleted size={22} />
               <span>Orders</span>
             </Link>
             <Link href="/merchant/orders/create" style={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              textDecoration: 'none',
-              color: pathname === '/merchant/orders/create' ? '#2f55a5' : '#64748b',
-              gap: '4px',
-              fontSize: '11px',
-              fontWeight: pathname === '/merchant/orders/create' ? '700' : '500',
-              transition: 'color 0.2s ease',
-              width: '25%'
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+              textDecoration: 'none', color: pathname === '/merchant/orders/create' ? '#2f55a5' : '#64748b',
+              gap: '4px', fontSize: '11px', fontWeight: pathname === '/merchant/orders/create' ? '700' : '500',
+              transition: 'color 0.2s ease', width: '20%'
             }}>
               <MdAddCircle size={22} />
               <span>New Order</span>
             </Link>
+            <Link href="/merchant/pickups" style={{
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+              textDecoration: 'none', color: pathname.startsWith('/merchant/pickups') ? '#2f55a5' : '#64748b',
+              gap: '4px', fontSize: '11px', fontWeight: pathname.startsWith('/merchant/pickups') ? '700' : '500',
+              transition: 'color 0.2s ease', width: '20%'
+            }}>
+              <MdInventory2 size={22} />
+              <span>Pickup</span>
+            </Link>
             <Link href="/merchant/profile" style={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              textDecoration: 'none',
-              color: pathname === '/merchant/profile' ? '#2f55a5' : '#64748b',
-              gap: '4px',
-              fontSize: '11px',
-              fontWeight: pathname === '/merchant/profile' ? '700' : '500',
-              transition: 'color 0.2s ease',
-              width: '25%'
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+              textDecoration: 'none', color: pathname === '/merchant/profile' ? '#2f55a5' : '#64748b',
+              gap: '4px', fontSize: '11px', fontWeight: pathname === '/merchant/profile' ? '700' : '500',
+              transition: 'color 0.2s ease', width: '20%'
             }}>
               <MdPerson size={22} />
               <span>Profile</span>

@@ -34,6 +34,7 @@ const dashboardTranslations = {
     totalProblem: 'Problem / Failed',
     totalReturn: 'Returned Packages',
     activeTasksBtn: 'Go to Tasks',
+    pickupsBtn: 'Assigned Pickups',
     logout: 'Log Out',
     loading: 'Loading dashboard...',
   },
@@ -52,6 +53,7 @@ const dashboardTranslations = {
     totalProblem: 'មានបញ្ហា / បរាជ័យ',
     totalReturn: 'កញ្ចប់អីវ៉ាន់ត្រឡប់មកវិញ',
     activeTasksBtn: 'ទៅកាន់ភារកិច្ច',
+    pickupsBtn: 'ការទៅយកអីវ៉ាន់ដែលចាត់តាំង',
     logout: 'ចាកចេញ',
     loading: 'កំពុងផ្ទុកផ្ទាំងគ្រប់គ្រង...',
   }
@@ -461,29 +463,53 @@ export default function DriverDashboardPage() {
         </div>
       </div>
 
-      {/* Primary Action Button */}
-      <button
-        onClick={() => router.push('/driver/tasks')}
-        style={{
-          background: '#2f55a5',
-          color: '#ffffff',
-          padding: '16px',
-          borderRadius: '16px',
-          fontSize: '15px',
-          fontWeight: '700',
-          border: 'none',
-          cursor: 'pointer',
-          width: '100%',
-          boxShadow: '0 4px 12px rgba(47, 85, 165, 0.15)',
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          gap: '8px'
-        }}
-      >
-        <MdFormatListBulleted size={20} />
-        {t.activeTasksBtn}
-      </button>
+      {/* Action Buttons */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        <button
+          onClick={() => router.push('/driver/tasks')}
+          style={{
+            background: '#2f55a5',
+            color: '#ffffff',
+            padding: '16px',
+            borderRadius: '16px',
+            fontSize: '15px',
+            fontWeight: '700',
+            border: 'none',
+            cursor: 'pointer',
+            width: '100%',
+            boxShadow: '0 4px 12px rgba(47, 85, 165, 0.15)',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            gap: '8px'
+          }}
+        >
+          <MdFormatListBulleted size={20} />
+          {t.activeTasksBtn}
+        </button>
+
+        <button
+          onClick={() => router.push('/driver/pickups')}
+          style={{
+            background: '#ffffff',
+            color: '#2f55a5',
+            border: '1.5px solid #b3c5ea',
+            padding: '15px',
+            borderRadius: '16px',
+            fontSize: '15px',
+            fontWeight: '700',
+            cursor: 'pointer',
+            width: '100%',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            gap: '8px'
+          }}
+        >
+          <MdLocalShipping size={20} />
+          {t.pickupsBtn}
+        </button>
+      </div>
     </div>
   );
 }

@@ -7,6 +7,9 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Like, ILike, Between, MoreThanOrEqual, LessThanOrEqual } from 'typeorm';
 import { Order } from './order.entity';
 import { OrderHistory } from './order-history.entity';
+import { PickupRequest } from './pickup-request.entity';
+import { Zone } from '../zones/zone.entity';
+import { Merchant } from '../merchants/merchant.entity';
 import {
   CreateOrderDto,
   UpdateOrderDto,
@@ -23,6 +26,7 @@ export class OrdersService {
   constructor(
     @InjectRepository(Order) private readonly repo: Repository<Order>,
     @InjectRepository(OrderHistory) private readonly historyRepo: Repository<OrderHistory>,
+    @InjectRepository(PickupRequest) private readonly pickupRequestRepo: Repository<PickupRequest>,
   ) {}
 
   private get relations(): any {
@@ -362,5 +366,99 @@ export class OrdersService {
       returned,
       revenue: parseFloat(revenue?.total || '0'),
     };
+  }
+
+  async findAllPickupRequests(query?: { status?: string; merchantId?: number }) {
+    const where: any = {};
+    if (query?.status) where.status = query.status;
+    if (query?.merchantId) where.merchantId = query.merchantId;
+    return this.pickupRequestRepo.find({
+      where,
+      relations: { merchant: true, pickupDriver: true, orders: true },
+      order: { createdAt: 'DESC' },
+    });
+  }
+
+  async findPickupRequestById(id: number) {
+    const request = await this.pickupRequestRepo.findOne({
+      where: { id },
+      relations: { merchant: true, pickupDriver: true, orders: true },
+    });
+    if (!request) throw new NotFoundException(`Pickup request #${id} not found`);
+    return request;
+  }
+
+  async assignPickupDriverToRequest(id: number, pickupDriverId: number) {
+    const request = await this.findPickupRequestById(id);
+    request.pickupDriverId = pickupDriverId;
+    return this.pickupRequestRepo.save(request);
+  }
+
+  async createParcelForRequest(id: number, dto: CreateOrderDto) {
+    const request = await this.findPickupRequestById(id);
+    
+    // Resolve delivery fee automatically
+    let resolvedDeliveryFee = dto.deliveryFee;
+    if (resolvedDeliveryFee === undefined || resolvedDeliveryFee === null || Number(resolvedDeliveryFee) === 0) {
+      if (request.merchant?.deliveryFee && Number(request.merchant.deliveryFee) > 0) {
+        resolvedDeliveryFee = request.merchant.deliveryFee;
+      } else if (dto.zoneId) {
+        const zone = await this.repo.manager.findOne(Zone, { where: { id: dto.zoneId } });
+        resolvedDeliveryFee = zone ? Number(zone.price) : 0;
+      } else {
+        resolvedDeliveryFee = 0;
+      }
+    }
+
+    const trackingCode = await this.generateNextTrackingCode();
+
+    const order = this.repo.create({
+      ...dto,
+      senderName: request.merchant?.name || 'Shop',
+      senderPhone: request.merchant?.phone || '000',
+      merchantId: request.merchantId,
+      pickupRequestId: id,
+      pickupDriverId: request.pickupDriverId || undefined,
+      status: 'in-warehouse',
+      warehouseAt: new Date(),
+      deliveryFee: resolvedDeliveryFee,
+      trackingCode,
+    } as any);
+
+    const savedOrder = await this.repo.save(order as unknown as Order);
+    await this.addHistory(savedOrder.id, 'in-warehouse', 'Inbound from pickup request');
+
+    // Check if we reached the count to mark the request as completed
+    const count = await this.repo.count({ where: { pickupRequestId: id } });
+    const targetQty = request.actualQuantity !== null && request.actualQuantity !== undefined 
+      ? request.actualQuantity 
+      : request.declaredQuantity;
+
+    if (count >= targetQty && request.status !== 'completed') {
+      request.status = 'completed';
+      await this.pickupRequestRepo.save(request);
+    }
+
+    return this.findOne(savedOrder.id);
+  }
+
+  async deleteParcelFromRequest(id: number, parcelId: number) {
+    const order = await this.findOne(parcelId);
+    if (order.pickupRequestId !== id) {
+      throw new BadRequestException(`Order #${parcelId} is not linked to pickup request #${id}`);
+    }
+    await this.repo.remove(order);
+
+    const request = await this.findPickupRequestById(id);
+    const count = await this.repo.count({ where: { pickupRequestId: id } });
+    const targetQty = request.actualQuantity !== null && request.actualQuantity !== undefined 
+      ? request.actualQuantity 
+      : request.declaredQuantity;
+
+    if (count < targetQty && request.status === 'completed') {
+      request.status = 'picked-up';
+      await this.pickupRequestRepo.save(request);
+    }
+    return { success: true };
   }
 }

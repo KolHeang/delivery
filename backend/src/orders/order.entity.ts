@@ -14,6 +14,7 @@ import { Customer } from '../customers/customer.entity';
 import { User } from '../users/users.entity';
 import { Zone } from '../zones/zone.entity';
 import { OrderHistory } from './order-history.entity';
+import { PickupRequest } from './pickup-request.entity';
 
 export type OrderStatus =
   | 'pending'
@@ -143,6 +144,13 @@ export class Order {
 
   @Column({ nullable: true })
   zoneId: number;
+
+  @ManyToOne(() => PickupRequest, (pr) => pr.orders, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'pickupRequestId' })
+  pickupRequest: PickupRequest;
+
+  @Column({ nullable: true })
+  pickupRequestId: number;
 
   @OneToMany(() => OrderHistory, (history) => history.order)
   histories: OrderHistory[];

@@ -14,7 +14,8 @@ import {
   MdLogout,
   MdAdd,
   MdFormatListBulleted,
-  MdRefresh
+  MdRefresh,
+  MdInventory2
 } from 'react-icons/md';
 
 const merchantDashboardTranslations = {
@@ -34,6 +35,7 @@ const merchantDashboardTranslations = {
     totalReturn: 'Returned Packages',
     createOrderBtn: 'Create New Parcel',
     viewOrdersBtn: 'View My Orders',
+    pickupRequestsBtn: 'Request / View Pickups',
     logout: 'Log Out',
     loading: 'Loading dashboard...',
   },
@@ -53,6 +55,7 @@ const merchantDashboardTranslations = {
     totalReturn: 'កញ្ចប់អីវ៉ាន់ត្រឡប់មកវិញ',
     createOrderBtn: 'បង្កើតការផ្ញើថ្មី',
     viewOrdersBtn: 'មើលការផ្ញើរបស់ខ្ញុំ',
+    pickupRequestsBtn: 'ស្នើសុំ / មើលការទៅយកទំនិញ',
     logout: 'ចាកចេញ',
     loading: 'កំពុងផ្ទុកផ្ទាំងគ្រប់គ្រង...',
   }
@@ -473,11 +476,34 @@ export default function MerchantDashboardPage() {
             display: 'flex',
             justifyContent: 'center',
             alignItems: 'center',
-            gap: '8px'
+            gap: '8px',
+            marginBottom: '12px'
           }}
         >
           <MdFormatListBulleted size={20} />
           {t.viewOrdersBtn}
+        </button>
+
+        <button
+          onClick={() => router.push('/merchant/pickups')}
+          style={{
+            background: '#ffffff',
+            color: '#2f55a5',
+            border: '1.5px solid #b3c5ea',
+            padding: '14px',
+            borderRadius: '16px',
+            fontSize: '14.5px',
+            fontWeight: '700',
+            cursor: 'pointer',
+            width: '100%',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            gap: '8px'
+          }}
+        >
+          <MdInventory2 size={20} />
+          {t.pickupRequestsBtn}
         </button>
       </div>
     </div>

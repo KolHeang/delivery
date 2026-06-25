@@ -6,11 +6,13 @@ import {
   Query,
   UseGuards,
   Request,
+  Param,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { MerchantService } from './merchant.service';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { CreateOrderDto } from '../../orders/dto/order.dto';
+import { CreatePickupRequestDto } from '../../orders/dto/pickup-request.dto';
 
 @ApiTags('Mobile Merchant')
 @ApiBearerAuth()
@@ -47,5 +49,23 @@ export class MerchantController {
   @ApiOperation({ summary: 'Get merchant dashboard data' })
   getDashboard(@Request() req: any) {
     return this.merchantService.getDashboard(req.user.id);
+  }
+
+  @Post('pickup-requests')
+  @ApiOperation({ summary: 'Create a new pickup request' })
+  createPickupRequest(@Request() req: any, @Body() dto: CreatePickupRequestDto) {
+    return this.merchantService.createPickupRequest(req.user.id, dto);
+  }
+
+  @Get('pickup-requests')
+  @ApiOperation({ summary: 'Get all pickup requests for this merchant' })
+  getPickupRequests(@Request() req: any) {
+    return this.merchantService.getPickupRequests(req.user.id);
+  }
+
+  @Get('pickup-requests/:id')
+  @ApiOperation({ summary: 'Get details of a specific pickup request' })
+  getPickupRequest(@Request() req: any, @Param('id') id: string) {
+    return this.merchantService.getPickupRequest(req.user.id, +id);
   }
 }

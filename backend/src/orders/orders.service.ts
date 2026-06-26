@@ -4,7 +4,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Like, ILike, Between, MoreThanOrEqual, LessThanOrEqual } from 'typeorm';
+import { Repository, Like, ILike, Between, MoreThanOrEqual, LessThanOrEqual, In } from 'typeorm';
 import { Order } from './order.entity';
 import { OrderHistory } from './order-history.entity';
 import { PickupRequest } from './pickup-request.entity';
@@ -27,7 +27,7 @@ export class OrdersService {
     @InjectRepository(Order) private readonly repo: Repository<Order>,
     @InjectRepository(OrderHistory) private readonly historyRepo: Repository<OrderHistory>,
     @InjectRepository(PickupRequest) private readonly pickupRequestRepo: Repository<PickupRequest>,
-  ) {}
+  ) { }
 
   private get relations(): any {
     return {
@@ -170,7 +170,7 @@ export class OrdersService {
   /** Orders that have arrived at the warehouse, waiting for delivery assignment */
   async findInWarehouse(): Promise<Order[]> {
     return this.repo.find({
-      where: { status: 'in-warehouse' },
+      where: { status: In(['in-warehouse', 'pending']) },
       relations: this.relations,
       order: { warehouseAt: 'DESC' },
     });
@@ -396,7 +396,7 @@ export class OrdersService {
 
   async createParcelForRequest(id: number, dto: CreateOrderDto) {
     const request = await this.findPickupRequestById(id);
-    
+
     // Resolve delivery fee automatically
     let resolvedDeliveryFee = dto.deliveryFee;
     if (resolvedDeliveryFee === undefined || resolvedDeliveryFee === null || Number(resolvedDeliveryFee) === 0) {
@@ -430,8 +430,8 @@ export class OrdersService {
 
     // Check if we reached the count to mark the request as completed
     const count = await this.repo.count({ where: { pickupRequestId: id } });
-    const targetQty = request.actualQuantity !== null && request.actualQuantity !== undefined 
-      ? request.actualQuantity 
+    const targetQty = request.actualQuantity !== null && request.actualQuantity !== undefined
+      ? request.actualQuantity
       : request.declaredQuantity;
 
     if (count >= targetQty && request.status !== 'completed') {
@@ -451,8 +451,8 @@ export class OrdersService {
 
     const request = await this.findPickupRequestById(id);
     const count = await this.repo.count({ where: { pickupRequestId: id } });
-    const targetQty = request.actualQuantity !== null && request.actualQuantity !== undefined 
-      ? request.actualQuantity 
+    const targetQty = request.actualQuantity !== null && request.actualQuantity !== undefined
+      ? request.actualQuantity
       : request.declaredQuantity;
 
     if (count < targetQty && request.status === 'completed') {

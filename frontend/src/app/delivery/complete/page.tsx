@@ -51,7 +51,7 @@ export default function CompletePackagePage() {
       const res = await api.get('/orders');
       // Only show active / non-final orders (picked-up, in-transit)
       const activeOrders = (res.data || []).filter((o: any) =>
-        o.status === 'in-transit' || o.status === 'picked-up'
+        o.status === 'in-transit' || o.status === 'picked-up' || o.status === 'assigned'
       );
 
       // Pre-fill default inputs for COD currencies
@@ -194,7 +194,7 @@ export default function CompletePackagePage() {
           const status = method === 'failed' ? 'failed' : 'delivered';
           const khr = parseInt(rowCashKHR[id] || '0') || 0;
           const usd = parseFloat(rowCashUSD[id] || '0') || 0;
-          
+
           await api.patch(`/orders/${id}`, {
             status,
             paymentMethod: method,
@@ -203,7 +203,7 @@ export default function CompletePackagePage() {
           });
         })
       );
-      
+
       alert(lang === 'km' ? 'រក្សាទុកទិន្នន័យបានជោគជ័យ!' : 'Batch updated successfully!');
       setSelectedIds([]);
       await loadActiveOrders();
@@ -241,7 +241,7 @@ export default function CompletePackagePage() {
       <div className="main-content">
         <Topbar title={t('completePackageTitle')} subtitle={t('completePackageSubtitle')} />
         <div className="page-content">
-          
+
           {/* Filters Card */}
           <div className="card" style={{ padding: '20px', marginBottom: '20px' }}>
             <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
@@ -295,7 +295,7 @@ export default function CompletePackagePage() {
 
           {/* Grid & Actions Card */}
           <div className="card" style={{ padding: '20px' }}>
-            
+
             {/* Header with Save in Batch Button */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e5e7eb', paddingBottom: '16px', marginBottom: '16px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -311,7 +311,7 @@ export default function CompletePackagePage() {
                   </div>
                 </div>
               </div>
-              
+
               <button
                 className="btn btn-primary"
                 onClick={handleBatchSave}
@@ -352,7 +352,7 @@ export default function CompletePackagePage() {
                 </select>
                 <span>entries</span>
               </div>
-              
+
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', color: '#4b5563' }}>
                 <span>Search:</span>
                 <input

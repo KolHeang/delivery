@@ -4,7 +4,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Like, ILike, Between, MoreThanOrEqual, LessThanOrEqual } from 'typeorm';
+import { Repository, Like, ILike, Between, MoreThanOrEqual, LessThanOrEqual, In } from 'typeorm';
 import { Order } from './order.entity';
 import { OrderHistory } from './order-history.entity';
 import {
@@ -23,7 +23,7 @@ export class OrdersService {
   constructor(
     @InjectRepository(Order) private readonly repo: Repository<Order>,
     @InjectRepository(OrderHistory) private readonly historyRepo: Repository<OrderHistory>,
-  ) {}
+  ) { }
 
   private get relations(): any {
     return {
@@ -166,7 +166,7 @@ export class OrdersService {
   /** Orders that have arrived at the warehouse, waiting for delivery assignment */
   async findInWarehouse(): Promise<Order[]> {
     return this.repo.find({
-      where: { status: 'in-warehouse' },
+      where: { status: In(['in-warehouse', 'pending']) },
       relations: this.relations,
       order: { warehouseAt: 'DESC' },
     });

@@ -98,6 +98,10 @@ export default function PickupRequestDetailPage() {
   /* ── print ref ── */
   const printRef = useRef<HTMLDivElement>(null);
 
+  /* ── printed-at timestamp (client-only to avoid hydration mismatch) ── */
+  const [printedAt, setPrintedAt] = useState('');
+  useEffect(() => { setPrintedAt(new Date().toLocaleString()); }, []);
+
   /* ────────────────────────────── load ── */
   const load = useCallback(async () => {
     setLoading(true);
@@ -162,11 +166,19 @@ export default function PickupRequestDetailPage() {
     if (!form.receiverPhone.trim()) { setFormError('Receiver phone is required'); return; }
     if (!form.receiverAddress.trim()) { setFormError('Receiver address is required'); return; }
     if (!form.zoneId) { setFormError('Zone is required'); return; }
+    // capacity check
+    const declaredQty = request?.declaredQuantity ?? 0;
+    if (declaredQty > 0 && parcels.length >= declaredQty) {
+      setFormError(`Cannot add more parcels — declared quantity is ${declaredQty} and all slots are filled.`);
+      return;
+    }
     setFormError('');
     setSubmitting(true);
     try {
       await api.post(`/orders/pickup-requests/${id}/parcels`, {
-        receiverName:    form.receiverName.trim() || undefined,
+        senderName:      request?.merchant?.name || '-',
+        senderPhone:     request?.merchant?.phone || '-',
+        receiverName:    form.receiverName.trim() || '-',
         receiverPhone:   form.receiverPhone.trim(),
         receiverAddress: form.receiverAddress.trim(),
         zoneId:          Number(form.zoneId),
@@ -189,7 +201,14 @@ export default function PickupRequestDetailPage() {
   };
 
   /* ────────────────────────────── batch helpers ── */
-  const addBatchRow = () => setBatchRows(r => [...r, emptyBatchRow()]);
+  const addBatchRow = () => {
+    const declaredQty = request?.declaredQuantity ?? 0;
+    if (declaredQty > 0 && parcels.length + batchRows.length >= declaredQty) {
+      alert(`Cannot add more rows — only ${Math.max(0, declaredQty - parcels.length)} slot(s) remaining.`);
+      return;
+    }
+    setBatchRows(r => [...r, emptyBatchRow()]);
+  };
 
   const removeBatchRow = (idx: number) =>
     setBatchRows(r => r.length === 1 ? r : r.filter((_, i) => i !== idx));
@@ -218,6 +237,13 @@ export default function PickupRequestDetailPage() {
       alert(`Row ${invalid + 1}: Address and Phone are required.`);
       return;
     }
+    // capacity check
+    const declaredQty = request?.declaredQuantity ?? 0;
+    if (declaredQty > 0 && parcels.length + batchRows.length > declaredQty) {
+      const remaining = declaredQty - parcels.length;
+      alert(`Cannot save — only ${remaining} slot(s) remaining out of declared ${declaredQty}. Please remove ${batchRows.length - remaining} row(s).`);
+      return;
+    }
     setBatchSubmitting(true);
     setBatchResults([]);
     const results: { idx: number; success: boolean; msg: string }[] = [];
@@ -228,6 +254,9 @@ export default function PickupRequestDetailPage() {
       const zoneId = row.zoneId ? Number(row.zoneId) : defaultZoneId;
       try {
         await api.post(`/orders/pickup-requests/${id}/parcels`, {
+          senderName:      request?.merchant?.name || '-',
+          senderPhone:     request?.merchant?.phone || '-',
+          receiverName:    '-',
           receiverPhone:   row.receiverPhone.trim(),
           receiverAddress: row.receiverAddress.trim(),
           zoneId,
@@ -473,6 +502,20 @@ export default function PickupRequestDetailPage() {
                 {/* ── Tabbed panel: Single / Batch Entry ── */}
                 <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
 
+                  {declared > 0 && completed >= declared ? (
+                    /* ── CAPACITY FULL BANNER ── */
+                    <div style={{ padding: '28px 24px', textAlign: 'center' }}>
+                      <div style={{ fontSize: 36, marginBottom: 10 }}>🔒</div>
+                      <div style={{ fontWeight: 800, fontSize: 16, color: '#dc2626', marginBottom: 6 }}>
+                        Declared Quantity Reached
+                      </div>
+                      <div style={{ fontSize: 13, color: 'var(--text-muted)', maxWidth: 280, margin: '0 auto' }}>
+                        All <strong>{declared}</strong> declared parcel(s) have been registered.
+                        Remove an existing parcel first to add a new one.
+                      </div>
+                    </div>
+                  ) : (
+                    <>
                   {/* Tab switcher */}
                   <div style={{ display: 'flex', borderBottom: '1.5px solid var(--border)' }}>
                     {(['single', 'batch'] as const).map(tab => (
@@ -717,6 +760,8 @@ export default function PickupRequestDetailPage() {
                       </div>
                     </div>
                   )}
+                    </>
+                  )}
                 </div>
               </div>
             </>
@@ -780,7 +825,7 @@ export default function PickupRequestDetailPage() {
         <div style={{ fontFamily: 'sans-serif', padding: 20 }}>
           <h2 style={{ marginBottom: 6 }}>Pickup Request Waybills — #{id}</h2>
           <p style={{ marginBottom: 20, fontSize: 13, color: '#555' }}>
-            Merchant: {request?.merchant?.name} · Printed: {new Date().toLocaleString()}
+            Merchant: {request?.merchant?.name} · Printed: {printedAt}
           </p>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
             {parcels.map((p: any, idx: number) => (

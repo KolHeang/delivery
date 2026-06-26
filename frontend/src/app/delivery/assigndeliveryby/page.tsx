@@ -32,7 +32,11 @@ export default function AssignDeliveryPage() {
   const [pageSize, setPageSize] = useState(20);
   const [currentPage, setCurrentPage] = useState(1);
 
-  // Driver search
+  // Filters
+  const [filterDate, setFilterDate] = useState('');
+  const [filterDriverId, setFilterDriverId] = useState('none');
+
+  // Driver search (right panel)
   const [driverSearch, setDriverSearch] = useState('');
 
   const load = useCallback(async () => {
@@ -65,17 +69,33 @@ export default function AssignDeliveryPage() {
     );
   }, [drivers, driverSearch]);
 
-  // Filter orders by search
+  // Filter orders by search + date + driver
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return unassigned;
-    return unassigned.filter(o =>
-      o.trackingCode?.toLowerCase().includes(q) ||
-      o.merchant?.name?.toLowerCase().includes(q) ||
-      o.receiverPhone?.toLowerCase().includes(q) ||
-      o.receiverAddress?.toLowerCase().includes(q)
-    );
-  }, [unassigned, search]);
+    return unassigned.filter(o => {
+      // text search
+      if (q && !(
+        o.trackingCode?.toLowerCase().includes(q) ||
+        o.merchant?.name?.toLowerCase().includes(q) ||
+        o.receiverPhone?.toLowerCase().includes(q) ||
+        o.receiverAddress?.toLowerCase().includes(q)
+      )) return false;
+      // date filter — match by createdAt date (YYYY-MM-DD)
+      if (filterDate) {
+        const orderDate = o.createdAt ? o.createdAt.slice(0, 10) : '';
+        if (orderDate !== filterDate) return false;
+      }
+      // driver filter — filter by currently assigned driver
+      if (filterDriverId) {
+        if (filterDriverId === 'none') {
+          if (o.driverId != null) return false;
+        } else {
+          if (String(o.driverId) !== filterDriverId) return false;
+        }
+      }
+      return true;
+    });
+  }, [unassigned, search, filterDate, filterDriverId]);
 
   // Pagination
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
@@ -85,8 +105,8 @@ export default function AssignDeliveryPage() {
     return filtered.slice(start, start + pageSize);
   }, [filtered, safePage, pageSize]);
 
-  // Reset to page 1 when search or pageSize changes
-  useEffect(() => { setCurrentPage(1); }, [search, pageSize]);
+  // Reset to page 1 when filters change
+  useEffect(() => { setCurrentPage(1); }, [search, pageSize, filterDate, filterDriverId]);
 
   const toggleOrder = (id: number) => {
     setSelected(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
@@ -146,6 +166,9 @@ export default function AssignDeliveryPage() {
                             · {selected.length} selected
                           </span>
                         )}
+                        <span style={{ marginLeft: 8, fontSize: 11, color: '#7c3aed', background: '#f3e8ff', padding: '2px 8px', borderRadius: 999, fontWeight: 600 }}>
+                          incl. assigned
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -159,14 +182,15 @@ export default function AssignDeliveryPage() {
                   </div>
                 </div>
 
-                {/* Search + Page size bar */}
-                <div style={{ padding: '10px 24px', borderBottom: '1px solid var(--border)', display: 'flex', gap: 12, alignItems: 'center', background: 'var(--bg-card)' }}>
+                {/* Search + Filters + Page size bar */}
+                <div style={{ padding: '10px 24px', borderBottom: '1px solid var(--border)', display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center', background: 'var(--bg-card)' }}>
+
                   {/* Search input */}
-                  <div style={{ flex: 1, position: 'relative' }}>
+                  <div style={{ flex: '1 1 200px', position: 'relative', minWidth: 180 }}>
                     <MdSearch size={18} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
                     <input
                       type="text"
-                      placeholder="ស្វែងរក tracking, merchant, phone, zone..."
+                      placeholder="ស្វែងរក tracking, merchant, phone..."
                       value={search}
                       onChange={e => setSearch(e.target.value)}
                       style={{
@@ -195,6 +219,61 @@ export default function AssignDeliveryPage() {
                         <MdClose size={16} />
                       </button>
                     )}
+                  </div>
+
+                  {/* Date filter */}
+                  <div style={{ position: 'relative', flexShrink: 0 }}>
+                    <input
+                      type="date"
+                      value={filterDate}
+                      onChange={e => setFilterDate(e.target.value)}
+                      style={{
+                        padding: '7px 10px',
+                        border: `1.5px solid ${filterDate ? 'var(--accent)' : 'var(--border)'}`,
+                        borderRadius: 10,
+                        fontSize: 13,
+                        background: filterDate ? 'var(--accent-light)' : 'var(--bg-primary)',
+                        color: filterDate ? 'var(--accent)' : 'var(--text-primary)',
+                        outline: 'none',
+                        cursor: 'pointer',
+                        fontWeight: filterDate ? 600 : 400,
+                      }}
+                    />
+                    {filterDate && (
+                      <button
+                        onClick={() => setFilterDate('')}
+                        title="Clear date"
+                        style={{ position: 'absolute', right: -8, top: -8, background: 'var(--danger)', border: 'none', borderRadius: '50%', width: 18, height: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#fff', fontSize: 10 }}
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Filter by current driver */}
+                  <div style={{ flexShrink: 0, minWidth: 160 }}>
+                    <select
+                      value={filterDriverId}
+                      onChange={e => setFilterDriverId(e.target.value)}
+                      style={{
+                        padding: '7px 10px',
+                        border: `1.5px solid ${filterDriverId ? 'var(--accent)' : 'var(--border)'}`,
+                        borderRadius: 10,
+                        fontSize: 13,
+                        background: filterDriverId ? 'var(--accent-light)' : 'var(--bg-primary)',
+                        color: filterDriverId ? 'var(--accent)' : 'var(--text-primary)',
+                        outline: 'none',
+                        cursor: 'pointer',
+                        fontWeight: filterDriverId ? 600 : 400,
+                        width: '100%',
+                      }}
+                    >
+                      <option value="">🧑 Driver ទាំងអស់</option>
+                      <option value="none">— មិនទាន់ assign</option>
+                      {drivers.map((d: any) => (
+                        <option key={d.id} value={String(d.id)}>{d.name}{d.nameKh ? ` (${d.nameKh})` : ''}</option>
+                      ))}
+                    </select>
                   </div>
 
                   {/* Page size selector */}
@@ -227,9 +306,9 @@ export default function AssignDeliveryPage() {
                   <div className="loading-wrapper"><div className="spinner" /></div>
                 ) : filtered.length === 0 ? (
                   <div className="empty-state" style={{ margin: 'auto' }}>
-                    <div className="empty-state-icon">{search ? '🔍' : '✅'}</div>
-                    <div className="empty-state-title">{search ? 'No results found' : 'No parcels in warehouse!'}</div>
-                    <div className="empty-state-text">{search ? `No orders match "${search}"` : 'No in-warehouse orders waiting for delivery assignment'}</div>
+                    <div className="empty-state-icon">{(search || filterDate || filterDriverId) ? '🔍' : '✅'}</div>
+                    <div className="empty-state-title">{(search || filterDate || filterDriverId) ? 'No results found' : 'No parcels in warehouse!'}</div>
+                    <div className="empty-state-text">{(search || filterDate || filterDriverId) ? 'Try adjusting your search, date, or driver filter.' : 'No orders waiting for delivery assignment'}</div>
                   </div>
                 ) : (
                   <div style={{ overflowY: 'auto', flex: 1 }}>
@@ -249,6 +328,7 @@ export default function AssignDeliveryPage() {
                           <th>{t('address')}</th>
                           <th>{t('cod')}</th>
                           <th>{t('deliveryFee')}</th>
+                          <th>Driver បច្ចុប្បន្ន</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -268,7 +348,14 @@ export default function AssignDeliveryPage() {
                                 onClick={e => e.stopPropagation()}
                               />
                             </td>
-                            <td><code style={{ fontSize: 12, background: 'rgba(0,0,0,0.05)', padding: '4px 8px', borderRadius: 6, fontWeight: 600 }}>{o.trackingCode}</code></td>
+                            <td>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                <code style={{ fontSize: 12, background: 'rgba(0,0,0,0.05)', padding: '4px 8px', borderRadius: 6, fontWeight: 600 }}>{o.trackingCode}</code>
+                                {o.status === 'assigned' && (
+                                  <span style={{ fontSize: 10, fontWeight: 700, color: '#7c3aed', background: '#f3e8ff', padding: '2px 7px', borderRadius: 999, display: 'inline-block', width: 'fit-content' }}>🔄 Reassign</span>
+                                )}
+                              </div>
+                            </td>
                             <td>
                               <div style={{ fontWeight: 600, fontSize: 13 }}>{o.merchant?.name || '—'}</div>
                               {o.merchant?.phone && <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{o.merchant.phone}</div>}
@@ -283,6 +370,21 @@ export default function AssignDeliveryPage() {
                             </td>
                             <td style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{formatCOD(o.cod, o.codCurrency || 'USD')}</td>
                             <td style={{ color: 'var(--success)', fontWeight: 600 }}>${parseFloat(o.deliveryFee).toFixed(2)}</td>
+                            <td>
+                              {o.driver ? (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                  <div style={{ width: 28, height: 28, borderRadius: '50%', background: '#7c3aed', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 12, flexShrink: 0 }}>
+                                    {o.driver.name?.charAt(0)}
+                                  </div>
+                                  <div>
+                                    <div style={{ fontWeight: 600, fontSize: 12 }}>{o.driver.name}</div>
+                                    {o.driver.nameKh && <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{o.driver.nameKh}</div>}
+                                  </div>
+                                </div>
+                              ) : (
+                                <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>—</span>
+                              )}
+                            </td>
                           </tr>
                         ))}
                       </tbody>

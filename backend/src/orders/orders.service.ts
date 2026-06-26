@@ -167,10 +167,10 @@ export class OrdersService {
       .getMany();
   }
 
-  /** Orders that have arrived at the warehouse, waiting for delivery assignment */
+  /** Orders that have arrived at the warehouse, waiting for delivery assignment (includes already-assigned for reassignment) */
   async findInWarehouse(): Promise<Order[]> {
     return this.repo.find({
-      where: { status: In(['in-warehouse', 'pending']) },
+      where: { status: In(['in-warehouse', 'pending', 'assigned']) },
       relations: this.relations,
       order: { warehouseAt: 'DESC' },
     });
@@ -219,6 +219,11 @@ export class OrdersService {
     if (!dto.trackingCode) {
       dto.trackingCode = await this.generateNextTrackingCode();
     }
+    // Apply defaults for optional numeric/enum fields
+    if (dto.weight === undefined || dto.weight === null) dto.weight = 0;
+    if (!dto.size) dto.size = 'small';
+    if (dto.cod === undefined || dto.cod === null) dto.cod = 0;
+    if (dto.deliveryFee === undefined || dto.deliveryFee === null) dto.deliveryFee = 0;
     const order = this.repo.create(dto as any) as any as Order;
     if (order.status === 'picked-up' && !order.pickedUpAt) {
       order.pickedUpAt = new Date();
@@ -315,17 +320,18 @@ export class OrdersService {
    */
   async assignDelivery(id: number, dto: AssignDeliveryDto): Promise<Order> {
     const order = await this.findOne(id);
-    if (order.status !== 'in-warehouse' && order.status !== 'pending') {
+    if (order.status !== 'in-warehouse' && order.status !== 'pending' && order.status !== 'assigned') {
       throw new BadRequestException(
-        'Delivery can only be assigned to pending or in-warehouse orders',
+        'Delivery can only be assigned to pending, in-warehouse, or already-assigned orders',
       );
     }
+    const isReassign = order.status === 'assigned' && order.driverId !== dto.driverId;
     await this.repo.update(id, {
       driverId: dto.driverId,
       status: 'assigned',
       assignedAt: new Date(),
     });
-    await this.addHistory(id, 'assigned');
+    await this.addHistory(id, 'assigned', isReassign ? `Reassigned to driver #${dto.driverId}` : undefined);
     return this.findOne(id);
   }
 
@@ -396,6 +402,14 @@ export class OrdersService {
 
   async createParcelForRequest(id: number, dto: CreateOrderDto) {
     const request = await this.findPickupRequestById(id);
+
+    // Prevent adding more parcels than the declared quantity
+    const existingCount = await this.repo.count({ where: { pickupRequestId: id } });
+    if (existingCount >= request.declaredQuantity) {
+      throw new BadRequestException(
+        `Cannot add more parcels. Pickup request #${id} already has ${existingCount} parcel(s) registered, which reached the declared quantity of ${request.declaredQuantity}.`,
+      );
+    }
 
     // Resolve delivery fee automatically
     let resolvedDeliveryFee = dto.deliveryFee;

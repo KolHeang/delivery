@@ -82,6 +82,11 @@ export class MerchantService {
     if (!dto.trackingCode) {
       dto.trackingCode = await this.generateNextTrackingCode();
     }
+    // Apply defaults for optional numeric/enum fields
+    if (dto.weight === undefined || dto.weight === null) dto.weight = 0;
+    if (!dto.size) dto.size = 'small';
+    if (dto.cod === undefined || dto.cod === null) dto.cod = 0;
+    if (dto.deliveryFee === undefined || dto.deliveryFee === null) dto.deliveryFee = 0;
     const order = this.orderRepo.create({
       ...dto,
       merchantId, // Force the merchant ID to the logged-in merchant

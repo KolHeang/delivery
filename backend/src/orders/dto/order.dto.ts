@@ -7,7 +7,7 @@ import {
   Min,
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 
 export class CreateOrderDto {
   @ApiProperty() @IsNotEmpty() @IsString() senderName: string;
@@ -16,13 +16,32 @@ export class CreateOrderDto {
   @ApiProperty() @IsNotEmpty() @IsString() receiverPhone: string;
   @ApiProperty() @IsNotEmpty() @IsString() receiverAddress: string;
 
-  @ApiProperty() @IsNumber() @Min(0) @Type(() => Number) weight: number;
-  @ApiProperty({ enum: ['small', 'medium', 'large'] })
-  @IsEnum(['small', 'medium', 'large'])
-  size: string;
+  @ApiProperty({ default: 0 })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Type(() => Number)
+  weight?: number;
 
-  @ApiProperty() @IsNumber() @Min(0) @Type(() => Number) cod: number;
-  @ApiProperty() @IsNumber() @Min(0) @Type(() => Number) deliveryFee: number;
+  @ApiProperty({ enum: ['small', 'medium', 'large'], default: 'small' })
+  @IsOptional()
+  @Transform(({ value }) => value || 'small')
+  @IsEnum(['small', 'medium', 'large'])
+  size?: string;
+
+  @ApiProperty({ default: 0 })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Type(() => Number)
+  cod?: number;
+
+  @ApiProperty({ default: 0 })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Type(() => Number)
+  deliveryFee?: number;
 
   @ApiProperty({ required: false }) @IsOptional() @IsString() note?: string;
   @ApiProperty({ required: false })

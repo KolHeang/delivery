@@ -945,7 +945,9 @@ export default function PaymentWithShopPage() {
                         {deliveredOrders.length > 0 && (
                           <>
                             <tr>
-                              <td colSpan={9} style={{ backgroundColor: '#2ecc71', color: '#fff', fontWeight: 'bold', padding: '6px', border: '1px solid #000' }}>{lang === 'km' ? 'អីវ៉ាន់ដែលបានជោគជ័យ' : 'Delivered Packages'}</td>
+                              <td colSpan={9} style={{ backgroundColor: '#16a34a', color: '#fff', fontWeight: 'bold', padding: '7px 10px', border: '1px solid #000', fontSize: 12 }}>
+                                🟢 {lang === 'km' ? 'ឥវ៉ាន់ដឹកបានជោគជ័យ' : 'Successfully Delivered'} ({deliveredOrders.length} {lang === 'km' ? 'កញ្ចប់' : 'parcels'})
+                              </td>
                             </tr>
                             {deliveredOrders.map((o: any, idx: number) => {
                               const isUSD = o.codCurrency === 'USD';
@@ -980,7 +982,9 @@ export default function PaymentWithShopPage() {
                         {inTransitOrders.length > 0 && (
                           <>
                             <tr>
-                              <td colSpan={9} style={{ backgroundColor: '#1abc9c', color: '#fff', fontWeight: 'bold', padding: '6px', border: '1px solid #000' }}>{lang === 'km' ? 'អីវ៉ាន់កំពុងដឹក' : 'In Transit Packages'}</td>
+                              <td colSpan={9} style={{ backgroundColor: '#d97706', color: '#fff', fontWeight: 'bold', padding: '7px 10px', border: '1px solid #000', fontSize: 12 }}>
+                                🟡 {lang === 'km' ? 'ឥវ៉ាន់កំពុងដឹកបន្ត' : 'In Transit / Pending'} ({inTransitOrders.length} {lang === 'km' ? 'កញ្ចប់' : 'parcels'})
+                              </td>
                             </tr>
                             {inTransitOrders.map((o: any, idx: number) => {
                               const isUSD = o.codCurrency === 'USD';
@@ -1006,13 +1010,19 @@ export default function PaymentWithShopPage() {
                         {returnedOrders.length > 0 && (
                           <>
                             <tr>
-                              <td colSpan={9} style={{ backgroundColor: '#e74c3c', color: '#fff', fontWeight: 'bold', padding: '6px', border: '1px solid #000' }}>{lang === 'km' ? 'អីវ៉ាន់ត្រឡប់ទៅហាង' : 'Returned Packages'}</td>
+                              <td colSpan={9} style={{ backgroundColor: '#dc2626', color: '#fff', fontWeight: 'bold', padding: '7px 10px', border: '1px solid #000', fontSize: 12 }}>
+                                🔴 {lang === 'km' ? 'ឥវ៉ាន់ត្រឡប់ទៅហាង' : 'Returned to Shop'} ({returnedOrders.length} {lang === 'km' ? 'កញ្ចប់' : 'parcels'})
+                              </td>
                             </tr>
                             {returnedOrders.map((o: any, idx: number) => {
                               const isUSD = o.codCurrency === 'USD';
                               const codVal = parseFloat(o.cod || 0);
+                              const latestNote = o.histories
+                                ?.slice()
+                                .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                                .find((h: any) => h.note)?.note || o.note || '—';
                               return (
-                                <tr key={o.id}>
+                                <tr key={o.id} style={{ background: '#fff5f5' }}>
                                   <td style={{ textAlign: 'center', padding: '6px 4px', border: '1px solid #000' }}>{idx + 1}</td>
                                   <td style={{ padding: '6px 4px', border: '1px solid #000', textAlign: 'center' }}>{formatDateToDDMMYYYY(o.createdAt)}</td>
                                   <td style={{ padding: '6px 4px', border: '1px solid #000' }}>{o.trackingCode} {o.receiverPhone ? `(${o.receiverPhone})` : ''}</td>
@@ -1021,7 +1031,7 @@ export default function PaymentWithShopPage() {
                                   <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000' }}></td>
                                   <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000' }}></td>
                                   <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000' }}>$ {parseFloat(o.deliveryFee || 0).toFixed(2)}</td>
-                                  <td style={{ padding: '6px 4px', border: '1px solid #000', textAlign: 'center' }}>{o.note || (o.status === 'returned' ? (lang === 'km' ? 'ត្រឡប់' : 'Returned') : (lang === 'km' ? 'មិនជោគជ័យ' : 'Failed'))}</td>
+                                  <td style={{ padding: '6px 4px', border: '1px solid #000', textAlign: 'left', color: '#7c3aed', fontSize: 10 }}>{latestNote}</td>
                                 </tr>
                               );
                             })}

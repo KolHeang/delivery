@@ -261,7 +261,7 @@ export class OrdersService {
     if (dto.status === 'delivered') updates.deliveredAt = new Date();
     await this.repo.update(id, updates);
     if (dto.status !== order.status) {
-      await this.addHistory(id, dto.status);
+      await this.addHistory(id, dto.status, dto.note);
     }
     return this.findOne(id);
   }

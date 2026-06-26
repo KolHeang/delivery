@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { getUser, isAuthenticated } from '@/lib/auth';
-import { MdDashboard, MdFormatListBulleted, MdPerson } from 'react-icons/md';
+import { MdDashboard, MdFormatListBulleted, MdPerson, MdInventory2 } from 'react-icons/md';
 
 export default function DriverLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -102,33 +102,28 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
               <span>Dashboard</span>
             </Link>
             <Link href="/driver/tasks" style={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              textDecoration: 'none',
-              color: pathname === '/driver/tasks' ? '#2f55a5' : '#64748b',
-              gap: '4px',
-              fontSize: '12px',
-              fontWeight: pathname === '/driver/tasks' ? '700' : '500',
-              transition: 'color 0.2s ease',
-              width: '33%'
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+              textDecoration: 'none', color: pathname.startsWith('/driver/tasks') ? '#2f55a5' : '#64748b',
+              gap: '4px', fontSize: '12px', fontWeight: pathname.startsWith('/driver/tasks') ? '700' : '500',
+              transition: 'color 0.2s ease', width: '25%'
             }}>
               <MdFormatListBulleted size={22} />
               <span>Tasks</span>
             </Link>
+            <Link href="/driver/pickups" style={{
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+              textDecoration: 'none', color: pathname.startsWith('/driver/pickups') ? '#2f55a5' : '#64748b',
+              gap: '4px', fontSize: '12px', fontWeight: pathname.startsWith('/driver/pickups') ? '700' : '500',
+              transition: 'color 0.2s ease', width: '25%'
+            }}>
+              <MdInventory2 size={22} />
+              <span>Pickup</span>
+            </Link>
             <Link href="/driver/profile" style={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              textDecoration: 'none',
-              color: pathname === '/driver/profile' ? '#2f55a5' : '#64748b',
-              gap: '4px',
-              fontSize: '12px',
-              fontWeight: pathname === '/driver/profile' ? '700' : '500',
-              transition: 'color 0.2s ease',
-              width: '33%'
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+              textDecoration: 'none', color: pathname === '/driver/profile' ? '#2f55a5' : '#64748b',
+              gap: '4px', fontSize: '12px', fontWeight: pathname === '/driver/profile' ? '700' : '500',
+              transition: 'color 0.2s ease', width: '25%'
             }}>
               <MdPerson size={22} />
               <span>Profile</span>

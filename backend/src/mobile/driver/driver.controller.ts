@@ -12,6 +12,7 @@ import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { DriverService } from './driver.service';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { UpdateOrderStatusDto } from '../../orders/dto/order.dto';
+import { ConfirmPickupDto } from '../../orders/dto/pickup-request.dto';
 
 @ApiTags('Mobile Driver')
 @ApiBearerAuth()
@@ -62,5 +63,21 @@ export class DriverController {
   @ApiOperation({ summary: 'Get driver dashboard data' })
   getDashboard(@Request() req: any) {
     return this.driverService.getDashboard(req.user.id);
+  }
+
+  @Get('pickup-requests')
+  @ApiOperation({ summary: 'Get assigned pickup requests' })
+  getPickupRequests(@Request() req: any) {
+    return this.driverService.getPickupRequests(req.user.id);
+  }
+
+  @Patch('pickup-requests/:id/pickup')
+  @ApiOperation({ summary: 'Confirm pickup with actual quantity' })
+  confirmPickup(
+    @Request() req: any,
+    @Param('id') id: string,
+    @Body() dto: ConfirmPickupDto,
+  ) {
+    return this.driverService.confirmPickup(req.user.id, +id, dto);
   }
 }

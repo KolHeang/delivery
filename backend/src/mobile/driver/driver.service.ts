@@ -5,6 +5,8 @@ import { User } from '../../users/users.entity';
 import { Order } from '../../orders/order.entity';
 import { OrderHistory } from '../../orders/order-history.entity';
 import { UpdateOrderStatusDto } from '../../orders/dto/order.dto';
+import { PickupRequest } from '../../orders/pickup-request.entity';
+import { ConfirmPickupDto } from '../../orders/dto/pickup-request.dto';
 
 @Injectable()
 export class DriverService {
@@ -12,6 +14,7 @@ export class DriverService {
     @InjectRepository(User) private readonly userRepo: Repository<User>,
     @InjectRepository(Order) private readonly orderRepo: Repository<Order>,
     @InjectRepository(OrderHistory) private readonly historyRepo: Repository<OrderHistory>,
+    @InjectRepository(PickupRequest) private readonly pickupRequestRepo: Repository<PickupRequest>,
   ) { }
 
   async getProfile(driverId: number) {
@@ -166,19 +169,13 @@ export class DriverService {
       {} as Record<string, number>,
     );
 
-    // Pickup stats (assigned to this driver as the pickup driver)
-    const pickupStatusCounts = await this.orderRepo
-      .createQueryBuilder('order')
-      .select('order.status', 'status')
-      .addSelect('COUNT(*)', 'count')
-      .where('order.pickupDriverId = :driverId', { driverId })
-      .groupBy('order.status')
-      .getRawMany();
-
-    const pickupStats = pickupStatusCounts.reduce(
-      (acc, curr) => ({ ...acc, [curr.status]: parseInt(curr.count) }),
-      {} as Record<string, number>,
-    );
+    // Count new Pickup Requests for dashboard
+    const pickupRequestCount = await this.pickupRequestRepo.count({
+      where: { pickupDriverId: driverId, status: 'pending' },
+    });
+    const pickedUpWaitingCount = await this.pickupRequestRepo.count({
+      where: { pickupDriverId: driverId, status: 'picked-up' },
+    });
 
     const broughtToHub = await this.orderRepo.count({
       where: {
@@ -210,8 +207,8 @@ export class DriverService {
         { currency: 'USD', balance: codPendingUSD },
       ],
       statistics: {
-        pickupRequest: pickupStats['pending'] || 0,
-        pickedUpWaiting: pickupStats['picked-up'] || 0,
+        pickupRequest: pickupRequestCount,
+        pickedUpWaiting: pickedUpWaitingCount,
         broughtToHub: broughtToHub,
         assignedParcels: (stats['assigned'] || 0) + (stats['in-transit'] || 0),
         totalPackage: totalPackage,
@@ -220,5 +217,24 @@ export class DriverService {
         totalReturn: (stats['returned'] || 0) + (stats['rejected'] || 0),
       },
     };
+  }
+
+  async getPickupRequests(driverId: number) {
+    return this.pickupRequestRepo.find({
+      where: { pickupDriverId: driverId },
+      relations: { merchant: true },
+      order: { createdAt: 'DESC' },
+    });
+  }
+
+  async confirmPickup(driverId: number, id: number, dto: ConfirmPickupDto) {
+    const request = await this.pickupRequestRepo.findOne({
+      where: { id, pickupDriverId: driverId },
+    });
+    if (!request) throw new NotFoundException(`Pickup request #${id} not found or not assigned to you`);
+
+    request.actualQuantity = dto.actualQuantity;
+    request.status = 'picked-up';
+    return this.pickupRequestRepo.save(request);
   }
 }

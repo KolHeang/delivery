@@ -510,8 +510,8 @@ export default function PrintInvoicePage() {
                 <div>
                   {lang === 'km' ? 'លេខអ្នកទទួល' : 'Receiver Phone'} : {o.receiverPhone}
                 </div>
-                <div>
-                  {lang === 'km' ? 'តំបន់' : 'Zone'} : {o.zone?.name || '—'}
+                <div style={{ fontSize: 11 }}>
+                  {lang === 'km' ? 'អាសយដ្ឋានអ្នកទទួល' : 'Receive Address'} : {o.receiverAddress || '—'}
                 </div>
               </div>
 

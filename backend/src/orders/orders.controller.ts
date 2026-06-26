@@ -20,6 +20,7 @@ import {
   AssignPickupDto,
   AssignDeliveryDto,
 } from './dto/order.dto';
+import { AssignRiderDto } from './dto/pickup-request.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 import { PermissionsGuard } from '../auth/permissions.guard';
@@ -110,6 +111,51 @@ export class OrdersController {
     return this.ordersService.findByPhone(phone);
   }
 
+  @Get('pickup-requests')
+  @RequirePermissions('orders.read')
+  findAllPickupRequests(
+    @Query('status') status?: string,
+    @Query('merchantId') merchantId?: string,
+  ) {
+    return this.ordersService.findAllPickupRequests({
+      status,
+      merchantId: merchantId ? +merchantId : undefined,
+    });
+  }
+
+  @Get('pickup-requests/:id')
+  @RequirePermissions('orders.read')
+  findOnePickupRequest(@Param('id', ParseIntPipe) id: number) {
+    return this.ordersService.findPickupRequestById(id);
+  }
+
+  @Patch('pickup-requests/:id/assign-driver')
+  @RequirePermissions('orders.update')
+  assignPickupDriver(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: AssignRiderDto,
+  ) {
+    return this.ordersService.assignPickupDriverToRequest(id, dto.pickupDriverId);
+  }
+
+  @Post('pickup-requests/:id/parcels')
+  @RequirePermissions('orders.create')
+  createParcelForRequest(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: CreateOrderDto,
+  ) {
+    return this.ordersService.createParcelForRequest(id, dto);
+  }
+
+  @Delete('pickup-requests/:id/parcels/:parcelId')
+  @RequirePermissions('orders.delete')
+  deleteParcelFromRequest(
+    @Param('id', ParseIntPipe) id: number,
+    @Param('parcelId', ParseIntPipe) parcelId: number,
+  ) {
+    return this.ordersService.deleteParcelFromRequest(id, parcelId);
+  }
+
   @Get(':id')
   @RequirePermissions('orders.read')
   findOne(@Param('id', ParseIntPipe) id: number) {
@@ -181,4 +227,5 @@ export class OrdersController {
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.ordersService.remove(id);
   }
+
 }

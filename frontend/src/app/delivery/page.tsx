@@ -22,6 +22,41 @@ const getLocalFirstDayOfMonthString = () => {
 const STATUS_OPTIONS = ['all', 'pending', 'in-warehouse', 'assigned', 'picked-up', 'in-transit', 'delivered', 'failed', 'returned'];
 const SIZE_OPTIONS = ['small', 'medium', 'large'];
 
+const PREDEFINED_REMARKS: Record<string, string[]> = {
+  failed: [
+    'Call អត់លើក',
+    'ភ្ញៀវសូមយកស្អែក',
+    'ដល់ទីតាំងCallអត់លើក',
+    'មិនអាចទាក់ទងបានទាំងលេខទាំងតេលេក្រោម',
+    'ភ្ញៀវសុំប្តូរទីតាំង',
+    'ទៅដល់អត់មានអ្នកទទួល',
+    'ខលអត់លើក Telegramអត់តប',
+    'ហាងអោយទុកសិន',
+    'លេខភ្ញៀវខុស',
+    'ភ្ញៀវអត់លុយយក',
+  ],
+  pending: [
+    'Call អត់លើក',
+    'ភ្ញៀវសូមយកស្អែក',
+    'ដល់ទីតាំងCallអត់លើក',
+    'មិនអាចទាក់ទងបានទាំងលេខទាំងតេលេក្រោម',
+    'ភ្ញៀវសុំប្តូរទីតាំង',
+    'ទៅដល់អត់មានអ្នកទទួល',
+    'ខលអត់លើក Telegramអត់តប',
+    'ហាងអោយទុកសិន',
+    'លេខភ្ញៀវខុស',
+    'ភ្ញៀវអត់លុយយក',
+  ],
+  returned: [
+    'ហាងអោយទុកសិន',
+    'ខលអត់លើកច្រើនថ្ងៃ',
+    'ភ្ញៀវ Block លេខអ្នកដឹក',
+    'ហាងឲត្រឡប់ទៅវិញ',
+    'ភ្ញៀវថាអត់បានកម្មង់',
+    'ភ្ញៀវសុំ Cancel',
+  ],
+};
+
 
 
 const formatCOD = (cod: any, currency: string) => {
@@ -46,6 +81,10 @@ export default function DeliveriesPage() {
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+
+  // Remark modal state
+  const [remarkModal, setRemarkModal] = useState<{ orderId: number; newStatus: string } | null>(null);
+  const [remarkText, setRemarkText] = useState('');
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -75,14 +114,15 @@ export default function DeliveriesPage() {
     }
   };
 
-  const handleToggleDeliveryStatus = async (orderId: number, currentStatus: string) => {
+  const handleToggleDeliveryStatus = (orderId: number, currentStatus: string) => {
     const nextStatus = currentStatus === 'delivered' ? 'failed' : 'delivered';
-    try {
-      await api.patch(`/orders/${orderId}/status`, { status: nextStatus });
-      await load();
-    } catch (err) {
-      console.error(err);
-    }
+    const order = orders.find((o: any) => o.id === orderId);
+    const latestNote = order?.histories
+      ?.slice()
+      .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .find((h: any) => h.note)?.note || order?.note || '';
+    setRemarkText(latestNote);
+    setRemarkModal({ orderId, newStatus: nextStatus });
   };
 
   const formatDateTime = (dateStr: string) => {
@@ -208,8 +248,30 @@ export default function DeliveriesPage() {
     try { await api.delete(`/orders/${id}`); await load(); } catch {}
   };
 
-  const handleStatusChange = async (id: number, status: string) => {
-    try { await api.patch(`/orders/${id}/status`, { status }); await load(); } catch {}
+  const handleStatusChange = (id: number, status: string) => {
+    const order = orders.find((o: any) => o.id === id);
+    const latestNote = order?.histories
+      ?.slice()
+      .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .find((h: any) => h.note)?.note || order?.note || '';
+    setRemarkText(latestNote);
+    setRemarkModal({ orderId: id, newStatus: status });
+  };
+
+  const submitStatusWithRemark = async () => {
+    if (!remarkModal) return;
+    try {
+      await api.patch(`/orders/${remarkModal.orderId}/status`, {
+        status: remarkModal.newStatus,
+        note: remarkText.trim() || undefined,
+      });
+      await load();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setRemarkModal(null);
+      setRemarkText('');
+    }
   };
 
   const handleBatchReceive = async () => {
@@ -334,7 +396,7 @@ export default function DeliveriesPage() {
             ) : (
               <>
                 <div className="table-responsive" style={{ overflowX: 'auto' }}>
-                  <table style={{ minWidth: 1600 }}>
+                  <table style={{ minWidth: 1800 }}>
                   <thead>
                     <tr>
                       <th>ល.រ</th>
@@ -357,6 +419,7 @@ export default function DeliveriesPage() {
                       <th style={{ minWidth: 130 }}>អ្នកដឹក</th>
                       <th style={{ textAlign: 'center', width: 80 }}>ស្ថានភាពដឹក ✓ ✕</th>
                       <th>ស្ថានភាព</th>
+                      <th style={{ minWidth: 160 }}>សម្គាល់</th>
                       <th>ស្ថានភាពទូទាត់</th>
                       <th>បញ្ចូលដោយ</th>
                       <th>បញ្ចប់ដោយ</th>
@@ -500,6 +563,32 @@ export default function DeliveriesPage() {
                                 </option>
                               ))}
                             </select>
+                          </td>
+                          <td style={{ fontSize: 12, maxWidth: 180 }}>
+                            {(() => {
+                              const latestNote = o.histories
+                                ?.slice()
+                                .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                                .find((h: any) => h.note)?.note || o.note || '';
+                              if (!latestNote) return <span style={{ color: 'var(--text-muted)' }}>—</span>;
+                              const isLong = latestNote.length > 40;
+                              return (
+                                <span
+                                  title={latestNote}
+                                  style={{
+                                    display: 'block',
+                                    whiteSpace: 'nowrap',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    maxWidth: 170,
+                                    color: '#334155',
+                                    cursor: isLong ? 'help' : 'default',
+                                  }}
+                                >
+                                  📝 {latestNote}
+                                </span>
+                              );
+                            })()}
                           </td>
                           <td>
                             <Badge 
@@ -668,6 +757,112 @@ export default function DeliveriesPage() {
               </div>
             </div>
           )}
+        </Modal>
+      )}
+
+      {/* Remark Modal */}
+      {remarkModal && (
+        <Modal
+          open={!!remarkModal}
+          onClose={() => { setRemarkModal(null); setRemarkText(''); }}
+          title={lang === 'km' ? 'បញ្ជូលសម្គាល់' : 'Add Remark'}
+          size="md"
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div style={{
+              padding: '10px 14px',
+              background: remarkModal.newStatus === 'failed' || remarkModal.newStatus === 'returned'
+                ? '#fef2f2' : '#f0fdf4',
+              borderRadius: 8,
+              fontSize: 13,
+              borderLeft: `4px solid ${
+                remarkModal.newStatus === 'failed' ? '#ef4444'
+                : remarkModal.newStatus === 'returned' ? '#f59e0b'
+                : '#10b981'
+              }`
+            }}>
+              <strong>{lang === 'km' ? 'ស្ថានភាពថ្មី៖' : 'New Status:'}</strong>{' '}
+              {getStatusLabel(remarkModal.newStatus)}
+            </div>
+
+            {/* Predefined remark chips */}
+            {(() => {
+              const presets = PREDEFINED_REMARKS[remarkModal.newStatus] || [];
+              if (presets.length === 0) return null;
+              return (
+                <div>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 8, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    {lang === 'km' ? 'ជ្រើសរើសសម្គាល់ស្តងត្រទួស' : 'Quick Select'}
+                  </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                    {presets.map((preset) => (
+                      <button
+                        key={preset}
+                        type="button"
+                        onClick={() => setRemarkText(preset)}
+                        style={{
+                          padding: '5px 12px',
+                          borderRadius: 20,
+                          border: `1.5px solid ${remarkText === preset ? '#2563eb' : '#d1d5db'}`,
+                          background: remarkText === preset ? '#eff6ff' : '#f9fafb',
+                          color: remarkText === preset ? '#1d4ed8' : '#374151',
+                          fontSize: 12,
+                          fontWeight: remarkText === preset ? 700 : 400,
+                          cursor: 'pointer',
+                          transition: 'all 0.15s',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {preset}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="form-label">
+                {lang === 'km' ? 'សម្គាល់ / មូលហេតុ' : 'Remark / Reason'}
+                {(remarkModal.newStatus === 'failed' || remarkModal.newStatus === 'returned') && (
+                  <span style={{ color: '#ef4444', marginLeft: 4 }}>*</span>
+                )}
+              </label>
+              <textarea
+                className="form-control"
+                rows={3}
+                placeholder={
+                  lang === 'km'
+                    ? 'បញ្ចូលមូលហេតុ ឬ កត់សម្គាល់...'
+                    : 'Enter reason or remark...'
+                }
+                value={remarkText}
+                onChange={e => setRemarkText(e.target.value)}
+                style={{ resize: 'vertical', fontSize: 13 }}
+                autoFocus
+              />
+            </div>
+
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button
+                className="btn btn-outline btn-sm"
+                onClick={() => { setRemarkModal(null); setRemarkText(''); }}
+              >
+                {lang === 'km' ? 'បោះបង់' : 'Cancel'}
+              </button>
+              <button
+                className="btn btn-primary btn-sm"
+                onClick={submitStatusWithRemark}
+                disabled={
+                  (remarkModal.newStatus === 'failed' || remarkModal.newStatus === 'returned')
+                    ? remarkText.trim() === ''
+                    : false
+                }
+              >
+                {lang === 'km' ? 'បញ្ជាក់' : 'Confirm'}
+              </button>
+            </div>
+          </div>
         </Modal>
       )}
     </div>

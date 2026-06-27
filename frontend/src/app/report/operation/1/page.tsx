@@ -28,7 +28,7 @@ const statusBadge = (status: string) => {
 export default function Rpt1Page() {
   const router = useRouter();
   const { t } = useLanguage();
-  const [startDate, setStartDate] = useState(() => { const d = new Date(); d.setDate(1); return d.toISOString().split('T')[0]; });
+  const [startDate, setStartDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [endDate, setEndDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [driverFilter, setDriverFilter] = useState('');
   const [merchantFilter, setMerchantFilter] = useState('');

@@ -6,16 +6,12 @@ import { isAuthenticated } from '@/lib/auth';
 import Sidebar from '@/components/layout/Sidebar';
 import Topbar from '@/components/layout/Topbar';
 import api from '@/lib/api';
-import { MdPrint, MdSearch, MdArrowBack } from 'react-icons/md';
+import { MdPrint, MdSearch, MdArrowBack, MdEdit, MdDelete, MdClose } from 'react-icons/md';
 import { useLanguage } from '@/lib/LanguageContext';
-import DateInput, { formatDateToDDMMYYYY } from '@/components/ui/DateInput';
+import DateInput, { formatDateToDDMMYYYY, getLocalDateString } from '@/components/ui/DateInput';
+import Modal from '@/components/ui/Modal';
 
-const getLocalDateString = (d: Date = new Date()) => {
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-};
+
 
 const getKhmerDateString = (date: Date = new Date()) => {
   const days = ['អាទិត្យ', 'ចន្ទ', 'អង្គារ', 'ពុធ', 'ព្រហស្បតិ៍', 'សុក្រ', 'សៅរ៍'];
@@ -48,16 +44,83 @@ export default function PaymentWithShopPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
+  // Tabs & History states
+  const [activeTab, setActiveTab] = useState<'settle' | 'history'>('settle');
+  const [historyData, setHistoryData] = useState<any[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historySearch, setHistorySearch] = useState('');
+  const [historyMerchantId, setHistoryMerchantId] = useState('');
+  const [historyStartDate, setHistoryStartDate] = useState('');
+  const [historyEndDate, setHistoryEndDate] = useState('');
+
+  // Edit Payout Modal State
+  const [editPayment, setEditPayment] = useState<any | null>(null);
+  const [editAmount, setEditAmount] = useState('');
+  const [editNote, setEditNote] = useState('');
+  const [editDate, setEditDate] = useState('');
+  const [editReference, setEditReference] = useState('');
+
+  const loadHistory = async () => {
+    setHistoryLoading(true);
+    try {
+      const res = await api.get('/payments/shop');
+      setHistoryData(res.data || []);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'history') {
+      loadHistory();
+    }
+  }, [activeTab]);
+
+  const handleEditPayment = (payment: any) => {
+    setEditPayment(payment);
+    setEditAmount(payment.amount.toString());
+    setEditNote(payment.note || '');
+    setEditDate(payment.date ? payment.date.split('T')[0] : '');
+    setEditReference(payment.reference || '');
+  };
+
+  const handleUpdatePayment = async () => {
+    if (!editPayment) return;
+    try {
+      await api.patch(`/payments/shop/${editPayment.id}`, {
+        amount: parseFloat(editAmount) || 0,
+        note: editNote,
+        date: editDate || undefined,
+        reference: editReference || undefined,
+      });
+      alert(lang === 'km' ? 'ធ្វើបច្ចុប្បន្នភាពបានជោគជ័យ!' : 'Updated successfully!');
+      setEditPayment(null);
+      loadHistory();
+      loadData();
+    } catch (err: any) {
+      alert(lang === 'km' ? 'ធ្វើបច្ចុប្បន្នភាពបានបរាជ័យ' : 'Failed to update: ' + (err.response?.data?.message || err.message));
+    }
+  };
+
+  const handleDeletePayment = async (paymentId: number) => {
+    if (!confirm(lang === 'km' ? 'តើអ្នកប្រាកដជាចង់បង្វិលការទូទាត់នេះថយក្រោយវិញទេ? វានឹងកំណត់ស្ថានភាពកញ្ចប់អីវ៉ាន់ទាំងអស់ទៅជាមិនទាន់ទូទាត់ឡើងវិញ និងបន្ថែមប្រាក់ចូលក្នុងសមតុល្យរបស់ហាងវិញ។' : 'Are you sure you want to reverse this settlement? This will reset all associated orders back to unpaid and add the payout amount back to the shop balance.')) return;
+    try {
+      await api.delete(`/payments/shop/${paymentId}`);
+      alert(lang === 'km' ? 'បានបង្វិលប្រតិបត្តិការដោយជោគជ័យ!' : 'Reversal completed successfully!');
+      loadHistory();
+      loadData();
+    } catch (err: any) {
+      alert(lang === 'km' ? 'ការបង្វិលប្រតិបត្តិការបានបរាជ័យ' : 'Failed to reverse payment: ' + (err.response?.data?.message || err.message));
+    }
+  };
+
   // Filters State
   const [merchantFilter, setMerchantFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('unpaid');
 
-  const [startDate, setStartDate] = useState(() => {
-    const d = new Date();
-    const year = d.getFullYear();
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    return `${year}-${month}-01`;
-  });
+  const [startDate, setStartDate] = useState(() => getLocalDateString());
   const [endDate, setEndDate] = useState(() => {
     const d = new Date();
     const year = d.getFullYear();
@@ -139,7 +202,11 @@ export default function PaymentWithShopPage() {
         const start = new Date(startDate);
         start.setHours(0, 0, 0, 0);
         mOrders = mOrders.filter(o => {
-          const d = o.deliveredAt ? new Date(o.deliveredAt) : new Date(o.createdAt);
+          let dateString = o.deliveredAt;
+          if (!dateString && (o.status === 'failed' || o.status === 'returned')) {
+            dateString = o.updatedAt || o.createdAt;
+          }
+          const d = dateString ? new Date(dateString) : new Date(o.createdAt);
           return d >= start;
         });
       }
@@ -147,14 +214,18 @@ export default function PaymentWithShopPage() {
         const end = new Date(endDate);
         end.setHours(23, 59, 59, 999);
         mOrders = mOrders.filter(o => {
-          const d = o.deliveredAt ? new Date(o.deliveredAt) : new Date(o.createdAt);
+          let dateString = o.deliveredAt;
+          if (!dateString && (o.status === 'failed' || o.status === 'returned')) {
+            dateString = o.updatedAt || o.createdAt;
+          }
+          const d = dateString ? new Date(dateString) : new Date(o.createdAt);
           return d <= end;
         });
       }
 
-      // Filtered orders for payouts (status: delivered, matching shop payout status)
+      // Filtered orders for payouts (status: delivered, failed, returned, matching shop payout status)
       const paymentOrders = mOrders.filter(o => 
-        o.status === 'delivered' && 
+        (o.status === 'delivered' || o.status === 'failed' || o.status === 'returned') && 
         o.merchantPaymentStatus === statusFilter
       );
 
@@ -175,24 +246,24 @@ export default function PaymentWithShopPage() {
       //   mOrders = mOrders.filter(o => o.status === statusFilter);
       // }
 
-      // Financial statistics (delivered orders only)
-      const totalUSD = paymentOrders.filter(o => o.codCurrency === 'USD').reduce((sum, o) => sum + parseFloat(o.cod || 0), 0);
-      const totalKHR = paymentOrders.filter(o => o.codCurrency === 'KHR').reduce((sum, o) => sum + parseFloat(o.cod || 0), 0);
+      // Financial statistics (delivered orders only for COD sum)
+      const totalUSD = paymentOrders.filter(o => o.status === 'delivered' && o.codCurrency === 'USD').reduce((sum, o) => sum + parseFloat(o.cod || 0), 0);
+      const totalKHR = paymentOrders.filter(o => o.status === 'delivered' && o.codCurrency === 'KHR').reduce((sum, o) => sum + parseFloat(o.cod || 0), 0);
 
-      const qrUSD = paymentOrders.filter(o => o.codCurrency === 'USD' && o.paymentMethod === 'bank').reduce((sum, o) => sum + parseFloat(o.cod || 0), 0);
-      const qrKHR = paymentOrders.filter(o => o.codCurrency === 'KHR' && o.paymentMethod === 'bank').reduce((sum, o) => sum + parseFloat(o.cod || 0), 0);
+      const qrUSD = paymentOrders.filter(o => o.status === 'delivered' && o.codCurrency === 'USD' && o.paymentMethod === 'bank').reduce((sum, o) => sum + parseFloat(o.cod || 0), 0);
+      const qrKHR = paymentOrders.filter(o => o.status === 'delivered' && o.codCurrency === 'KHR' && o.paymentMethod === 'bank').reduce((sum, o) => sum + parseFloat(o.cod || 0), 0);
 
-      const podUSD = paymentOrders.filter(o => o.codCurrency === 'USD' && o.paymentMethod === 'cash').reduce((sum, o) => sum + parseFloat(o.cod || 0), 0);
-      const podKHR = paymentOrders.filter(o => o.codCurrency === 'KHR' && o.paymentMethod === 'cash').reduce((sum, o) => sum + parseFloat(o.cod || 0), 0);
+      const podUSD = paymentOrders.filter(o => o.status === 'delivered' && o.codCurrency === 'USD' && o.paymentMethod === 'cash').reduce((sum, o) => sum + parseFloat(o.cod || 0), 0);
+      const podKHR = paymentOrders.filter(o => o.status === 'delivered' && o.codCurrency === 'KHR' && o.paymentMethod === 'cash').reduce((sum, o) => sum + parseFloat(o.cod || 0), 0);
 
-      const deliveryFee = paymentOrders.reduce((sum, o) => sum + parseFloat(o.deliveryFee || 0), 0);
+      const deliveryFee = paymentOrders.filter(o => o.status === 'delivered').reduce((sum, o) => sum + parseFloat(o.deliveryFee || 0), 0);
 
       const payableUSD = Math.max(0, totalUSD - deliveryFee);
       const payableKHR = totalKHR;
 
-      // Check if driver has settled payment with the company (driverPaymentStatus must be 'paid' for all delivered orders)
+      // Check if driver has settled payment with the company (driverPaymentStatus must be 'paid' for all delivered/failed/returned orders)
       const hasUnsettledDriver = paymentOrders.some(
-        o => o.status === 'delivered' && o.driverPaymentStatus === 'unpaid'
+        o => o.driverPaymentStatus === 'unpaid'
       );
 
       return {
@@ -388,6 +459,37 @@ export default function PaymentWithShopPage() {
     return `${parseFloat(cod || 0).toFixed(2)} USD`;
   };
 
+  // Filter historyData client-side
+  const filteredHistory = historyData.filter((h: any) => {
+    // 1. Merchant filter
+    if (historyMerchantId && String(h.merchantId) !== historyMerchantId) {
+      return false;
+    }
+    // 2. Date filters
+    const d = h.date ? new Date(h.date) : new Date(h.createdAt);
+    if (historyStartDate) {
+      const start = new Date(historyStartDate);
+      start.setHours(0, 0, 0, 0);
+      if (d < start) return false;
+    }
+    if (historyEndDate) {
+      const end = new Date(historyEndDate);
+      end.setHours(23, 59, 59, 999);
+      if (d > end) return false;
+    }
+    // 3. Search filter (reference, note, merchant name)
+    if (historySearch.trim()) {
+      const q = historySearch.toLowerCase();
+      const refMatch = h.reference?.toLowerCase().includes(q);
+      const noteMatch = h.note?.toLowerCase().includes(q);
+      const merchantNameMatch = h.merchant?.name?.toLowerCase().includes(q) || h.merchant?.nameKh?.toLowerCase().includes(q);
+      if (!refMatch && !noteMatch && !merchantNameMatch) {
+        return false;
+      }
+    }
+    return true;
+  });
+
   if (loading) return (
     <div className="app-layout">
       <Sidebar />
@@ -405,7 +507,47 @@ export default function PaymentWithShopPage() {
           
           <Topbar title={lang === 'km' ? 'ទូទាត់ប្រាក់ជាមួយហាង' : 'Payment with Shop'} subtitle={lang === 'km' ? 'គ្រប់គ្រងការទូទាត់ប្រាក់ជាមួយហាង' : 'Manage payout settlement with merchant shops'} />
 
+          {/* Tabs Bar */}
+          <div style={{ display: 'flex', borderBottom: '1px solid #e5e7eb', padding: '0 20px', background: '#fff', gap: 20 }}>
+            <button 
+              onClick={() => setActiveTab('settle')}
+              style={{ 
+                padding: '12px 8px', 
+                fontSize: 14, 
+                fontWeight: 600, 
+                color: activeTab === 'settle' ? '#2563eb' : '#64748b', 
+                borderBottom: activeTab === 'settle' ? '2px solid #2563eb' : '2px solid transparent',
+                background: 'transparent',
+                borderTop: 'none',
+                borderLeft: 'none',
+                borderRight: 'none',
+                cursor: 'pointer'
+              }}
+            >
+              {lang === 'km' ? 'ទូទាត់ប្រាក់' : 'Settle Payout'}
+            </button>
+            <button 
+              onClick={() => setActiveTab('history')}
+              style={{ 
+                padding: '12px 8px', 
+                fontSize: 14, 
+                fontWeight: 600, 
+                color: activeTab === 'history' ? '#2563eb' : '#64748b', 
+                borderBottom: activeTab === 'history' ? '2px solid #2563eb' : '2px solid transparent',
+                background: 'transparent',
+                borderTop: 'none',
+                borderLeft: 'none',
+                borderRight: 'none',
+                cursor: 'pointer'
+              }}
+            >
+              {lang === 'km' ? 'ប្រវត្តិទូទាត់ប្រាក់' : 'Settlement History'}
+            </button>
+          </div>
+
           <div style={{ padding: '20px' }}>
+            {activeTab === 'settle' ? (
+              <>
             
             {/* Breadcrumb Action Panel */}
             <div className="card" style={{ padding: '12px 20px', marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#fff', border: '1px solid #e5e7eb' }}>
@@ -537,6 +679,31 @@ export default function PaymentWithShopPage() {
                 >
                   <MdPrint size={18} />
                   <span>{lang === 'km' ? 'បោះពុម្ព' : 'Print'}</span>
+                </button>
+                <button
+                  className="btn btn-outline"
+                  onClick={() => {
+                    setMerchantFilter('');
+                    setStatusFilter('unpaid');
+                    setStartDate(getLocalDateString());
+                    setEndDate(getLocalDateString());
+                    setSelectedMerchantIds([]);
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    height: '38px',
+                    padding: '0 16px',
+                    fontSize: '13px',
+                    fontWeight: '600',
+                    borderRadius: '4px',
+                    borderColor: '#d1d5db',
+                    backgroundColor: '#fff',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <span>{lang === 'km' ? 'សម្អាត' : 'Clear'}</span>
                 </button>
               </div>
             </div>
@@ -740,13 +907,14 @@ export default function PaymentWithShopPage() {
                                         <th style={{ padding: '8px 6px', border: '1px solid #e5e7eb', textAlign: 'right' }}>{lang === 'km' ? 'សេវាដឹក' : 'Delivery Fee'}</th>
                                         <th style={{ padding: '8px 6px', border: '1px solid #e5e7eb', textAlign: 'right' }}>{lang === 'km' ? 'ទឹកប្រាក់ត្រូវទូទាត់' : 'Amount/COD'}</th>
                                         <th style={{ padding: '8px 6px', border: '1px solid #e5e7eb', textAlign: 'center' }}>{lang === 'km' ? 'វិធីសាស្ត្រទូទាត់' : 'Payment Method'}</th>
+                                        <th style={{ padding: '8px 6px', border: '1px solid #e5e7eb', textAlign: 'center' }}>{lang === 'km' ? 'ស្ថានភាពអីវ៉ាន់' : 'Order Status'}</th>
                                         <th style={{ padding: '8px 6px', border: '1px solid #e5e7eb', textAlign: 'center' }}>{lang === 'km' ? 'ស្ថានភាពអ្នកដឹក' : 'Driver Status'}</th>
                                       </tr>
                                     </thead>
                                     <tbody>
                                       {row.paymentOrders.length === 0 ? (
                                         <tr>
-                                          <td colSpan={7} style={{ textAlign: 'center', padding: '12px', color: '#6b7280' }}>
+                                          <td colSpan={8} style={{ textAlign: 'center', padding: '12px', color: '#6b7280' }}>
                                             {lang === 'km' ? 'មិនមានការបញ្ជាទិញត្រូវនឹងតម្រងស្ថានភាពទេ' : 'No orders matching status filter'}
                                           </td>
                                         </tr>
@@ -756,12 +924,27 @@ export default function PaymentWithShopPage() {
                                             <td style={{ padding: '8px 6px', border: '1px solid #e5e7eb' }}><code>{o.trackingCode}</code></td>
                                             <td style={{ padding: '8px 6px', border: '1px solid #e5e7eb' }}>{getLocalDateString(new Date(o.createdAt))}</td>
                                             <td style={{ padding: '8px 6px', border: '1px solid #e5e7eb', fontWeight: '600' }}>{o.receiverPhone}</td>
-                                            <td style={{ padding: '8px 6px', border: '1px solid #e5e7eb', textAlign: 'right' }}>{formatFee(o.deliveryFee)}</td>
-                                            <td style={{ padding: '8px 6px', border: '1px solid #e5e7eb', textAlign: 'right', fontWeight: 'bold' }}>{formatCODDisplay(o.cod, o.codCurrency)}</td>
+                                            <td style={{ padding: '8px 6px', border: '1px solid #e5e7eb', textAlign: 'right' }}>{o.status === 'delivered' ? formatFee(o.deliveryFee) : '0.00$'}</td>
+                                            <td style={{ padding: '8px 6px', border: '1px solid #e5e7eb', textAlign: 'right', fontWeight: 'bold' }}>{o.status === 'delivered' ? formatCODDisplay(o.cod, o.codCurrency) : (o.codCurrency === 'KHR' ? '0 KHR' : '0.00 USD')}</td>
                                             <td style={{ padding: '8px 6px', border: '1px solid #e5e7eb', textAlign: 'center' }}>
                                               <span style={{ fontSize: '11px', background: '#e0f2fe', color: '#0369a1', padding: '2px 6px', borderRadius: '4px', fontWeight: '600' }}>
                                                 {o.paymentMethod === 'bank' ? (lang === 'km' ? 'ធនាគារ' : 'Bank') : (lang === 'km' ? 'សាច់ប្រាក់' : 'Cash')}
                                               </span>
+                                            </td>
+                                            <td style={{ padding: '8px 6px', border: '1px solid #e5e7eb', textAlign: 'center' }}>
+                                              {o.status === 'delivered' ? (
+                                                <span style={{ fontSize: '11px', background: '#dcfce7', color: '#15803d', padding: '2px 6px', borderRadius: '4px', fontWeight: '600' }}>
+                                                  {lang === 'km' ? 'ជោគជ័យ' : 'Delivered'}
+                                                </span>
+                                              ) : o.status === 'failed' ? (
+                                                <span style={{ fontSize: '11px', background: '#fee2e2', color: '#b91c1c', padding: '2px 6px', borderRadius: '4px', fontWeight: '600' }}>
+                                                  {lang === 'km' ? 'បរាជ័យ' : 'Failed'}
+                                                </span>
+                                              ) : (
+                                                <span style={{ fontSize: '11px', background: '#fef3c7', color: '#d97706', padding: '2px 6px', borderRadius: '4px', fontWeight: '600' }}>
+                                                  {lang === 'km' ? 'បង្វិលត្រឡប់' : 'Returned'}
+                                                </span>
+                                              )}
                                             </td>
                                             <td style={{ padding: '8px 6px', border: '1px solid #e5e7eb', textAlign: 'center' }}>
                                               <span style={{
@@ -791,10 +974,205 @@ export default function PaymentWithShopPage() {
                 </table>
               </div>
             </div>
+              </>
+          ) : (
+            <div className="card" style={{ padding: '20px', backgroundColor: '#fff', border: '1px solid #e5e7eb' }}>
+              
+              {/* History Search & Filters Bar */}
+              <div style={{ display: 'flex', gap: 12, marginBottom: 16, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: '#64748b', paddingLeft: 2 }}>
+                    {lang === 'km' ? 'ស្វែងរក' : 'Search'}
+                  </span>
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder={lang === 'km' ? 'ស្វែងរកលេខយោង សម្គាល់...' : 'Search ref, note, shop...'}
+                    value={historySearch}
+                    onChange={e => setHistorySearch(e.target.value)}
+                    style={{ width: '220px', height: '38px', padding: '6px 12px', borderRadius: '4px', border: '1px solid #d1d5db', backgroundColor: '#fff' }}
+                  />
+                </div>
 
-          </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: '#64748b', paddingLeft: 2 }}>
+                    {lang === 'km' ? 'ហាង / Merchant' : 'Merchant'}
+                  </span>
+                  <select
+                    className="form-control"
+                    value={historyMerchantId}
+                    onChange={e => setHistoryMerchantId(e.target.value)}
+                    style={{ width: '200px', height: '38px', padding: '6px 12px', borderRadius: '4px', border: '1px solid #d1d5db', backgroundColor: '#fff', cursor: 'pointer' }}
+                  >
+                    <option value="">{lang === 'km' ? '-- ទាំងអស់ --' : '-- All --'}</option>
+                    {merchants.map(m => (
+                      <option key={m.id} value={m.id}>
+                        {lang === 'km' && m.nameKh ? m.nameKh : m.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: '#64748b', paddingLeft: 2 }}>
+                    {lang === 'km' ? 'ចាប់ពីថ្ងៃ' : 'Start Date'}
+                  </span>
+                  <input
+                    type="date"
+                    className="form-control"
+                    value={historyStartDate}
+                    onChange={e => setHistoryStartDate(e.target.value)}
+                    style={{ width: '160px', height: '38px', padding: '6px 12px', borderRadius: '4px', border: '1px solid #d1d5db', backgroundColor: '#fff' }}
+                  />
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: '#64748b', paddingLeft: 2 }}>
+                    {lang === 'km' ? 'ដល់ថ្ងៃ' : 'End Date'}
+                  </span>
+                  <input
+                    type="date"
+                    className="form-control"
+                    value={historyEndDate}
+                    onChange={e => setHistoryEndDate(e.target.value)}
+                    style={{ width: '160px', height: '38px', padding: '6px 12px', borderRadius: '4px', border: '1px solid #d1d5db', backgroundColor: '#fff' }}
+                  />
+                </div>
+
+                <button
+                  className="btn btn-outline"
+                  onClick={() => {
+                    setHistorySearch('');
+                    setHistoryMerchantId('');
+                    setHistoryStartDate('');
+                    setHistoryEndDate('');
+                  }}
+                  style={{ height: 38, padding: '0 16px', fontWeight: 600 }}
+                >
+                  {lang === 'km' ? 'សម្អាត' : 'Clear'}
+                </button>
+              </div>
+
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                  <thead>
+                    <tr style={{ background: '#f8f9fa', borderBottom: '2px solid #dee2e6' }}>
+                      <th style={{ padding: '10px 8px', border: '1px solid #dee2e6', textAlign: 'center' }}>ល.រ</th>
+                      <th style={{ padding: '10px 8px', border: '1px solid #dee2e6', textAlign: 'left' }}>ហាង / Merchant</th>
+                      <th style={{ padding: '10px 8px', border: '1px solid #dee2e6', textAlign: 'left' }}>លេខយោង</th>
+                      <th style={{ padding: '10px 8px', border: '1px solid #dee2e6', textAlign: 'left' }}>កាលបរិច្ឆេទ</th>
+                      <th style={{ padding: '10px 8px', border: '1px solid #dee2e6', textAlign: 'right' }}>ទឹកប្រាក់ ($)</th>
+                      <th style={{ padding: '10px 8px', border: '1px solid #dee2e6', textAlign: 'left' }}>សម្គាល់</th>
+                      <th style={{ padding: '10px 8px', border: '1px solid #dee2e6', textAlign: 'center', width: 120 }}>សកម្មភាព</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {historyLoading ? (
+                      <tr><td colSpan={7} style={{ textAlign: 'center', padding: '20px 0' }}><div className="spinner" style={{ margin: '0 auto' }} /></td></tr>
+                    ) : filteredHistory.length === 0 ? (
+                      <tr><td colSpan={7} style={{ textAlign: 'center', padding: '20px 0', color: '#64748b' }}>{lang === 'km' ? 'គ្មានទិន្នន័យប្រវត្តិទូទាត់ទេ' : 'No payout settlement history found'}</td></tr>
+                    ) : (
+                      filteredHistory.map((h, idx) => (
+                        <tr key={h.id} style={{ borderBottom: '1px solid #dee2e6' }}>
+                          <td style={{ padding: '10px 8px', border: '1px solid #dee2e6', textAlign: 'center' }}>{idx + 1}</td>
+                          <td style={{ padding: '10px 8px', border: '1px solid #dee2e6', fontWeight: 600 }}>{h.merchant?.nameKh || h.merchant?.name || '—'}</td>
+                          <td style={{ padding: '10px 8px', border: '1px solid #dee2e6' }}><code>{h.reference || '—'}</code></td>
+                          <td style={{ padding: '10px 8px', border: '1px solid #dee2e6' }}>{formatDateToDDMMYYYY(h.date)}</td>
+                          <td style={{ padding: '10px 8px', border: '1px solid #dee2e6', textAlign: 'right', fontWeight: 700, color: 'var(--success)' }}>${parseFloat(h.amount).toFixed(2)}</td>
+                          <td style={{ padding: '10px 8px', border: '1px solid #dee2e6' }}>{h.note || '—'}</td>
+                          <td style={{ padding: '10px 8px', border: '1px solid #dee2e6', textAlign: 'center' }}>
+                            <div style={{ display: 'flex', justifyContent: 'center', gap: 8 }}>
+                              <button 
+                                onClick={() => handleEditPayment(h)}
+                                style={{ background: '#3b82f6', color: '#fff', border: 'none', borderRadius: 4, padding: '6px 10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontSize: 12 }}
+                              >
+                                <MdEdit size={14} /> {lang === 'km' ? 'កែប្រែ' : 'Edit'}
+                              </button>
+                              <button 
+                                onClick={() => handleDeletePayment(h.id)}
+                                style={{ background: '#ef4444', color: '#fff', border: 'none', borderRadius: 4, padding: '6px 10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontSize: 12 }}
+                              >
+                                <MdDelete size={14} /> {lang === 'km' ? 'បង្វិល' : 'Reverse'}
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </div>
       </div>
+      </div>
+
+      {/* Edit Payment Modal */}
+      {editPayment && (
+        <Modal 
+          open={!!editPayment} 
+          onClose={() => setEditPayment(null)} 
+          title={lang === 'km' ? 'កែប្រែប្រតិបត្តិការទូទាត់' : 'Edit Settlement Payout'} 
+          size="md"
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div className="form-group">
+              <label className="form-label">{lang === 'km' ? 'ចំនួនទឹកប្រាក់ ($)' : 'Amount ($)'}</label>
+              <input 
+                type="number" 
+                step="0.01" 
+                className="form-control" 
+                value={editAmount} 
+                onChange={e => setEditAmount(e.target.value)} 
+              />
+            </div>
+            <div className="form-group">
+              <label className="form-label">{lang === 'km' ? 'លេខយោង' : 'Reference'}</label>
+              <input 
+                type="text" 
+                className="form-control" 
+                value={editReference} 
+                onChange={e => setEditReference(e.target.value)} 
+              />
+            </div>
+            <div className="form-group">
+              <label className="form-label">{lang === 'km' ? 'កាលបរិច្ឆេទ' : 'Date'}</label>
+              <input 
+                type="date" 
+                className="form-control" 
+                value={editDate} 
+                onChange={e => setEditDate(e.target.value)} 
+              />
+            </div>
+            <div className="form-group">
+              <label className="form-label">{lang === 'km' ? 'សម្គាល់' : 'Note'}</label>
+              <textarea 
+                className="form-control" 
+                value={editNote} 
+                onChange={e => setEditNote(e.target.value)} 
+                rows={3}
+              />
+            </div>
+            <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', marginTop: 10 }}>
+              <button 
+                className="btn btn-outline" 
+                onClick={() => setEditPayment(null)}
+                style={{ height: 38, padding: '0 18px', fontWeight: 600 }}
+              >
+                {lang === 'km' ? 'បោះបង់' : 'Cancel'}
+              </button>
+              <button 
+                className="btn btn-primary" 
+                onClick={handleUpdatePayment}
+                style={{ height: 38, padding: '0 18px', fontWeight: 600 }}
+              >
+                {lang === 'km' ? 'រក្សាទុក' : 'Save Changes'}
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
 
       {/* Confirmation Modal */}
       {showConfirmModal && (
@@ -909,9 +1287,9 @@ export default function PaymentWithShopPage() {
             {merchantFilter && groupedData.length > 0 ? (
               (() => {
                 const row = groupedData[0];
-                const deliveredOrders = row.paymentOrders;
+                const deliveredOrders = row.paymentOrders.filter((o: any) => o.status === 'delivered');
                 const inTransitOrders = row.orders.filter((o: any) => o.status === 'in-transit' || o.status === 'picked-up' || o.status === 'pending');
-                const returnedOrders = row.orders.filter((o: any) => o.status === 'returned' || o.status === 'failed');
+                const returnedOrders = row.paymentOrders.filter((o: any) => o.status === 'returned' || o.status === 'failed');
 
                 const delUSD = deliveredOrders.filter((o: any) => o.codCurrency === 'USD').reduce((sum: number, o: any) => sum + parseFloat(o.cod || 0), 0);
                 const delKHR = deliveredOrders.filter((o: any) => o.codCurrency === 'KHR').reduce((sum: number, o: any) => sum + parseFloat(o.cod || 0), 0);
@@ -924,20 +1302,20 @@ export default function PaymentWithShopPage() {
                   <>
                     <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 16, fontSize: 11 }}>
                       <thead>
-                        <tr style={{ backgroundColor: '#f8f9fa' }}>
-                          <th rowSpan={2} style={{ padding: '6px 4px', textAlign: 'center', border: '1px solid #000', fontWeight: 'bold' }}>{lang === 'km' ? 'ល.រ' : 'No.'}</th>
-                          <th rowSpan={2} style={{ padding: '6px 4px', textAlign: 'center', border: '1px solid #000', fontWeight: 'bold' }}>{lang === 'km' ? 'កាលបរិច្ឆេទ' : 'Date'}</th>
-                          <th rowSpan={2} style={{ padding: '6px 4px', textAlign: 'center', border: '1px solid #000', fontWeight: 'bold' }}>{lang === 'km' ? 'បរិយាយ' : 'Description'}</th>
-                          <th colSpan={2} style={{ padding: '6px 4px', textAlign: 'center', border: '1px solid #000', fontWeight: 'bold' }}>{lang === 'km' ? <>ទឹកប្រាក់ដើមមាន<br/>(ដុល្លារ / ខ្មែរ)</> : <>Original Amount<br/>(USD / KHR)</>}</th>
-                          <th colSpan={2} style={{ padding: '6px 4px', textAlign: 'center', border: '1px solid #000', fontWeight: 'bold' }}>{lang === 'km' ? <>ទឹកប្រាក់ទទួលបាន<br/>(ដុល្លារ / ខ្មែរ)</> : <>Received Amount<br/>(USD / KHR)</>}</th>
-                          <th rowSpan={2} style={{ padding: '6px 4px', textAlign: 'center', border: '1px solid #000', fontWeight: 'bold' }}>{lang === 'km' ? 'សេវាដឹក' : 'Delivery Fee'}</th>
-                          <th rowSpan={2} style={{ padding: '6px 4px', textAlign: 'center', border: '1px solid #000', fontWeight: 'bold' }}>{lang === 'km' ? 'ផ្សេងៗ' : 'Remark'}</th>
+                        <tr style={{ backgroundColor: '#244f96', color: '#fff' }}>
+                          <th rowSpan={2} style={{ padding: '6px 4px', textAlign: 'center', border: '1px solid #000', fontWeight: 'bold', color: '#fff' }}>{lang === 'km' ? 'ល.រ' : 'No.'}</th>
+                          <th rowSpan={2} style={{ padding: '6px 4px', textAlign: 'center', border: '1px solid #000', fontWeight: 'bold', color: '#fff' }}>{lang === 'km' ? 'កាលបរិច្ឆេទ' : 'Date'}</th>
+                          <th rowSpan={2} style={{ padding: '6px 4px', textAlign: 'center', border: '1px solid #000', fontWeight: 'bold', color: '#fff' }}>{lang === 'km' ? 'បរិយាយ' : 'Description'}</th>
+                          <th colSpan={2} style={{ padding: '6px 4px', textAlign: 'center', border: '1px solid #000', fontWeight: 'bold', color: '#fff' }}>{lang === 'km' ? <>ទឹកប្រាក់ដើមមាន<br/>(ដុល្លារ / ខ្មែរ)</> : <>Original Amount<br/>(USD / KHR)</>}</th>
+                          <th colSpan={2} style={{ padding: '6px 4px', textAlign: 'center', border: '1px solid #000', fontWeight: 'bold', color: '#fff' }}>{lang === 'km' ? <>ទឹកប្រាក់ទទួលបាន<br/>(ដុល្លារ / ខ្មែរ)</> : <>Received Amount<br/>(USD / KHR)</>}</th>
+                          <th rowSpan={2} style={{ padding: '6px 4px', textAlign: 'center', border: '1px solid #000', fontWeight: 'bold', color: '#fff' }}>{lang === 'km' ? 'សេវាដឹក' : 'Delivery Fee'}</th>
+                          <th rowSpan={2} style={{ padding: '6px 4px', textAlign: 'center', border: '1px solid #000', fontWeight: 'bold', color: '#fff' }}>{lang === 'km' ? 'ផ្សេងៗ' : 'Remark'}</th>
                         </tr>
-                        <tr>
-                          <th style={{ border: '1px solid #000', borderTop: 'none', padding: '2px', fontSize: '9px', fontWeight: 'normal', textAlign: 'center' }}>{lang === 'km' ? 'ដុល្លារ' : 'USD'}</th>
-                          <th style={{ border: '1px solid #000', borderTop: 'none', padding: '2px', fontSize: '9px', fontWeight: 'normal', textAlign: 'center' }}>{lang === 'km' ? 'ខ្មែរ' : 'KHR'}</th>
-                          <th style={{ border: '1px solid #000', borderTop: 'none', padding: '2px', fontSize: '9px', fontWeight: 'normal', textAlign: 'center' }}>{lang === 'km' ? 'ដុល្លារ' : 'USD'}</th>
-                          <th style={{ border: '1px solid #000', borderTop: 'none', padding: '2px', fontSize: '9px', fontWeight: 'normal', textAlign: 'center' }}>{lang === 'km' ? 'ខ្មែរ' : 'KHR'}</th>
+                        <tr style={{ backgroundColor: '#3060a8', color: '#fff' }}>
+                          <th style={{ border: '1px solid #000', borderTop: 'none', padding: '2px', fontSize: '9px', fontWeight: 'normal', textAlign: 'center', color: '#fff' }}>{lang === 'km' ? 'ដុល្លារ' : 'USD'}</th>
+                          <th style={{ border: '1px solid #000', borderTop: 'none', padding: '2px', fontSize: '9px', fontWeight: 'normal', textAlign: 'center', color: '#fff' }}>{lang === 'km' ? 'ខ្មែរ' : 'KHR'}</th>
+                          <th style={{ border: '1px solid #000', borderTop: 'none', padding: '2px', fontSize: '9px', fontWeight: 'normal', textAlign: 'center', color: '#fff' }}>{lang === 'km' ? 'ដុល្លារ' : 'USD'}</th>
+                          <th style={{ border: '1px solid #000', borderTop: 'none', padding: '2px', fontSize: '9px', fontWeight: 'normal', textAlign: 'center', color: '#fff' }}>{lang === 'km' ? 'ខ្មែរ' : 'KHR'}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -945,8 +1323,8 @@ export default function PaymentWithShopPage() {
                         {deliveredOrders.length > 0 && (
                           <>
                             <tr>
-                              <td colSpan={9} style={{ backgroundColor: '#16a34a', color: '#fff', fontWeight: 'bold', padding: '7px 10px', border: '1px solid #000', fontSize: 12 }}>
-                                🟢 {lang === 'km' ? 'ឥវ៉ាន់ដឹកបានជោគជ័យ' : 'Successfully Delivered'} ({deliveredOrders.length} {lang === 'km' ? 'កញ្ចប់' : 'parcels'})
+                              <td colSpan={9} style={{ backgroundColor: '#2ecc71', color: '#fff', fontWeight: 'bold', padding: '7px 10px', border: '1px solid #000', fontSize: 12 }}>
+                                {lang === 'km' ? 'អីវ៉ាន់ដែលបានជោគជ័យ' : 'Successfully Delivered'} ({deliveredOrders.length} {lang === 'km' ? 'កញ្ចប់' : 'parcels'})
                               </td>
                             </tr>
                             {deliveredOrders.map((o: any, idx: number) => {
@@ -982,8 +1360,8 @@ export default function PaymentWithShopPage() {
                         {inTransitOrders.length > 0 && (
                           <>
                             <tr>
-                              <td colSpan={9} style={{ backgroundColor: '#d97706', color: '#fff', fontWeight: 'bold', padding: '7px 10px', border: '1px solid #000', fontSize: 12 }}>
-                                🟡 {lang === 'km' ? 'ឥវ៉ាន់កំពុងដឹកបន្ត' : 'In Transit / Pending'} ({inTransitOrders.length} {lang === 'km' ? 'កញ្ចប់' : 'parcels'})
+                              <td colSpan={9} style={{ backgroundColor: '#3498db', color: '#fff', fontWeight: 'bold', padding: '7px 10px', border: '1px solid #000', fontSize: 12 }}>
+                                {lang === 'km' ? 'ឥវ៉ាន់កំពុងដឹក' : 'In Transit / Pending'} ({inTransitOrders.length} {lang === 'km' ? 'កញ្ចប់' : 'parcels'})
                               </td>
                             </tr>
                             {inTransitOrders.map((o: any, idx: number) => {
@@ -1010,8 +1388,8 @@ export default function PaymentWithShopPage() {
                         {returnedOrders.length > 0 && (
                           <>
                             <tr>
-                              <td colSpan={9} style={{ backgroundColor: '#dc2626', color: '#fff', fontWeight: 'bold', padding: '7px 10px', border: '1px solid #000', fontSize: 12 }}>
-                                🔴 {lang === 'km' ? 'ឥវ៉ាន់ត្រឡប់ទៅហាង' : 'Returned to Shop'} ({returnedOrders.length} {lang === 'km' ? 'កញ្ចប់' : 'parcels'})
+                              <td colSpan={9} style={{ backgroundColor: '#e74c3c', color: '#fff', fontWeight: 'bold', padding: '7px 10px', border: '1px solid #000', fontSize: 12 }}>
+                                {lang === 'km' ? 'ឥវ៉ាន់ត្រឡប់ទៅហាង' : 'Returned to Shop'} ({returnedOrders.length} {lang === 'km' ? 'កញ្ចប់' : 'parcels'})
                               </td>
                             </tr>
                             {returnedOrders.map((o: any, idx: number) => {

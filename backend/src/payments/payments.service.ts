@@ -39,6 +39,7 @@ export class PaymentsService {
       date,
       reference,
       note,
+      orderIds,
     });
     const saved = await this.staffRepo.save(payment);
 
@@ -288,6 +289,90 @@ export class PaymentsService {
     } catch (err) {
       console.error('Failed to send Telegram message:', err);
     }
+  }
+
+  async deleteStaffPayment(id: number) {
+    const payment = await this.staffRepo.findOne({ where: { id } });
+    if (!payment) throw new NotFoundException('Payment record not found');
+
+    if (payment.orderIds && payment.orderIds.length > 0) {
+      await this.orderRepo
+        .createQueryBuilder()
+        .update(Order)
+        .set({ driverPaymentStatus: 'unpaid' })
+        .whereInIds(payment.orderIds)
+        .andWhere('driverId = :driverId', { driverId: payment.driverId })
+        .execute();
+    }
+
+    await this.staffRepo.remove(payment);
+    return { success: true };
+  }
+
+  async updateStaffPayment(
+    id: number,
+    body: { amount?: number; note?: string; date?: Date; reference?: string },
+  ) {
+    const payment = await this.staffRepo.findOne({ where: { id } });
+    if (!payment) throw new NotFoundException('Payment record not found');
+
+    if (body.amount !== undefined) payment.amount = parseFloat(body.amount as any);
+    if (body.note !== undefined) payment.note = body.note;
+    if (body.date !== undefined) payment.date = body.date;
+    if (body.reference !== undefined) payment.reference = body.reference;
+
+    return this.staffRepo.save(payment);
+  }
+
+  async deleteShopPayment(id: number) {
+    const payment = await this.shopRepo.findOne({ where: { id } });
+    if (!payment) throw new NotFoundException('Payment record not found');
+
+    const merchant = await this.merchantRepo.findOne({ where: { id: payment.merchantId } });
+    if (merchant) {
+      merchant.balance = parseFloat(merchant.balance as any) + parseFloat(payment.amount as any);
+      await this.merchantRepo.save(merchant);
+    }
+
+    if (payment.orderIds && payment.orderIds.length > 0) {
+      await this.orderRepo
+        .createQueryBuilder()
+        .update(Order)
+        .set({ merchantPaymentStatus: 'unpaid' })
+        .whereInIds(payment.orderIds)
+        .andWhere('merchantId = :merchantId', { merchantId: payment.merchantId })
+        .execute();
+    }
+
+    await this.shopRepo.remove(payment);
+    return { success: true };
+  }
+
+  async updateShopPayment(
+    id: number,
+    body: { amount?: number; note?: string; date?: Date; reference?: string },
+  ) {
+    const payment = await this.shopRepo.findOne({ where: { id } });
+    if (!payment) throw new NotFoundException('Payment record not found');
+
+    if (body.amount !== undefined) {
+      const oldAmount = parseFloat(payment.amount as any);
+      const newAmount = parseFloat(body.amount as any);
+      const diff = oldAmount - newAmount;
+
+      const merchant = await this.merchantRepo.findOne({ where: { id: payment.merchantId } });
+      if (merchant) {
+        merchant.balance = parseFloat(merchant.balance as any) + diff;
+        await this.merchantRepo.save(merchant);
+      }
+      payment.amount = newAmount;
+    }
+
+    if (body.note !== undefined) payment.note = body.note;
+    if (body.date !== undefined) payment.date = body.date;
+    if (body.reference !== undefined) payment.reference = body.reference;
+
+    return this.shopRepo.save(payment);
   }
 
   async getPublicInvoice(merchantId: number, reference: string) {

@@ -15,7 +15,7 @@ interface Row { id: any; name: string; delivered: number; failed: number; return
 export default function Rpt4Page() {
   const router = useRouter();
   const { t } = useLanguage();
-  const [startDate, setStartDate] = useState(() => { const d = new Date(); d.setDate(1); return d.toISOString().split('T')[0]; });
+  const [startDate, setStartDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [endDate, setEndDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [merchantFilter, setMerchantFilter] = useState('');
   const [rows, setRows] = useState<Row[]>([]);

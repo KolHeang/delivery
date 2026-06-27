@@ -166,20 +166,20 @@ export default function ReportPaymentCustomerPage() {
         {/* Table of Orders */}
         <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 16, fontSize: 11 }}>
           <thead>
-            <tr style={{ backgroundColor: '#f8f9fa' }}>
-              <th rowSpan={2} style={{ padding: '6px 4px', textAlign: 'center', border: '1px solid #000', fontWeight: 'bold' }}>ល.រ</th>
-              <th rowSpan={2} style={{ padding: '6px 4px', textAlign: 'center', border: '1px solid #000', fontWeight: 'bold' }}>កាលបរិច្ឆេទ</th>
-              <th rowSpan={2} style={{ padding: '6px 4px', textAlign: 'center', border: '1px solid #000', fontWeight: 'bold' }}>បរិយាយ</th>
-              <th colSpan={2} style={{ padding: '6px 4px', textAlign: 'center', border: '1px solid #000', fontWeight: 'bold' }}>ទឹកប្រាក់ដើមមាន<br/>(ដុល្លារ / ខ្មែរ)</th>
-              <th colSpan={2} style={{ padding: '6px 4px', textAlign: 'center', border: '1px solid #000', fontWeight: 'bold' }}>ទឹកប្រាក់ទទួលបាន<br/>(ដុល្លារ / ខ្មែរ)</th>
-              <th rowSpan={2} style={{ padding: '6px 4px', textAlign: 'center', border: '1px solid #000', fontWeight: 'bold' }}>សេវាដឹក</th>
-              <th rowSpan={2} style={{ padding: '6px 4px', textAlign: 'center', border: '1px solid #000', fontWeight: 'bold' }}>ផ្សេងៗ</th>
+            <tr style={{ backgroundColor: '#244f96', color: '#fff' }}>
+              <th rowSpan={2} style={{ padding: '6px 4px', textAlign: 'center', border: '1px solid #000', fontWeight: 'bold', color: '#fff' }}>ល.រ</th>
+              <th rowSpan={2} style={{ padding: '6px 4px', textAlign: 'center', border: '1px solid #000', fontWeight: 'bold', color: '#fff' }}>កាលបរិច្ឆេទ</th>
+              <th rowSpan={2} style={{ padding: '6px 4px', textAlign: 'center', border: '1px solid #000', fontWeight: 'bold', color: '#fff' }}>បរិយាយ</th>
+              <th colSpan={2} style={{ padding: '6px 4px', textAlign: 'center', border: '1px solid #000', fontWeight: 'bold', color: '#fff' }}>ទឹកប្រាក់ដើមមាន<br/>(ដុល្លារ / ខ្មែរ)</th>
+              <th colSpan={2} style={{ padding: '6px 4px', textAlign: 'center', border: '1px solid #000', fontWeight: 'bold', color: '#fff' }}>ទឹកប្រាក់ទទួលបាន<br/>(ដុល្លារ / ខ្មែរ)</th>
+              <th rowSpan={2} style={{ padding: '6px 4px', textAlign: 'center', border: '1px solid #000', fontWeight: 'bold', color: '#fff' }}>សេវាដឹក</th>
+              <th rowSpan={2} style={{ padding: '6px 4px', textAlign: 'center', border: '1px solid #000', fontWeight: 'bold', color: '#fff' }}>ផ្សេងៗ</th>
             </tr>
-            <tr>
-              <th style={{ border: '1px solid #000', padding: '2px', fontSize: '9px', fontWeight: 'normal', textAlign: 'center' }}>ដុល្លារ</th>
-              <th style={{ border: '1px solid #000', padding: '2px', fontSize: '9px', fontWeight: 'normal', textAlign: 'center' }}>ខ្មែរ</th>
-              <th style={{ border: '1px solid #000', padding: '2px', fontSize: '9px', fontWeight: 'normal', textAlign: 'center' }}>ដុល្លារ</th>
-              <th style={{ border: '1px solid #000', padding: '2px', fontSize: '9px', fontWeight: 'normal', textAlign: 'center' }}>ខ្មែរ</th>
+            <tr style={{ backgroundColor: '#3060a8', color: '#fff' }}>
+              <th style={{ border: '1px solid #000', padding: '2px', fontSize: '9px', fontWeight: 'normal', textAlign: 'center', color: '#fff' }}>ដុល្លារ</th>
+              <th style={{ border: '1px solid #000', padding: '2px', fontSize: '9px', fontWeight: 'normal', textAlign: 'center', color: '#fff' }}>ខ្មែរ</th>
+              <th style={{ border: '1px solid #000', padding: '2px', fontSize: '9px', fontWeight: 'normal', textAlign: 'center', color: '#fff' }}>ដុល្លារ</th>
+              <th style={{ border: '1px solid #000', padding: '2px', fontSize: '9px', fontWeight: 'normal', textAlign: 'center', color: '#fff' }}>ខ្មែរ</th>
             </tr>
           </thead>
           <tbody>

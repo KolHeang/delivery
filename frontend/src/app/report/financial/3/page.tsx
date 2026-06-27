@@ -16,7 +16,7 @@ interface Row { label: string; income: number; expense: number; profit: number; 
 export default function Frpt3Page() {
   const router = useRouter();
   const { t } = useLanguage();
-  const [startDate, setStartDate] = useState(() => { const d = new Date(); d.setDate(1); return d.toISOString().split('T')[0]; });
+  const [startDate, setStartDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [endDate, setEndDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [rows, setRows] = useState<Row[]>([]);
   const [summary, setSummary] = useState({ totalIncome: 0, totalExpense: 0, netProfit: 0 });

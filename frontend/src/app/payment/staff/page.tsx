@@ -6,16 +6,12 @@ import { isAuthenticated } from '@/lib/auth';
 import Sidebar from '@/components/layout/Sidebar';
 import Topbar from '@/components/layout/Topbar';
 import api from '@/lib/api';
-import { MdFilterList, MdClear, MdPrint, MdSave, MdMoreHoriz } from 'react-icons/md';
+import { MdFilterList, MdClear, MdPrint, MdSave, MdMoreHoriz, MdEdit, MdDelete, MdClose } from 'react-icons/md';
 import { useLanguage } from '@/lib/LanguageContext';
-import DateInput, { formatDateToDDMMYYYY } from '@/components/ui/DateInput';
+import DateInput, { formatDateToDDMMYYYY, getLocalDateString } from '@/components/ui/DateInput';
+import Modal from '@/components/ui/Modal';
 
-const getLocalDateString = (d: Date = new Date()) => {
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-};
+
 
 const getLocalFirstDayOfMonthString = () => {
   const d = new Date();
@@ -34,7 +30,7 @@ export default function PaymentWithStaffPage() {
   // Filter States
   const [driverId, setDriverId] = useState('');
   const [statusFilter, setStatusFilter] = useState('unpaid');
-  const [startDate, setStartDate] = useState(() => getLocalFirstDayOfMonthString());
+  const [startDate, setStartDate] = useState(() => getLocalDateString());
   const [endDate, setEndDate] = useState(() => getLocalDateString());
   
   // Data States
@@ -43,13 +39,81 @@ export default function PaymentWithStaffPage() {
   const [saving, setSaving] = useState(false);
   const [user, setUser] = useState<any>(null);
 
+  // Tabs & History states
+  const [activeTab, setActiveTab] = useState<'settle' | 'history'>('settle');
+  const [historyData, setHistoryData] = useState<any[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historySearch, setHistorySearch] = useState('');
+  const [historyDriverId, setHistoryDriverId] = useState('');
+
+  // Edit Payout Modal State
+  const [editPayment, setEditPayment] = useState<any | null>(null);
+  const [editAmount, setEditAmount] = useState('');
+  const [editNote, setEditNote] = useState('');
+  const [editDate, setEditDate] = useState('');
+  const [editReference, setEditReference] = useState('');
+
+  const loadHistory = async () => {
+    setHistoryLoading(true);
+    try {
+      const res = await api.get('/payments/staff');
+      setHistoryData(res.data || []);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'history') {
+      loadHistory();
+    }
+  }, [activeTab]);
+
+  const handleEditPayment = (payment: any) => {
+    setEditPayment(payment);
+    setEditAmount(payment.amount.toString());
+    setEditNote(payment.note || '');
+    setEditDate(payment.date ? payment.date.split('T')[0] : '');
+    setEditReference(payment.reference || '');
+  };
+
+  const handleUpdatePayment = async () => {
+    if (!editPayment) return;
+    try {
+      await api.patch(`/payments/staff/${editPayment.id}`, {
+        amount: parseFloat(editAmount) || 0,
+        note: editNote,
+        date: editDate || undefined,
+        reference: editReference || undefined,
+      });
+      alert(lang === 'km' ? 'ធ្វើបច្ចុប្បន្នភាពបានជោគជ័យ!' : 'Updated successfully!');
+      setEditPayment(null);
+      loadHistory();
+      handleFilter();
+    } catch (err: any) {
+      alert(lang === 'km' ? 'ធ្វើបច្ចុប្បន្នភាពបានបរាជ័យ' : 'Failed to update: ' + (err.response?.data?.message || err.message));
+    }
+  };
+
+  const handleDeletePayment = async (paymentId: number) => {
+    if (!confirm(lang === 'km' ? 'តើអ្នកប្រាកដជាចង់បង្វិលការទូទាត់នេះថយក្រោយវិញទេ? វានឹងកំណត់ស្ថានភាពកញ្ចប់អីវ៉ាន់ទាំងអស់ទៅជាមិនទាន់ទូទាត់ឡើងវិញ។' : 'Are you sure you want to reverse this settlement? This will reset all associated orders back to unpaid.')) return;
+    try {
+      await api.delete(`/payments/staff/${paymentId}`);
+      alert(lang === 'km' ? 'បានបង្វិលប្រតិបត្តិការដោយជោគជ័យ!' : 'Reversal completed successfully!');
+      loadHistory();
+      handleFilter();
+    } catch (err: any) {
+      alert(lang === 'km' ? 'ការបង្វិលប្រតិបត្តិការបានបរាជ័យ' : 'Failed to reverse payment: ' + (err.response?.data?.message || err.message));
+    }
+  };
+
   const loadDrivers = async () => {
     try {
       const res = await api.get('/drivers');
       setDrivers(res.data || []);
-      if (res.data && res.data.length > 0) {
-        setDriverId(res.data[0].id.toString());
-      }
+      setDriverId(''); // Default to "All" (empty string)
     } catch {}
     setLoading(false);
   };
@@ -66,9 +130,11 @@ export default function PaymentWithStaffPage() {
   }, [router]);
 
   const handleFilter = async () => {
-    if (!driverId) return;
     try {
-      const res = await api.get(`/orders?driverId=${driverId}&status=delivered&driverPaymentStatus=${statusFilter}`);
+      const url = driverId 
+        ? `/orders?driverId=${driverId}`
+        : `/orders`;
+      const res = await api.get(url);
       setOrders(res.data || []);
       setSelectedIds([]);
     } catch {
@@ -77,14 +143,14 @@ export default function PaymentWithStaffPage() {
   };
 
   useEffect(() => {
-    if (driverId) handleFilter();
+    handleFilter();
   }, [driverId, statusFilter]);
 
   const handleClear = () => {
-    setDriverId(drivers[0]?.id?.toString() || '');
+    setDriverId('');
     setStatusFilter('unpaid');
-    setStartDate('');
-    setEndDate('');
+    setStartDate(getLocalDateString());
+    setEndDate(getLocalDateString());
     setSelectedIds([]);
   };
 
@@ -134,8 +200,21 @@ export default function PaymentWithStaffPage() {
   };
 
   const handleSavePayment = async () => {
-    if (selectedIds.length === 0) return alert(lang === 'km' ? 'សូមជ្រើសរើសយ៉ាងហោចណាស់កញ្ចប់អីវ៉ាន់មួយដើម្បីទូទាត់។' : 'Please select at least one order to settle.');
-    if (!driverId) return;
+    // Also include unpaid failed/returned order IDs in the date range so they get marked as paid/settled
+    const unpaidFailedOrderIds = filteredOrders
+      .filter((o: any) => (o.status === 'failed' || o.status === 'returned') && o.driverPaymentStatus === 'unpaid')
+      .map((o: any) => o.id);
+
+    const allOrderIdsToSettle = [...selectedIds, ...unpaidFailedOrderIds];
+
+    if (allOrderIdsToSettle.length === 0) {
+      alert(lang === 'km' ? 'សូមជ្រើសរើសយ៉ាងហោចណាស់កញ្ចប់អីវ៉ាន់មួយ ឬមានកញ្ចប់អីវ៉ាន់មិនជោគជ័យដើម្បីទូទាត់។' : 'Please select at least one order or have failed/returned orders to settle.');
+      return;
+    }
+    if (!driverId) {
+      alert(lang === 'km' ? 'សូមជ្រើសរើសបុគ្គលិកដឹកជញ្ជូនជាក់លាក់ណាមួយដើម្បីធ្វើការទូទាត់ប្រាក់។' : 'Please select a specific delivery driver to perform settlement.');
+      return;
+    }
     
     const selectedOrders = filteredOrders.filter((o: any) => selectedIds.includes(o.id));
     const totalDeliveryFee = selectedOrders.reduce((sum, o: any) => sum + parseFloat(o.deliveryFee || '0'), 0);
@@ -148,7 +227,7 @@ export default function PaymentWithStaffPage() {
         date: new Date().toISOString(),
         reference: `SETTLE-STAFF-${Date.now().toString().slice(-6)}`,
         note: `Bulk settlement for ${selectedIds.length} orders`,
-        orderIds: selectedIds,
+        orderIds: allOrderIdsToSettle,
       });
       alert(lang === 'km' ? 'រក្សាទុកការទូទាត់បានជោគជ័យ!' : 'Payment settled successfully!');
       handleFilter(); 
@@ -158,6 +237,7 @@ export default function PaymentWithStaffPage() {
     setSaving(false);
   };
 
+  const unpaidFailedOrders = filteredOrders.filter((o: any) => (o.status === 'failed' || o.status === 'returned') && o.driverPaymentStatus === 'unpaid');
   const selectedOrders = filteredOrders.filter((o: any) => selectedIds.includes(o.id));
   const totalDeliveryFee = selectedOrders.reduce((sum, o: any) => sum + parseFloat(o.deliveryFee || '0'), 0);
   const totalCodKhr = selectedOrders.filter((o: any) => o.codCurrency === 'KHR').reduce((sum, o: any) => sum + parseFloat(o.cod || '0'), 0);
@@ -165,13 +245,30 @@ export default function PaymentWithStaffPage() {
 
   // Print: use selected orders if any, otherwise print all filtered orders — delivered only for section 1
   const basePrintOrders = selectedIds.length > 0 ? selectedOrders : filteredOrders;
-  const printOrders = basePrintOrders.filter((o: any) => o.status === 'delivered');
-  const printFailedOrders = basePrintOrders.filter((o: any) => o.status === 'failed' || o.status === 'returned');
+  const printOrders = basePrintOrders.filter((o: any) => o.status === 'delivered' && o.driverPaymentStatus === statusFilter);
+  const printFailedOrders = basePrintOrders.filter((o: any) => (o.status === 'failed' || o.status === 'returned') && o.driverPaymentStatus === statusFilter);
   
   const printTotalFee = printOrders.reduce((sum, o: any) => sum + parseFloat(o.deliveryFee || '0'), 0);
   const printCodKhr = printOrders.filter((o: any) => o.codCurrency === 'KHR').reduce((sum, o: any) => sum + parseFloat(o.cod || '0'), 0);
   const printCodUsd = printOrders.filter((o: any) => o.codCurrency === 'USD').reduce((sum, o: any) => sum + parseFloat(o.cod || '0'), 0);
   const printPayableUsd = printTotalFee;
+
+  // Filter historyData client-side
+  const filteredHistory = historyData.filter((h: any) => {
+    if (historyDriverId && String(h.driverId) !== historyDriverId) {
+      return false;
+    }
+    if (historySearch.trim()) {
+      const q = historySearch.toLowerCase();
+      const refMatch = h.reference?.toLowerCase().includes(q);
+      const noteMatch = h.note?.toLowerCase().includes(q);
+      const driverNameMatch = h.driver?.name?.toLowerCase().includes(q) || h.driver?.nameKh?.toLowerCase().includes(q);
+      if (!refMatch && !noteMatch && !driverNameMatch) {
+        return false;
+      }
+    }
+    return true;
+  });
 
   if (loading) return (
     <div className="app-layout">
@@ -191,7 +288,47 @@ export default function PaymentWithStaffPage() {
       <div className="main-content" style={{ background: '#fff', minHeight: '100vh', fontFamily: 'Kantumruy Pro, sans-serif' }}>
         <Topbar title={lang === 'km' ? 'ទូទាត់ប្រាក់ជាមួយអ្នកដឹក' : 'Payment with Delivery'} subtitle={lang === 'km' ? 'ទូទាត់ប្រាក់ជាមួយអ្នកដឹកជញ្ជូន' : 'Settle payout with delivery drivers'} />
         
+        {/* Tabs Bar */}
+        <div style={{ display: 'flex', borderBottom: '1px solid #e5e7eb', padding: '0 24px', background: '#fff', gap: 20 }}>
+          <button 
+            onClick={() => setActiveTab('settle')}
+            style={{ 
+              padding: '12px 8px', 
+              fontSize: 14, 
+              fontWeight: 600, 
+              color: activeTab === 'settle' ? '#2563eb' : '#64748b', 
+              borderBottom: activeTab === 'settle' ? '2px solid #2563eb' : '2px solid transparent',
+              background: 'transparent',
+              borderTop: 'none',
+              borderLeft: 'none',
+              borderRight: 'none',
+              cursor: 'pointer'
+            }}
+          >
+            {lang === 'km' ? 'ទូទាត់ប្រាក់' : 'Settle Payout'}
+          </button>
+          <button 
+            onClick={() => setActiveTab('history')}
+            style={{ 
+              padding: '12px 8px', 
+              fontSize: 14, 
+              fontWeight: 600, 
+              color: activeTab === 'history' ? '#2563eb' : '#64748b', 
+              borderBottom: activeTab === 'history' ? '2px solid #2563eb' : '2px solid transparent',
+              background: 'transparent',
+              borderTop: 'none',
+              borderLeft: 'none',
+              borderRight: 'none',
+              cursor: 'pointer'
+            }}
+          >
+            {lang === 'km' ? 'ប្រវត្តិទូទាត់ប្រាក់' : 'Settlement History'}
+          </button>
+        </div>
+
         <div style={{ padding: '20px 24px' }}>
+          {activeTab === 'settle' ? (
+            <>
           
           {/* Action & Filter Bar */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, flexWrap: 'wrap', gap: 16 }}>
@@ -206,6 +343,7 @@ export default function PaymentWithStaffPage() {
                   value={driverId} 
                   onChange={e => setDriverId(e.target.value)}
                 >
+                  <option value="">{lang === 'km' ? '-- ទាំងអស់ --' : '-- All --'}</option>
                   {drivers.map(d => (
                     <option key={d.id} value={d.id}>{d.name} {d.nameKh ? `(${d.nameKh})` : ''}</option>
                   ))}
@@ -252,8 +390,8 @@ export default function PaymentWithStaffPage() {
               {statusFilter === 'unpaid' && (
                 <button 
                   onClick={handleSavePayment} 
-                  disabled={saving || selectedIds.length === 0}
-                  style={{ height: 34, padding: '0 16px', borderRadius: 4, background: (saving || selectedIds.length === 0) ? '#6c757d' : '#0d6efd', color: '#fff', border: 'none', display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 600, cursor: (saving || selectedIds.length === 0) ? 'not-allowed' : 'pointer' }}
+                  disabled={saving || (selectedIds.length === 0 && unpaidFailedOrders.length === 0)}
+                  style={{ height: 34, padding: '0 16px', borderRadius: 4, background: (saving || (selectedIds.length === 0 && unpaidFailedOrders.length === 0)) ? '#6c757d' : '#0d6efd', color: '#fff', border: 'none', display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 600, cursor: (saving || (selectedIds.length === 0 && unpaidFailedOrders.length === 0)) ? 'not-allowed' : 'pointer' }}
                 >
                   <MdSave size={16} /> {lang === 'km' ? 'រក្សាទុកការទូទាត់' : 'Save Settlement'}
                 </button>
@@ -269,7 +407,7 @@ export default function PaymentWithStaffPage() {
                 {lang === 'km' ? '១. ផ្នែកដឹកជោគជ័យ' : '1. Successful Deliveries'}
               </h3>
               <span style={{ background: '#dcfce7', color: '#16a34a', padding: '2px 10px', borderRadius: 12, fontSize: 12, fontWeight: 600 }}>
-                {filteredOrders.filter((o: any) => o.status === 'delivered').length} {lang === 'km' ? 'កញ្ចប់' : 'parcels'}
+                {filteredOrders.filter((o: any) => o.status === 'delivered' && o.driverPaymentStatus === statusFilter).length} {lang === 'km' ? 'កញ្ចប់' : 'parcels'}
               </span>
             </div>
             <div style={{ border: '1px solid #dee2e6', borderRadius: 4, overflowX: 'auto', background: '#fff' }}>
@@ -279,9 +417,9 @@ export default function PaymentWithStaffPage() {
                     <th style={{ padding: '10px 8px', textAlign: 'center', borderRight: '1px solid #dee2e6', width: 40 }}>{lang === 'km' ? 'ល.រ' : 'No.'}</th>
                     <th style={{ padding: '10px 8px', textAlign: 'center', borderRight: '1px solid #dee2e6', width: 44 }}>
                       <input type="checkbox"
-                        checked={filteredOrders.filter((o: any) => o.status === 'delivered').length > 0 && filteredOrders.filter((o: any) => o.status === 'delivered').every((o: any) => selectedIds.includes(o.id))}
+                        checked={filteredOrders.filter((o: any) => o.status === 'delivered' && o.driverPaymentStatus === statusFilter).length > 0 && filteredOrders.filter((o: any) => o.status === 'delivered' && o.driverPaymentStatus === statusFilter).every((o: any) => selectedIds.includes(o.id))}
                         onChange={(e) => {
-                          const ids = filteredOrders.filter((o: any) => o.status === 'delivered').map((o: any) => o.id);
+                          const ids = filteredOrders.filter((o: any) => o.status === 'delivered' && o.driverPaymentStatus === statusFilter).map((o: any) => o.id);
                           if (e.target.checked) setSelectedIds(prev => Array.from(new Set([...prev, ...ids])));
                           else setSelectedIds(prev => prev.filter(id => !ids.includes(id)));
                         }}
@@ -298,10 +436,10 @@ export default function PaymentWithStaffPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredOrders.filter((o: any) => o.status === 'delivered').length === 0 ? (
+                  {filteredOrders.filter((o: any) => o.status === 'delivered' && o.driverPaymentStatus === statusFilter).length === 0 ? (
                     <tr><td colSpan={9} style={{ textAlign: 'center', padding: '24px 0', color: '#6c757d' }}>{lang === 'km' ? 'គ្មានទិន្នន័យ' : 'No data'}</td></tr>
                   ) : (
-                    filteredOrders.filter((o: any) => o.status === 'delivered').map((o: any, idx: number) => {
+                    filteredOrders.filter((o: any) => o.status === 'delivered' && o.driverPaymentStatus === statusFilter).map((o: any, idx: number) => {
                       const isSelected = selectedIds.includes(o.id);
                       return (
                         <tr key={o.id} style={{ borderBottom: '1px solid #dee2e6', background: isSelected ? '#f0fdf4' : '#fff' }}>
@@ -329,8 +467,8 @@ export default function PaymentWithStaffPage() {
 
                   {/* Totals for delivered */}
                   {(() => {
-                    const delivOrders = filteredOrders.filter((o: any) => o.status === 'delivered' && selectedIds.includes(o.id));
-                    const allDeliv = filteredOrders.filter((o: any) => o.status === 'delivered');
+                    const delivOrders = filteredOrders.filter((o: any) => o.status === 'delivered' && o.driverPaymentStatus === statusFilter && selectedIds.includes(o.id));
+                    const allDeliv = filteredOrders.filter((o: any) => o.status === 'delivered' && o.driverPaymentStatus === statusFilter);
                     const src = delivOrders.length > 0 ? delivOrders : allDeliv;
                     const khr = src.filter((o: any) => o.codCurrency === 'KHR').reduce((s: number, o: any) => s + parseFloat(o.cod || '0'), 0);
                     const usd = src.filter((o: any) => o.codCurrency === 'USD').reduce((s: number, o: any) => s + parseFloat(o.cod || '0'), 0);
@@ -377,7 +515,7 @@ export default function PaymentWithStaffPage() {
 
           {/* ── Section 2: Failed / Returned Deliveries ── */}
           {(() => {
-            const failedOrders = filteredOrders.filter((o: any) => o.status === 'failed' || o.status === 'returned');
+            const failedOrders = filteredOrders.filter((o: any) => (o.status === 'failed' || o.status === 'returned') && o.driverPaymentStatus === statusFilter);
             return (
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
@@ -456,11 +594,178 @@ export default function PaymentWithStaffPage() {
               </div>
             );
           })()}
+            </>
+          ) : (
+            <div className="card" style={{ padding: '20px', backgroundColor: '#fff', border: '1px solid #e5e7eb' }}>
+              
+              {/* History Search & Select Driver Filter Bar */}
+              <div style={{ display: 'flex', gap: 12, marginBottom: 16, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: '#64748b', paddingLeft: 2 }}>
+                    {lang === 'km' ? 'ស្វែងរក' : 'Search'}
+                  </span>
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder={lang === 'km' ? 'ស្វែងរកលេខយោង សម្គាល់...' : 'Search ref, note, name...'}
+                    value={historySearch}
+                    onChange={e => setHistorySearch(e.target.value)}
+                    style={{ width: '240px', height: '38px', padding: '6px 12px' }}
+                  />
+                </div>
 
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: '#64748b', paddingLeft: 2 }}>
+                    {lang === 'km' ? 'អ្នកដឹកជញ្ជូន' : 'Delivery Driver'}
+                  </span>
+                  <select
+                    className="form-control"
+                    value={historyDriverId}
+                    onChange={e => setHistoryDriverId(e.target.value)}
+                    style={{ width: '200px', height: '38px', cursor: 'pointer' }}
+                  >
+                    <option value="">{lang === 'km' ? '-- ទាំងអស់ --' : '-- All --'}</option>
+                    {drivers.map(d => (
+                      <option key={d.id} value={d.id}>{d.name} {d.nameKh ? `(${d.nameKh})` : ''}</option>
+                    ))}
+                  </select>
+                </div>
 
+                <button
+                  className="btn btn-outline"
+                  onClick={() => {
+                    setHistorySearch('');
+                    setHistoryDriverId('');
+                  }}
+                  style={{ height: 38, padding: '0 16px', fontWeight: 600 }}
+                >
+                  {lang === 'km' ? 'សម្អាត' : 'Clear'}
+                </button>
+              </div>
+
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                  <thead>
+                    <tr style={{ background: '#f8f9fa', borderBottom: '2px solid #dee2e6' }}>
+                      <th style={{ padding: '10px 8px', border: '1px solid #dee2e6', textAlign: 'center' }}>ល.រ</th>
+                      <th style={{ padding: '10px 8px', border: '1px solid #dee2e6', textAlign: 'left' }}>អ្នកដឹកជញ្ជូន</th>
+                      <th style={{ padding: '10px 8px', border: '1px solid #dee2e6', textAlign: 'left' }}>លេខយោង</th>
+                      <th style={{ padding: '10px 8px', border: '1px solid #dee2e6', textAlign: 'left' }}>កាលបរិច្ឆេទ</th>
+                      <th style={{ padding: '10px 8px', border: '1px solid #dee2e6', textAlign: 'right' }}>ទឹកប្រាក់ ($)</th>
+                      <th style={{ padding: '10px 8px', border: '1px solid #dee2e6', textAlign: 'left' }}>សម្គាល់</th>
+                      <th style={{ padding: '10px 8px', border: '1px solid #dee2e6', textAlign: 'center', width: 120 }}>សកម្មភាព</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {historyLoading ? (
+                      <tr><td colSpan={7} style={{ textAlign: 'center', padding: '20px 0' }}><div className="spinner" style={{ margin: '0 auto' }} /></td></tr>
+                    ) : filteredHistory.length === 0 ? (
+                      <tr><td colSpan={7} style={{ textAlign: 'center', padding: '20px 0', color: '#64748b' }}>{lang === 'km' ? 'គ្មានទិន្នន័យប្រវត្តិទូទាត់ទេ' : 'No payout settlement history found'}</td></tr>
+                    ) : (
+                      filteredHistory.map((h, idx) => (
+                        <tr key={h.id} style={{ borderBottom: '1px solid #dee2e6' }}>
+                          <td style={{ padding: '10px 8px', border: '1px solid #dee2e6', textAlign: 'center' }}>{idx + 1}</td>
+                          <td style={{ padding: '10px 8px', border: '1px solid #dee2e6', fontWeight: 600 }}>{h.driver?.nameKh || h.driver?.name || '—'}</td>
+                          <td style={{ padding: '10px 8px', border: '1px solid #dee2e6' }}><code>{h.reference || '—'}</code></td>
+                          <td style={{ padding: '10px 8px', border: '1px solid #dee2e6' }}>{formatDateToDDMMYYYY(h.date)}</td>
+                          <td style={{ padding: '10px 8px', border: '1px solid #dee2e6', textAlign: 'right', fontWeight: 700, color: 'var(--success)' }}>${parseFloat(h.amount).toFixed(2)}</td>
+                          <td style={{ padding: '10px 8px', border: '1px solid #dee2e6' }}>{h.note || '—'}</td>
+                          <td style={{ padding: '10px 8px', border: '1px solid #dee2e6', textAlign: 'center' }}>
+                            <div style={{ display: 'flex', justifyContent: 'center', gap: 8 }}>
+                              <button 
+                                onClick={() => handleEditPayment(h)}
+                                style={{ background: '#3b82f6', color: '#fff', border: 'none', borderRadius: 4, padding: '6px 10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontSize: 12 }}
+                              >
+                                <MdEdit size={14} /> {lang === 'km' ? 'កែប្រែ' : 'Edit'}
+                              </button>
+                              <button 
+                                onClick={() => handleDeletePayment(h.id)}
+                                style={{ background: '#ef4444', color: '#fff', border: 'none', borderRadius: 4, padding: '6px 10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontSize: 12 }}
+                              >
+                                <MdDelete size={14} /> {lang === 'km' ? 'បង្វិល' : 'Reverse'}
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </div>
       </div>
       </div>
+
+      {/* Edit Payment Modal */}
+      {editPayment && (
+        <Modal 
+          open={!!editPayment} 
+          onClose={() => setEditPayment(null)} 
+          title={lang === 'km' ? 'កែប្រែប្រតិបត្តិការទូទាត់' : 'Edit Settlement Payout'} 
+          size="md"
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div className="form-group">
+              <label className="form-label">{lang === 'km' ? 'ចំនួនទឹកប្រាក់ ($)' : 'Amount ($)'}</label>
+              <input 
+                type="number" 
+                step="0.01" 
+                className="form-control" 
+                value={editAmount} 
+                onChange={e => setEditAmount(e.target.value)} 
+              />
+            </div>
+            <div className="form-group">
+              <label className="form-label">{lang === 'km' ? 'លេខយោង' : 'Reference'}</label>
+              <input 
+                type="text" 
+                className="form-control" 
+                value={editReference} 
+                onChange={e => setEditReference(e.target.value)} 
+              />
+            </div>
+            <div className="form-group">
+              <label className="form-label">{lang === 'km' ? 'កាលបរិច្ឆេទ' : 'Date'}</label>
+              <input 
+                type="date" 
+                className="form-control" 
+                value={editDate} 
+                onChange={e => setEditDate(e.target.value)} 
+              />
+            </div>
+            <div className="form-group">
+              <label className="form-label">{lang === 'km' ? 'សម្គាល់' : 'Note'}</label>
+              <textarea 
+                className="form-control" 
+                value={editNote} 
+                onChange={e => setEditNote(e.target.value)} 
+                rows={3}
+              />
+            </div>
+            <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', marginTop: 10 }}>
+              <button 
+                className="btn btn-outline" 
+                onClick={() => setEditPayment(null)}
+                style={{ height: 38, padding: '0 18px', fontWeight: 600 }}
+              >
+                {lang === 'km' ? 'បោះបង់' : 'Cancel'}
+              </button>
+              <button 
+                className="btn btn-primary" 
+                onClick={handleUpdatePayment}
+                style={{ height: 38, padding: '0 18px', fontWeight: 600 }}
+              >
+                {lang === 'km' ? 'រក្សាទុក' : 'Save Changes'}
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+
+
 
 
       {/* Printable Invoice List Table — outside app-layout (Print-only) */}
@@ -472,8 +777,8 @@ export default function PaymentWithStaffPage() {
         
         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginBottom: 10 }}>
           <div>
-            <div><strong>{lang === 'km' ? 'ឈ្មោះអ្នកដឹកជញ្ជូន :' : 'Driver Name :'}</strong> {selectedDriver ? `${selectedDriver.name} ${selectedDriver.nameKh ? `(${selectedDriver.nameKh})` : ''}` : '—'}</div>
-            <div><strong>{lang === 'km' ? 'លេខទូរស័ព្ទ :' : 'Phone Number :'}</strong> {selectedDriver?.phone || 'N/A'}</div>
+            <div><strong>{lang === 'km' ? 'ឈ្មោះអ្នកដឹកជញ្ជូន :' : 'Driver Name :'}</strong> {selectedDriver ? `${selectedDriver.name} ${selectedDriver.nameKh ? `(${selectedDriver.nameKh})` : ''}` : (lang === 'km' ? 'ទាំងអស់' : 'All')}</div>
+            <div><strong>{lang === 'km' ? 'លេខទូរស័ព្ទ :' : 'Phone Number :'}</strong> {selectedDriver?.phone || '—'}</div>
             <div><strong>{lang === 'km' ? 'កាលបរិច្ឆេទបោះពុម្ព :' : 'Print Date :'}</strong> {new Date().toLocaleString(lang === 'km' ? 'kh-KH' : 'en-US', { month: 'long', day: 'numeric', year: 'numeric', hour: 'numeric', minute: 'numeric', hour12: true })}</div>
           </div>
           <div style={{ textAlign: 'right' }}>

@@ -37,7 +37,7 @@ export default function DeliverySummaryPage() {
   const [drivers, setDrivers] = useState<any[]>([]);
 
   // Filters
-  const [startDate, setStartDate] = useState(() => getLocalFirstDayOfMonthString());
+  const [startDate, setStartDate] = useState(() => getLocalDateString());
   const [endDate, setEndDate] = useState(() => getLocalDateString());
   const [driverId, setDriverId] = useState('');
   const [search, setSearch] = useState('');

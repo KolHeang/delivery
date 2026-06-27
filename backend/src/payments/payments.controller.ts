@@ -7,6 +7,8 @@ import {
   UseGuards,
   ParseIntPipe,
   Query,
+  Delete,
+  Patch,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { PaymentsService } from './payments.service';
@@ -54,6 +56,21 @@ export class PaymentsController {
     return this.paymentsService.getDriverPaymentStats(driverId);
   }
 
+  @UseGuards(JwtAuthGuard)
+  @Delete('staff/:id')
+  deleteStaff(@Param('id', ParseIntPipe) id: number) {
+    return this.paymentsService.deleteStaffPayment(id);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch('staff/:id')
+  updateStaff(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: { amount?: number; note?: string; date?: Date; reference?: string },
+  ) {
+    return this.paymentsService.updateStaffPayment(id, body);
+  }
+
   // Shop Payments
   @UseGuards(JwtAuthGuard)
   @Post('shop')
@@ -90,6 +107,21 @@ export class PaymentsController {
   @Get('shop/merchant-stats/:merchantId')
   getMerchantStats(@Param('merchantId', ParseIntPipe) merchantId: number) {
     return this.paymentsService.getMerchantPaymentStats(merchantId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Delete('shop/:id')
+  deleteShop(@Param('id', ParseIntPipe) id: number) {
+    return this.paymentsService.deleteShopPayment(id);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch('shop/:id')
+  updateShop(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: { amount?: number; note?: string; date?: Date; reference?: string },
+  ) {
+    return this.paymentsService.updateShopPayment(id, body);
   }
 
   // Public Invoice Report (Unauthenticated)

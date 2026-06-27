@@ -33,6 +33,9 @@ export class StaffPayment {
   @Column({ nullable: true, type: 'text' })
   note: string;
 
+  @Column({ type: 'json', nullable: true })
+  orderIds: number[];
+
   @CreateDateColumn()
   createdAt: Date;
 

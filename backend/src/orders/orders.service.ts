@@ -239,21 +239,44 @@ export class OrdersService {
   async update(id: number, dto: UpdateOrderDto): Promise<Order> {
     const order = await this.findOne(id);
     const updates: any = { ...dto };
-    if (dto.status === 'picked-up' && !order.pickedUpAt) {
+
+    // Auto-update status when delivery driver (driverId) is updated
+    if (dto.driverId !== undefined) {
+      if (dto.driverId) {
+        if (updates.status === undefined || updates.status === 'pending' || updates.status === 'in-warehouse') {
+          if (order.status === 'pending' || order.status === 'in-warehouse') {
+            updates.status = 'assigned';
+            updates.assignedAt = new Date();
+          }
+        }
+      } else {
+        if (updates.status === undefined || updates.status === 'assigned') {
+          if (order.status === 'assigned') {
+            updates.status = order.warehouseAt ? 'in-warehouse' : 'pending';
+            updates.assignedAt = null;
+          }
+        }
+      }
+    }
+
+    const finalStatus = updates.status || dto.status;
+
+    if (finalStatus === 'picked-up' && !order.pickedUpAt) {
       updates.pickedUpAt = new Date();
     }
-    if (dto.status === 'in-warehouse' && !order.warehouseAt) {
+    if (finalStatus === 'in-warehouse' && !order.warehouseAt) {
       updates.warehouseAt = new Date();
     }
-    if (dto.status === 'delivered' && !order.deliveredAt) {
+    if (finalStatus === 'delivered' && !order.deliveredAt) {
       updates.deliveredAt = new Date();
     }
     if (dto.createdAt) {
       updates.createdAt = new Date(dto.createdAt);
     }
     await this.repo.update(id, updates);
-    if (dto.status && dto.status !== order.status) {
-      await this.addHistory(id, dto.status, dto.note);
+    if (finalStatus && finalStatus !== order.status) {
+      const historyNote = dto.note || (updates.status === 'assigned' ? 'Driver assigned' : undefined);
+      await this.addHistory(id, finalStatus, historyNote);
     }
     return this.findOne(id);
   }

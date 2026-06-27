@@ -48,7 +48,7 @@ export default function PrintInvoiceDeliveryPage() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [merchantFilter, setMerchantFilter] = useState('');
   const [driverFilter, setDriverFilter] = useState('');
-  const [startDate, setStartDate] = useState(() => getLocalFirstDayOfMonthString());
+  const [startDate, setStartDate] = useState(() => getLocalDateString());
   const [endDate, setEndDate] = useState(() => getLocalDateString());
   const [isPrinting, setIsPrinting] = useState(false);
 

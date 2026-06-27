@@ -41,7 +41,7 @@ export default function ShopSummaryPage() {
   const [merchants, setMerchants] = useState<any[]>([]);
 
   // Filters
-  const [startDate, setStartDate] = useState(() => getLocalFirstDayOfMonthString());
+  const [startDate, setStartDate] = useState(() => getLocalDateString());
   const [endDate, setEndDate] = useState(() => getLocalDateString());
   const [merchantId, setMerchantId] = useState('');
   const [search, setSearch] = useState('');

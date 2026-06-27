@@ -35,7 +35,7 @@ export default function PickUpSummaryPage() {
   const [merchants, setMerchants] = useState<any[]>([]);
 
   // Filters
-  const [startDate, setStartDate] = useState(() => getLocalFirstDayOfMonthString());
+  const [startDate, setStartDate] = useState(() => getLocalDateString());
   const [endDate, setEndDate] = useState(() => getLocalDateString());
   const [driverId, setDriverId] = useState('');
   const [merchantId, setMerchantId] = useState('');

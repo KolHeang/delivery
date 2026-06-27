@@ -73,7 +73,7 @@ export default function DeliveriesPage() {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [totalItems, setTotalItems] = useState(0);
   const [statusFilter, setStatusFilter] = useState('all');
-  const [startDate, setStartDate] = useState(() => getLocalFirstDayOfMonthString());
+  const [startDate, setStartDate] = useState(() => getLocalDateString());
   const [endDate, setEndDate] = useState(() => getLocalDateString());
   const [driverFilter, setDriverFilter] = useState('');
   const [merchantFilter, setMerchantFilter] = useState('');

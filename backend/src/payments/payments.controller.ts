@@ -79,6 +79,7 @@ export class PaymentsController {
     body: {
       merchantId: number;
       amount: number;
+      amountKHR?: number;
       date: Date;
       reference?: string;
       note?: string;
@@ -89,6 +90,7 @@ export class PaymentsController {
     return this.paymentsService.createShopPayment(
       body.merchantId,
       body.amount,
+      body.amountKHR || 0,
       body.date,
       body.reference,
       body.note,

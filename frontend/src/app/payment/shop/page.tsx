@@ -378,6 +378,7 @@ export default function PaymentWithShopPage() {
         await api.post('/payments/shop', {
           merchantId: mId,
           amount: item.financials.payableUSD,
+          amountKHR: item.financials.payableKHR,
           date: new Date().toISOString(),
           reference,
           note: lang === 'km' 
@@ -924,8 +925,52 @@ export default function PaymentWithShopPage() {
                                             <td style={{ padding: '8px 6px', border: '1px solid #e5e7eb' }}><code>{o.trackingCode}</code></td>
                                             <td style={{ padding: '8px 6px', border: '1px solid #e5e7eb' }}>{getLocalDateString(new Date(o.createdAt))}</td>
                                             <td style={{ padding: '8px 6px', border: '1px solid #e5e7eb', fontWeight: '600' }}>{o.receiverPhone}</td>
-                                            <td style={{ padding: '8px 6px', border: '1px solid #e5e7eb', textAlign: 'right' }}>{o.status === 'delivered' ? formatFee(o.deliveryFee) : '0.00$'}</td>
-                                            <td style={{ padding: '8px 6px', border: '1px solid #e5e7eb', textAlign: 'right', fontWeight: 'bold' }}>{o.status === 'delivered' ? formatCODDisplay(o.cod, o.codCurrency) : (o.codCurrency === 'KHR' ? '0 KHR' : '0.00 USD')}</td>
+                                            <td style={{ padding: '4px 6px', border: '1px solid #e5e7eb', textAlign: 'right' }}>
+                                              {statusFilter === 'unpaid' && o.status === 'delivered' ? (
+                                                <div style={{ display: 'inline-flex', alignItems: 'center' }}>
+                                                  <span style={{ fontSize: '11px', marginRight: '2px' }}>$</span>
+                                                  <input 
+                                                    type="number"
+                                                    step="0.01"
+                                                    value={o.deliveryFee}
+                                                    onChange={e => {
+                                                      const val = parseFloat(e.target.value) || 0;
+                                                      setOrders(prev => prev.map(item => item.id === o.id ? { ...item, deliveryFee: val } : item));
+                                                    }}
+                                                    onBlur={e => {
+                                                      const val = parseFloat(e.target.value) || 0;
+                                                      api.patch(`/orders/${o.id}`, { deliveryFee: val }).catch(console.error);
+                                                    }}
+                                                    style={{ width: '60px', padding: '2px 4px', fontSize: '11px', border: '1px solid #cbd5e1', borderRadius: '4px', textAlign: 'right' }}
+                                                  />
+                                                </div>
+                                              ) : (
+                                                o.status === 'delivered' ? formatFee(o.deliveryFee) : '0.00$'
+                                              )}
+                                            </td>
+                                            <td style={{ padding: '4px 6px', border: '1px solid #e5e7eb', textAlign: 'right', fontWeight: 'bold' }}>
+                                              {statusFilter === 'unpaid' && o.status === 'delivered' ? (
+                                                <div style={{ display: 'inline-flex', alignItems: 'center' }}>
+                                                  <span style={{ fontSize: '11px', marginRight: '2px' }}>{o.codCurrency === 'KHR' ? '៛' : '$'}</span>
+                                                  <input 
+                                                    type="number"
+                                                    step={o.codCurrency === 'KHR' ? '1000' : '0.01'}
+                                                    value={o.cod}
+                                                    onChange={e => {
+                                                      const val = parseFloat(e.target.value) || 0;
+                                                      setOrders(prev => prev.map(item => item.id === o.id ? { ...item, cod: val } : item));
+                                                    }}
+                                                    onBlur={e => {
+                                                      const val = parseFloat(e.target.value) || 0;
+                                                      api.patch(`/orders/${o.id}`, { cod: val }).catch(console.error);
+                                                    }}
+                                                    style={{ width: '80px', padding: '2px 4px', fontSize: '11px', border: '1px solid #cbd5e1', borderRadius: '4px', textAlign: 'right' }}
+                                                  />
+                                                </div>
+                                              ) : (
+                                                o.status === 'delivered' ? formatCODDisplay(o.cod, o.codCurrency) : (o.codCurrency === 'KHR' ? '0 KHR' : '0.00 USD')
+                                              )}
+                                            </td>
                                             <td style={{ padding: '8px 6px', border: '1px solid #e5e7eb', textAlign: 'center' }}>
                                               <span style={{ fontSize: '11px', background: '#e0f2fe', color: '#0369a1', padding: '2px 6px', borderRadius: '4px', fontWeight: '600' }}>
                                                 {o.paymentMethod === 'bank' ? (lang === 'km' ? 'ធនាគារ' : 'Bank') : (lang === 'km' ? 'សាច់ប្រាក់' : 'Cash')}
@@ -1057,20 +1102,21 @@ export default function PaymentWithShopPage() {
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                   <thead>
                     <tr style={{ background: '#f8f9fa', borderBottom: '2px solid #dee2e6' }}>
-                      <th style={{ padding: '10px 8px', border: '1px solid #dee2e6', textAlign: 'center' }}>ល.រ</th>
-                      <th style={{ padding: '10px 8px', border: '1px solid #dee2e6', textAlign: 'left' }}>ហាង / Merchant</th>
-                      <th style={{ padding: '10px 8px', border: '1px solid #dee2e6', textAlign: 'left' }}>លេខយោង</th>
-                      <th style={{ padding: '10px 8px', border: '1px solid #dee2e6', textAlign: 'left' }}>កាលបរិច្ឆេទ</th>
-                      <th style={{ padding: '10px 8px', border: '1px solid #dee2e6', textAlign: 'right' }}>ទឹកប្រាក់ ($)</th>
-                      <th style={{ padding: '10px 8px', border: '1px solid #dee2e6', textAlign: 'left' }}>សម្គាល់</th>
-                      <th style={{ padding: '10px 8px', border: '1px solid #dee2e6', textAlign: 'center', width: 120 }}>សកម្មភាព</th>
+                      <th style={{ padding: '10px 8px', border: '1px solid #dee2e6', textAlign: 'center' }}>{lang === 'km' ? 'ល.រ' : 'No.'}</th>
+                      <th style={{ padding: '10px 8px', border: '1px solid #dee2e6', textAlign: 'left' }}>{lang === 'km' ? 'ហាង' : 'Merchant'}</th>
+                      <th style={{ padding: '10px 8px', border: '1px solid #dee2e6', textAlign: 'left' }}>{lang === 'km' ? 'លេខយោង' : 'Reference'}</th>
+                      <th style={{ padding: '10px 8px', border: '1px solid #dee2e6', textAlign: 'left' }}>{lang === 'km' ? 'កាលបរិច្ឆេទ' : 'Date'}</th>
+                      <th style={{ padding: '10px 8px', border: '1px solid #dee2e6', textAlign: 'right' }}>{lang === 'km' ? 'ទឹកប្រាក់ USD' : 'Amount USD'}</th>
+                      <th style={{ padding: '10px 8px', border: '1px solid #dee2e6', textAlign: 'right' }}>{lang === 'km' ? 'ទឹកប្រាក់ KHR' : 'Amount KHR'}</th>
+                      <th style={{ padding: '10px 8px', border: '1px solid #dee2e6', textAlign: 'left' }}>{lang === 'km' ? 'សម្គាល់' : 'Note'}</th>
+                      <th style={{ padding: '10px 8px', border: '1px solid #dee2e6', textAlign: 'center', width: 120 }}>{lang === 'km' ? 'សកម្មភាព' : 'Actions'}</th>
                     </tr>
                   </thead>
                   <tbody>
                     {historyLoading ? (
-                      <tr><td colSpan={7} style={{ textAlign: 'center', padding: '20px 0' }}><div className="spinner" style={{ margin: '0 auto' }} /></td></tr>
+                      <tr><td colSpan={8} style={{ textAlign: 'center', padding: '20px 0' }}><div className="spinner" style={{ margin: '0 auto' }} /></td></tr>
                     ) : filteredHistory.length === 0 ? (
-                      <tr><td colSpan={7} style={{ textAlign: 'center', padding: '20px 0', color: '#64748b' }}>{lang === 'km' ? 'គ្មានទិន្នន័យប្រវត្តិទូទាត់ទេ' : 'No payout settlement history found'}</td></tr>
+                      <tr><td colSpan={8} style={{ textAlign: 'center', padding: '20px 0', color: '#64748b' }}>{lang === 'km' ? 'គ្មានទិន្នន័យប្រវត្តិទូទាត់ទេ' : 'No payout settlement history found'}</td></tr>
                     ) : (
                       filteredHistory.map((h, idx) => (
                         <tr key={h.id} style={{ borderBottom: '1px solid #dee2e6' }}>
@@ -1079,20 +1125,15 @@ export default function PaymentWithShopPage() {
                           <td style={{ padding: '10px 8px', border: '1px solid #dee2e6' }}><code>{h.reference || '—'}</code></td>
                           <td style={{ padding: '10px 8px', border: '1px solid #dee2e6' }}>{formatDateToDDMMYYYY(h.date)}</td>
                           <td style={{ padding: '10px 8px', border: '1px solid #dee2e6', textAlign: 'right', fontWeight: 700, color: 'var(--success)' }}>${parseFloat(h.amount).toFixed(2)}</td>
+                          <td style={{ padding: '10px 8px', border: '1px solid #dee2e6', textAlign: 'right', fontWeight: 700, color: 'var(--success)' }}>{h.amountKHR ? `៛${parseFloat(h.amountKHR).toLocaleString()}` : '៛0'}</td>
                           <td style={{ padding: '10px 8px', border: '1px solid #dee2e6' }}>{h.note || '—'}</td>
                           <td style={{ padding: '10px 8px', border: '1px solid #dee2e6', textAlign: 'center' }}>
                             <div style={{ display: 'flex', justifyContent: 'center', gap: 8 }}>
                               <button 
-                                onClick={() => handleEditPayment(h)}
-                                style={{ background: '#3b82f6', color: '#fff', border: 'none', borderRadius: 4, padding: '6px 10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontSize: 12 }}
-                              >
-                                <MdEdit size={14} /> {lang === 'km' ? 'កែប្រែ' : 'Edit'}
-                              </button>
-                              <button 
                                 onClick={() => handleDeletePayment(h.id)}
                                 style={{ background: '#ef4444', color: '#fff', border: 'none', borderRadius: 4, padding: '6px 10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontSize: 12 }}
                               >
-                                <MdDelete size={14} /> {lang === 'km' ? 'បង្វិល' : 'Reverse'}
+                                <MdDelete size={14} /> {lang === 'km' ? 'បង្វិលការទូទាត់' : 'Reverse'}
                               </button>
                             </div>
                           </td>
@@ -1288,8 +1329,8 @@ export default function PaymentWithShopPage() {
               (() => {
                 const row = groupedData[0];
                 const deliveredOrders = row.paymentOrders.filter((o: any) => o.status === 'delivered');
-                const inTransitOrders = row.orders.filter((o: any) => o.status === 'in-transit' || o.status === 'picked-up' || o.status === 'pending');
-                const returnedOrders = row.paymentOrders.filter((o: any) => o.status === 'returned' || o.status === 'failed');
+                const inTransitOrders = row.orders.filter((o: any) => o.status === 'in-transit' || o.status === 'picked-up' || o.status === 'pending' || o.status === 'failed');
+                const returnedOrders = row.paymentOrders.filter((o: any) => o.status === 'returned');
 
                 const delUSD = deliveredOrders.filter((o: any) => o.codCurrency === 'USD').reduce((sum: number, o: any) => sum + parseFloat(o.cod || 0), 0);
                 const delKHR = deliveredOrders.filter((o: any) => o.codCurrency === 'KHR').reduce((sum: number, o: any) => sum + parseFloat(o.cod || 0), 0);
@@ -1323,8 +1364,8 @@ export default function PaymentWithShopPage() {
                         {deliveredOrders.length > 0 && (
                           <>
                             <tr>
-                              <td colSpan={9} style={{ backgroundColor: '#2ecc71', color: '#fff', fontWeight: 'bold', padding: '7px 10px', border: '1px solid #000', fontSize: 12 }}>
-                                {lang === 'km' ? 'អីវ៉ាន់ដែលបានជោគជ័យ' : 'Successfully Delivered'} ({deliveredOrders.length} {lang === 'km' ? 'កញ្ចប់' : 'parcels'})
+                              <td colSpan={9} style={{ backgroundColor: '#10b981', color: '#fff', fontWeight: 'bold', padding: '7px 10px', border: '1px solid #000', fontSize: 12 }}>
+                                {lang === 'km' ? 'អីវ៉ាន់ដឹកបានជោគជ័យ' : 'Successfully Delivered'} ({deliveredOrders.length} {lang === 'km' ? 'កញ្ចប់' : 'parcels'})
                               </td>
                             </tr>
                             {deliveredOrders.map((o: any, idx: number) => {
@@ -1356,17 +1397,35 @@ export default function PaymentWithShopPage() {
                           </>
                         )}
 
-                        {/* In Transit Section */}
+                        {/* In Transit / Failed Section */}
                         {inTransitOrders.length > 0 && (
                           <>
                             <tr>
-                              <td colSpan={9} style={{ backgroundColor: '#3498db', color: '#fff', fontWeight: 'bold', padding: '7px 10px', border: '1px solid #000', fontSize: 12 }}>
-                                {lang === 'km' ? 'ឥវ៉ាន់កំពុងដឹក' : 'In Transit / Pending'} ({inTransitOrders.length} {lang === 'km' ? 'កញ្ចប់' : 'parcels'})
+                              <td colSpan={9} style={{ backgroundColor: '#f59e0b', color: '#000', fontWeight: 'bold', padding: '7px 10px', border: '1px solid #000', fontSize: 12 }}>
+                                {lang === 'km' ? 'អីវ៉ាន់ដឹកបន្ត' : 'Failed / Carried Forward'} ({inTransitOrders.length} {lang === 'km' ? 'កញ្ចប់' : 'parcels'})
                               </td>
                             </tr>
                             {inTransitOrders.map((o: any, idx: number) => {
                               const isUSD = o.codCurrency === 'USD';
                               const codVal = parseFloat(o.cod || 0);
+
+                              // Get Khmer status translation
+                              let statusLabel = '';
+                              if (o.status === 'failed') {
+                                statusLabel = lang === 'km' ? 'មិនជោគជ័យ' : 'Failed';
+                              } else if (o.status === 'pending') {
+                                statusLabel = lang === 'km' ? 'រង់ចាំ' : 'Pending';
+                              } else if (o.status === 'picked-up') {
+                                statusLabel = lang === 'km' ? 'ក្នុងឃ្លាំង' : 'In Warehouse';
+                              } else {
+                                statusLabel = lang === 'km' ? 'កំពុងដឹក' : 'In Transit';
+                              }
+
+                              const latestNote = o.histories
+                                ?.slice()
+                                .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                                .find((h: any) => h.note)?.note || o.note || statusLabel;
+
                               return (
                                 <tr key={o.id}>
                                   <td style={{ textAlign: 'center', padding: '6px 4px', border: '1px solid #000' }}>{idx + 1}</td>
@@ -1376,8 +1435,8 @@ export default function PaymentWithShopPage() {
                                   <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000' }}>{!isUSD ? `${codVal.toLocaleString()} ៛` : '0'}</td>
                                   <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000' }}></td>
                                   <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000' }}></td>
-                                  <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000' }}>$ {parseFloat(o.deliveryFee || 0).toFixed(2)}</td>
-                                  <td style={{ padding: '6px 4px', border: '1px solid #000', textAlign: 'center' }}>{o.note || (o.status === 'returned' ? (lang === 'km' ? 'ត្រឡប់' : 'Returned') : (lang === 'km' ? 'មិនជោគជ័យ' : 'Failed'))}</td>
+                                  <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000' }}>$ {o.status === 'failed' ? '0.00' : parseFloat(o.deliveryFee || 0).toFixed(2)}</td>
+                                  <td style={{ padding: '6px 4px', border: '1px solid #000', textAlign: 'center' }}>{latestNote}</td>
                                 </tr>
                               );
                             })}
@@ -1388,8 +1447,8 @@ export default function PaymentWithShopPage() {
                         {returnedOrders.length > 0 && (
                           <>
                             <tr>
-                              <td colSpan={9} style={{ backgroundColor: '#e74c3c', color: '#fff', fontWeight: 'bold', padding: '7px 10px', border: '1px solid #000', fontSize: 12 }}>
-                                {lang === 'km' ? 'ឥវ៉ាន់ត្រឡប់ទៅហាង' : 'Returned to Shop'} ({returnedOrders.length} {lang === 'km' ? 'កញ្ចប់' : 'parcels'})
+                              <td colSpan={9} style={{ backgroundColor: '#ef4444', color: '#fff', fontWeight: 'bold', padding: '7px 10px', border: '1px solid #000', fontSize: 12 }}>
+                                {lang === 'km' ? 'អីវ៉ាន់ត្រឡប់ទៅហាង (Return)' : 'Returned to Shop (Return)'} ({returnedOrders.length} {lang === 'km' ? 'កញ្ចប់' : 'parcels'})
                               </td>
                             </tr>
                             {returnedOrders.map((o: any, idx: number) => {
@@ -1398,7 +1457,7 @@ export default function PaymentWithShopPage() {
                               const latestNote = o.histories
                                 ?.slice()
                                 .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-                                .find((h: any) => h.note)?.note || o.note || '—';
+                                .find((h: any) => h.note)?.note || o.note || (lang === 'km' ? 'ត្រឡប់' : 'Returned');
                               return (
                                 <tr key={o.id} style={{ background: '#fff5f5' }}>
                                   <td style={{ textAlign: 'center', padding: '6px 4px', border: '1px solid #000' }}>{idx + 1}</td>
@@ -1408,7 +1467,7 @@ export default function PaymentWithShopPage() {
                                   <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000' }}>{!isUSD ? `${codVal.toLocaleString()} ៛` : '0 ៛'}</td>
                                   <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000' }}></td>
                                   <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000' }}></td>
-                                  <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000' }}>$ {parseFloat(o.deliveryFee || 0).toFixed(2)}</td>
+                                  <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000' }}>$ 0.00</td>
                                   <td style={{ padding: '6px 4px', border: '1px solid #000', textAlign: 'left', color: '#7c3aed', fontSize: 10 }}>{latestNote}</td>
                                 </tr>
                               );

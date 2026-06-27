@@ -24,6 +24,9 @@ export class ShopPayment {
   @Column('decimal', { precision: 10, scale: 2, default: 0 })
   amount: number;
 
+  @Column('decimal', { precision: 12, scale: 2, default: 0, name: 'amount_khr' })
+  amountKHR: number;
+
   @Column({ type: 'date', default: () => 'CURRENT_DATE' })
   date: Date;
 

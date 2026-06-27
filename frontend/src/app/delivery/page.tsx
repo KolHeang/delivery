@@ -24,34 +24,24 @@ const SIZE_OPTIONS = ['small', 'medium', 'large'];
 
 const PREDEFINED_REMARKS: Record<string, string[]> = {
   failed: [
-    'Call អត់លើក',
-    'ភ្ញៀវសូមយកស្អែក',
-    'ដល់ទីតាំងCallអត់លើក',
-    'មិនអាចទាក់ទងបានទាំងលេខទាំងតេលេក្រោម',
+    'ភ្ញៀវសុំស្អែក',
+    'ខលមិនលើក',
+    'ភ្ញៀវសុំលើកថ្ងៃ',
     'ភ្ញៀវសុំប្តូរទីតាំង',
     'ទៅដល់អត់មានអ្នកទទួល',
-    'ខលអត់លើក Telegramអត់តប',
-    'ហាងអោយទុកសិន',
     'លេខភ្ញៀវខុស',
     'ភ្ញៀវអត់លុយយក',
   ],
   pending: [
-    'Call អត់លើក',
-    'ភ្ញៀវសូមយកស្អែក',
-    'ដល់ទីតាំងCallអត់លើក',
-    'មិនអាចទាក់ទងបានទាំងលេខទាំងតេលេក្រោម',
-    'ភ្ញៀវសុំប្តូរទីតាំង',
-    'ទៅដល់អត់មានអ្នកទទួល',
-    'ខលអត់លើក Telegramអត់តប',
-    'ហាងអោយទុកសិន',
-    'លេខភ្ញៀវខុស',
-    'ភ្ញៀវអត់លុយយក',
+    'ភ្ញៀវសុំស្អែក',
+    'ខលមិនលើក',
+    'ភ្ញៀវសុំលើកថ្ងៃ',
   ],
   returned: [
-    'ហាងអោយទុកសិន',
-    'ខលអត់លើកច្រើនថ្ងៃ',
-    'ភ្ញៀវ Block លេខអ្នកដឹក',
-    'ហាងឲត្រឡប់ទៅវិញ',
+    'អីវ៉ាន់ខ្វះ',
+    'ភ្ញៀវឈប់យក',
+    'ទាក់ទងមិនបានច្រើនថ្ងៃ',
+    'ហាងអោយត្រឡប់ទៅវិញ',
     'ភ្ញៀវថាអត់បានកម្មង់',
     'ភ្ញៀវសុំ Cancel',
   ],
@@ -546,7 +536,12 @@ export default function DeliveriesPage() {
                                 fontSize: '12px', 
                                 minWidth: '130px',
                                 fontWeight: 600,
-                                color: o.status === 'delivered' ? 'var(--success, #10b981)' : o.status === 'failed' ? 'var(--danger, #ef4444)' : 'inherit'
+                                color: o.status === 'delivered' ? '#10b981' : 
+                                       o.status === 'returned' ? '#ef4444' : 
+                                       (o.status === 'failed' || o.status === 'pending' || o.status === 'in-transit' || o.status === 'picked-up' || o.status === 'in-warehouse' || o.status === 'assigned') ? '#f59e0b' : 'inherit',
+                                borderColor: o.status === 'delivered' ? '#10b981' : 
+                                             o.status === 'returned' ? '#ef4444' : 
+                                             (o.status === 'failed' || o.status === 'pending' || o.status === 'in-transit' || o.status === 'picked-up' || o.status === 'in-warehouse' || o.status === 'assigned') ? '#f59e0b' : '#cbd5e1',
                               }}
                             >
                               {Array.from(new Set([
@@ -655,6 +650,8 @@ export default function DeliveriesPage() {
               { label: 'Delivery Fee', value: `$${parseFloat(viewModal.deliveryFee).toFixed(2)}` },
               { label: 'Pickup Driver', value: viewModal.pickupDriver?.name || 'None' },
               { label: 'Delivery Driver', value: viewModal.driver?.name || 'Unassigned' },
+              { label: lang === 'km' ? 'ទូទាត់ហាង (Shop Payout)' : 'Shop Payout', value: <Badge status={viewModal.merchantPaymentStatus === 'paid' ? 'paid' : 'pending'} label={viewModal.merchantPaymentStatus === 'paid' ? (lang === 'km' ? 'ទូទាត់រួច' : 'Paid') : (lang === 'km' ? 'មិនទាន់ទូទាត់' : 'Unpaid')} /> },
+              { label: lang === 'km' ? 'ទូទាត់អ្នកដឹក (Driver Payout)' : 'Driver Payout', value: <Badge status={viewModal.driverPaymentStatus === 'paid' ? 'paid' : 'pending'} label={viewModal.driverPaymentStatus === 'paid' ? (lang === 'km' ? 'ទូទាត់រួច' : 'Paid') : (lang === 'km' ? 'មិនទាន់ទូទាត់' : 'Unpaid')} /> },
               { label: 'Created', value: formatDateToDDMMYYYY(viewModal.createdAt) },
             ].map(({ label, value }) => (
               <div key={label}>

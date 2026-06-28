@@ -107,12 +107,13 @@ export default function AssignPickupPage() {
     setAssigning(true);
     try {
       await Promise.all(selected.map(id => api.post(`/orders/${id}/assign-pickup`, { driverId: selectedDriver })));
+      const count = selected.length;
       setSelected([]);
       setSelectedDriver(null);
       setSearch('');
       setCurrentPage(1);
       await load();
-      alert(`✅ ${selected.length} ${t('pickupAssignSuccess')}`);
+      alert(`✅ ${count} ${t('pickupAssignSuccess')}`);
     } catch (err: any) {
       alert(err.response?.data?.message || 'Error assigning pickup');
     }

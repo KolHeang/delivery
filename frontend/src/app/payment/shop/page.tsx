@@ -797,6 +797,7 @@ return {
                       <th style={{ padding: '10px 8px', border: '1px solid #dee2e6', textAlign: 'left' }}>{lang === 'km' ? 'កាលបរិច្ឆេទ' : 'Date'}</th>
                       <th style={{ padding: '10px 8px', border: '1px solid #dee2e6', textAlign: 'left' }}>{lang === 'km' ? 'ឈ្មោះហាង' : 'Shop Name'}</th>
                       <th style={{ padding: '10px 8px', border: '1px solid #dee2e6', textAlign: 'left' }}>{lang === 'km' ? 'លេខអ្នកទទួល' : 'Receiver Phone'}</th>
+                      <th style={{ padding: '10px 8px', border: '1px solid #dee2e6', textAlign: 'left' }}>{lang === 'km' ? 'អាសយដ្ឋាន' : 'Address'}</th>
                       <th style={{ padding: '10px 8px', border: '1px solid #dee2e6', textAlign: 'right', width: 150 }}>{lang === 'km' ? 'ប្រាក់បានបញ្ចូល' : 'Collected COD'}</th>
                       <th style={{ padding: '10px 8px', border: '1px solid #dee2e6', textAlign: 'right', width: 140 }}>{lang === 'km' ? 'ប្រាក់កម្រៃដឹក' : 'Delivery Fee'}</th>
                       <th style={{ padding: '10px 8px', border: '1px solid #dee2e6', textAlign: 'center' }}>{lang === 'km' ? 'ស្ថានភាព' : 'Status'}</th>
@@ -804,7 +805,7 @@ return {
                   </thead>
                   <tbody>
                     {eligibleOrders.length === 0 ? (
-                      <tr><td colSpan={9} style={{ textAlign: 'center', padding: '24px 0', color: '#6c757d' }}>{lang === 'km' ? 'គ្មានទិន្នន័យ' : 'No data'}</td></tr>
+                      <tr><td colSpan={10} style={{ textAlign: 'center', padding: '24px 0', color: '#6c757d' }}>{lang === 'km' ? 'គ្មានទិន្នន័យ' : 'No data'}</td></tr>
                     ) : (
                       eligibleOrders.map((o, idx) => {
                         const isSelected = selectedIds.includes(o.id);
@@ -825,6 +826,7 @@ return {
                             <td style={{ padding: '8px', border: '1px solid #dee2e6' }}>{o.deliveredAt ? formatDateToDDMMYYYY(o.deliveredAt) : (o.updatedAt ? formatDateToDDMMYYYY(o.updatedAt) : '—')}</td>
                             <td style={{ padding: '8px', border: '1px solid #dee2e6', color: '#0d6efd', fontWeight: 600 }}>{o.merchant?.name || '—'}</td>
                             <td style={{ padding: '8px', border: '1px solid #dee2e6' }}>{o.receiverPhone}</td>
+                            <td style={{ padding: '8px', border: '1px solid #dee2e6' }}>{o.zone?.name || o.receiverAddress || '—'}</td>
                             
                             {/* Editable Collected COD */}
                             <td style={{ padding: '6px 8px', border: '1px solid #dee2e6', textAlign: 'right' }}>
@@ -900,7 +902,7 @@ return {
                     {eligibleOrders.length > 0 && (
                       <>
                         <tr style={{ background: '#f8f9fa' }}>
-                          <td colSpan={6} style={{ textAlign: 'right', padding: '10px 16px', fontWeight: 600, borderRight: '1px solid #dee2e6' }}>{lang === 'km' ? 'សរុបប្រាក់បានបញ្ចូលជារៀល (KHR Collected)' : 'Total KHR Collected'}</td>
+                          <td colSpan={7} style={{ textAlign: 'right', padding: '10px 16px', fontWeight: 600, borderRight: '1px solid #dee2e6' }}>{lang === 'km' ? 'សរុបប្រាក់បានបញ្ចូលជារៀល (KHR Collected)' : 'Total KHR Collected'}</td>
                           <td colSpan={2} style={{ padding: '8px 12px', borderRight: '1px solid #dee2e6' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                               <span style={{ fontWeight: 600, minWidth: 60, textAlign: 'right' }}>{totalKHR.toLocaleString()} ៛</span>
@@ -910,7 +912,7 @@ return {
                           <td />
                         </tr>
                         <tr style={{ background: '#f8f9fa' }}>
-                          <td colSpan={6} style={{ textAlign: 'right', padding: '10px 16px', fontWeight: 600, borderRight: '1px solid #dee2e6' }}>{lang === 'km' ? 'សរុបប្រាក់បានបញ្ចូលជាដុល្លារ (USD Collected)' : 'Total USD Collected'}</td>
+                          <td colSpan={7} style={{ textAlign: 'right', padding: '10px 16px', fontWeight: 600, borderRight: '1px solid #dee2e6' }}>{lang === 'km' ? 'សរុបប្រាក់បានបញ្ចូលជាដុល្លារ (USD Collected)' : 'Total USD Collected'}</td>
                           <td colSpan={2} style={{ padding: '8px 12px', borderRight: '1px solid #dee2e6' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                               <span style={{ fontWeight: 600, minWidth: 60, textAlign: 'right' }}>${totalUSD.toFixed(2)}</span>
@@ -920,7 +922,7 @@ return {
                           <td />
                         </tr>
                         <tr style={{ background: '#f8f9fa' }}>
-                          <td colSpan={6} style={{ textAlign: 'right', padding: '10px 16px', fontWeight: 600, borderRight: '1px solid #dee2e6' }}>{lang === 'km' ? 'សរុបថ្លៃសេវាដឹក (Total Delivery Fee)' : 'Total Delivery Fee'}</td>
+                          <td colSpan={7} style={{ textAlign: 'right', padding: '10px 16px', fontWeight: 600, borderRight: '1px solid #dee2e6' }}>{lang === 'km' ? 'សរុបថ្លៃសេវាដឹក (Total Delivery Fee)' : 'Total Delivery Fee'}</td>
                           <td colSpan={2} style={{ padding: '8px 12px', borderRight: '1px solid #dee2e6' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                               <span style={{ fontWeight: 600, minWidth: 60, textAlign: 'right' }}>${deliveryFee.toFixed(2)}</span>
@@ -930,7 +932,7 @@ return {
                           <td />
                         </tr>
                         <tr style={{ background: '#f0fdf4', borderTop: '2px solid #dee2e6' }}>
-                          <td colSpan={6} style={{ textAlign: 'right', padding: '10px 16px', fontWeight: 700, borderRight: '1px solid #dee2e6', color: '#16a34a' }}>{lang === 'km' ? 'ទឹកប្រាក់ត្រូវទូទាត់សរុប (Net Payable)' : 'Net Payable to Shop'}</td>
+                          <td colSpan={7} style={{ textAlign: 'right', padding: '10px 16px', fontWeight: 700, borderRight: '1px solid #dee2e6', color: '#16a34a' }}>{lang === 'km' ? 'ទឹកប្រាក់ត្រូវទូទាត់សរុប (Net Payable)' : 'Net Payable to Shop'}</td>
                           <td colSpan={2} style={{ padding: '8px 12px', borderRight: '1px solid #dee2e6' }}>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -977,6 +979,7 @@ return {
                           <th style={{ padding: '10px 8px', border: '1px solid #dee2e6', textAlign: 'left' }}>{lang === 'km' ? 'កាលបរិច្ឆេទ' : 'Date'}</th>
                           <th style={{ padding: '10px 8px', border: '1px solid #dee2e6', textAlign: 'left' }}>{lang === 'km' ? 'ឈ្មោះហាង' : 'Shop Name'}</th>
                           <th style={{ padding: '10px 8px', border: '1px solid #dee2e6', textAlign: 'left' }}>{lang === 'km' ? 'លេខអ្នកទទួល' : 'Receiver Phone'}</th>
+                          <th style={{ padding: '10px 8px', border: '1px solid #dee2e6', textAlign: 'left' }}>{lang === 'km' ? 'អាសយដ្ឋាន' : 'Address'}</th>
                           <th style={{ padding: '10px 8px', border: '1px solid #dee2e6', textAlign: 'right' }}>{lang === 'km' ? 'ប្រាក់បានបញ្ចូល' : 'Collected COD'}</th>
                           <th style={{ padding: '10px 8px', border: '1px solid #dee2e6', textAlign: 'right' }}>{lang === 'km' ? 'ប្រាក់កម្រៃដឹក' : 'Delivery Fee'}</th>
                           <th style={{ padding: '10px 8px', border: '1px solid #dee2e6', textAlign: 'left', minWidth: 160 }}>{lang === 'km' ? 'មូលហេតុ (Note)' : 'Reason (Note)'}</th>
@@ -985,7 +988,7 @@ return {
                       </thead>
                       <tbody>
                         {failedOrders.length === 0 ? (
-                          <tr><td colSpan={9} style={{ textAlign: 'center', padding: '24px 0', color: '#6c757d' }}>{lang === 'km' ? 'គ្មានទិន្នន័យ' : 'No failed/returned orders'}</td></tr>
+                          <tr><td colSpan={10} style={{ textAlign: 'center', padding: '24px 0', color: '#6c757d' }}>{lang === 'km' ? 'គ្មានទិន្នន័យ' : 'No failed/returned orders'}</td></tr>
                         ) : (
                           failedOrders.map((o, idx) => {
                             const latestNote = o.histories
@@ -999,6 +1002,7 @@ return {
                                 <td style={{ padding: '8px', border: '1px solid #dee2e6' }}>{o.deliveredAt ? formatDateToDDMMYYYY(o.deliveredAt) : (o.updatedAt ? formatDateToDDMMYYYY(o.updatedAt) : '—')}</td>
                                 <td style={{ padding: '8px', border: '1px solid #dee2e6', color: '#0d6efd', fontWeight: 600 }}>{o.merchant?.name || '—'}</td>
                                 <td style={{ padding: '8px', border: '1px solid #dee2e6' }}>{o.receiverPhone}</td>
+                                <td style={{ padding: '8px', border: '1px solid #dee2e6' }}>{o.zone?.name || o.receiverAddress || '—'}</td>
                                 <td style={{ padding: '8px', border: '1px solid #dee2e6', textAlign: 'right', color: '#6b7280', fontWeight: 600 }}>
                                   {o.codCurrency === 'KHR' ? (parseInt(o.cod).toLocaleString() + ' ៛') : ('$ ' + parseFloat(o.cod).toFixed(2))}
                                 </td>
@@ -1361,10 +1365,13 @@ return {
                         <tr style={{ backgroundColor: '#244f96', color: '#fff' }}>
                           <th rowSpan={2} style={{ padding: '6px 4px', textAlign: 'center', border: '1px solid #000', fontWeight: 'bold', color: '#fff' }}>{lang === 'km' ? 'ល.រ' : 'No.'}</th>
                           <th rowSpan={2} style={{ padding: '6px 4px', textAlign: 'center', border: '1px solid #000', fontWeight: 'bold', color: '#fff' }}>{lang === 'km' ? 'កាលបរិច្ឆេទ' : 'Date'}</th>
-                          <th rowSpan={2} style={{ padding: '6px 4px', textAlign: 'center', border: '1px solid #000', fontWeight: 'bold', color: '#fff' }}>{lang === 'km' ? 'បរិយាយ' : 'Description'}</th>
+                          <th rowSpan={2} style={{ padding: '6px 4px', textAlign: 'center', border: '1px solid #000', fontWeight: 'bold', color: '#fff' }}>{lang === 'km' ? 'លេខកូដ (ហាង)' : 'Tracking Code (Shop)'}</th>
+                          <th rowSpan={2} style={{ padding: '6px 4px', textAlign: 'center', border: '1px solid #000', fontWeight: 'bold', color: '#fff' }}>{lang === 'km' ? 'លេខអ្នកទទួល' : 'Receiver Phone'}</th>
+                          <th rowSpan={2} style={{ padding: '6px 4px', textAlign: 'center', border: '1px solid #000', fontWeight: 'bold', color: '#fff' }}>{lang === 'km' ? 'អាសយដ្ឋាន' : 'Address'}</th>
                           <th colSpan={2} style={{ padding: '6px 4px', textAlign: 'center', border: '1px solid #000', fontWeight: 'bold', color: '#fff' }}>{lang === 'km' ? <>ទឹកប្រាក់ដើមមាន<br/>(ដុល្លារ / ខ្មែរ)</> : <>Original Amount<br/>(USD / KHR)</>}</th>
                           <th colSpan={2} style={{ padding: '6px 4px', textAlign: 'center', border: '1px solid #000', fontWeight: 'bold', color: '#fff' }}>{lang === 'km' ? <>ទឹកប្រាក់ទទួលបាន<br/>(ដុល្លារ / ខ្មែរ)</> : <>Received Amount<br/>(USD / KHR)</>}</th>
                           <th rowSpan={2} style={{ padding: '6px 4px', textAlign: 'center', border: '1px solid #000', fontWeight: 'bold', color: '#fff' }}>{lang === 'km' ? 'សេវាដឹក' : 'Delivery Fee'}</th>
+                          <th rowSpan={2} style={{ padding: '6px 4px', textAlign: 'center', border: '1px solid #000', fontWeight: 'bold', color: '#fff' }}>{lang === 'km' ? 'ស្ថានភាព' : 'Status'}</th>
                           <th rowSpan={2} style={{ padding: '6px 4px', textAlign: 'center', border: '1px solid #000', fontWeight: 'bold', color: '#fff' }}>{lang === 'km' ? 'ផ្សេងៗ' : 'Remark'}</th>
                         </tr>
                         <tr style={{ backgroundColor: '#3060a8', color: '#fff' }}>
@@ -1379,7 +1386,7 @@ return {
                         {deliveredOrders.length > 0 && (
                           <>
                             <tr>
-                              <td colSpan={9} style={{ backgroundColor: '#10b981', color: '#fff', fontWeight: 'bold', padding: '7px 10px', border: '1px solid #000', fontSize: 12 }}>
+                              <td colSpan={12} style={{ backgroundColor: '#10b981', color: '#fff', fontWeight: 'bold', padding: '7px 10px', border: '1px solid #000', fontSize: 12 }}>
                                 {lang === 'km' ? 'អីវ៉ាន់ដឹកបានជោគជ័យ' : 'Successfully Delivered'} ({deliveredOrders.length} {lang === 'km' ? 'កញ្ចប់' : 'parcels'})
                               </td>
                             </tr>
@@ -1390,23 +1397,27 @@ return {
                                 <tr key={o.id}>
                                   <td style={{ textAlign: 'center', padding: '6px 4px', border: '1px solid #000' }}>{idx + 1}</td>
                                   <td style={{ padding: '6px 4px', border: '1px solid #000', textAlign: 'center' }}>{formatDateToDDMMYYYY(o.createdAt)}</td>
-                                  <td style={{ padding: '6px 4px', border: '1px solid #000' }}>{o.trackingCode} {o.receiverPhone ? ('(' + o.receiverPhone + ')') : ''}</td>
+                                  <td style={{ padding: '6px 4px', border: '1px solid #000' }}>{o.trackingCode} ({o.merchant?.name || '—'})</td>
+                                  <td style={{ padding: '6px 4px', border: '1px solid #000' }}>{o.receiverPhone || '—'}</td>
+                                  <td style={{ padding: '6px 4px', border: '1px solid #000' }}>{o.zone?.name || o.receiverAddress || '—'}</td>
                                   <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000' }}>{isUSD ? ('$ ' + codVal.toFixed(2)) : '$ 0'}</td>
                                   <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000' }}>{!isUSD ? (codVal.toLocaleString() + ' ៛') : '0 ៛'}</td>
                                   <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000' }}>{isUSD ? ('$ ' + codVal.toFixed(2)) : '$ 0.00'}</td>
                                   <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000' }}>{!isUSD ? (codVal.toLocaleString() + ' ៛') : '0 ៛'}</td>
                                   <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000' }}>$ {parseFloat(o.deliveryFee || 0).toFixed(2)}</td>
-                                  <td style={{ padding: '6px 4px', border: '1px solid #000', textAlign: 'center' }}></td>
+                                  <td style={{ padding: '6px 4px', border: '1px solid #000', textAlign: 'center', color: '#16a34a', fontWeight: 'bold' }}>{lang === 'km' ? 'ជោគជ័យ' : 'Delivered'}</td>
+                                  <td style={{ padding: '6px 4px', border: '1px solid #000', textAlign: 'center' }}>{o.note || ''}</td>
                                 </tr>
                               );
                             })}
                             <tr>
-                              <td colSpan={3} style={{ textAlign: 'right', fontWeight: 'bold', padding: '6px 4px', border: '1px solid #000' }}>{lang === 'km' ? 'សរុប' : 'Total'}</td>
+                              <td colSpan={5} style={{ textAlign: 'right', fontWeight: 'bold', padding: '6px 4px', border: '1px solid #000' }}>{lang === 'km' ? 'សរុប' : 'Total'}</td>
                               <td style={{ textAlign: 'right', fontWeight: 'bold', padding: '6px 4px', border: '1px solid #000' }}>$ {delUSD.toFixed(2)}</td>
                               <td style={{ textAlign: 'right', fontWeight: 'bold', padding: '6px 4px', border: '1px solid #000' }}>{delKHR.toLocaleString()} {lang === 'km' ? 'រៀល' : 'KHR'}</td>
                               <td style={{ textAlign: 'right', fontWeight: 'bold', padding: '6px 4px', border: '1px solid #000' }}>$ {delUSD.toFixed(2)}</td>
                               <td style={{ textAlign: 'right', fontWeight: 'bold', padding: '6px 4px', border: '1px solid #000' }}>{delKHR.toLocaleString()} {lang === 'km' ? 'រៀល' : 'KHR'}</td>
                               <td style={{ textAlign: 'right', fontWeight: 'bold', padding: '6px 4px', border: '1px solid #000' }}>$ {delFee.toFixed(2)}</td>
+                              <td style={{ border: '1px solid #000' }}></td>
                               <td style={{ border: '1px solid #000' }}></td>
                             </tr>
                           </>
@@ -1416,7 +1427,7 @@ return {
                         {inTransitOrders.length > 0 && (
                           <>
                             <tr>
-                              <td colSpan={9} style={{ backgroundColor: '#f59e0b', color: '#000', fontWeight: 'bold', padding: '7px 10px', border: '1px solid #000', fontSize: 12 }}>
+                              <td colSpan={12} style={{ backgroundColor: '#f59e0b', color: '#000', fontWeight: 'bold', padding: '7px 10px', border: '1px solid #000', fontSize: 12 }}>
                                 {lang === 'km' ? 'អីវ៉ាន់ដឹកបន្ត' : 'Failed / Carried Forward'} ({inTransitOrders.length} {lang === 'km' ? 'កញ្ចប់' : 'parcels'})
                               </td>
                             </tr>
@@ -1445,12 +1456,15 @@ return {
                                 <tr key={o.id}>
                                   <td style={{ textAlign: 'center', padding: '6px 4px', border: '1px solid #000' }}>{idx + 1}</td>
                                   <td style={{ padding: '6px 4px', border: '1px solid #000', textAlign: 'center' }}>{formatDateToDDMMYYYY(o.createdAt)}</td>
-                                  <td style={{ padding: '6px 4px', border: '1px solid #000' }}>{o.trackingCode} {o.receiverPhone ? ('(' + o.receiverPhone + ')') : ''}</td>
+                                  <td style={{ padding: '6px 4px', border: '1px solid #000' }}>{o.trackingCode} ({o.merchant?.name || '—'})</td>
+                                  <td style={{ padding: '6px 4px', border: '1px solid #000' }}>{o.receiverPhone || '—'}</td>
+                                  <td style={{ padding: '6px 4px', border: '1px solid #000' }}>{o.zone?.name || o.receiverAddress || '—'}</td>
                                   <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000' }}>{isUSD ? ('$ ' + codVal.toFixed(2)) : '$ 0'}</td>
                                   <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000' }}>{!isUSD ? (codVal.toLocaleString() + ' ៛') : '0'}</td>
                                   <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000' }}></td>
                                   <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000' }}></td>
                                   <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000' }}>$ {parseFloat(o.deliveryFee || 0).toFixed(2)}</td>
+                                  <td style={{ padding: '6px 4px', border: '1px solid #000', textAlign: 'center', color: '#ef4444', fontWeight: 'bold' }}>{statusLabel}</td>
                                   <td style={{ padding: '6px 4px', border: '1px solid #000', textAlign: 'center' }}>{latestNote}</td>
                                 </tr>
                               );
@@ -1458,37 +1472,40 @@ return {
                           </>
                         )}
 
-                        {/* Returned Section */}
-                        {returnedOrders.length > 0 && (
-                          <>
-                            <tr>
-                              <td colSpan={9} style={{ backgroundColor: '#ef4444', color: '#fff', fontWeight: 'bold', padding: '7px 10px', border: '1px solid #000', fontSize: 12 }}>
-                                {lang === 'km' ? 'អីវ៉ាន់ត្រឡប់ទៅហាង (Return)' : 'Returned to Shop (Return)'} ({returnedOrders.length} {lang === 'km' ? 'កញ្ចប់' : 'parcels'})
-                              </td>
-                            </tr>
-                            {returnedOrders.map((o, idx) => {
-                              const isUSD = o.codCurrency === 'USD';
-                              const codVal = parseFloat(o.cod || 0);
-                              const latestNote = o.histories
-                                ?.slice()
-                                .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-                                .find((h: any) => h.note)?.note || o.note || (lang === 'km' ? 'ត្រឡប់' : 'Returned');
-                              return (
-                                <tr key={o.id} style={{ background: '#fff5f5' }}>
-                                  <td style={{ textAlign: 'center', padding: '6px 4px', border: '1px solid #000' }}>{idx + 1}</td>
-                                  <td style={{ padding: '6px 4px', border: '1px solid #000', textAlign: 'center' }}>{formatDateToDDMMYYYY(o.createdAt)}</td>
-                                  <td style={{ padding: '6px 4px', border: '1px solid #000' }}>{o.trackingCode} {o.receiverPhone ? ('(' + o.receiverPhone + ')') : ''}</td>
-                                  <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000' }}>{isUSD ? ('$ ' + codVal.toFixed(2)) : '$ 0'}</td>
-                                  <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000' }}>{!isUSD ? (codVal.toLocaleString() + ' ៛') : '0 ៛'}</td>
-                                  <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000' }}></td>
-                                  <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000' }}></td>
-                                  <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000' }}>$ 0.00</td>
-                                  <td style={{ padding: '6px 4px', border: '1px solid #000', textAlign: 'left', color: '#7c3aed', fontSize: 10 }}>{latestNote}</td>
-                                </tr>
-                              );
-                            })}
-                          </>
-                        )}
+                         {/* Returned Section */}
+                         {returnedOrders.length > 0 && (
+                           <>
+                             <tr>
+                               <td colSpan={12} style={{ backgroundColor: '#ef4444', color: '#fff', fontWeight: 'bold', padding: '7px 10px', border: '1px solid #000', fontSize: 12 }}>
+                                 {lang === 'km' ? 'អីវ៉ាន់ត្រឡប់ទៅហាង (Return)' : 'Returned to Shop (Return)'} ({returnedOrders.length} {lang === 'km' ? 'កញ្ចប់' : 'parcels'})
+                               </td>
+                             </tr>
+                             {returnedOrders.map((o, idx) => {
+                               const isUSD = o.codCurrency === 'USD';
+                               const codVal = parseFloat(o.cod || 0);
+                               const latestNote = o.histories
+                                 ?.slice()
+                                 .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                                 .find((h: any) => h.note)?.note || o.note || (lang === 'km' ? 'ត្រឡប់' : 'Returned');
+                               return (
+                                 <tr key={o.id} style={{ background: '#fff5f5' }}>
+                                   <td style={{ textAlign: 'center', padding: '6px 4px', border: '1px solid #000' }}>{idx + 1}</td>
+                                   <td style={{ padding: '6px 4px', border: '1px solid #000', textAlign: 'center' }}>{formatDateToDDMMYYYY(o.createdAt)}</td>
+                                   <td style={{ padding: '6px 4px', border: '1px solid #000' }}>{o.trackingCode} ({o.merchant?.name || '—'})</td>
+                                   <td style={{ padding: '6px 4px', border: '1px solid #000' }}>{o.receiverPhone || '—'}</td>
+                                   <td style={{ padding: '6px 4px', border: '1px solid #000' }}>{o.zone?.name || o.receiverAddress || '—'}</td>
+                                   <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000' }}>{isUSD ? ('$ ' + codVal.toFixed(2)) : '$ 0'}</td>
+                                   <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000' }}>{!isUSD ? (codVal.toLocaleString() + ' ៛') : '0 ៛'}</td>
+                                   <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000' }}></td>
+                                   <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000' }}></td>
+                                   <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000' }}>$ 0.00</td>
+                                   <td style={{ padding: '6px 4px', border: '1px solid #000', textAlign: 'center', color: '#ef4444', fontWeight: 'bold' }}>{lang === 'km' ? 'បង្វិលត្រឡប់' : 'Returned'}</td>
+                                   <td style={{ padding: '6px 4px', border: '1px solid #000', textAlign: 'left', color: '#7c3aed', fontSize: 10 }}>{latestNote}</td>
+                                 </tr>
+                               );
+                             })}
+                           </>
+                         )}
                       </tbody>
                     </table>
 

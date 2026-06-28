@@ -142,12 +142,13 @@ export default function AssignDeliveryPage() {
     setAssigning(true);
     try {
       await Promise.all(selected.map(id => api.post(`/orders/${id}/assign-delivery`, { driverId: selectedDriver })));
+      const count = selected.length;
       setSelected([]);
       setSelectedDriver(null);
       setSearch('');
       setCurrentPage(1);
       await load();
-      alert(`✅ ${selected.length} order(s) assigned for delivery successfully!`);
+      alert(`✅ ${count} order(s) assigned for delivery successfully!`);
     } catch (err: any) {
       alert(err.response?.data?.message || 'Error assigning orders');
     }

@@ -67,7 +67,6 @@ export default function PrintInvoicePage() {
   const [endDate, setEndDate] = useState(() => getLocalDateString());
   const [filteredOrders, setFilteredOrders] = useState<any[]>([]);
   const { lang, t } = useLanguage();
-  const [showPrintModal, setShowPrintModal] = useState(false);
   const [isDirectMode, setIsDirectMode] = useState(false);
 
   useEffect(() => {
@@ -159,12 +158,7 @@ export default function PrintInvoicePage() {
     }
   };
 
-  const handlePrint = () => {
-    setShowPrintModal(true);
-  };
-
-  const confirmPrint = async () => {
-    setShowPrintModal(false);
+  const handlePrint = async () => {
     try {
       await api.post('/invoices', { orderIds: selectedIds });
     } catch (err) {
@@ -253,7 +247,7 @@ export default function PrintInvoicePage() {
           }}>
             <button 
               className="btn btn-success" 
-              onClick={confirmPrint}
+              onClick={handlePrint}
               style={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 6 }}
             >
               <MdPrint size={18} /> {lang === 'km' ? 'បោះពុម្ពវិក្កយបត្រ' : 'Print Invoice'}
@@ -451,10 +445,10 @@ export default function PrintInvoicePage() {
             {/* Logo and QR Code header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <div style={{
                     width: 32, height: 32, borderRadius: 8,
-                    background: '#000',
+                    background: 'linear-gradient(135deg, #2563eb, #6366f1)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     color: '#fff', fontSize: 16,
                     flexShrink: 0,
@@ -464,8 +458,12 @@ export default function PrintInvoicePage() {
                     📦
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                    <span style={{ fontSize: 16, fontWeight: 800, color: '#000', letterSpacing: '0.5px', lineHeight: 1.1 }}>EBS<span style={{ color: '#555' }}>Express</span></span>
-                    <span style={{ fontSize: 9, color: '#555', marginTop: 1, letterSpacing: '0.2px' }}>Delivery System</span>
+                    <span style={{ fontSize: 15, fontWeight: 800, color: '#1e3a8a', letterSpacing: '0.5px', lineHeight: 1.1, WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
+                      EBS<span style={{ color: '#2563eb' }}>Express</span>
+                    </span>
+                    <span style={{ fontSize: 8, color: '#4b5563', marginTop: 1, letterSpacing: '0.2px' }}>
+                      Delivery System
+                    </span>
                   </div>
                 </div>
               </div>
@@ -474,49 +472,52 @@ export default function PrintInvoicePage() {
                 <img 
                   src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${o.trackingCode}`} 
                   alt="QR Code" 
-                  style={{ width: 75, height: 75 }} 
+                  style={{ width: 65, height: 65 }} 
                 />
               </div>
             </div>
 
             {/* Invoice Title */}
             <div style={{ textAlign: 'center', margin: '10px 0 5px' }}>
-              <h2 style={{ fontSize: 20, fontWeight: 'bold', margin: 0, letterSpacing: '0.5px' }}>
+              <h2 style={{ fontSize: 18, fontWeight: 'bold', margin: 0, letterSpacing: '0.5px', color: '#000' }}>
                 {lang === 'km' ? 'វិក្កយបត្រ' : 'INVOICE'} : {o.trackingCode}
               </h2>
             </div>
 
             {/* Horizontal Separator */}
-            <hr style={{ border: 'none', borderTop: '2.5px solid #000', margin: '4px 0 0 0' }} />
+            <hr style={{ border: 'none', borderTop: '2px solid #000', margin: '4px 0 0 0' }} />
 
-            {/* Sender / Receiver Header Row */}
+            {/* Shop Details Header Row */}
             <div style={{ 
               display: 'flex', 
               justifyContent: 'space-between', 
               padding: '6px 4px', 
-              borderBottom: '1px solid #000', 
+              borderBottom: '1.5px solid #000', 
               fontWeight: 'bold', 
-              fontSize: 13 
+              fontSize: 12 
             }}>
               <div>
-                {lang === 'km' ? 'ឈ្មោះហាង' : 'Shop Name'} : {o.senderPhone || o.merchant?.phone}
+                {lang === 'km' ? 'ឈ្មោះហាង' : 'Shop Name'} : <span style={{ textTransform: 'uppercase' }}>{o.merchant?.nameKh || o.merchant?.name || o.senderName || '—'}</span>
+              </div>
+              <div>
+                📞 {o.senderPhone || o.merchant?.phone || '—'}
               </div>
             </div>
 
             {/* Main Grid: Left vs Right */}
-            <div style={{ display: 'flex', fontSize: 12, borderBottom: '1px solid #000', minHeight: 70 }}>
+            <div style={{ display: 'flex', fontSize: 11, borderBottom: '1.5px solid #000', minHeight: 70 }}>
               {/* Left Side */}
-              <div style={{ flex: 1, padding: '8px 4px', borderRight: '1.5px solid #000', display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <div style={{ flex: 1.2, padding: '8px 4px', borderRight: '1.5px solid #000', display: 'flex', flexDirection: 'column', gap: 6 }}>
                 <div>
-                  {lang === 'km' ? 'លេខអ្នកទទួល' : 'Receiver Phone'} : {o.receiverPhone}
+                  <strong>{lang === 'km' ? 'លេខអ្នកទទួល' : 'Receiver Phone'} :</strong> {o.receiverPhone}
                 </div>
-                <div style={{ fontSize: 11 }}>
-                  {lang === 'km' ? 'អាសយដ្ឋានអ្នកទទួល' : 'Receive Address'} : {o.receiverAddress || '—'}
+                <div>
+                  <strong>{lang === 'km' ? 'អាសយដ្ឋានអ្នកទទួល' : 'Receive Address'} :</strong> {o.receiverAddress || '—'}
                 </div>
               </div>
 
               {/* Right Side */}
-              <div style={{ flex: 1, padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <div style={{ flex: 0.8, padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 6 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <span>{lang === 'km' ? 'តម្លៃវ៉ាន់' : 'COD'} :</span>
                   <span style={{ fontWeight: 'bold' }}>{formatCOD(o.cod, o.codCurrency || 'USD')}</span>
@@ -539,15 +540,23 @@ export default function PrintInvoicePage() {
               fontSize: 10,
               lineHeight: 1.4
             }}>
-              <div style={{ fontWeight: 'bold', flex: 1, paddingRight: 10 }}>
+              <div style={{ fontWeight: 'bold', flex: 1, paddingRight: 10, color: '#4b5563' }}>
                 {lang === 'km' ? 'ក្រុមហ៊ុនមិនទទួលបញ្ញើដែលច្បាប់ហាមឃាត់' : 'Company does not accept contraband goods'}
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span style={{ fontWeight: 'bold' }}>{lang === 'km' ? 'តម្លៃសរុប' : 'Total'} :</span>
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                  <div style={{ borderBottom: '1.5px solid #000', padding: '0 8px 2px', fontWeight: 'bold', fontSize: 13 }}>
-                    {formatCOD(o.cod, o.codCurrency || 'USD')}
-                  </div>
+                <div style={{ 
+                  background: '#f1f5f9', 
+                  padding: '4px 10px', 
+                  borderRadius: 4, 
+                  fontWeight: 'bold', 
+                  fontSize: 13, 
+                  color: '#000', 
+                  border: '1px solid #000', 
+                  WebkitPrintColorAdjust: 'exact', 
+                  printColorAdjust: 'exact' 
+                }}>
+                  {formatCOD(o.cod, o.codCurrency || 'USD')}
                 </div>
               </div>
             </div>
@@ -555,74 +564,7 @@ export default function PrintInvoicePage() {
         ))}
       </div>
 
-      {showPrintModal && (
-        <Modal
-          open={showPrintModal}
-          onClose={() => setShowPrintModal(false)}
-          title={
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontFamily: "'Kantumruy Pro', sans-serif" }}>
-              <span style={{ 
-                display: 'inline-flex', 
-                alignItems: 'center', 
-                justifyContent: 'center', 
-                width: 24, 
-                height: 24, 
-                borderRadius: '50%', 
-                background: '#0f172a', 
-                color: '#fff', 
-                fontWeight: 'bold',
-                fontSize: 14 
-              }}>!</span>
-              <span style={{ fontWeight: 'bold', fontSize: 16 }}>Print Qrcode</span>
-            </div>
-          }
-          size="sm"
-          footer={
-            <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', width: '100%', fontFamily: "'Kantumruy Pro', sans-serif" }}>
-              <button 
-                onClick={() => setShowPrintModal(false)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 6,
-                  border: '1px solid #cbd5e1',
-                  background: '#f8fafc',
-                  color: '#334155',
-                  padding: '8px 16px',
-                  borderRadius: 6,
-                  cursor: 'pointer',
-                  fontWeight: 600,
-                  fontSize: 13
-                }}
-              >
-                <MdClose size={16} /> {lang === 'km' ? 'បិទ' : 'Close'}
-              </button>
-              <button 
-                onClick={confirmPrint}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 6,
-                  border: 'none',
-                  background: '#e28a35',
-                  color: '#fff',
-                  padding: '8px 16px',
-                  borderRadius: 6,
-                  cursor: 'pointer',
-                  fontWeight: 600,
-                  fontSize: 13
-                }}
-              >
-                <MdBookmark size={16} /> {lang === 'km' ? 'រក្សាទុក' : 'Save'}
-              </button>
-            </div>
-          }
-        >
-          <div style={{ textAlign: 'center', padding: '20px 0', fontSize: 14, fontWeight: 500, fontFamily: "'Kantumruy Pro', sans-serif", color: '#1e293b' }}>
-            Print Qrcode
-          </div>
-        </Modal>
-      )}
+
 
     </div>
   );

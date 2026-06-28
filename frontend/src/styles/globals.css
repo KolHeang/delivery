@@ -1628,13 +1628,16 @@ select.form-control {
   /* Inside receipt: make sure everything shows */
   body.receipt-print-active .receipt-print-container * {
     visibility: visible !important;
-    display: revert !important;
   }
 
   body.receipt-print-active .receipt-print-container table {
     display: table !important;
     width: 100% !important;
     border-collapse: collapse !important;
+  }
+
+  body.receipt-print-active .receipt-print-container table.summary-table {
+    width: 300px !important;
   }
 
   body.receipt-print-active .receipt-print-container thead {
@@ -1662,7 +1665,6 @@ select.form-control {
   body.receipt-print-active .receipt-print-container div,
   body.receipt-print-active .receipt-print-container p,
   body.receipt-print-active .receipt-print-container strong {
-    display: revert !important;
     color: #000 !important;
   }
 }

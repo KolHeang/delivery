@@ -20,6 +20,28 @@ const getLocalFirstDayOfMonthString = () => {
   return `${year}-${month}-01`;
 };
 
+const getKhmerDateString = (date: Date = new Date()) => {
+  const days = ['អាទិត្យ', 'ចន្ទ', 'អង្គារ', 'ពុធ', 'ព្រហស្បតិ៍', 'សុក្រ', 'សៅរ៍'];
+  const months = [
+    'មករា', 'កម្ភៈ', 'មីនា', 'មេសា', 'ឧសភា', 'មិថុនា',
+    'កក្កដា', 'សីហា', 'កញ្ញា', 'តុលា', 'វិច្ឆិកា', 'ធ្នូ'
+  ];
+  const khmerNums = ['០', '១', '២', '៣', '៤', '៥', '៦', '៧', '៨', '៩'];
+  const toKhmerNum = (num: number) => {
+    return String(num).split('').map(char => {
+      const idx = parseInt(char);
+      return isNaN(idx) ? char : khmerNums[idx];
+    }).join('');
+  };
+
+  const dayName = days[date.getDay()];
+  const day = toKhmerNum(date.getDate());
+  const monthName = months[date.getMonth()];
+  const year = toKhmerNum(date.getFullYear());
+
+  return `ថ្ងៃ ${dayName} ទី ${day} ខែ ${monthName} ឆ្នាំ ${year}`;
+};
+
 export default function PaymentWithStaffPage() {
   const router = useRouter();
   const { t, lang } = useLanguage();
@@ -442,7 +464,7 @@ export default function PaymentWithStaffPage() {
             <div style={{ border: '1px solid #dee2e6', borderRadius: 4, overflowX: 'auto', background: '#fff' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 900 }}>
                 <thead>
-                  <tr style={{ background: '#f0fdf4', borderBottom: '2px solid #16a34a' }}>
+                  <tr style={{ background: '#f0fdf4', borderBottom: '2px solid #dee2e6' }}>
                     <th style={{ padding: '10px 8px', textAlign: 'center', borderRight: '1px solid #dee2e6', width: 40 }}>{lang === 'km' ? 'ល.រ' : 'No.'}</th>
                     <th style={{ padding: '10px 8px', textAlign: 'center', borderRight: '1px solid #dee2e6', width: 44 }}>
                       <input type="checkbox"
@@ -596,18 +618,18 @@ export default function PaymentWithStaffPage() {
                     {lang === 'km' ? `សរុបកញ្ចប់មិនជោគជ័យ: ${failedOrders.length} កញ្ចប់` : `Total Failed: ${failedOrders.length} parcels`}
                   </span>
                 </div>
-                <div style={{ border: '1px solid #fca5a5', borderRadius: 4, overflowX: 'auto', background: '#fff' }}>
+                 <div style={{ border: '1px solid #dee2e6', borderRadius: 4, overflowX: 'auto', background: '#fff' }}>
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 900 }}>
                     <thead>
-                      <tr style={{ background: '#fef2f2', borderBottom: '2px solid #ef4444' }}>
-                        <th style={{ padding: '10px 8px', textAlign: 'center', borderRight: '1px solid #fca5a5', width: 40 }}>{lang === 'km' ? 'ល.រ' : 'No.'}</th>
-                        <th style={{ padding: '10px 8px', textAlign: 'left', borderRight: '1px solid #fca5a5' }}>{lang === 'km' ? 'លេខកូដ' : 'Tracking Code'}</th>
-                        <th style={{ padding: '10px 8px', textAlign: 'left', borderRight: '1px solid #fca5a5' }}>{lang === 'km' ? 'កាលបរិច្ឆេទ' : 'Date'}</th>
-                        <th style={{ padding: '10px 8px', textAlign: 'left', borderRight: '1px solid #fca5a5' }}>{lang === 'km' ? 'ឈ្មោះហាង' : 'Shop Name'}</th>
-                        <th style={{ padding: '10px 8px', textAlign: 'left', borderRight: '1px solid #fca5a5' }}>{lang === 'km' ? 'លេខអ្នកទទួល' : 'Receiver Phone'}</th>
-                        <th style={{ padding: '10px 8px', textAlign: 'right', borderRight: '1px solid #fca5a5' }}>{lang === 'km' ? 'ប្រាក់បានបញ្ចូល' : 'Collected COD'}</th>
-                        <th style={{ padding: '10px 8px', textAlign: 'right', borderRight: '1px solid #fca5a5' }}>{lang === 'km' ? 'ប្រាក់កម្រៃដឹក' : 'Delivery Fee'}</th>
-                        <th style={{ padding: '10px 8px', textAlign: 'left', borderRight: '1px solid #fca5a5', minWidth: 160 }}>{lang === 'km' ? 'មូលហេតុ (Note)' : 'Reason (Note)'}</th>
+                      <tr style={{ background: '#fef2f2', borderBottom: '2px solid #dee2e6' }}>
+                        <th style={{ padding: '10px 8px', textAlign: 'center', borderRight: '1px solid #dee2e6', width: 40 }}>{lang === 'km' ? 'ល.រ' : 'No.'}</th>
+                        <th style={{ padding: '10px 8px', textAlign: 'left', borderRight: '1px solid #dee2e6' }}>{lang === 'km' ? 'លេខកូដ' : 'Tracking Code'}</th>
+                        <th style={{ padding: '10px 8px', textAlign: 'left', borderRight: '1px solid #dee2e6' }}>{lang === 'km' ? 'កាលបរិច្ឆេទ' : 'Date'}</th>
+                        <th style={{ padding: '10px 8px', textAlign: 'left', borderRight: '1px solid #dee2e6' }}>{lang === 'km' ? 'ឈ្មោះហាង' : 'Shop Name'}</th>
+                        <th style={{ padding: '10px 8px', textAlign: 'left', borderRight: '1px solid #dee2e6' }}>{lang === 'km' ? 'លេខអ្នកទទួល' : 'Receiver Phone'}</th>
+                        <th style={{ padding: '10px 8px', textAlign: 'right', borderRight: '1px solid #dee2e6' }}>{lang === 'km' ? 'ប្រាក់បានបញ្ចូល' : 'Collected COD'}</th>
+                        <th style={{ padding: '10px 8px', textAlign: 'right', borderRight: '1px solid #dee2e6' }}>{lang === 'km' ? 'ប្រាក់កម្រៃដឹក' : 'Delivery Fee'}</th>
+                        <th style={{ padding: '10px 8px', textAlign: 'left', borderRight: '1px solid #dee2e6', minWidth: 160 }}>{lang === 'km' ? 'មូលហេតុ (Note)' : 'Reason (Note)'}</th>
                         <th style={{ padding: '10px 8px', textAlign: 'center' }}>{lang === 'km' ? 'ស្ថានភាព' : 'Status'}</th>
                       </tr>
                     </thead>
@@ -621,19 +643,19 @@ export default function PaymentWithStaffPage() {
                             .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
                             .find((h: any) => h.note)?.note || o.note || '—';
                           return (
-                            <tr key={o.id} style={{ borderBottom: '1px solid #fca5a5', background: idx % 2 === 0 ? '#fff' : '#fff9f9' }}>
-                              <td style={{ padding: '8px', textAlign: 'center', borderRight: '1px solid #fca5a5', fontWeight: 600 }}>{idx + 1}</td>
-                              <td style={{ padding: '8px', borderRight: '1px solid #fca5a5', color: '#475569' }}>{o.trackingCode}</td>
-                              <td style={{ padding: '8px', borderRight: '1px solid #fca5a5' }}>{o.deliveredAt ? formatDateToDDMMYYYY(o.deliveredAt) : (o.updatedAt ? formatDateToDDMMYYYY(o.updatedAt) : '—')}</td>
-                              <td style={{ padding: '8px', borderRight: '1px solid #fca5a5', color: '#0d6efd', fontWeight: 600 }}>{o.merchant?.name || '—'}</td>
-                              <td style={{ padding: '8px', borderRight: '1px solid #fca5a5' }}>{o.receiverPhone}</td>
-                              <td style={{ padding: '8px', textAlign: 'right', borderRight: '1px solid #fca5a5', color: '#6b7280', fontWeight: 600 }}>
+                            <tr key={o.id} style={{ borderBottom: '1px solid #dee2e6', background: idx % 2 === 0 ? '#fff' : '#fff9f9' }}>
+                              <td style={{ padding: '8px', textAlign: 'center', borderRight: '1px solid #dee2e6', fontWeight: 600 }}>{idx + 1}</td>
+                              <td style={{ padding: '8px', borderRight: '1px solid #dee2e6', color: '#475569' }}>{o.trackingCode}</td>
+                              <td style={{ padding: '8px', borderRight: '1px solid #dee2e6' }}>{o.deliveredAt ? formatDateToDDMMYYYY(o.deliveredAt) : (o.updatedAt ? formatDateToDDMMYYYY(o.updatedAt) : '—')}</td>
+                              <td style={{ padding: '8px', borderRight: '1px solid #dee2e6', color: '#0d6efd', fontWeight: 600 }}>{o.merchant?.name || '—'}</td>
+                              <td style={{ padding: '8px', borderRight: '1px solid #dee2e6' }}>{o.receiverPhone}</td>
+                              <td style={{ padding: '8px', textAlign: 'right', borderRight: '1px solid #dee2e6', color: '#6b7280', fontWeight: 600 }}>
                                 {o.codCurrency === 'KHR' ? `${parseInt(o.cod).toLocaleString()} ៛` : `$ ${parseFloat(o.cod).toFixed(2)}`}
                               </td>
-                              <td style={{ padding: '8px', textAlign: 'right', borderRight: '1px solid #fca5a5', color: '#6b7280', fontWeight: 600 }}>
+                              <td style={{ padding: '8px', textAlign: 'right', borderRight: '1px solid #dee2e6', color: '#6b7280', fontWeight: 600 }}>
                                 $ {parseFloat(o.deliveryFee).toFixed(2)}
                               </td>
-                              <td style={{ padding: '8px', borderRight: '1px solid #fca5a5', fontSize: 12, color: '#7c3aed', fontStyle: latestNote === '—' ? 'italic' : 'normal' }}>
+                              <td style={{ padding: '8px', borderRight: '1px solid #dee2e6', fontSize: 12, color: '#7c3aed', fontStyle: latestNote === '—' ? 'italic' : 'normal' }}>
                                 {latestNote !== '—' ? `📝 ${latestNote}` : '—'}
                               </td>
                               <td style={{ padding: '8px', textAlign: 'center' }}>
@@ -649,7 +671,7 @@ export default function PaymentWithStaffPage() {
                       )}
                       {/* Failed summary row */}
                       {failedOrders.length > 0 && (
-                        <tr style={{ background: '#fef2f2', borderTop: '2px solid #ef4444' }}>
+                        <tr style={{ background: '#fef2f2', borderTop: '2px solid #dee2e6' }}>
                           <td colSpan={9} style={{ padding: '10px 16px', fontWeight: 700, color: '#ef4444', fontSize: 13 }}>
                             📦 {lang === 'km'
                               ? `សរុបកញ្ចប់មិនជោគជ័យ: ${failedOrders.length} កញ្ចប់ (បរាជ័យ: ${failedOrders.filter((o: any) => o.status === 'failed').length} · ត្រឡប់: ${failedOrders.filter((o: any) => o.status === 'returned').length})`
@@ -860,7 +882,8 @@ export default function PaymentWithStaffPage() {
 
 
       {/* Printable Invoice List Table — outside app-layout (Print-only) */}
-      <div className="receipt-print-container" style={{ fontFamily: "Kantumruy Pro, Inter, sans-serif", fontSize: 11 }}>
+      <div className="receipt-print-container" style={{ fontFamily: 'Kantumruy Pro, Inter, sans-serif' }}>
+        {/* Header Layout (Matches template) */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20, borderBottom: '2px solid #000', paddingBottom: 15 }}>
           {/* Left side: Company Info */}
           <div style={{ fontSize: 11, lineHeight: '1.6', flex: 1 }}>
@@ -883,145 +906,88 @@ export default function PaymentWithStaffPage() {
 
           {/* Center side: Title */}
           <div style={{ textAlign: 'center', alignSelf: 'center', flex: 1.2 }}>
-            <h2 style={{ margin: 0, fontSize: 16, fontWeight: 'bold', color: '#000' }}>
-              {lang === 'km' ? 'វិក្កយបត្រ (សម្រាប់អ្នកដឹក)' : 'Invoice (For Driver)'}
+            <h2 style={{ margin: 0, fontSize: 18, fontWeight: 'bold', fontFamily: 'Kantumruy Pro, sans-serif', color: '#000' }}>
+              {lang === 'km' ? 'របាយការណ៍ទូទាត់ប្រចាំថ្ងៃ (សម្រាប់អ្នកដឹក)' : 'Daily Settlement Report (Driver)'}
             </h2>
           </div>
 
           {/* Right side: Driver & Date Info */}
           <div style={{ fontSize: 11, textAlign: 'right', lineHeight: '1.6', flex: 1 }}>
             <div><strong>{lang === 'km' ? 'ឈ្មោះអ្នកដឹក៖' : 'Driver Name:'}</strong> <span style={{ fontStyle: 'italic', fontWeight: 'bold' }}>{selectedDriver ? `${selectedDriver.name} ${selectedDriver.nameKh ? `(${selectedDriver.nameKh})` : ''}` : (lang === 'km' ? 'ទាំងអស់' : 'All Drivers')}</span></div>
-            <div><strong>{lang === 'km' ? 'លេខទូរស័ព្ទ៖' : 'Phone Number:'}</strong> {selectedDriver?.phone || '—'}</div>
+            <div><strong>{lang === 'km' ? 'ទូរស័ព្ទ៖' : 'Phone:'}</strong> {selectedDriver?.phone || '—'}</div>
             <div><strong>{lang === 'km' ? 'លេខយោង៖' : 'No. :'}</strong> <code>INV_DRIVER_{getLocalDateString().replace(/-/g, '')}</code></div>
             <div><strong>{lang === 'km' ? 'កាលបរិច្ឆេទ៖' : 'Date:'}</strong> {formatDateToDDMMYYYY(getLocalDateString())}</div>
           </div>
         </div>
 
-        <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #000', textAlign: 'center', fontSize: 10 }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 16, fontSize: 11 }}>
           <thead>
-            <tr style={{ backgroundColor: '#10b981', color: '#fff' }}>
-              <th rowSpan={2} style={{ border: '1px solid #000', padding: 4, color: '#fff' }}>{lang === 'km' ? 'ល.រ' : 'No'}</th>
-              <th rowSpan={2} style={{ border: '1px solid #000', padding: 4, color: '#fff' }}>{lang === 'km' ? 'លេខកូដវិក្កយបត្រ' : 'Bill Invoice'}</th>
-              <th rowSpan={2} style={{ border: '1px solid #000', padding: 4, color: '#fff' }}>{lang === 'km' ? 'អតិថិជន' : 'Merchant'}</th>
-              <th rowSpan={2} style={{ border: '1px solid #000', padding: 4, color: '#fff' }}>{lang === 'km' ? 'តំបន់' : 'Zone'}</th>
-              <th rowSpan={2} style={{ border: '1px solid #000', padding: 4, color: '#fff' }}>{lang === 'km' ? 'លេខទូរស័ព្ទ' : 'Phone'}</th>
-              <th rowSpan={2} style={{ border: '1px solid #000', padding: 4, color: '#fff' }}>{lang === 'km' ? 'ទទួលអីវ៉ាន់' : 'Collected'}</th>
-              <th rowSpan={2} style={{ border: '1px solid #000', padding: 4, color: '#fff' }}>{lang === 'km' ? 'ចេញអីវ៉ាន់' : 'Delivered'}</th>
-              <th rowSpan={2} style={{ border: '1px solid #000', padding: 4, color: '#fff' }}>{lang === 'km' ? 'ប្រភេទបង់លុយ' : 'Payment Type'}</th>
-              <th colSpan={2} style={{ border: '1px solid #000', padding: 4, color: '#fff' }}>COD</th>
-              <th colSpan={2} style={{ border: '1px solid #000', padding: 4, color: '#fff' }}>QR {lang === 'km' ? 'ហាង' : 'Shop'}</th>
-              <th colSpan={2} style={{ border: '1px solid #000', padding: 4, color: '#fff' }}>QR {lang === 'km' ? 'ក្រុមហ៊ុន' : 'Company'}</th>
-              <th rowSpan={2} style={{ border: '1px solid #000', padding: 4, color: '#fff' }}>{lang === 'km' ? 'សេវាដឹក(USD)' : 'Delivery Fee (USD)'}</th>
-              <th rowSpan={2} style={{ border: '1px solid #000', padding: 4, color: '#fff' }}>{lang === 'km' ? 'ទឹកប្រាក់សរុប (USD)' : 'Total Amount (USD)'}</th>
-              <th rowSpan={2} style={{ border: '1px solid #000', padding: 4, color: '#fff' }}>{lang === 'km' ? 'ទឹកប្រាក់សរុប (KHR)' : 'Total Amount (KHR)'}</th>
-              <th rowSpan={2} style={{ border: '1px solid #000', padding: 4, color: '#fff' }}>Remark</th>
-              <th rowSpan={2} style={{ border: '1px solid #000', padding: 4, color: '#fff' }}>{lang === 'km' ? 'ស្ថានភាព' : 'Status'}</th>
+            <tr style={{ backgroundColor: '#244f96', color: '#fff' }}>
+              <th rowSpan={2} style={{ padding: '6px 4px', textAlign: 'center', border: '1px solid #000', fontWeight: 'bold', color: '#fff' }}>{lang === 'km' ? 'ល.រ' : 'No.'}</th>
+              <th rowSpan={2} style={{ padding: '6px 4px', textAlign: 'center', border: '1px solid #000', fontWeight: 'bold', color: '#fff' }}>{lang === 'km' ? 'កាលបរិច្ឆេទ' : 'Date'}</th>
+              <th rowSpan={2} style={{ padding: '6px 4px', textAlign: 'center', border: '1px solid #000', fontWeight: 'bold', color: '#fff' }}>{lang === 'km' ? 'បរិយាយ' : 'Description'}</th>
+              <th colSpan={2} style={{ padding: '6px 4px', textAlign: 'center', border: '1px solid #000', fontWeight: 'bold', color: '#fff' }}>{lang === 'km' ? <>ទឹកប្រាក់ដើមមាន<br/>(ដុល្លារ / ខ្មែរ)</> : <>Original Amount<br/>(USD / KHR)</>}</th>
+              <th colSpan={2} style={{ padding: '6px 4px', textAlign: 'center', border: '1px solid #000', fontWeight: 'bold', color: '#fff' }}>{lang === 'km' ? <>ទឹកប្រាក់ទទួលបាន<br/>(ដុល្លារ / ខ្មែរ)</> : <>Received Amount<br/>(USD / KHR)</>}</th>
+              <th rowSpan={2} style={{ padding: '6px 4px', textAlign: 'center', border: '1px solid #000', fontWeight: 'bold', color: '#fff' }}>{lang === 'km' ? 'សេវាដឹក' : 'Delivery Fee'}</th>
+              <th rowSpan={2} style={{ padding: '6px 4px', textAlign: 'center', border: '1px solid #000', fontWeight: 'bold', color: '#fff' }}>Remark</th>
             </tr>
-            <tr style={{ backgroundColor: '#10b981', color: '#fff' }}>
-              <th style={{ border: '1px solid #000', padding: 4, color: '#fff' }}>USD ($)</th>
-              <th style={{ border: '1px solid #000', padding: 4, color: '#fff' }}>KHR (៛)</th>
-              <th style={{ border: '1px solid #000', padding: 4, color: '#fff' }}>USD ($)</th>
-              <th style={{ border: '1px solid #000', padding: 4, color: '#fff' }}>KHR (៛)</th>
-              <th style={{ border: '1px solid #000', padding: 4, color: '#fff' }}>USD ($)</th>
-              <th style={{ border: '1px solid #000', padding: 4, color: '#fff' }}>KHR (៛)</th>
+            <tr style={{ backgroundColor: '#3060a8', color: '#fff' }}>
+              <th style={{ border: '1px solid #000', padding: '2px', fontSize: '9px', fontWeight: 'normal', textAlign: 'center', color: '#fff' }}>{lang === 'km' ? 'ដុល្លារ' : 'USD'}</th>
+              <th style={{ border: '1px solid #000', padding: '2px', fontSize: '9px', fontWeight: 'normal', textAlign: 'center', color: '#fff' }}>{lang === 'km' ? 'ខ្មែរ' : 'KHR'}</th>
+              <th style={{ border: '1px solid #000', padding: '2px', fontSize: '9px', fontWeight: 'normal', textAlign: 'center', color: '#fff' }}>{lang === 'km' ? 'ដុល្លារ' : 'USD'}</th>
+              <th style={{ border: '1px solid #000', padding: '2px', fontSize: '9px', fontWeight: 'normal', textAlign: 'center', color: '#fff' }}>{lang === 'km' ? 'ខ្មែរ' : 'KHR'}</th>
             </tr>
           </thead>
           <tbody>
-            {printOrders.length === 0 ? (
-              <tr><td colSpan={17} style={{ padding: 10 }}>{lang === 'km' ? 'គ្មានទិន្នន័យ' : 'No data available'}</td></tr>
-            ) : (
-              printOrders.map((o, idx) => {
-                const isCOD = o.paymentMethod === 'cod' || !o.paymentMethod;
-                const isQR = o.paymentMethod === 'qr';
-                const codUSD = o.codCurrency === 'USD' && isCOD ? parseFloat(o.cod || '0') : 0;
-                const codKHR = o.codCurrency === 'KHR' && isCOD ? parseFloat(o.cod || '0') : 0;
-                const qrShopUSD = o.codCurrency === 'USD' && isQR ? parseFloat(o.cod || '0') : 0;
-                const qrShopKHR = o.codCurrency === 'KHR' && isQR ? parseFloat(o.cod || '0') : 0;
-                const fee = parseFloat(o.deliveryFee || '0');
-                const totalUSD = codUSD + qrShopUSD;
-                const totalKHR = codKHR + qrShopKHR;
-
-                return (
-                  <tr key={o.id}>
-                    <td style={{ border: '1px solid #000', padding: 4 }}>{idx + 1}</td>
-                    <td style={{ border: '1px solid #000', padding: 4 }}>{o.trackingCode}</td>
-                    <td style={{ border: '1px solid #000', padding: 4 }}>{o.merchant?.name || '—'}</td>
-                    <td style={{ border: '1px solid #000', padding: 4 }}>{o.zone?.name || '—'}</td>
-                    <td style={{ border: '1px solid #000', padding: 4 }}>{o.receiverPhone}</td>
-                    <td style={{ border: '1px solid #000', padding: 4 }}>{o.createdAt ? formatDateToDDMMYYYY(o.createdAt) : '—'}</td>
-                    <td style={{ border: '1px solid #000', padding: 4 }}>{o.deliveredAt ? formatDateToDDMMYYYY(o.deliveredAt) : '—'}</td>
-                    <td style={{ border: '1px solid #000', padding: 4 }}>{isCOD ? 'COD' : (lang === 'km' ? 'QR + សាច់ប្រាក់' : 'QR + Cash')}</td>
-                    <td style={{ border: '1px solid #000', padding: 4, color: codUSD ? 'inherit' : '#9ca3af' }}>{codUSD ? `$${codUSD.toFixed(2)}` : '-'}</td>
-                    <td style={{ border: '1px solid #000', padding: 4, color: codKHR ? 'inherit' : '#9ca3af' }}>{codKHR ? `៛${codKHR.toLocaleString()}` : '-'}</td>
-                    <td style={{ border: '1px solid #000', padding: 4, color: qrShopUSD ? 'inherit' : '#9ca3af' }}>{qrShopUSD ? `$${qrShopUSD.toFixed(2)}` : '-'}</td>
-                    <td style={{ border: '1px solid #000', padding: 4, color: qrShopKHR ? 'inherit' : '#9ca3af' }}>{qrShopKHR ? `៛${qrShopKHR.toLocaleString()}` : '-'}</td>
-                    <td style={{ border: '1px solid #000', padding: 4, color: '#9ca3af' }}>-</td>
-                    <td style={{ border: '1px solid #000', padding: 4, color: '#9ca3af' }}>-</td>
-                    <td style={{ border: '1px solid #000', padding: 4 }}>${fee.toFixed(2)}</td>
-                    <td style={{ border: '1px solid #000', padding: 4 }}>${totalUSD.toFixed(2)}</td>
-                    <td style={{ border: '1px solid #000', padding: 4 }}>{totalKHR ? `៛${totalKHR.toLocaleString()}` : '៛0'}</td>
-                    <td style={{ border: '1px solid #000', padding: 4 }}>{o.note || ''}</td>
-                    <td style={{ border: '1px solid #000', padding: 4, color: o.status === 'delivered' ? '#16a34a' : o.status === 'returned' ? '#f59e0b' : o.status === 'failed' ? '#ef4444' : '#64748b' }}>
-                      {o.status === 'delivered' ? (lang === 'km' ? 'ជោគជ័យ' : 'Delivered') : o.status === 'returned' ? (lang === 'km' ? 'បង្វិលត្រឡប់' : 'Returned') : o.status === 'failed' ? (lang === 'km' ? 'បរាជ័យ' : 'Failed') : (lang === 'km' ? 'កំពុងដឹក' : 'In Transit')}
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-          {printOrders.length > 0 && (
-            <tfoot>
-              <tr style={{ background: '#e2e8f0', fontWeight: 'bold' }}>
-                <td colSpan={8} style={{ border: '1px solid #000', padding: 4, textAlign: 'right' }}>{lang === 'km' ? 'សរុប' : 'Total'}</td>
-                <td style={{ border: '1px solid #000', padding: 4 }}>${printOrders.reduce((sum, o) => sum + (o.codCurrency === 'USD' && (o.paymentMethod === 'cod' || !o.paymentMethod) ? parseFloat(o.cod||'0') : 0), 0).toFixed(2)}</td>
-                <td style={{ border: '1px solid #000', padding: 4 }}>៛{printOrders.reduce((sum, o) => sum + (o.codCurrency === 'KHR' && (o.paymentMethod === 'cod' || !o.paymentMethod) ? parseFloat(o.cod||'0') : 0), 0).toLocaleString()}</td>
-                <td style={{ border: '1px solid #000', padding: 4 }}>${printOrders.reduce((sum, o) => sum + (o.codCurrency === 'USD' && o.paymentMethod === 'qr' ? parseFloat(o.cod||'0') : 0), 0).toFixed(2)}</td>
-                <td style={{ border: '1px solid #000', padding: 4 }}>៛{printOrders.reduce((sum, o) => sum + (o.codCurrency === 'KHR' && o.paymentMethod === 'qr' ? parseFloat(o.cod||'0') : 0), 0).toLocaleString()}</td>
-                <td style={{ border: '1px solid #000', padding: 4 }}>$0.00</td>
-                <td style={{ border: '1px solid #000', padding: 4 }}>៛0</td>
-                <td style={{ border: '1px solid #000', padding: 4 }}>${printTotalFee.toFixed(2)}</td>
-                <td style={{ border: '1px solid #000', padding: 4 }}>${printCodUsd.toFixed(2)}</td>
-                <td style={{ border: '1px solid #000', padding: 4 }}>៛{printCodKhr.toLocaleString()}</td>
-                <td colSpan={2} style={{ border: '1px solid #000', padding: 4 }}></td>
-              </tr>
-              <tr style={{ background: '#e2e8f0', fontWeight: 'bold' }}>
-                <td colSpan={15} style={{ border: '1px solid #000', padding: 4, textAlign: 'right' }}>{lang === 'km' ? 'ប្រាក់ដែលត្រូវទូទាត់សរុប' : 'Total Net Payable Amount'}</td>
-                <td style={{ border: '1px solid #000', padding: 4 }}>${printCodUsd.toFixed(2)}</td>
-                <td style={{ border: '1px solid #000', padding: 4 }}>៛{printCodKhr.toLocaleString()}</td>
-                <td colSpan={2} style={{ border: '1px solid #000', padding: 4 }}></td>
-              </tr>
-            </tfoot>
-          )}
-        </table>
-
-        {/* ── Print Section 2: Failed / Carried Forward ── */}
-        {printInTransitOrders.length > 0 && (
-          <div style={{ marginTop: 24 }}>
-            <h4 style={{ margin: '0 0 8px 0', padding: '7px 10px', fontSize: 13, color: '#000', backgroundColor: '#f59e0b', fontWeight: 'bold' }}>
-              {lang === 'km' ? '២. ផ្នែកដឹកបន្ត' : '2. Failed / Carried Forward'}
-              &nbsp;—&nbsp;
-              <span style={{ fontWeight: 400 }}>
-                {lang === 'km'
-                  ? `សរុបកញ្ចប់ដឹកបន្ត: ${printInTransitOrders.length} កញ្ចប់`
-                  : `Total: ${printInTransitOrders.length} parcels`}
-              </span>
-            </h4>
-            <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #000', textAlign: 'center', fontSize: 10 }}>
-              <thead>
-                <tr style={{ backgroundColor: '#f59e0b', color: '#000' }}>
-                  <th style={{ border: '1px solid #000', padding: 4, color: '#000' }}>{lang === 'km' ? 'ល.រ' : 'No'}</th>
-                  <th style={{ border: '1px solid #000', padding: 4, color: '#000' }}>{lang === 'km' ? 'លេខកូដ' : 'Bill Invoice'}</th>
-                  <th style={{ border: '1px solid #000', padding: 4, color: '#000' }}>{lang === 'km' ? 'ហាង' : 'Shop'}</th>
-                  <th style={{ border: '1px solid #000', padding: 4, color: '#000' }}>{lang === 'km' ? 'តំបន់' : 'Zone'}</th>
-                  <th style={{ border: '1px solid #000', padding: 4, color: '#000' }}>{lang === 'km' ? 'លេខទូរស័ព្ទ' : 'Phone'}</th>
-                  <th style={{ border: '1px solid #000', padding: 4, color: '#000' }}>{lang === 'km' ? 'ថ្ងៃបង្កើត' : 'Date'}</th>
-                  <th style={{ border: '1px solid #000', padding: 4, color: '#000' }}>COD</th>
-                  <th style={{ border: '1px solid #000', padding: 4, minWidth: 160, color: '#000' }}>{lang === 'km' ? 'មូលហេតុ (Note)' : 'Reason (Note)'}</th>
-                  <th style={{ border: '1px solid #000', padding: 4, color: '#000' }}>{lang === 'km' ? 'ស្ថានភាព' : 'Status'}</th>
+            {/* Delivered Section */}
+            {printOrders.length > 0 && (
+              <>
+                <tr>
+                  <td colSpan={9} style={{ backgroundColor: '#10b981', color: '#fff', fontWeight: 'bold', padding: '7px 10px', border: '1px solid #000', fontSize: 12 }}>
+                    {lang === 'km' ? 'អីវ៉ាន់ដឹកបានជោគជ័យ' : 'Successfully Delivered'} ({printOrders.length} {lang === 'km' ? 'កញ្ចប់' : 'parcels'})
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {printInTransitOrders.map((o: any, idx: number) => {
+                {printOrders.map((o, idx) => {
+                  const isUSD = o.codCurrency === 'USD';
+                  const codVal = parseFloat(o.cod || 0);
+                  return (
+                    <tr key={o.id}>
+                      <td style={{ textAlign: 'center', padding: '6px 4px', border: '1px solid #000' }}>{idx + 1}</td>
+                      <td style={{ padding: '6px 4px', border: '1px solid #000', textAlign: 'center' }}>{formatDateToDDMMYYYY(o.deliveredAt || o.createdAt)}</td>
+                      <td style={{ padding: '6px 4px', border: '1px solid #000' }}>{o.trackingCode} ({o.merchant?.name || '—'}) {o.receiverPhone ? `(${o.receiverPhone})` : ''}</td>
+                      <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000' }}>{isUSD ? ('$ ' + codVal.toFixed(2)) : '$ 0'}</td>
+                      <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000' }}>{!isUSD ? (codVal.toLocaleString() + ' ៛') : '0 ៛'}</td>
+                      <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000' }}>{isUSD ? ('$ ' + codVal.toFixed(2)) : '$ 0.00'}</td>
+                      <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000' }}>{!isUSD ? (codVal.toLocaleString() + ' ៛') : '0 ៛'}</td>
+                      <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000' }}>$ {parseFloat(o.deliveryFee || 0).toFixed(2)}</td>
+                      <td style={{ padding: '6px 4px', border: '1px solid #000', textAlign: 'center' }}>{o.note || ''}</td>
+                    </tr>
+                  );
+                })}
+                <tr>
+                  <td colSpan={3} style={{ textAlign: 'right', fontWeight: 'bold', padding: '6px 4px', border: '1px solid #000' }}>{lang === 'km' ? 'សរុប' : 'Total'}</td>
+                  <td style={{ textAlign: 'right', fontWeight: 'bold', padding: '6px 4px', border: '1px solid #000' }}>$ {printCodUsd.toFixed(2)}</td>
+                  <td style={{ textAlign: 'right', fontWeight: 'bold', padding: '6px 4px', border: '1px solid #000' }}>{printCodKhr.toLocaleString()} {lang === 'km' ? 'រៀល' : 'KHR'}</td>
+                  <td style={{ textAlign: 'right', fontWeight: 'bold', padding: '6px 4px', border: '1px solid #000' }}>$ {printCodUsd.toFixed(2)}</td>
+                  <td style={{ textAlign: 'right', fontWeight: 'bold', padding: '6px 4px', border: '1px solid #000' }}>{printCodKhr.toLocaleString()} {lang === 'km' ? 'រៀល' : 'KHR'}</td>
+                  <td style={{ textAlign: 'right', fontWeight: 'bold', padding: '6px 4px', border: '1px solid #000' }}>$ {printTotalFee.toFixed(2)}</td>
+                  <td style={{ border: '1px solid #000' }}></td>
+                </tr>
+              </>
+            )}
+
+            {/* In Transit / Failed Section */}
+            {printInTransitOrders.length > 0 && (
+              <>
+                <tr>
+                  <td colSpan={9} style={{ backgroundColor: '#f59e0b', color: '#000', fontWeight: 'bold', padding: '7px 10px', border: '1px solid #000', fontSize: 12 }}>
+                    {lang === 'km' ? 'អីវ៉ាន់ដឹកបន្ត' : 'Failed / Carried Forward'} ({printInTransitOrders.length} {lang === 'km' ? 'កញ្ចប់' : 'parcels'})
+                  </td>
+                </tr>
+                {printInTransitOrders.map((o, idx) => {
+                  const isUSD = o.codCurrency === 'USD';
+                  const codVal = parseFloat(o.cod || 0);
+
                   let statusLabel = '';
                   if (o.status === 'failed') {
                     statusLabel = lang === 'km' ? 'មិនជោគជ័យ' : 'Failed';
@@ -1037,101 +1003,90 @@ export default function PaymentWithStaffPage() {
                     ?.slice()
                     .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
                     .find((h: any) => h.note)?.note || o.note || statusLabel;
+
                   return (
                     <tr key={o.id}>
-                      <td style={{ border: '1px solid #000', padding: 4 }}>{idx + 1}</td>
-                      <td style={{ border: '1px solid #000', padding: 4 }}>{o.trackingCode}</td>
-                      <td style={{ border: '1px solid #000', padding: 4 }}>{o.merchant?.name || '—'}</td>
-                      <td style={{ border: '1px solid #000', padding: 4 }}>{o.zone?.name || '—'}</td>
-                      <td style={{ border: '1px solid #000', padding: 4 }}>{o.receiverPhone}</td>
-                      <td style={{ border: '1px solid #000', padding: 4 }}>{o.createdAt ? formatDateToDDMMYYYY(o.createdAt) : '—'}</td>
-                      <td style={{ border: '1px solid #000', padding: 4 }}>
-                        {o.codCurrency === 'USD' ? `$${parseFloat(o.cod||'0').toFixed(2)}` : `៛${parseFloat(o.cod||'0').toLocaleString()}`}
-                      </td>
-                      <td style={{ border: '1px solid #000', padding: 4, textAlign: 'left', color: '#7c3aed' }}>{latestNote}</td>
-                      <td style={{ border: '1px solid #000', padding: 4, fontWeight: 'bold' }}>
-                        {statusLabel}
-                      </td>
+                      <td style={{ textAlign: 'center', padding: '6px 4px', border: '1px solid #000' }}>{idx + 1}</td>
+                      <td style={{ padding: '6px 4px', border: '1px solid #000', textAlign: 'center' }}>{formatDateToDDMMYYYY(o.createdAt)}</td>
+                      <td style={{ padding: '6px 4px', border: '1px solid #000' }}>{o.trackingCode} ({o.merchant?.name || '—'}) {o.receiverPhone ? `(${o.receiverPhone})` : ''}</td>
+                      <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000' }}>{isUSD ? ('$ ' + codVal.toFixed(2)) : '$ 0'}</td>
+                      <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000' }}>{!isUSD ? (codVal.toLocaleString() + ' ៛') : '0'}</td>
+                      <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000' }}></td>
+                      <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000' }}></td>
+                      <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000' }}>$ {parseFloat(o.deliveryFee || 0).toFixed(2)}</td>
+                      <td style={{ padding: '6px 4px', border: '1px solid #000', textAlign: 'center' }}>{latestNote}</td>
                     </tr>
                   );
                 })}
-              </tbody>
-              <tfoot>
-                <tr style={{ background: '#fef3c7', fontWeight: 'bold' }}>
-                  <td colSpan={9} style={{ border: '1px solid #000', padding: 6, textAlign: 'left', color: '#b45309' }}>
-                    📦 {lang === 'km'
-                      ? `សរុបកញ្ចប់ដឹកបន្ត: ${printInTransitOrders.length} កញ្ចប់`
-                      : `Total Failed / Carried Forward Parcels: ${printInTransitOrders.length}`}
+              </>
+            )}
+
+            {/* Returned Section */}
+            {printReturnedOrders.length > 0 && (
+              <>
+                <tr>
+                  <td colSpan={9} style={{ backgroundColor: '#ef4444', color: '#fff', fontWeight: 'bold', padding: '7px 10px', border: '1px solid #000', fontSize: 12 }}>
+                    {lang === 'km' ? 'អីវ៉ាន់ត្រឡប់ទៅហាង (Return)' : 'Returned to Shop (Return)'} ({printReturnedOrders.length} {lang === 'km' ? 'កញ្ចប់' : 'parcels'})
                   </td>
                 </tr>
-              </tfoot>
-            </table>
-          </div>
-        )}
-
-        {/* ── Print Section 3: Returned to Shop ── */}
-        {printReturnedOrders.length > 0 && (
-          <div style={{ marginTop: 24 }}>
-            <h4 style={{ margin: '0 0 8px 0', padding: '7px 10px', fontSize: 13, color: '#fff', backgroundColor: '#ef4444', fontWeight: 'bold' }}>
-              {lang === 'km' ? '៣. ផ្នែកត្រឡប់ទៅហាង' : '3. Returned to Shop'}
-              &nbsp;—&nbsp;
-              <span style={{ fontWeight: 400 }}>
-                {lang === 'km'
-                  ? `សរុបកញ្ចប់ត្រឡប់ទៅហាង: ${printReturnedOrders.length} កញ្ចប់`
-                  : `Total: ${printReturnedOrders.length} parcels`}
-              </span>
-            </h4>
-            <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #000', textAlign: 'center', fontSize: 10 }}>
-              <thead>
-                <tr style={{ backgroundColor: '#ef4444', color: '#fff' }}>
-                  <th style={{ border: '1px solid #000', padding: 4, color: '#fff' }}>{lang === 'km' ? 'ល.រ' : 'No'}</th>
-                  <th style={{ border: '1px solid #000', padding: 4, color: '#fff' }}>{lang === 'km' ? 'លេខកូដ' : 'Bill Invoice'}</th>
-                  <th style={{ border: '1px solid #000', padding: 4, color: '#fff' }}>{lang === 'km' ? 'ហាង' : 'Shop'}</th>
-                  <th style={{ border: '1px solid #000', padding: 4, color: '#fff' }}>{lang === 'km' ? 'តំបន់' : 'Zone'}</th>
-                  <th style={{ border: '1px solid #000', padding: 4, color: '#fff' }}>{lang === 'km' ? 'លេខទូរស័ព្ទ' : 'Phone'}</th>
-                  <th style={{ border: '1px solid #000', padding: 4, color: '#fff' }}>{lang === 'km' ? 'ថ្ងៃបង្កើត' : 'Date'}</th>
-                  <th style={{ border: '1px solid #000', padding: 4, color: '#fff' }}>COD</th>
-                  <th style={{ border: '1px solid #000', padding: 4, minWidth: 160, color: '#fff' }}>{lang === 'km' ? 'មូលហេតុ (Note)' : 'Reason (Note)'}</th>
-                  <th style={{ border: '1px solid #000', padding: 4, color: '#fff' }}>{lang === 'km' ? 'ស្ថានភាព' : 'Status'}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {printReturnedOrders.map((o: any, idx: number) => {
+                {printReturnedOrders.map((o, idx) => {
+                  const isUSD = o.codCurrency === 'USD';
+                  const codVal = parseFloat(o.cod || 0);
                   const latestNote = o.histories
                     ?.slice()
                     .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
                     .find((h: any) => h.note)?.note || o.note || (lang === 'km' ? 'ត្រឡប់' : 'Returned');
                   return (
-                    <tr key={o.id}>
-                      <td style={{ border: '1px solid #000', padding: 4 }}>{idx + 1}</td>
-                      <td style={{ border: '1px solid #000', padding: 4 }}>{o.trackingCode}</td>
-                      <td style={{ border: '1px solid #000', padding: 4 }}>{o.merchant?.name || '—'}</td>
-                      <td style={{ border: '1px solid #000', padding: 4 }}>{o.zone?.name || '—'}</td>
-                      <td style={{ border: '1px solid #000', padding: 4 }}>{o.receiverPhone}</td>
-                      <td style={{ border: '1px solid #000', padding: 4 }}>{o.createdAt ? formatDateToDDMMYYYY(o.createdAt) : '—'}</td>
-                      <td style={{ border: '1px solid #000', padding: 4 }}>
-                        {o.codCurrency === 'USD' ? `$${parseFloat(o.cod||'0').toFixed(2)}` : `៛${parseFloat(o.cod||'0').toLocaleString()}`}
-                      </td>
-                      <td style={{ border: '1px solid #000', padding: 4, textAlign: 'left', color: '#7c3aed' }}>{latestNote}</td>
-                      <td style={{ border: '1px solid #000', padding: 4, fontWeight: 'bold' }}>
-                        {lang === 'km' ? 'បង្វិលត្រឡប់' : 'Returned'}
-                      </td>
+                    <tr key={o.id} style={{ background: '#fff5f5' }}>
+                      <td style={{ textAlign: 'center', padding: '6px 4px', border: '1px solid #000' }}>{idx + 1}</td>
+                      <td style={{ padding: '6px 4px', border: '1px solid #000', textAlign: 'center' }}>{formatDateToDDMMYYYY(o.createdAt)}</td>
+                      <td style={{ padding: '6px 4px', border: '1px solid #000' }}>{o.trackingCode} ({o.merchant?.name || '—'}) {o.receiverPhone ? `(${o.receiverPhone})` : ''}</td>
+                      <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000' }}>{isUSD ? ('$ ' + codVal.toFixed(2)) : '$ 0'}</td>
+                      <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000' }}>{!isUSD ? (codVal.toLocaleString() + ' ៛') : '0 ៛'}</td>
+                      <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000' }}></td>
+                      <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000' }}></td>
+                      <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000' }}>$ 0.00</td>
+                      <td style={{ padding: '6px 4px', border: '1px solid #000', textAlign: 'left', color: '#7c3aed', fontSize: 10 }}>{latestNote}</td>
                     </tr>
                   );
                 })}
-              </tbody>
-              <tfoot>
-                <tr style={{ background: '#fee2e2', fontWeight: 'bold' }}>
-                  <td colSpan={9} style={{ border: '1px solid #000', padding: 6, textAlign: 'left', color: '#dc2626' }}>
-                    📦 {lang === 'km'
-                      ? `សរុបកញ្ចប់ត្រឡប់ទៅហាង: ${printReturnedOrders.length} កញ្ចប់`
-                      : `Total Returned Parcels: ${printReturnedOrders.length}`}
-                  </td>
-                </tr>
-              </tfoot>
-            </table>
+              </>
+            )}
+          </tbody>
+        </table>
+
+        {/* Financial summaries Box */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', marginTop: 20 }}>
+          <table className="summary-table" style={{ borderCollapse: 'collapse', fontSize: 11, width: '320px', border: '1px solid #000' }}>
+            <tbody>
+              <tr>
+                <td style={{ padding: '6px 12px', border: '1px solid #000', textAlign: 'right' }}>{lang === 'km' ? 'ប្រាក់ COD ទទួលបាន' : 'Total COD Collected'}</td>
+                <td style={{ padding: '6px 12px', border: '1px solid #000', fontWeight: 'bold', textAlign: 'right' }}>$ {printCodUsd.toFixed(2)} / {printCodKhr.toLocaleString()} {lang === 'km' ? 'រៀល' : 'KHR'}</td>
+              </tr>
+              <tr>
+                <td style={{ padding: '6px 12px', border: '1px solid #000', textAlign: 'right' }}>{lang === 'km' ? 'ប្រាក់កម្រៃដឹកសរុប' : 'Total Delivery Fee'}</td>
+                <td style={{ padding: '6px 12px', border: '1px solid #000', fontWeight: 'bold', textAlign: 'right' }}>$ {printTotalFee.toFixed(2)}</td>
+              </tr>
+              <tr>
+                <td style={{ padding: '6px 12px', border: '1px solid #000', textAlign: 'right' }}>{lang === 'km' ? 'ប្រាក់ត្រូវទូទាត់សរុប (Net Payout)' : 'Total Net Payout'}</td>
+                <td style={{ padding: '6px 12px', border: '1px solid #000', fontWeight: 'bold', color: '#dc2626', textAlign: 'right' }}>$ {printPayableUsd.toFixed(2)}</td>
+              </tr>
+            </tbody>
+          </table>
+
+          {/* Localized Date for print */}
+          <div style={{ marginTop: 8, fontSize: 11, fontWeight: 'bold', fontStyle: 'italic', color: '#000' }}>
+            {lang === 'km' ? getKhmerDateString(new Date()) : new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
           </div>
-        )}
+        </div>
+
+        {/* Signatures */}
+        <div style={{ marginTop: 30, display: 'flex', justifyContent: 'space-between', paddingLeft: 30 }}>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: 12, fontWeight: 'bold', marginBottom: 40 }}>{lang === 'km' ? 'បានឃើញ និងឯកភាព' : 'Approved By'}</div>
+            <div style={{ fontSize: 12, color: '#000' }}>..........................................</div>
+          </div>
+        </div>
       </div>
     </>
   );

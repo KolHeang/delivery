@@ -110,6 +110,7 @@ export class UpdateOrderDto {
   @IsOptional() @IsNumber() @Type(() => Number) driverId?: number;
   @IsOptional() @IsNumber() @Type(() => Number) pickupDriverId?: number;
   @IsOptional() @IsString() createdAt?: string;
+  @IsOptional() @IsString() deliveredAt?: string;
 }
 
 export class UpdateOrderStatusDto {

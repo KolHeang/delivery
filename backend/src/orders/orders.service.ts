@@ -267,7 +267,7 @@ export class OrdersService {
     if (finalStatus === 'in-warehouse' && !order.warehouseAt) {
       updates.warehouseAt = new Date();
     }
-    if (finalStatus === 'delivered' && !order.deliveredAt) {
+    if (finalStatus === 'delivered' && !updates.deliveredAt && !order.deliveredAt) {
       updates.deliveredAt = new Date();
     }
     if (dto.createdAt) {

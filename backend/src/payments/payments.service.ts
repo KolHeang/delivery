@@ -279,6 +279,7 @@ export class PaymentsService {
           chat_id: targetChatId,
           text: text,
           parse_mode: 'HTML',
+          disable_web_page_preview: true,
         }),
       });
 

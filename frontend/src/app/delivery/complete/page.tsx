@@ -194,12 +194,14 @@ export default function CompletePackagePage() {
           const status = method === 'failed' ? 'failed' : 'delivered';
           const khr = parseInt(rowCashKHR[id] || '0') || 0;
           const usd = parseFloat(rowCashUSD[id] || '0') || 0;
+          const completedDate = rowCompletedDate[id] || appliedFilters.date;
 
           await api.patch(`/orders/${id}`, {
             status,
             paymentMethod: method,
             receivedAmountKHR: khr,
             receivedAmountUSD: usd,
+            deliveredAt: completedDate ? new Date(completedDate).toISOString() : undefined,
           });
         })
       );

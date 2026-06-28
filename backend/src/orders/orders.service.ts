@@ -261,6 +261,14 @@ export class OrdersService {
 
     const finalStatus = updates.status || dto.status;
 
+    if (finalStatus && ['pending', 'in-warehouse', 'assigned', 'picked-up', 'in-transit'].includes(finalStatus)) {
+      updates.driverPaymentStatus = 'unpaid';
+      updates.merchantPaymentStatus = 'unpaid';
+      updates.receivedAmountUSD = 0;
+      updates.receivedAmountKHR = 0;
+      updates.paymentMethod = null as any;
+    }
+
     if (finalStatus === 'picked-up' && !order.pickedUpAt) {
       updates.pickedUpAt = new Date();
     }
@@ -287,6 +295,15 @@ export class OrdersService {
     if (dto.status === 'picked-up') updates.pickedUpAt = new Date();
     if (dto.status === 'in-warehouse') updates.warehouseAt = new Date();
     if (dto.status === 'delivered') updates.deliveredAt = new Date();
+
+    if (['pending', 'in-warehouse', 'assigned', 'picked-up', 'in-transit'].includes(dto.status)) {
+      updates.driverPaymentStatus = 'unpaid';
+      updates.merchantPaymentStatus = 'unpaid';
+      updates.receivedAmountUSD = 0;
+      updates.receivedAmountKHR = 0;
+      updates.paymentMethod = null as any;
+    }
+
     await this.repo.update(id, updates);
     if (dto.status !== order.status) {
       await this.addHistory(id, dto.status, dto.note);

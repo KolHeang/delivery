@@ -1521,6 +1521,8 @@ select.form-control {
   }
 
   .sidebar,
+  .header,
+  .page-header-container,
   .topbar,
   .no-print,
   .loading-wrapper,

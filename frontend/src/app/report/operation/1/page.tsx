@@ -9,6 +9,7 @@ import api from '@/lib/api';
 import { useLanguage } from '@/lib/LanguageContext';
 import DateInput, { formatDateToDDMMYYYY } from '@/components/ui/DateInput';
 import { MdPrint, MdSearch, MdArrowBack } from 'react-icons/md';
+import ReportHeader from '@/components/ui/ReportHeader';
 
 interface Row {
   id: number; trackingCode: string; driver: string; shopName: string;
@@ -65,12 +66,7 @@ export default function Rpt1Page() {
       <div className="main-content">
         <Topbar title={t('rpt1Title')} subtitle={t('operationReportTitle')} />
         <div className="page-content">
-          {/* Print header */}
-          <div className="print-only" style={{ marginBottom: 20, paddingBottom: 10, borderBottom: '2px solid #000', textAlign: 'center' }}>
-            <h1 style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>EBS Digital Solutions</h1>
-            <h2 style={{ fontSize: 14, margin: '4px 0 0' }}>{t('rpt1Title')}</h2>
-            <p style={{ fontSize: 11, margin: '4px 0 0', color: '#64748b' }}>{t('startDate')}: {formatDateToDDMMYYYY(startDate)} — {t('endDate')}: {formatDateToDDMMYYYY(endDate)}</p>
-          </div>
+          <ReportHeader title={t('rpt1Title')} startDate={startDate} endDate={endDate} />
 
           {/* Back */}
           <div className="no-print" style={{ marginBottom: 14 }}>

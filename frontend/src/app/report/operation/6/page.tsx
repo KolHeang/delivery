@@ -9,8 +9,21 @@ import api from '@/lib/api';
 import { useLanguage } from '@/lib/LanguageContext';
 import DateInput, { formatDateToDDMMYYYY } from '@/components/ui/DateInput';
 import { MdPrint, MdSearch, MdArrowBack } from 'react-icons/md';
+import ReportHeader from '@/components/ui/ReportHeader';
 
-interface Row { id: number; trackingCode: string; shopName: string; receiverPhone: string; location: string; weight: string; size: string; date: string; status: string; note: string; }
+interface Row {
+  id: number;
+  trackingCode: string;
+  shopName: string;
+  receiverPhone: string;
+  location: string;
+  date: string;
+  status: string;
+  note: string;
+  codAmount: number;
+  currency: string;
+  deliveryFee: number;
+}
 
 const statusBadge = (status: string) => {
   const s = (status || '').toLowerCase();
@@ -38,8 +51,9 @@ export default function Rpt6Page() {
       const mapped: Row[] = (res.data || []).map((o: any) => ({
         id: o.id, trackingCode: o.trackingCode, shopName: o.shopName,
         receiverPhone: o.receiverPhone, location: o.location,
-        weight: o.weight || '—', size: o.size || '—', date: o.date,
-        status: o.status, note: o.note || '',
+        date: o.date, status: o.status, note: o.note || '',
+        codAmount: o.codAmount || 0, currency: o.currency || 'USD',
+        deliveryFee: o.deliveryFee || 0,
       }));
       setRows(mapped);
     } catch { setRows([]); }
@@ -54,11 +68,7 @@ export default function Rpt6Page() {
       <div className="main-content">
         <Topbar title={t('rpt6Title')} subtitle={t('operationReportTitle')} />
         <div className="page-content">
-          <div className="print-only" style={{ marginBottom: 20, paddingBottom: 10, borderBottom: '2px solid #000', textAlign: 'center' }}>
-            <h1 style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>EBS Digital Solutions</h1>
-            <h2 style={{ fontSize: 14, margin: '4px 0 0' }}>{t('rpt6Title')}</h2>
-            <p style={{ fontSize: 11, margin: '4px 0 0', color: '#64748b' }}>{t('startDate')}: {formatDateToDDMMYYYY(startDate)} — {t('endDate')}: {formatDateToDDMMYYYY(endDate)}</p>
-          </div>
+          <ReportHeader title={t('rpt6Title')} startDate={startDate} endDate={endDate} />
           <div className="no-print" style={{ marginBottom: 14 }}>
             <button className="btn btn-outline btn-sm" onClick={() => router.push('/report')} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <MdArrowBack size={16} /> {t('report')}
@@ -95,8 +105,8 @@ export default function Rpt6Page() {
                     <tr>
                       <th>{t('colNo')}</th><th>{t('colTrackingCode')}</th><th>{t('colShop')}</th>
                       <th>{t('colReceiverPhone')}</th><th>{t('colLocation')}</th>
-                      <th>{t('colWeight')}</th><th>{t('colSize')}</th>
-                      <th>{t('colDate')}</th><th>{t('colStatus')}</th><th>{t('colNote')}</th>
+                      <th>{t('colDate')}</th><th>{t('colServiceFee')}</th><th>{t('colCodPod')}</th>
+                      <th>{t('colStatus')}</th><th>{t('colNote')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -109,9 +119,13 @@ export default function Rpt6Page() {
                           <td style={{ fontSize: 12 }}>{r.shopName}</td>
                           <td style={{ fontSize: 12 }}>{r.receiverPhone}</td>
                           <td style={{ fontSize: 12 }}>{r.location}</td>
-                          <td style={{ fontSize: 12 }}>{r.weight}</td>
-                          <td style={{ fontSize: 12 }}>{r.size}</td>
                           <td style={{ fontSize: 12 }}>{formatDateToDDMMYYYY(r.date)}</td>
+                          <td style={{ fontSize: 12, textAlign: 'right', fontWeight: 600 }}>$ {(r.deliveryFee || 0).toFixed(2)}</td>
+                          <td style={{ fontSize: 12, fontWeight: 700, textAlign: 'right' }}>
+                            {(r.currency || 'USD') === 'USD'
+                              ? `$ ${(r.codAmount || 0).toFixed(2)}`
+                              : `${(r.codAmount || 0).toLocaleString()} ៛`}
+                          </td>
                           <td>{statusBadge(r.status)}</td>
                           <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>{r.note}</td>
                         </tr>

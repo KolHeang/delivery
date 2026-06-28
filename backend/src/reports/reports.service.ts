@@ -236,21 +236,34 @@ export class ReportsService {
 
     const orders = await q.getMany();
 
-    return orders.map((o) => ({
-      id: o.id,
-      trackingCode: o.trackingCode,
-      driver: o.driver?.name || '—',
-      shopName: o.merchant?.name || '—',
-      receiverPhone: o.receiverPhone,
-      location: o.zone?.name || o.receiverAddress || '—',
-      date: o.createdAt ? new Date(o.createdAt).toISOString().split('T')[0] : '—',
-      status: o.status,
-      currency: o.codCurrency || 'USD',
-      codAmount: parseFloat(o.cod as any || '0'),
-      deliveryFee: parseFloat(o.deliveryFee as any || '0'),
-      paidAmount: parseFloat(o.cod as any || '0'),
-      note: o.note || '',
-    }));
+    return orders.map((o) => {
+      const formatLocal = (d?: Date) => {
+        if (!d) return '—';
+        const dateObj = new Date(d);
+        if (isNaN(dateObj.getTime())) return '—';
+        const year = dateObj.getFullYear();
+        const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+        const day = String(dateObj.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      };
+
+      return {
+        id: o.id,
+        trackingCode: o.trackingCode,
+        driver: o.driver?.name || '—',
+        shopName: o.merchant?.name || '—',
+        receiverPhone: o.receiverPhone,
+        location: o.zone?.name || o.receiverAddress || '—',
+        date: formatLocal(o.createdAt),
+        status: o.status,
+        currency: o.codCurrency || 'USD',
+        codAmount: parseFloat(o.cod as any || '0'),
+        deliveryFee: parseFloat(o.deliveryFee as any || '0'),
+        paidAmount: parseFloat(o.cod as any || '0'),
+        note: o.note || '',
+        deliveredAt: formatLocal(o.deliveredAt),
+      };
+    });
   }
 
   async getFinancialReport(startDate?: string, endDate?: string) {

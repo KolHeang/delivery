@@ -134,8 +134,8 @@ export default function CompletePackagePage() {
 
   const handlePaymentMethodChange = (id: number, value: string) => {
     setRowPaymentMethod(prev => ({ ...prev, [id]: value }));
-    // If failed, automatically zero out cash amounts
-    if (value === 'failed') {
+    // If failed or returned, automatically zero out cash amounts
+    if (value === 'failed' || value === 'returned') {
       setRowCashKHR(prev => ({ ...prev, [id]: '0' }));
       setRowCashUSD(prev => ({ ...prev, [id]: '0' }));
     }
@@ -191,7 +191,9 @@ export default function CompletePackagePage() {
       await Promise.all(
         selectedIds.map(async id => {
           const method = rowPaymentMethod[id] || 'cash';
-          const status = method === 'failed' ? 'failed' : 'delivered';
+          let status = 'delivered';
+          if (method === 'failed') status = 'failed';
+          else if (method === 'returned') status = 'returned';
           const khr = parseInt(rowCashKHR[id] || '0') || 0;
           const usd = parseFloat(rowCashUSD[id] || '0') || 0;
           const completedDate = rowCompletedDate[id] || appliedFilters.date;
@@ -414,7 +416,7 @@ export default function CompletePackagePage() {
                       {lang === 'km' ? 'សាច់ប្រាក់' : 'Cash'}
                     </th>
                     <th rowSpan={2} style={{ padding: '12px 8px', border: '1px solid #e5e7eb', textAlign: 'left', fontSize: '13px', fontWeight: 'bold', width: '160px' }}>
-                      {lang === 'km' ? 'វិធីសាស្ត្រទូទាត់' : 'Payment Method'}
+                      {lang === 'km' ? 'ស្ថានភាព / វិធីសាស្ត្រទូទាត់' : 'Status / Payment Method'}
                     </th>
                   </tr>
                   <tr style={{ backgroundColor: '#f3f4f6', borderBottom: '2px solid #e5e7eb' }}>
@@ -490,7 +492,7 @@ export default function CompletePackagePage() {
                               className="form-control"
                               value={rowCashKHR[o.id] ?? ''}
                               onChange={e => handleCashKHRChange(o.id, e.target.value)}
-                              disabled={rowPaymentMethod[o.id] === 'failed'}
+                              disabled={rowPaymentMethod[o.id] === 'failed' || rowPaymentMethod[o.id] === 'returned'}
                               style={{ width: '100px', height: '32px', padding: '2px 6px', borderRadius: '4px', border: '1px solid #d1d5db', fontSize: '13px', textAlign: 'center' }}
                             />
                           </td>
@@ -500,7 +502,7 @@ export default function CompletePackagePage() {
                               className="form-control"
                               value={rowCashUSD[o.id] ?? ''}
                               onChange={e => handleCashUSDChange(o.id, e.target.value)}
-                              disabled={rowPaymentMethod[o.id] === 'failed'}
+                              disabled={rowPaymentMethod[o.id] === 'failed' || rowPaymentMethod[o.id] === 'returned'}
                               style={{ width: '100px', height: '32px', padding: '2px 6px', borderRadius: '4px', border: '1px solid #d1d5db', fontSize: '13px', textAlign: 'center' }}
                             />
                           </td>
@@ -514,6 +516,7 @@ export default function CompletePackagePage() {
                               <option value="cash">{lang === 'km' ? 'ទទួលសាច់ប្រាក់' : 'Receive Cash'}</option>
                               <option value="bank">{lang === 'km' ? 'ទូទាត់តាមធនាគារ' : 'Bank Transfer'}</option>
                               <option value="failed">{lang === 'km' ? 'ដឹកមិនជោគជ័យ' : 'Delivery Failed'}</option>
+                              <option value="returned">{lang === 'km' ? 'បង្វិលត្រឡប់ទៅហាង' : 'Return to Shop'}</option>
                             </select>
                           </td>
                         </tr>

@@ -623,11 +623,65 @@ export default function DriverTasksPage() {
               <label style={{ fontSize: '13px', fontWeight: '700', color: '#475569', display: 'block', marginBottom: '6px' }}>
                 {t.remarkLabel} <span style={{ color: '#ef4444' }}>*</span>
               </label>
+
+              {/* Predefined remarks for driver */}
+              <div style={{ marginBottom: 12 }}>
+                <div style={{ fontSize: 11, color: '#64748b', marginBottom: 6, fontWeight: 600 }}>
+                  {lang === 'km' ? 'មូលហេតុដឹកបន្ត (Failed / Postpone)៖' : 'Reason for failed/postpone:'}
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
+                  {['ភ្ញៀវសុំស្អែក', 'ខលមិនលើក', 'ភ្ញៀវសុំលើកថ្ងៃ'].map(p => (
+                    <button
+                      key={p}
+                      type="button"
+                      onClick={() => setRemark(p)}
+                      style={{
+                        padding: '4px 10px',
+                        borderRadius: 20,
+                        border: `1.5px solid ${remark === p ? '#3b82f6' : '#cbd5e1'}`,
+                        background: remark === p ? '#eff6ff' : '#f8fafc',
+                        color: remark === p ? '#2563eb' : '#334155',
+                        fontSize: 12,
+                        fontWeight: remark === p ? 700 : 400,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {p}
+                    </button>
+                  ))}
+                </div>
+
+                <div style={{ fontSize: 11, color: '#64748b', marginBottom: 6, fontWeight: 600 }}>
+                  {lang === 'km' ? 'មូលហេតុត្រឡប់ (Return)៖' : 'Reason for return:'}
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {['អីវ៉ាន់ខ្វះ', 'ភ្ញៀវឈប់យក', 'ទាក់ទងមិនបានច្រើនថ្ងៃ', 'ហាងអោយត្រឡប់ទៅវិញ'].map(p => (
+                    <button
+                      key={p}
+                      type="button"
+                      onClick={() => setRemark(p)}
+                      style={{
+                        padding: '4px 10px',
+                        borderRadius: 20,
+                        border: `1.5px solid ${remark === p ? '#3b82f6' : '#cbd5e1'}`,
+                        background: remark === p ? '#eff6ff' : '#f8fafc',
+                        color: remark === p ? '#2563eb' : '#334155',
+                        fontSize: 12,
+                        fontWeight: remark === p ? 700 : 400,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {p}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <textarea
                 value={remark}
                 onChange={e => setRemark(e.target.value)}
                 placeholder={t.remarkPlaceholder}
-                rows={3}
+                rows={2}
                 style={{
                   width: '100%',
                   padding: '10px 12px',

@@ -21,11 +21,24 @@ export default function AssignDeliveryPage() {
   const router = useRouter();
   const [unassigned, setUnassigned] = useState<any[]>([]);
   const [drivers, setDrivers] = useState<any[]>([]);
-  const { t } = useLanguage();
+  const { lang, t } = useLanguage();
   const [selected, setSelected] = useState<number[]>([]);
   const [selectedDriver, setSelectedDriver] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [assigning, setAssigning] = useState(false);
+
+  // Tabs & History states
+  const [assignTab, setAssignTab] = useState<'unassigned' | 'assigned'>('unassigned');
+
+  const handleTabChange = (tab: 'unassigned' | 'assigned') => {
+    setAssignTab(tab);
+    setSelected([]);
+    if (tab === 'unassigned') {
+      setFilterDriverId('none');
+    } else {
+      setFilterDriverId('');
+    }
+  };
 
   // Orders Search & Pagination
   const [search, setSearch] = useState('');
@@ -69,7 +82,7 @@ export default function AssignDeliveryPage() {
     );
   }, [drivers, driverSearch]);
 
-  // Filter orders by search + date + driver
+  // Filter orders by search + date + driver + tab
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return unassigned.filter(o => {
@@ -85,17 +98,18 @@ export default function AssignDeliveryPage() {
         const orderDate = o.createdAt ? o.createdAt.slice(0, 10) : '';
         if (orderDate !== filterDate) return false;
       }
-      // driver filter — filter by currently assigned driver
-      if (filterDriverId) {
-        if (filterDriverId === 'none') {
-          if (o.driverId != null) return false;
-        } else {
-          if (String(o.driverId) !== filterDriverId) return false;
+      // Tab / Driver filter
+      if (assignTab === 'unassigned') {
+        if (o.driverId != null) return false;
+      } else {
+        if (o.driverId == null) return false;
+        if (filterDriverId && filterDriverId !== 'none' && String(o.driverId) !== filterDriverId) {
+          return false;
         }
       }
       return true;
     });
-  }, [unassigned, search, filterDate, filterDriverId]);
+  }, [unassigned, search, filterDate, filterDriverId, assignTab]);
 
   // Pagination
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
@@ -106,7 +120,7 @@ export default function AssignDeliveryPage() {
   }, [filtered, safePage, pageSize]);
 
   // Reset to page 1 when filters change
-  useEffect(() => { setCurrentPage(1); }, [search, pageSize, filterDate, filterDriverId]);
+  useEffect(() => { setCurrentPage(1); }, [search, pageSize, filterDate, filterDriverId, assignTab]);
 
   const toggleOrder = (id: number) => {
     setSelected(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
@@ -158,7 +172,12 @@ export default function AssignDeliveryPage() {
                       📦
                     </div>
                     <div>
-                      <span className="card-title" style={{ fontSize: 16 }}>{t('unassignedParcels')}</span>
+                      <span className="card-title" style={{ fontSize: 16 }}>
+                        {assignTab === 'unassigned'
+                          ? (lang === 'km' ? 'កញ្ចប់អីវ៉ាន់មិនទាន់ចាត់ចែង' : 'Unassigned Parcels')
+                          : (lang === 'km' ? 'កញ្ចប់អីវ៉ាន់ចាត់ចែងរួច' : 'Assigned Parcels')
+                        }
+                      </span>
                       <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2 }}>
                         {filtered.length} / {unassigned.length} orders
                         {selected.length > 0 && (
@@ -166,9 +185,6 @@ export default function AssignDeliveryPage() {
                             · {selected.length} selected
                           </span>
                         )}
-                        <span style={{ marginLeft: 8, fontSize: 11, color: '#7c3aed', background: '#f3e8ff', padding: '2px 8px', borderRadius: 999, fontWeight: 600 }}>
-                          incl. assigned
-                        </span>
                       </div>
                     </div>
                   </div>
@@ -180,6 +196,54 @@ export default function AssignDeliveryPage() {
                     )}
                     <button className="btn btn-outline" onClick={load}><MdRefresh size={16} /> Refresh</button>
                   </div>
+                </div>
+
+                {/* Tabs Bar */}
+                <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', padding: '0 24px', background: 'var(--bg-card)', gap: 24 }}>
+                  <button 
+                    onClick={() => handleTabChange('unassigned')}
+                    style={{ 
+                      padding: '12px 8px', 
+                      fontSize: 14, 
+                      fontWeight: 600, 
+                      color: assignTab === 'unassigned' ? 'var(--accent)' : 'var(--text-muted)', 
+                      borderBottom: assignTab === 'unassigned' ? '2px solid var(--accent)' : '2px solid transparent',
+                      background: 'transparent',
+                      borderTop: 'none',
+                      borderLeft: 'none',
+                      borderRight: 'none',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    <span>🔴</span>
+                    <span>{lang === 'km' ? 'មិនទាន់ចាត់ចែង' : 'Unassigned'}</span>
+                  </button>
+                  <button 
+                    onClick={() => handleTabChange('assigned')}
+                    style={{ 
+                      padding: '12px 8px', 
+                      fontSize: 14, 
+                      fontWeight: 600, 
+                      color: assignTab === 'assigned' ? 'var(--accent)' : 'var(--text-muted)', 
+                      borderBottom: assignTab === 'assigned' ? '2px solid var(--accent)' : '2px solid transparent',
+                      background: 'transparent',
+                      borderTop: 'none',
+                      borderLeft: 'none',
+                      borderRight: 'none',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    <span>🟢</span>
+                    <span>{lang === 'km' ? 'ចាត់ចែងរួច' : 'Assigned'}</span>
+                  </button>
                 </div>
 
                 {/* Search + Filters + Page size bar */}
@@ -251,30 +315,31 @@ export default function AssignDeliveryPage() {
                   </div>
 
                   {/* Filter by current driver */}
-                  <div style={{ flexShrink: 0, minWidth: 160 }}>
-                    <select
-                      value={filterDriverId}
-                      onChange={e => setFilterDriverId(e.target.value)}
-                      style={{
-                        padding: '7px 10px',
-                        border: `1.5px solid ${filterDriverId ? 'var(--accent)' : 'var(--border)'}`,
-                        borderRadius: 10,
-                        fontSize: 13,
-                        background: filterDriverId ? 'var(--accent-light)' : 'var(--bg-primary)',
-                        color: filterDriverId ? 'var(--accent)' : 'var(--text-primary)',
-                        outline: 'none',
-                        cursor: 'pointer',
-                        fontWeight: filterDriverId ? 600 : 400,
-                        width: '100%',
-                      }}
-                    >
-                      <option value="">🧑 Driver ទាំងអស់</option>
-                      <option value="none">— មិនទាន់ assign</option>
-                      {drivers.map((d: any) => (
-                        <option key={d.id} value={String(d.id)}>{d.name}{d.nameKh ? ` (${d.nameKh})` : ''}</option>
-                      ))}
-                    </select>
-                  </div>
+                  {assignTab === 'assigned' && (
+                    <div style={{ flexShrink: 0, minWidth: 160 }}>
+                      <select
+                        value={filterDriverId}
+                        onChange={e => setFilterDriverId(e.target.value)}
+                        style={{
+                          padding: '7px 10px',
+                          border: `1.5px solid ${filterDriverId ? 'var(--accent)' : 'var(--border)'}`,
+                          borderRadius: 10,
+                          fontSize: 13,
+                          background: filterDriverId ? 'var(--accent-light)' : 'var(--bg-primary)',
+                          color: filterDriverId ? 'var(--accent)' : 'var(--text-primary)',
+                          outline: 'none',
+                          cursor: 'pointer',
+                          fontWeight: filterDriverId ? 600 : 400,
+                          width: '100%',
+                        }}
+                      >
+                        <option value="">🧑 Driver ទាំងអស់</option>
+                        {drivers.map((d: any) => (
+                          <option key={d.id} value={String(d.id)}>{d.name}{d.nameKh ? ` (${d.nameKh})` : ''}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
 
                   {/* Page size selector */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>

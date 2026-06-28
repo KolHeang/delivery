@@ -24,34 +24,24 @@ const SIZE_OPTIONS = ['small', 'medium', 'large'];
 
 const PREDEFINED_REMARKS: Record<string, string[]> = {
   failed: [
-    'Call អត់លើក',
-    'ភ្ញៀវសូមយកស្អែក',
-    'ដល់ទីតាំងCallអត់លើក',
-    'មិនអាចទាក់ទងបានទាំងលេខទាំងតេលេក្រោម',
+    'ភ្ញៀវសុំស្អែក',
+    'ខលមិនលើក',
+    'ភ្ញៀវសុំលើកថ្ងៃ',
     'ភ្ញៀវសុំប្តូរទីតាំង',
     'ទៅដល់អត់មានអ្នកទទួល',
-    'ខលអត់លើក Telegramអត់តប',
-    'ហាងអោយទុកសិន',
     'លេខភ្ញៀវខុស',
     'ភ្ញៀវអត់លុយយក',
   ],
   pending: [
-    'Call អត់លើក',
-    'ភ្ញៀវសូមយកស្អែក',
-    'ដល់ទីតាំងCallអត់លើក',
-    'មិនអាចទាក់ទងបានទាំងលេខទាំងតេលេក្រោម',
-    'ភ្ញៀវសុំប្តូរទីតាំង',
-    'ទៅដល់អត់មានអ្នកទទួល',
-    'ខលអត់លើក Telegramអត់តប',
-    'ហាងអោយទុកសិន',
-    'លេខភ្ញៀវខុស',
-    'ភ្ញៀវអត់លុយយក',
+    'ភ្ញៀវសុំស្អែក',
+    'ខលមិនលើក',
+    'ភ្ញៀវសុំលើកថ្ងៃ',
   ],
   returned: [
-    'ហាងអោយទុកសិន',
-    'ខលអត់លើកច្រើនថ្ងៃ',
-    'ភ្ញៀវ Block លេខអ្នកដឹក',
-    'ហាងឲត្រឡប់ទៅវិញ',
+    'អីវ៉ាន់ខ្វះ',
+    'ភ្ញៀវឈប់យក',
+    'ទាក់ទងមិនបានច្រើនថ្ងៃ',
+    'ហាងអោយត្រឡប់ទៅវិញ',
     'ភ្ញៀវថាអត់បានកម្មង់',
     'ភ្ញៀវសុំ Cancel',
   ],
@@ -306,9 +296,9 @@ export default function DeliveriesPage() {
               {/* Advanced Filters */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
                 <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label className="form-label" style={{ fontSize: 11, marginBottom: 4 }}>Status</label>
+                  <label className="form-label" style={{ fontSize: 11, marginBottom: 4 }}>{lang === 'km' ? 'ស្ថានភាព' : 'Status'}</label>
                   <select className="form-control" value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setCurrentPage(1); }}>
-                    <option value="all">{lang === 'km' ? 'ជ្រើសរើសស្ថានភាព' : 'Select Status'}</option>
+                    <option value="all">{lang === 'km' ? 'ទាំងអស់' : 'All'}</option>
                     {['pending', 'in-warehouse', 'in-transit', 'delivered', 'failed', 'returned'].map(s => (
                       <option key={s} value={s}>{getStatusLabel(s)}</option>
                     ))}
@@ -327,16 +317,16 @@ export default function DeliveriesPage() {
                   onChange={val => { setEndDate(val); setCurrentPage(1); }}
                 />
                 <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label className="form-label" style={{ fontSize: 11, marginBottom: 4 }}>អ្នកដឹក</label>
+                  <label className="form-label" style={{ fontSize: 11, marginBottom: 4 }}>{lang === 'km' ? 'អ្នកដឹក' : 'Driver'}</label>
                   <select className="form-control" value={driverFilter} onChange={e => { setDriverFilter(e.target.value); setCurrentPage(1); }}>
-                    <option value="">-- {t('all') || 'All'} --</option>
+                    <option value="">-- {lang === 'km' ? 'ទាំងអស់' : 'All'} --</option>
                     {drivers.map(d => <option key={d.id} value={d.id}>{d.name} {d.nameKh ? `(${d.nameKh})` : ''}</option>)}
                   </select>
                 </div>
                 <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label className="form-label" style={{ fontSize: 11, marginBottom: 4 }}>ហាង</label>
+                  <label className="form-label" style={{ fontSize: 11, marginBottom: 4 }}>{lang === 'km' ? 'ហាង' : 'Merchant'}</label>
                   <select className="form-control" value={merchantFilter} onChange={e => { setMerchantFilter(e.target.value); setCurrentPage(1); }}>
-                    <option value="">-- {t('all') || 'All'} --</option>
+                    <option value="">-- {lang === 'km' ? 'ទាំងអស់' : 'All'} --</option>
                     {merchants.map(m => <option key={m.id} value={m.id}>{m.name} {m.nameKh ? `(${m.nameKh})` : ''}</option>)}
                   </select>
                 </div>
@@ -346,7 +336,7 @@ export default function DeliveriesPage() {
               <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
                 <div className="search-input-wrapper" style={{ flex: 1, minWidth: 200 }}>
                   <MdSearch className="search-icon" />
-                  <input className="form-control search-input" placeholder="Search by tracking, receiver, merchant..." value={search} onChange={e => setSearch(e.target.value)} />
+                  <input className="form-control search-input" placeholder={lang === 'km' ? 'ស្វែងរកតាមលេខកូដ អ្នកទទួល ហាង...' : 'Search by tracking, receiver, merchant...'} value={search} onChange={e => setSearch(e.target.value)} />
                 </div>
               </div>
             </div>
@@ -399,8 +389,8 @@ export default function DeliveriesPage() {
                   <table style={{ minWidth: 1800 }}>
                   <thead>
                     <tr>
-                      <th>ល.រ</th>
-                      <th>លេខ</th>
+                      <th>{lang === 'km' ? 'ល.រ' : 'No.'}</th>
+                      <th>{lang === 'km' ? 'លេខ' : 'Tracking'}</th>
                       <th style={{ textAlign: 'center', width: 40 }}>
                         <input
                           type="checkbox"
@@ -409,21 +399,21 @@ export default function DeliveriesPage() {
                           style={{ cursor: 'pointer', width: 16, height: 16 }}
                         />
                       </th>
-                      <th>កាលបរិច្ឆេទ</th>
-                      <th>ឈ្មោះហាង</th>
-                      <th>អាសយដ្ឋានអ្នកទទួល</th>
-                      <th>លេខទូរស័ព្ទ</th>
-                      <th>ចំនួន$</th>
-                      <th>ចំនួន៛</th>
-                      <th style={{ minWidth: 130 }}>អ្នកយកកញ្ចប់</th>
-                      <th style={{ minWidth: 130 }}>អ្នកដឹក</th>
-                      <th style={{ textAlign: 'center', width: 80 }}>ស្ថានភាពដឹក ✓ ✕</th>
-                      <th>ស្ថានភាព</th>
-                      <th style={{ minWidth: 160 }}>សម្គាល់</th>
-                      <th>ស្ថានភាពទូទាត់</th>
-                      <th>បញ្ចូលដោយ</th>
-                      <th>បញ្ចប់ដោយ</th>
-                      <th>ធ្វើបច្ចុប្បន្នភាព</th>
+                      <th>{lang === 'km' ? 'កាលបរិច្ឆេទ' : 'Date'}</th>
+                      <th>{lang === 'km' ? 'ឈ្មោះហាង' : 'Merchant'}</th>
+                      <th>{lang === 'km' ? 'អាសយដ្ឋានអ្នកទទួល' : 'Receiver Address'}</th>
+                      <th>{lang === 'km' ? 'លេខទូរស័ព្ទ' : 'Receiver Phone'}</th>
+                      <th>{lang === 'km' ? 'ចំនួន$' : 'Amount USD'}</th>
+                      <th>{lang === 'km' ? 'ចំនួន៛' : 'Amount KHR'}</th>
+                      <th style={{ minWidth: 130 }}>{lang === 'km' ? 'អ្នកយកកញ្ចប់' : 'Pickup Driver'}</th>
+                      <th style={{ minWidth: 130 }}>{lang === 'km' ? 'អ្នកដឹក' : 'Delivery Driver'}</th>
+                      <th style={{ textAlign: 'center', width: 80 }}>{lang === 'km' ? 'ស្ថានភាពដឹក ✓ ✕' : 'Delivery Status ✓ ✕'}</th>
+                      <th>{lang === 'km' ? 'ស្ថានភាព' : 'Status'}</th>
+                      <th style={{ minWidth: 160 }}>{lang === 'km' ? 'សម្គាល់' : 'Remarks/Notes'}</th>
+                      <th>{lang === 'km' ? 'ស្ថានភាពទូទាត់' : 'Payment Status'}</th>
+                      <th>{lang === 'km' ? 'បញ្ចូលដោយ' : 'Created By'}</th>
+                      <th>{lang === 'km' ? 'បញ្ចប់ដោយ' : 'Completed By'}</th>
+                      <th>{lang === 'km' ? 'ធ្វើបច្ចុប្បន្នភាព' : 'Updated At'}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -546,7 +536,12 @@ export default function DeliveriesPage() {
                                 fontSize: '12px', 
                                 minWidth: '130px',
                                 fontWeight: 600,
-                                color: o.status === 'delivered' ? 'var(--success, #10b981)' : o.status === 'failed' ? 'var(--danger, #ef4444)' : 'inherit'
+                                color: o.status === 'delivered' ? '#10b981' : 
+                                       o.status === 'returned' ? '#ef4444' : 
+                                       (o.status === 'failed' || o.status === 'pending' || o.status === 'in-transit' || o.status === 'picked-up' || o.status === 'in-warehouse' || o.status === 'assigned') ? '#f59e0b' : 'inherit',
+                                borderColor: o.status === 'delivered' ? '#10b981' : 
+                                             o.status === 'returned' ? '#ef4444' : 
+                                             (o.status === 'failed' || o.status === 'pending' || o.status === 'in-transit' || o.status === 'picked-up' || o.status === 'in-warehouse' || o.status === 'assigned') ? '#f59e0b' : '#cbd5e1',
                               }}
                             >
                               {Array.from(new Set([
@@ -655,6 +650,8 @@ export default function DeliveriesPage() {
               { label: 'Delivery Fee', value: `$${parseFloat(viewModal.deliveryFee).toFixed(2)}` },
               { label: 'Pickup Driver', value: viewModal.pickupDriver?.name || 'None' },
               { label: 'Delivery Driver', value: viewModal.driver?.name || 'Unassigned' },
+              { label: lang === 'km' ? 'ទូទាត់ហាង (Shop Payout)' : 'Shop Payout', value: <Badge status={viewModal.merchantPaymentStatus === 'paid' ? 'paid' : 'pending'} label={viewModal.merchantPaymentStatus === 'paid' ? (lang === 'km' ? 'ទូទាត់រួច' : 'Paid') : (lang === 'km' ? 'មិនទាន់ទូទាត់' : 'Unpaid')} /> },
+              { label: lang === 'km' ? 'ទូទាត់អ្នកដឹក (Driver Payout)' : 'Driver Payout', value: <Badge status={viewModal.driverPaymentStatus === 'paid' ? 'paid' : 'pending'} label={viewModal.driverPaymentStatus === 'paid' ? (lang === 'km' ? 'ទូទាត់រួច' : 'Paid') : (lang === 'km' ? 'មិនទាន់ទូទាត់' : 'Unpaid')} /> },
               { label: 'Created', value: formatDateToDDMMYYYY(viewModal.createdAt) },
             ].map(({ label, value }) => (
               <div key={label}>

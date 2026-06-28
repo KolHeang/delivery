@@ -67,6 +67,7 @@ export class PaymentsService {
   async createShopPayment(
     merchantId: number,
     amount: number,
+    amountKHR: number,
     date: Date,
     reference?: string,
     note?: string,
@@ -96,6 +97,7 @@ export class PaymentsService {
     const payment = this.shopRepo.create({
       merchantId,
       amount,
+      amountKHR,
       date,
       reference,
       note,

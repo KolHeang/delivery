@@ -584,13 +584,13 @@ tbody td {
 }
 
 .badge-failed {
-  background: var(--danger-light);
-  color: #991b1b;
+  background: var(--warning-light);
+  color: #92400e;
 }
 
 .badge-returned {
-  background: var(--neutral-light);
-  color: #374151;
+  background: var(--danger-light);
+  color: #991b1b;
 }
 
 .badge-in-warehouse {
@@ -1509,6 +1509,11 @@ select.form-control {
    PRINT STYLES (for printable reports)
    ============================================================ */
 @media print {
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
   body {
     background: #ffffff !important;
     color: #000000 !important;
@@ -1570,10 +1575,21 @@ select.form-control {
     border: 1px solid #cbd5e1 !important;
     padding: 8px 12px !important;
     color: #000000 !important;
+  }
+
+  tr[style*="background"] th,
+  tr[style*="background"] td,
+  tr[style*="Background"] th,
+  tr[style*="Background"] td {
+    background: inherit !important;
+  }
+
+  th:not([style*="background"]):not([style*="Background"]),
+  td:not([style*="background"]):not([style*="Background"]) {
     background: #ffffff !important;
   }
 
-  th {
+  th:not([style*="background"]):not([style*="Background"]) {
     background-color: #f1f5f9 !important;
     font-weight: 700 !important;
   }

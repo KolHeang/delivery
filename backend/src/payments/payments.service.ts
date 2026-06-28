@@ -390,6 +390,7 @@ export class PaymentsService {
         .whereInIds(payment.orderIds)
         .leftJoinAndSelect('order.merchant', 'merchant')
         .leftJoinAndSelect('order.driver', 'driver')
+        .leftJoinAndSelect('order.histories', 'histories')
         .getMany();
     }
 

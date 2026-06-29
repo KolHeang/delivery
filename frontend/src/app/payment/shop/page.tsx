@@ -51,8 +51,8 @@ export default function PaymentWithShopPage() {
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historySearch, setHistorySearch] = useState('');
   const [historyMerchantId, setHistoryMerchantId] = useState('');
-  const [historyStartDate, setHistoryStartDate] = useState(() => getLocalDateString());
-  const [historyEndDate, setHistoryEndDate] = useState(() => getLocalDateString());
+  const [historyStartDate, setHistoryStartDate] = useState('');
+  const [historyEndDate, setHistoryEndDate] = useState('');
 
   // Edit Payout Modal State
   const [editPayment, setEditPayment] = useState<any | null>(null);
@@ -121,14 +121,8 @@ export default function PaymentWithShopPage() {
   const [merchantFilter, setMerchantFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('unpaid');
 
-  const [startDate, setStartDate] = useState(() => getLocalDateString());
-  const [endDate, setEndDate] = useState(() => {
-    const d = new Date();
-    const year = d.getFullYear();
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  });
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
 
   // Interactive UI State
   const [expandedMerchantId, setExpandedMerchantId] = useState<number | null>(null);
@@ -684,6 +678,7 @@ return {
                   value={startDate}
                   onChange={setStartDate}
                   style={{ minWidth: 220 }}
+                  allowEmpty={true}
                 />
                 <DateInput
                   labelEn="End Date"
@@ -691,6 +686,7 @@ return {
                   value={endDate}
                   onChange={setEndDate}
                   style={{ minWidth: 220 }}
+                  allowEmpty={true}
                 />
               </div>
 
@@ -744,8 +740,8 @@ return {
                   onClick={() => {
                     setMerchantFilter('');
                     setStatusFilter('unpaid');
-                    setStartDate(getLocalDateString());
-                    setEndDate(getLocalDateString());
+                    setStartDate('');
+                    setEndDate('');
                     setSelectedIds([]);
                   }}
                   style={{

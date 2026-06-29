@@ -52,8 +52,8 @@ export default function PaymentWithStaffPage() {
   // Filter States
   const [driverId, setDriverId] = useState('');
   const [statusFilter, setStatusFilter] = useState('unpaid');
-  const [startDate, setStartDate] = useState(() => getLocalDateString());
-  const [endDate, setEndDate] = useState(() => getLocalDateString());
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   
   // Data States
   const [orders, setOrders] = useState<any[]>([]);
@@ -72,8 +72,8 @@ export default function PaymentWithStaffPage() {
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historySearch, setHistorySearch] = useState('');
   const [historyDriverId, setHistoryDriverId] = useState('');
-  const [historyStartDate, setHistoryStartDate] = useState(() => getLocalDateString());
-  const [historyEndDate, setHistoryEndDate] = useState(() => getLocalDateString());
+  const [historyStartDate, setHistoryStartDate] = useState('');
+  const [historyEndDate, setHistoryEndDate] = useState('');
 
   // Edit Payout Modal State
   const [editPayment, setEditPayment] = useState<any | null>(null);
@@ -421,6 +421,7 @@ export default function PaymentWithStaffPage() {
                 labelKh="ចាប់ពីថ្ងៃ"
                 value={startDate}
                 onChange={setStartDate}
+                allowEmpty={true}
               />
               
               <DateInput
@@ -428,6 +429,7 @@ export default function PaymentWithStaffPage() {
                 labelKh="ដល់"
                 value={endDate}
                 onChange={setEndDate}
+                allowEmpty={true}
               />
             </div>
             
@@ -757,8 +759,8 @@ export default function PaymentWithStaffPage() {
                   onClick={() => {
                     setHistorySearch('');
                     setHistoryDriverId('');
-                    setHistoryStartDate(getLocalDateString());
-                    setHistoryEndDate(getLocalDateString());
+                    setHistoryStartDate('');
+                    setHistoryEndDate('');
                   }}
                   style={{ height: 38, padding: '0 16px', fontWeight: 600 }}
                 >

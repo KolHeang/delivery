@@ -170,7 +170,7 @@ export class OrdersService {
   /** Orders that have arrived at the warehouse, waiting for delivery assignment (includes already-assigned for reassignment) */
   async findInWarehouse(): Promise<Order[]> {
     return this.repo.find({
-      where: { status: In(['in-warehouse', 'pending', 'assigned']) },
+      where: { status: In(['in-warehouse', 'pending', 'assigned', 'failed']) },
       relations: this.relations,
       order: { warehouseAt: 'DESC' },
     });
@@ -360,12 +360,17 @@ export class OrdersService {
    */
   async assignDelivery(id: number, dto: AssignDeliveryDto): Promise<Order> {
     const order = await this.findOne(id);
-    if (order.status !== 'in-warehouse' && order.status !== 'pending' && order.status !== 'assigned') {
+    if (
+      order.status !== 'in-warehouse' &&
+      order.status !== 'pending' &&
+      order.status !== 'assigned' &&
+      order.status !== 'failed'
+    ) {
       throw new BadRequestException(
-        'Delivery can only be assigned to pending, in-warehouse, or already-assigned orders',
+        'Delivery can only be assigned to pending, in-warehouse, already-assigned, or failed orders',
       );
     }
-    const isReassign = order.status === 'assigned' && order.driverId !== dto.driverId;
+    const isReassign = (order.status === 'assigned' || order.status === 'failed') && order.driverId !== dto.driverId;
     await this.repo.update(id, {
       driverId: dto.driverId,
       status: 'assigned',

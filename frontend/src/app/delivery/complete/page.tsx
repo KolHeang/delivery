@@ -27,11 +27,13 @@ export default function CompletePackagePage() {
   const [saving, setSaving] = useState(false);
 
   // Filters state
-  const [filterDate, setFilterDate] = useState(() => getLocalDateString());
+  const [filterDate, setFilterDate] = useState('');
   const [filterDriver, setFilterDriver] = useState('');
-  const [appliedFilters, setAppliedFilters] = useState<{ date: string; driverId: string }>(() => ({
-    date: getLocalDateString(),
+  const [filterStatus, setFilterStatus] = useState('');
+  const [appliedFilters, setAppliedFilters] = useState<{ date: string; driverId: string; status: string }>(() => ({
+    date: '',
     driverId: '',
+    status: '',
   }));
 
   // Table controls state
@@ -111,6 +113,7 @@ export default function CompletePackagePage() {
     setAppliedFilters({
       date: filterDate,
       driverId: filterDriver,
+      status: filterStatus,
     });
     setCurrentPage(1);
     setSelectedIds([]); // Reset selection on filter change
@@ -152,7 +155,18 @@ export default function CompletePackagePage() {
       if (!o.driverId || String(o.driverId) !== appliedFilters.driverId) return false;
     }
 
-    // 2. Search query
+    // 2. Filter by applied status
+    if (appliedFilters.status) {
+      if (o.status !== appliedFilters.status) return false;
+    }
+
+    // 3. Filter by applied date
+    if (appliedFilters.date) {
+      const orderDateStr = getLocalDateString(new Date(o.createdAt));
+      if (orderDateStr !== appliedFilters.date) return false;
+    }
+
+    // 4. Search query
     if (search) {
       const q = search.toLowerCase();
       const matchTracking = o.trackingCode?.toLowerCase().includes(q);
@@ -196,7 +210,7 @@ export default function CompletePackagePage() {
           else if (method === 'returned') status = 'returned';
           const khr = parseInt(rowCashKHR[id] || '0') || 0;
           const usd = parseFloat(rowCashUSD[id] || '0') || 0;
-          const completedDate = rowCompletedDate[id] || appliedFilters.date;
+          const completedDate = rowCompletedDate[id] || appliedFilters.date || getLocalDateString();
 
           await api.patch(`/orders/${id}`, {
             status,
@@ -255,7 +269,24 @@ export default function CompletePackagePage() {
                 value={filterDate}
                 onChange={setFilterDate}
                 style={{ minWidth: 220 }}
+                allowEmpty={true}
               />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: '200px' }}>
+                <label style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--text-main, #374151)' }}>
+                  {lang === 'km' ? 'ស្ថានភាព៖' : 'Status:'}
+                </label>
+                <select
+                  className="form-control"
+                  value={filterStatus}
+                  onChange={e => setFilterStatus(e.target.value)}
+                  style={{ height: '38px', padding: '8px 12px', borderRadius: '6px', border: '1px solid #d1d5db', backgroundColor: '#fff' }}
+                >
+                  <option value="">{lang === 'km' ? '— ទាំងអស់ —' : '— All —'}</option>
+                  <option value="assigned">{lang === 'km' ? 'បានចាត់ចែង' : 'Assigned'}</option>
+                  <option value="picked-up">{lang === 'km' ? 'បានប្រមូល' : 'Picked Up'}</option>
+                  <option value="in-transit">{lang === 'km' ? 'កំពុងដឹក' : 'In Transit'}</option>
+                </select>
+              </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: '250px' }}>
                 <label style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--text-main, #374151)' }}>
                   {lang === 'km' ? 'អ្នកដឹក៖' : 'Driver:'}

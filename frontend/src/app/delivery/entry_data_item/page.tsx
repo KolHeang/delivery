@@ -27,10 +27,10 @@ export default function BatchEntryPage() {
   const { t } = useLanguage();
   const [selectedMerchantId, setSelectedMerchantId] = useState('');
   const [parcelDate, setParcelDate] = useState(() => getLocalDateString());
-  const [deliveryFee, setDeliveryFee] = useState('0');
+  const [deliveryFee, setDeliveryFee] = useState('1.25');
 
   const [rows, setRows] = useState<any[]>([
-    { receiverName: '-', receiverAddress: '', receiverPhone: '', deliveryFee: '0', codUSD: '0', codKHR: '0', pickupId: '', driverId: '', note: '' }
+    { receiverName: '-', receiverAddress: '', receiverPhone: '', deliveryFee: '1.25', codUSD: '0', codKHR: '0', pickupId: '', driverId: '', note: '' }
   ]);
 
   useEffect(() => {
@@ -51,12 +51,16 @@ export default function BatchEntryPage() {
   useEffect(() => {
     const merchant = merchants.find(m => m.id.toString() === selectedMerchantId);
     if (merchant) {
-      const fee = merchant.deliveryFee?.toString() || '0';
+      let fee = merchant.deliveryFee?.toString() || '0';
+      if (parseFloat(fee) === 0) {
+        fee = '1.25';
+      }
+      const prevDeliveryFee = deliveryFee;
       setDeliveryFee(fee);
       
-      // Update any rows that have default/unset delivery fee
+      // Update any rows that have default/unset delivery fee, or matching previous merchant's default fee
       setRows(prev => prev.map(row => {
-        if (!row.deliveryFee || parseFloat(row.deliveryFee) === 0) {
+        if (!row.deliveryFee || parseFloat(row.deliveryFee) === 0 || row.deliveryFee === prevDeliveryFee) {
           return { ...row, deliveryFee: fee };
         }
         return row;
@@ -67,7 +71,7 @@ export default function BatchEntryPage() {
   const addRow = () => {
     setRows(prev => [
       ...prev,
-      { receiverName: '-', receiverAddress: '', receiverPhone: '', deliveryFee: deliveryFee || '0', codUSD: '0', codKHR: '0', pickupId: '', driverId: '', note: '' }
+      { receiverName: '-', receiverAddress: '', receiverPhone: '', deliveryFee: deliveryFee || '1.25', codUSD: '0', codKHR: '0', pickupId: '', driverId: '', note: '' }
     ]);
   };
 

@@ -231,16 +231,17 @@ export default function ReportPaymentCustomerPage() {
             <thead>
               <tr style={{ backgroundColor: '#244f96', color: '#fff', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
                 <th rowSpan={2} style={{ padding: '6px 4px', textAlign: 'center', border: '1px solid #000', fontWeight: 'bold', color: '#fff', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>ល.រ</th>
-                <th rowSpan={2} style={{ padding: '6px 4px', textAlign: 'center', border: '1px solid #000', fontWeight: 'bold', color: '#fff', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>កាលបរិច្ឆេទ</th>
-                <th rowSpan={2} style={{ padding: '6px 4px', textAlign: 'center', border: '1px solid #000', fontWeight: 'bold', color: '#fff', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>បរិយាយ</th>
+                <th colSpan={2} style={{ padding: '6px 4px', textAlign: 'center', border: '1px solid #000', fontWeight: 'bold', color: '#fff', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>កាលបរិច្ឆេទ</th>
+                <th rowSpan={2} style={{ padding: '6px 4px', textAlign: 'center', border: '1px solid #000', fontWeight: 'bold', color: '#fff', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>លេខកូដ</th>
+                <th rowSpan={2} style={{ padding: '6px 4px', textAlign: 'center', border: '1px solid #000', fontWeight: 'bold', color: '#fff', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>លេខអ្នកទទួល</th>
+                <th rowSpan={2} style={{ padding: '6px 4px', textAlign: 'center', border: '1px solid #000', fontWeight: 'bold', color: '#fff', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>អាសយដ្ឋាន</th>
                 <th colSpan={2} style={{ padding: '6px 4px', textAlign: 'center', border: '1px solid #000', fontWeight: 'bold', color: '#fff', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>ទឹកប្រាក់ដើមមាន<br/>(ដុល្លារ / ខ្មែរ)</th>
-                <th colSpan={2} style={{ padding: '6px 4px', textAlign: 'center', border: '1px solid #000', fontWeight: 'bold', color: '#fff', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>ទឹកប្រាក់ទទួលបាន<br/>(ដុល្លារ / ខ្មែរ)</th>
                 <th rowSpan={2} style={{ padding: '6px 4px', textAlign: 'center', border: '1px solid #000', fontWeight: 'bold', color: '#fff', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>សេវាដឹក</th>
                 <th rowSpan={2} style={{ padding: '6px 4px', textAlign: 'center', border: '1px solid #000', fontWeight: 'bold', color: '#fff', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>ផ្សេងៗ</th>
               </tr>
               <tr style={{ backgroundColor: '#3060a8', color: '#fff', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
-                <th style={{ border: '1px solid #000', padding: '2px', fontSize: '9px', fontWeight: 'normal', textAlign: 'center', color: '#fff', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>ដុល្លារ</th>
-                <th style={{ border: '1px solid #000', padding: '2px', fontSize: '9px', fontWeight: 'normal', textAlign: 'center', color: '#fff', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>ខ្មែរ</th>
+                <th style={{ border: '1px solid #000', padding: '2px', fontSize: '9px', fontWeight: 'normal', textAlign: 'center', color: '#fff', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>បង្កើតវិក្កយបត្រ</th>
+                <th style={{ border: '1px solid #000', padding: '2px', fontSize: '9px', fontWeight: 'normal', textAlign: 'center', color: '#fff', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>បញ្ចប់វិក្កយបត្រ</th>
                 <th style={{ border: '1px solid #000', padding: '2px', fontSize: '9px', fontWeight: 'normal', textAlign: 'center', color: '#fff', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>ដុល្លារ</th>
                 <th style={{ border: '1px solid #000', padding: '2px', fontSize: '9px', fontWeight: 'normal', textAlign: 'center', color: '#fff', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>ខ្មែរ</th>
               </tr>
@@ -250,7 +251,7 @@ export default function ReportPaymentCustomerPage() {
               {deliveredOrders.length > 0 && (
                 <>
                   <tr>
-                    <td colSpan={9} style={{ backgroundColor: '#10b981', color: '#fff', fontWeight: 'bold', padding: '7px 10px', border: '1px solid #000', fontSize: 12, WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
+                    <td colSpan={10} style={{ backgroundColor: '#10b981', color: '#fff', fontWeight: 'bold', padding: '7px 10px', border: '1px solid #000', fontSize: 12, WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
                       អីវ៉ាន់ដែលបានជោគជ័យ ({deliveredOrders.length} កញ្ចប់)
                     </td>
                   </tr>
@@ -261,10 +262,11 @@ export default function ReportPaymentCustomerPage() {
                       <tr key={o.id}>
                         <td style={{ textAlign: 'center', padding: '6px 4px', border: '1px solid #000' }}>{idx + 1}</td>
                         <td style={{ padding: '6px 4px', border: '1px solid #000', textAlign: 'center' }}>{formatDateToDDMMYYYY(o.createdAt)}</td>
-                        <td style={{ padding: '6px 4px', border: '1px solid #000' }}>{o.trackingCode} {o.receiverPhone ? `(${o.receiverPhone})` : ''}</td>
+                        <td style={{ padding: '6px 4px', border: '1px solid #000', textAlign: 'center' }}>{o.deliveredAt ? formatDateToDDMMYYYY(o.deliveredAt) : '—'}</td>
+                        <td style={{ padding: '6px 4px', border: '1px solid #000' }}>{o.trackingCode}</td>
+                        <td style={{ padding: '6px 4px', border: '1px solid #000' }}>{o.receiverPhone || '—'}</td>
+                        <td style={{ padding: '6px 4px', border: '1px solid #000' }}>{o.receiverAddress || '—'}</td>
                         <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000' }}>{isUSD ? `$ ${codVal.toFixed(2)}` : '$ 0'}</td>
-                        <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000' }}>{!isUSD ? `${codVal.toLocaleString()} ៛` : '0 ៛'}</td>
-                        <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000' }}>{isUSD ? `$ ${codVal.toFixed(2)}` : '$ 0.00'}</td>
                         <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000' }}>{!isUSD ? `${codVal.toLocaleString()} ៛` : '0 ៛'}</td>
                         <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000' }}>$ {parseFloat(o.deliveryFee || 0).toFixed(2)}</td>
                         <td style={{ padding: '6px 4px', border: '1px solid #000', textAlign: 'center' }}></td>
@@ -272,9 +274,7 @@ export default function ReportPaymentCustomerPage() {
                     );
                   })}
                   <tr>
-                    <td colSpan={3} style={{ textAlign: 'right', fontWeight: 'bold', padding: '6px 4px', border: '1px solid #000' }}>សរុប</td>
-                    <td style={{ textAlign: 'right', fontWeight: 'bold', padding: '6px 4px', border: '1px solid #000' }}>$ {delUSD.toFixed(2)}</td>
-                    <td style={{ textAlign: 'right', fontWeight: 'bold', padding: '6px 4px', border: '1px solid #000' }}>{delKHR.toLocaleString()} រៀល</td>
+                    <td colSpan={6} style={{ textAlign: 'right', fontWeight: 'bold', padding: '6px 4px', border: '1px solid #000' }}>សរុប</td>
                     <td style={{ textAlign: 'right', fontWeight: 'bold', padding: '6px 4px', border: '1px solid #000' }}>$ {delUSD.toFixed(2)}</td>
                     <td style={{ textAlign: 'right', fontWeight: 'bold', padding: '6px 4px', border: '1px solid #000' }}>{delKHR.toLocaleString()} រៀល</td>
                     <td style={{ textAlign: 'right', fontWeight: 'bold', padding: '6px 4px', border: '1px solid #000' }}>$ {delFee.toFixed(2)}</td>
@@ -287,7 +287,7 @@ export default function ReportPaymentCustomerPage() {
               {inTransitOrders.length > 0 && (
                 <>
                   <tr>
-                    <td colSpan={9} style={{ backgroundColor: '#f59e0b', color: '#000', fontWeight: 'bold', padding: '7px 10px', border: '1px solid #000', fontSize: 12, WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
+                    <td colSpan={10} style={{ backgroundColor: '#f59e0b', color: '#000', fontWeight: 'bold', padding: '7px 10px', border: '1px solid #000', fontSize: 12, WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
                       អីវ៉ាន់ដឹកបន្ត ({inTransitOrders.length} កញ្ចប់)
                     </td>
                   </tr>
@@ -316,11 +316,12 @@ export default function ReportPaymentCustomerPage() {
                       <tr key={o.id}>
                         <td style={{ textAlign: 'center', padding: '6px 4px', border: '1px solid #000' }}>{idx + 1}</td>
                         <td style={{ padding: '6px 4px', border: '1px solid #000', textAlign: 'center' }}>{formatDateToDDMMYYYY(o.createdAt)}</td>
-                        <td style={{ padding: '6px 4px', border: '1px solid #000' }}>{o.trackingCode} {o.receiverPhone ? `(${o.receiverPhone})` : ''}</td>
+                        <td style={{ padding: '6px 4px', border: '1px solid #000', textAlign: 'center' }}>{o.deliveredAt ? formatDateToDDMMYYYY(o.deliveredAt) : '—'}</td>
+                        <td style={{ padding: '6px 4px', border: '1px solid #000' }}>{o.trackingCode}</td>
+                        <td style={{ padding: '6px 4px', border: '1px solid #000' }}>{o.receiverPhone || '—'}</td>
+                        <td style={{ padding: '6px 4px', border: '1px solid #000' }}>{o.receiverAddress || '—'}</td>
                         <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000' }}>{isUSD ? `$ ${codVal.toFixed(2)}` : '$ 0'}</td>
                         <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000' }}>{!isUSD ? `${codVal.toLocaleString()} ៛` : '0'}</td>
-                        <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000' }}></td>
-                        <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000' }}></td>
                         <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000' }}>$ {parseFloat(o.deliveryFee || 0).toFixed(2)}</td>
                         <td style={{ padding: '6px 4px', border: '1px solid #000', textAlign: 'center' }}>{latestNote}</td>
                       </tr>
@@ -333,7 +334,7 @@ export default function ReportPaymentCustomerPage() {
               {returnedOrders.length > 0 && (
                 <>
                   <tr>
-                    <td colSpan={9} style={{ backgroundColor: '#ef4444', color: '#fff', fontWeight: 'bold', padding: '7px 10px', border: '1px solid #000', fontSize: 12, WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
+                    <td colSpan={10} style={{ backgroundColor: '#ef4444', color: '#fff', fontWeight: 'bold', padding: '7px 10px', border: '1px solid #000', fontSize: 12, WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
                       អីវ៉ាន់ត្រឡប់ទៅហាង (Return) ({returnedOrders.length} កញ្ចប់)
                     </td>
                   </tr>
@@ -348,13 +349,14 @@ export default function ReportPaymentCustomerPage() {
                       <tr key={o.id} style={{ background: '#fff5f5' }}>
                         <td style={{ textAlign: 'center', padding: '6px 4px', border: '1px solid #000' }}>{idx + 1}</td>
                         <td style={{ padding: '6px 4px', border: '1px solid #000', textAlign: 'center' }}>{formatDateToDDMMYYYY(o.createdAt)}</td>
-                        <td style={{ padding: '6px 4px', border: '1px solid #000' }}>{o.trackingCode} {o.receiverPhone ? `(${o.receiverPhone})` : ''}</td>
+                        <td style={{ padding: '6px 4px', border: '1px solid #000', textAlign: 'center' }}>{o.deliveredAt ? formatDateToDDMMYYYY(o.deliveredAt) : '—'}</td>
+                        <td style={{ padding: '6px 4px', border: '1px solid #000' }}>{o.trackingCode}</td>
+                        <td style={{ padding: '6px 4px', border: '1px solid #000' }}>{o.receiverPhone || '—'}</td>
+                        <td style={{ padding: '6px 4px', border: '1px solid #000' }}>{o.receiverAddress || '—'}</td>
                         <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000' }}>{isUSD ? `$ ${codVal.toFixed(2)}` : '$ 0'}</td>
                         <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000' }}>{!isUSD ? `${codVal.toLocaleString()} ៛` : '0 ៛'}</td>
-                        <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000' }}></td>
-                        <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000' }}></td>
                         <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000' }}>$ 0.00</td>
-                        <td style={{ padding: '6px 4px', border: '1px solid #000', textAlign: 'left', color: '#7c3aed', fontSize: 10 }}>{latestNote}</td>
+                        <td style={{ padding: '6px 4px', border: '1px solid #000', textAlign: 'left', color: '#ef4444', fontSize: 10 }}>{latestNote}</td>
                       </tr>
                     );
                   })}
@@ -363,7 +365,7 @@ export default function ReportPaymentCustomerPage() {
 
               {deliveredOrders.length === 0 && inTransitOrders.length === 0 && returnedOrders.length === 0 && (
                 <tr>
-                  <td colSpan={9} style={{ textAlign: 'center', padding: '12px', border: '1px solid #000', color: '#6b7280' }}>
+                  <td colSpan={10} style={{ textAlign: 'center', padding: '12px', border: '1px solid #000', color: '#6b7280' }}>
                     គ្មានទិន្នន័យ
                   </td>
                 </tr>

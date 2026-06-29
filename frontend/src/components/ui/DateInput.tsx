@@ -105,8 +105,17 @@ export default function DateInput({ labelEn, labelKh, value, onChange, style, in
           <span style={{ position: 'absolute', pointerEvents: 'none', fontSize: 14, top: 2, right: 4 }}>📅</span>
           <input
             type="date"
-            value={value || getLocalDateString()}
+            value={value || ''}
             onChange={e => onChange(e.target.value)}
+            onClick={(e) => {
+              if (typeof e.currentTarget.showPicker === 'function') {
+                try {
+                  e.currentTarget.showPicker();
+                } catch (err) {
+                  console.error('Error showing picker:', err);
+                }
+              }
+            }}
             style={{
               position: 'absolute',
               top: 0,

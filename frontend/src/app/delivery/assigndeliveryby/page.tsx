@@ -48,6 +48,7 @@ export default function AssignDeliveryPage() {
   // Filters
   const [filterDate, setFilterDate] = useState('');
   const [filterDriverId, setFilterDriverId] = useState('none');
+  const [filterStatus, setFilterStatus] = useState('');
 
   // Driver search (right panel)
   const [driverSearch, setDriverSearch] = useState('');
@@ -98,6 +99,10 @@ export default function AssignDeliveryPage() {
         const orderDate = o.createdAt ? o.createdAt.slice(0, 10) : '';
         if (orderDate !== filterDate) return false;
       }
+      // status filter
+      if (filterStatus) {
+        if (o.status !== filterStatus) return false;
+      }
       // Tab / Driver filter
       if (assignTab === 'unassigned') {
         if (o.driverId != null) return false;
@@ -109,7 +114,7 @@ export default function AssignDeliveryPage() {
       }
       return true;
     });
-  }, [unassigned, search, filterDate, filterDriverId, assignTab]);
+  }, [unassigned, search, filterDate, filterDriverId, filterStatus, assignTab]);
 
   // Pagination
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
@@ -120,7 +125,7 @@ export default function AssignDeliveryPage() {
   }, [filtered, safePage, pageSize]);
 
   // Reset to page 1 when filters change
-  useEffect(() => { setCurrentPage(1); }, [search, pageSize, filterDate, filterDriverId, assignTab]);
+  useEffect(() => { setCurrentPage(1); }, [search, pageSize, filterDate, filterDriverId, filterStatus, assignTab]);
 
   const toggleOrder = (id: number) => {
     setSelected(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
@@ -315,6 +320,32 @@ export default function AssignDeliveryPage() {
                     )}
                   </div>
 
+                  {/* Status Filter */}
+                  <div style={{ flexShrink: 0, minWidth: 150 }}>
+                    <select
+                      value={filterStatus}
+                      onChange={e => setFilterStatus(e.target.value)}
+                      style={{
+                        padding: '7px 10px',
+                        border: `1.5px solid ${filterStatus ? 'var(--accent)' : 'var(--border)'}`,
+                        borderRadius: 10,
+                        fontSize: 13,
+                        background: filterStatus ? 'var(--accent-light)' : 'var(--bg-primary)',
+                        color: filterStatus ? 'var(--accent)' : 'var(--text-primary)',
+                        outline: 'none',
+                        cursor: 'pointer',
+                        fontWeight: filterStatus ? 600 : 400,
+                        width: '100%',
+                      }}
+                    >
+                      <option value="">{lang === 'km' ? '⚙️ ស្ថានភាព ទាំងអស់' : '⚙️ All Statuses'}</option>
+                      <option value="pending">{lang === 'km' ? 'រង់ចាំ (Pending)' : 'Pending'}</option>
+                      <option value="in-warehouse">{lang === 'km' ? 'ក្នុងឃ្លាំង (In Warehouse)' : 'In Warehouse'}</option>
+                      <option value="assigned">{lang === 'km' ? 'បានចាត់ចែង (Assigned)' : 'Assigned'}</option>
+                      <option value="failed">{lang === 'km' ? 'មិនជោគជ័យ (Failed)' : 'Failed'}</option>
+                    </select>
+                  </div>
+
                   {/* Filter by current driver */}
                   {assignTab === 'assigned' && (
                     <div style={{ flexShrink: 0, minWidth: 160 }}>
@@ -417,8 +448,10 @@ export default function AssignDeliveryPage() {
                             <td>
                               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                                 <code style={{ fontSize: 12, background: 'rgba(0,0,0,0.05)', padding: '4px 8px', borderRadius: 6, fontWeight: 600 }}>{o.trackingCode}</code>
-                                {o.status === 'assigned' && (
-                                  <span style={{ fontSize: 10, fontWeight: 700, color: '#7c3aed', background: '#f3e8ff', padding: '2px 7px', borderRadius: 999, display: 'inline-block', width: 'fit-content' }}>🔄 Reassign</span>
+                                {(o.status === 'assigned' || o.status === 'failed') && (
+                                  <span style={{ fontSize: 10, fontWeight: 700, color: '#7c3aed', background: '#f3e8ff', padding: '2px 7px', borderRadius: 999, display: 'inline-block', width: 'fit-content' }}>
+                                    {o.status === 'failed' ? (lang === 'km' ? '❌ មិនជោគជ័យ (ប្តូរអ្នកដឹក)' : '❌ Failed (Reassign)') : (lang === 'km' ? '🔄 ប្តូរអ្នកដឹក' : '🔄 Reassign')}
+                                  </span>
                                 )}
                               </div>
                             </td>

@@ -25,17 +25,18 @@ interface DateInputProps {
   onChange: (val: string) => void;
   style?: React.CSSProperties;
   inputStyle?: React.CSSProperties;
+  allowEmpty?: boolean;
 }
 
-export default function DateInput({ labelEn, labelKh, value, onChange, style, inputStyle }: DateInputProps) {
+export default function DateInput({ labelEn, labelKh, value, onChange, style, inputStyle, allowEmpty }: DateInputProps) {
   const { lang } = useLanguage();
   const [textValue, setTextValue] = React.useState('');
 
   React.useEffect(() => {
-    if (!value) {
+    if (!value && !allowEmpty) {
       onChange(getLocalDateString());
     }
-  }, [value, onChange]);
+  }, [value, onChange, allowEmpty]);
 
   React.useEffect(() => {
     if (value) {
@@ -43,6 +44,8 @@ export default function DateInput({ labelEn, labelKh, value, onChange, style, in
       if (parts.length === 3) {
         setTextValue(`${parts[2]}-${parts[1]}-${parts[0]}`);
       }
+    } else {
+      setTextValue('');
     }
   }, [value]);
 

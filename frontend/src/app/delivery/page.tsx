@@ -488,20 +488,24 @@ export default function DeliveriesPage() {
                           </td>
                           <td style={{ textAlign: 'center' }}>
                             <div 
-                              onClick={() => handleToggleDeliveryStatus(o.id, o.status)}
+                              onClick={() => {
+                                if (o.status === 'delivered') return;
+                                handleToggleDeliveryStatus(o.id, o.status);
+                              }}
                               style={{
                                 width: 50,
                                 height: 24,
                                 borderRadius: 12,
                                 background: o.status === 'delivered' ? 'var(--success, #10b981)' : '#e5e7eb',
                                 position: 'relative',
-                                cursor: 'pointer',
+                                cursor: o.status === 'delivered' ? 'not-allowed' : 'pointer',
                                 display: 'inline-flex',
                                 alignItems: 'center',
                                 padding: '0 4px',
                                 boxSizing: 'border-box',
                                 transition: 'background-color 0.2s',
-                                userSelect: 'none'
+                                userSelect: 'none',
+                                opacity: o.status === 'delivered' ? 0.8 : 1
                               }}
                             >
                               <div 
@@ -530,6 +534,7 @@ export default function DeliveriesPage() {
                               className="form-control"
                               value={o.status}
                               onChange={e => handleStatusChange(o.id, e.target.value)}
+                              disabled={o.status === 'delivered'}
                               style={{ 
                                 height: '32px', 
                                 padding: '2px 6px', 
@@ -542,6 +547,7 @@ export default function DeliveriesPage() {
                                 borderColor: o.status === 'delivered' ? '#10b981' : 
                                              o.status === 'returned' ? '#ef4444' : 
                                              (o.status === 'failed' || o.status === 'pending' || o.status === 'in-transit' || o.status === 'picked-up' || o.status === 'in-warehouse' || o.status === 'assigned') ? '#f59e0b' : '#cbd5e1',
+                                cursor: o.status === 'delivered' ? 'not-allowed' : 'pointer',
                               }}
                             >
                               {Array.from(new Set([

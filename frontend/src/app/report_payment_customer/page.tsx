@@ -98,8 +98,10 @@ export default function ReportPaymentCustomerPage() {
   const delKHR = deliveredOrders.filter((o: any) => o.codCurrency === 'KHR').reduce((sum: number, o: any) => sum + parseFloat(o.cod || 0), 0);
   const delFee = deliveredOrders.reduce((sum: number, o: any) => sum + parseFloat(o.deliveryFee || 0), 0);
 
+  const customerRate = merchant ? parseFloat(merchant.exchangeRate as any || 4100) : 4100;
   const payableUSD = Math.max(0, delUSD - delFee);
-  const payableKHR = delKHR;
+  const remainingUSD = Math.max(0, delFee - delUSD);
+  const payableKHR = Math.max(0, delKHR - (remainingUSD * customerRate));
 
   const formattedDate = payment.date ? formatDateToDDMMYYYY(payment.date) : formatDateToDDMMYYYY(new Date().toISOString());
 

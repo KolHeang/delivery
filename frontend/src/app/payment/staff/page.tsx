@@ -522,7 +522,7 @@ export default function PaymentWithStaffPage() {
                                     const val = parseFloat(e.target.value) || 0;
                                     api.patch(`/orders/${o.id}`, { cod: val }).catch(console.error);
                                   }}
-                                  style={{ width: '80px', padding: '2px 4px', fontSize: '12px', border: '1px solid #cbd5e1', borderRadius: '4px', textAlign: 'right' }}
+                                  style={{ width: o.codCurrency === 'KHR' ? '120px' : '80px', padding: '2px 4px', fontSize: '12px', border: '1px solid #cbd5e1', borderRadius: '4px', textAlign: 'right' }}
                                 />
                               </div>
                             ) : (

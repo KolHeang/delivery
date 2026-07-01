@@ -19,41 +19,41 @@ export class PickupRequest {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column()
+  @Column({ name: 'declared_quantity' })
   declaredQuantity: number;
 
-  @Column({ nullable: true })
+  @Column({ name: 'actual_quantity', nullable: true })
   actualQuantity: number;
 
-  @Column({ type: 'text', nullable: true })
+  @Column({ name: 'pickup_address', type: 'text', nullable: true })
   pickupAddress: string;
 
-  @Column({ type: 'timestamp' })
+  @Column({ name: 'pickup_time', type: 'timestamp' })
   pickupTime: Date;
 
   @Column({ default: 'pending' })
   status: PickupRequestStatus;
 
   @ManyToOne(() => Merchant, { eager: true })
-  @JoinColumn({ name: 'merchantId' })
+  @JoinColumn({ name: 'merchant_id' })
   merchant: Merchant;
 
-  @Column()
+  @Column({ name: 'merchant_id' })
   merchantId: number;
 
   @ManyToOne(() => User, { nullable: true, eager: true })
-  @JoinColumn({ name: 'pickupDriverId' })
+  @JoinColumn({ name: 'pickup_driver_id' })
   pickupDriver: User;
 
-  @Column({ nullable: true })
+  @Column({ name: 'pickup_driver_id', nullable: true })
   pickupDriverId: number;
 
   @OneToMany(() => Order, (order) => order.pickupRequest)
   orders: Order[];
 
-  @CreateDateColumn()
+  @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 
-  @UpdateDateColumn()
+  @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
 }

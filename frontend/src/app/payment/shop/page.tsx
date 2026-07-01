@@ -253,8 +253,10 @@ export default function PaymentWithShopPage() {
 
       const deliveryFee = paymentOrders.filter(o => o.status === 'delivered').reduce((sum, o) => sum + parseFloat(o.deliveryFee || 0), 0);
 
+      const rate = parseFloat(m.exchangeRate as any || 4100);
       const payableUSD = Math.max(0, totalUSD - deliveryFee);
-      const payableKHR = totalKHR;
+      const remainingUSD = Math.max(0, deliveryFee - totalUSD);
+      const payableKHR = Math.max(0, totalKHR - (remainingUSD * rate));
 
       // Check if driver has settled payment with the company (driverPaymentStatus must be 'paid' for all delivered/failed/returned orders)
       const hasUnsettledDriver = paymentOrders.some(
@@ -310,8 +312,11 @@ return {
   const totalKHR = targetOrders.filter(o => o.codCurrency === 'KHR').reduce((sum, o) => sum + parseFloat(o.cod || 0), 0);
   const deliveryFee = targetOrders.reduce((sum, o) => sum + parseFloat(o.deliveryFee || 0), 0);
 
+  const selectedMerchant = merchants.find(m => String(m.id) === merchantFilter);
+  const rate = selectedMerchant ? parseFloat(selectedMerchant.exchangeRate as any || 4100) : 4100;
   const payableUSD = Math.max(0, totalUSD - deliveryFee);
-  const payableKHR = totalKHR;
+  const remainingUSD = Math.max(0, deliveryFee - totalUSD);
+  const payableKHR = Math.max(0, totalKHR - (remainingUSD * rate));
 
   // 1. Hook to read query parameters and set states once data is loaded
   useEffect(() => {
@@ -417,8 +422,11 @@ return {
         const groupTotalKHR = groupOrders.filter(o => o.codCurrency === 'KHR').reduce((sum, o) => sum + parseFloat(o.cod || 0), 0);
         const groupDeliveryFee = groupOrders.reduce((sum, o) => sum + parseFloat(o.deliveryFee || 0), 0);
         
+        const merchantObj = merchants.find(m => m.id === mId);
+        const groupRate = merchantObj ? parseFloat(merchantObj.exchangeRate as any || 4100) : 4100;
         const groupPayableUSD = Math.max(0, groupTotalUSD - groupDeliveryFee);
-        const groupPayableKHR = groupTotalKHR;
+        const groupRemainingUSD = Math.max(0, groupDeliveryFee - groupTotalUSD);
+        const groupPayableKHR = Math.max(0, groupTotalKHR - (groupRemainingUSD * groupRate));
 
         const reference = `SETTLE-SHOP-${Date.now().toString().slice(-6)}`;
         const detailUrl = `${window.location.origin}/report_payment_customer?client_id=${mId}&reference=${reference}`;
@@ -843,7 +851,7 @@ return {
                                         }
                                       }
                                     }}
-                                    style={{ width: 80, height: 28, padding: '2px 6px', fontSize: 12, textAlign: 'right' }}
+                                    style={{ width: o.codCurrency === 'KHR' ? 120 : 80, height: 28, padding: '2px 6px', fontSize: 12, textAlign: 'right' }}
                                   />
                                   <span style={{ fontSize: 11, color: '#64748b', fontWeight: '600', width: 26, textAlign: 'left' }}>
                                     {o.codCurrency === 'KHR' ? '៛' : '$'}
@@ -1351,8 +1359,10 @@ return {
                 const delKHR = deliveredOrders.filter(o => o.codCurrency === 'KHR').reduce((sum, o) => sum + parseFloat(o.cod || 0), 0);
                 const delFee = deliveredOrders.reduce((sum, o) => sum + parseFloat(o.deliveryFee || 0), 0);
 
+                const printRate = row?.merchant ? parseFloat(row.merchant.exchangeRate as any || 4100) : 4100;
                 const payableUSD = Math.max(0, delUSD - delFee);
-                const payableKHR = delKHR;
+                const remainingUSD = Math.max(0, delFee - delUSD);
+                const payableKHR = Math.max(0, delKHR - (remainingUSD * printRate));
 
                 return (
                   <>

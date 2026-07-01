@@ -22,9 +22,9 @@ export class IncomeType {
   @OneToMany(() => Income, (income) => income.type)
   incomes: Income[];
 
-  @CreateDateColumn()
+  @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 
-  @UpdateDateColumn()
+  @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
 }

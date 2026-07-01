@@ -33,27 +33,27 @@ export class Order {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ unique: true })
+  @Column({ name: 'tracking_code', unique: true })
   trackingCode: string;
 
   @Column({ default: 'pending' })
   status: OrderStatus;
 
   // Sender info
-  @Column()
+  @Column({ name: 'sender_name' })
   senderName: string;
 
-  @Column()
+  @Column({ name: 'sender_phone' })
   senderPhone: string;
 
   // Receiver info
-  @Column()
+  @Column({ name: 'receiver_name' })
   receiverName: string;
 
-  @Column()
+  @Column({ name: 'receiver_phone' })
   receiverPhone: string;
 
-  @Column({ type: 'text' })
+  @Column({ name: 'receiver_address', type: 'text' })
   receiverAddress: string;
 
   // Package details
@@ -70,95 +70,95 @@ export class Order {
   @Column('decimal', { precision: 10, scale: 2, default: 0 })
   cod: number;
 
-  @Column({ default: 'USD' })
+  @Column({ name: 'cod_currency', default: 'USD' })
   codCurrency: string;
 
-  @Column('decimal', { precision: 10, scale: 2, default: 0 })
+  @Column('decimal', { name: 'delivery_fee', precision: 10, scale: 2, default: 0 })
   deliveryFee: number;
 
-  @Column({ default: 'pending' })
+  @Column({ name: 'payment_status', default: 'pending' })
   paymentStatus: PaymentStatus;
 
-  @Column({ default: 'unpaid' })
+  @Column({ name: 'driver_payment_status', default: 'unpaid' })
   driverPaymentStatus: 'unpaid' | 'paid';
 
-  @Column({ default: 'unpaid' })
+  @Column({ name: 'merchant_payment_status', default: 'unpaid' })
   merchantPaymentStatus: 'unpaid' | 'paid';
 
-  @Column({ nullable: true })
+  @Column({ name: 'payment_method', nullable: true })
   paymentMethod: string;
 
-  @Column('decimal', { precision: 10, scale: 2, default: 0 })
+  @Column('decimal', { name: 'received_amount_usd', precision: 10, scale: 2, default: 0 })
   receivedAmountUSD: number;
 
-  @Column('decimal', { precision: 10, scale: 2, default: 0 })
+  @Column('decimal', { name: 'received_amount_khr', precision: 10, scale: 2, default: 0 })
   receivedAmountKHR: number;
 
   // Timestamps
-  @Column({ type: 'timestamp', nullable: true })
+  @Column({ name: 'picked_up_at', type: 'timestamp', nullable: true })
   pickedUpAt: Date;
 
-  @Column({ type: 'timestamp', nullable: true })
+  @Column({ name: 'warehouse_at', type: 'timestamp', nullable: true })
   warehouseAt: Date;       // When parcel arrived at warehouse (via-warehouse flow)
 
-  @Column({ type: 'timestamp', nullable: true })
+  @Column({ name: 'assigned_at', type: 'timestamp', nullable: true })
   assignedAt: Date;        // When delivery driver was assigned
 
-  @Column({ type: 'timestamp', nullable: true })
+  @Column({ name: 'delivered_at', type: 'timestamp', nullable: true })
   deliveredAt: Date;
 
   // Relations
   @ManyToOne(() => Merchant, { nullable: true, eager: true })
-  @JoinColumn({ name: 'merchantId' })
+  @JoinColumn({ name: 'merchant_id' })
   merchant: Merchant;
 
-  @Column({ nullable: true })
+  @Column({ name: 'merchant_id', nullable: true })
   merchantId: number;
 
   @ManyToOne(() => Customer, { nullable: true, eager: true })
-  @JoinColumn({ name: 'customerId' })
+  @JoinColumn({ name: 'customer_id' })
   customer: Customer;
 
-  @Column({ nullable: true })
+  @Column({ name: 'customer_id', nullable: true })
   customerId: number;
 
   // Delivery driver (delivers to customer)
   @ManyToOne(() => User, { nullable: true, eager: true })
-  @JoinColumn({ name: 'driverId' })
+  @JoinColumn({ name: 'driver_id' })
   driver: User;
 
-  @Column({ nullable: true })
+  @Column({ name: 'driver_id', nullable: true })
   driverId: number;
 
   // Pickup driver (collects parcel from merchant store → warehouse)
   @ManyToOne(() => User, { nullable: true, eager: true })
-  @JoinColumn({ name: 'pickupDriverId' })
+  @JoinColumn({ name: 'pickup_driver_id' })
   pickupDriver: User;
 
-  @Column({ nullable: true })
+  @Column({ name: 'pickup_driver_id', nullable: true })
   pickupDriverId: number;
 
   @ManyToOne(() => Zone, { nullable: true, eager: true })
-  @JoinColumn({ name: 'zoneId' })
+  @JoinColumn({ name: 'zone_id' })
   zone: Zone;
 
-  @Column({ nullable: true })
+  @Column({ name: 'zone_id', nullable: true })
   zoneId: number;
 
   @ManyToOne(() => PickupRequest, (pr) => pr.orders, { nullable: true, onDelete: 'SET NULL' })
-  @JoinColumn({ name: 'pickupRequestId' })
+  @JoinColumn({ name: 'pickup_request_id' })
   pickupRequest: PickupRequest;
 
-  @Column({ nullable: true })
+  @Column({ name: 'pickup_request_id', nullable: true })
   pickupRequestId: number;
 
   @OneToMany(() => OrderHistory, (history) => history.order)
   histories: OrderHistory[];
 
-  @CreateDateColumn()
+  @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 
-  @UpdateDateColumn()
+  @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
 
   @BeforeInsert()

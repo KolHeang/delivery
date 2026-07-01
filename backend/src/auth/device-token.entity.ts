@@ -20,26 +20,26 @@ export class DeviceToken {
   @Index()
   token: string;
 
-  @Column({ nullable: true })
+  @Column({ nullable: true, name: 'device_type' })
   deviceType: string;
 
-  @Column({ nullable: true })
+  @Column({ nullable: true, name: 'user_id' })
   userId: number | null;
 
   @ManyToOne(() => User, { onDelete: 'CASCADE', nullable: true })
-  @JoinColumn({ name: 'userId' })
+  @JoinColumn({ name: 'user_id' })
   user: User;
 
-  @Column({ nullable: true })
+  @Column({ nullable: true, name: 'merchant_id' })
   merchantId: number | null;
 
   @ManyToOne(() => Merchant, { onDelete: 'CASCADE', nullable: true })
-  @JoinColumn({ name: 'merchantId' })
+  @JoinColumn({ name: 'merchant_id' })
   merchant: Merchant;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 
-  @UpdateDateColumn()
+  @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
 }

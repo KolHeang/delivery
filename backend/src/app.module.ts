@@ -19,6 +19,7 @@ import { SettingsModule } from './settings/settings.module';
 import { MobileModule } from './mobile/mobile.module';
 import { InvoicesModule } from './invoices/invoices.module';
 import { RolesModule } from './roles/roles.module';
+import { ActivityLogsModule } from './activity-logs/activity-logs.module';
 
 @Module({
   imports: [
@@ -45,6 +46,7 @@ import { RolesModule } from './roles/roles.module';
     MobileModule,
     InvoicesModule,
     RolesModule,
+    ActivityLogsModule,
   ],
 })
 export class AppModule { }

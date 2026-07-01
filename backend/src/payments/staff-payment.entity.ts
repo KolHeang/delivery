@@ -15,10 +15,10 @@ export class StaffPayment {
   id: number;
 
   @ManyToOne(() => User, { eager: true, onDelete: 'SET NULL' })
-  @JoinColumn({ name: 'driverId' })
+  @JoinColumn({ name: 'driver_id' })
   driver: User;
 
-  @Column({ nullable: true })
+  @Column({ name: 'driver_id', nullable: true })
   driverId: number;
 
   @Column('decimal', { precision: 10, scale: 2, default: 0 })
@@ -33,12 +33,12 @@ export class StaffPayment {
   @Column({ nullable: true, type: 'text' })
   note: string;
 
-  @Column({ type: 'json', nullable: true })
+  @Column({ name: 'order_ids', type: 'json', nullable: true })
   orderIds: number[];
 
-  @CreateDateColumn()
+  @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 
-  @UpdateDateColumn()
+  @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
 }

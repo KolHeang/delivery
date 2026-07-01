@@ -13,16 +13,16 @@ export class Invoice {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ unique: true })
+  @Column({ name: 'invoice_number', unique: true })
   invoiceNumber: string;
 
   @ManyToOne(() => Order, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'orderId' })
+  @JoinColumn({ name: 'order_id' })
   order: Order;
 
-  @Column()
+  @Column({ name: 'order_id' })
   orderId: number;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ name: 'created_at' })
   printedAt: Date;
 }

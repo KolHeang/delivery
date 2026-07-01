@@ -140,6 +140,7 @@ export const translations = {
     organizationSetting: 'Organization Setting',
     organisationSettings: 'Organisation Settings',
     generalSettings: 'General Settings',
+    activityLogs: 'Activity Logs',
     myProfile: 'My Profile',
     logout: 'Logout',
 
@@ -759,6 +760,7 @@ export const translations = {
     organizationSetting: 'កំណត់មុខងារសំខាន់ៗក្រុមហ៊ុន',
     organisationSettings: 'ការកំណត់ស្ថាប័ន',
     generalSettings: 'កំណត់ព័ត៌មានក្រុមហ៊ុន',
+    activityLogs: 'ប្រវត្តិកត់ត្រាសកម្មភាព',
     myProfile: 'គណនីរបស់ខ្ញុំ',
     logout: 'ចាកចេញ',
 

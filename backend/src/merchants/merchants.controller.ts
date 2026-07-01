@@ -19,6 +19,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { createMulterOptions } from '../config/multer';
 import { MinioService } from '../minio/minio.service';
+import { LogActivity } from '../activity-logs/activity.decorator';
 
 @ApiTags('Merchants')
 @ApiBearerAuth()
@@ -47,6 +48,7 @@ export class MerchantsController {
   }
 
   @Post()
+  @LogActivity({ action: 'CREATE_MERCHANT', entityName: 'Merchant', description: 'Created new merchant/shop' })
   @UseInterceptors(
     FileFieldsInterceptor([
       { name: 'photo', maxCount: 1 },
@@ -75,6 +77,7 @@ export class MerchantsController {
   }
 
   @Patch(':id')
+  @LogActivity({ action: 'UPDATE_MERCHANT', entityName: 'Merchant', description: 'Updated merchant/shop details' })
   @UseInterceptors(
     FileFieldsInterceptor([
       { name: 'photo', maxCount: 1 },
@@ -103,7 +106,9 @@ export class MerchantsController {
     return this.merchantsService.update(id, dto);
   }
 
-  @Delete(':id') remove(@Param('id', ParseIntPipe) id: number) {
+  @Delete(':id')
+  @LogActivity({ action: 'DELETE_MERCHANT', entityName: 'Merchant', description: 'Deleted merchant/shop' })
+  remove(@Param('id', ParseIntPipe) id: number) {
     return this.merchantsService.remove(id);
   }
 }

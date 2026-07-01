@@ -13,6 +13,7 @@ import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { DriversService } from './drivers.service';
 import { CreateDriverDto, UpdateDriverDto } from './dto/driver.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { LogActivity } from '../activity-logs/activity.decorator';
 
 @ApiTags('Drivers')
 @ApiBearerAuth()
@@ -30,16 +31,22 @@ export class DriversController {
   @Get(':id') findOne(@Param('id', ParseIntPipe) id: number) {
     return this.driversService.findOne(id);
   }
-  @Post() create(@Body() dto: CreateDriverDto) {
+  @Post()
+  @LogActivity({ action: 'CREATE_DRIVER', entityName: 'User', description: 'Created new driver' })
+  create(@Body() dto: CreateDriverDto) {
     return this.driversService.create(dto);
   }
-  @Patch(':id') update(
+  @Patch(':id')
+  @LogActivity({ action: 'UPDATE_DRIVER', entityName: 'User', description: 'Updated driver details' })
+  update(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateDriverDto,
   ) {
     return this.driversService.update(id, dto);
   }
-  @Delete(':id') remove(@Param('id', ParseIntPipe) id: number) {
+  @Delete(':id')
+  @LogActivity({ action: 'DELETE_DRIVER', entityName: 'User', description: 'Deleted driver' })
+  remove(@Param('id', ParseIntPipe) id: number) {
     return this.driversService.remove(id);
   }
 }

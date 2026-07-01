@@ -25,6 +25,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 import { PermissionsGuard } from '../auth/permissions.guard';
 import { RequirePermissions } from '../auth/permissions.decorator';
+import { LogActivity } from '../activity-logs/activity.decorator';
 
 @ApiTags('Orders')
 @ApiBearerAuth()
@@ -164,18 +165,21 @@ export class OrdersController {
 
   @Post()
   @RequirePermissions('orders.create')
+  @LogActivity({ action: 'CREATE_ORDER', entityName: 'Order', description: 'Created new order' })
   create(@Body() dto: CreateOrderDto) {
     return this.ordersService.create(dto);
   }
 
   @Patch(':id')
   @RequirePermissions('orders.update')
+  @LogActivity({ action: 'UPDATE_ORDER', entityName: 'Order', description: 'Updated order details' })
   update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateOrderDto) {
     return this.ordersService.update(id, dto);
   }
 
   @Patch(':id/status')
   @RequirePermissions('orders.update')
+  @LogActivity({ action: 'UPDATE_ORDER_STATUS', entityName: 'Order', description: 'Updated order status' })
   updateStatus(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateOrderStatusDto,
@@ -189,6 +193,7 @@ export class OrdersController {
    */
   @Post(':id/assign')
   @RequirePermissions('orders.update')
+  @LogActivity({ action: 'ASSIGN_DRIVER', entityName: 'Order', description: 'Assigned driver to order' })
   assignDriver(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: AssignDriverDto,
@@ -215,6 +220,7 @@ export class OrdersController {
    */
   @Post(':id/assign-delivery')
   @RequirePermissions('orders.update')
+  @LogActivity({ action: 'ASSIGN_DELIVERY', entityName: 'Order', description: 'Assigned delivery driver to order' })
   assignDelivery(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: AssignDeliveryDto,
@@ -224,6 +230,7 @@ export class OrdersController {
 
   @Delete(':id')
   @RequirePermissions('orders.delete')
+  @LogActivity({ action: 'DELETE_ORDER', entityName: 'Order', description: 'Deleted order' })
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.ordersService.remove(id);
   }

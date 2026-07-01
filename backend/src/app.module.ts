@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { APP_INTERCEPTOR } from '@nestjs/core';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { typeOrmConfig } from './config/typeorm.config';
@@ -20,6 +21,7 @@ import { MobileModule } from './mobile/mobile.module';
 import { InvoicesModule } from './invoices/invoices.module';
 import { RolesModule } from './roles/roles.module';
 import { ActivityLogsModule } from './activity-logs/activity-logs.module';
+import { ActivityLogInterceptor } from './activity-logs/activity-log.interceptor';
 
 @Module({
   imports: [
@@ -47,6 +49,12 @@ import { ActivityLogsModule } from './activity-logs/activity-logs.module';
     InvoicesModule,
     RolesModule,
     ActivityLogsModule,
+  ],
+  providers: [
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: ActivityLogInterceptor,
+    },
   ],
 })
 export class AppModule { }

@@ -14,6 +14,7 @@ import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { ZonesService } from './zones.service';
 import { CreateZoneDto, UpdateZoneDto, CreateSubZoneDto } from './dto/zone.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { LogActivity } from '../activity-logs/activity.decorator';
 
 @ApiTags('Zones')
 @ApiBearerAuth()
@@ -34,20 +35,27 @@ export class ZonesController {
   @Get(':id') findOne(@Param('id', ParseIntPipe) id: number) {
     return this.zonesService.findOne(id);
   }
-  @Post() create(@Body() dto: CreateZoneDto) {
+  @Post()
+  @LogActivity({ action: 'CREATE_ZONE', entityName: 'Zone', description: 'Created new zone' })
+  create(@Body() dto: CreateZoneDto) {
     return this.zonesService.create(dto);
   }
-  @Patch(':id') update(
+  @Patch(':id')
+  @LogActivity({ action: 'UPDATE_ZONE', entityName: 'Zone', description: 'Updated zone details' })
+  update(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateZoneDto,
   ) {
     return this.zonesService.update(id, dto);
   }
-  @Delete(':id') remove(@Param('id', ParseIntPipe) id: number) {
+  @Delete(':id')
+  @LogActivity({ action: 'DELETE_ZONE', entityName: 'Zone', description: 'Deleted zone' })
+  remove(@Param('id', ParseIntPipe) id: number) {
     return this.zonesService.remove(id);
   }
 
   @Post(':id/subzones')
+  @LogActivity({ action: 'CREATE_SUB_ZONE', entityName: 'SubZone', description: 'Added subzone to zone' })
   addSubZone(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: CreateSubZoneDto,
@@ -56,6 +64,7 @@ export class ZonesController {
   }
 
   @Delete('subzones/:id')
+  @LogActivity({ action: 'DELETE_SUB_ZONE', entityName: 'SubZone', description: 'Deleted subzone' })
   removeSubZone(@Param('id', ParseIntPipe) id: number) {
     return this.zonesService.removeSubZone(id);
   }

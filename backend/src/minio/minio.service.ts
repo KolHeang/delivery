@@ -48,7 +48,11 @@ export class MinioService {
         { 'Content-Type': file.mimetype }
       );
 
-      const externalUrl = process.env.MINIO_EXTERNAL_URL || `http://${process.env.MINIO_ENDPOINT || 'localhost'}:${process.env.MINIO_PORT || 9000}`;
+      let externalUrl = process.env.MINIO_EXTERNAL_URL || `${process.env.MINIO_ENDPOINT || 'localhost'}:${process.env.MINIO_PORT || 9000}`;
+      if (!externalUrl.startsWith('http://') && !externalUrl.startsWith('https://')) {
+        const useSSL = process.env.MINIO_USE_SSL === 'true';
+        externalUrl = `${useSSL ? 'https://' : 'http://'}${externalUrl}`;
+      }
       return `${externalUrl}/${bucket}/${key}`;
     } catch (error) {
       this.logger.error('Failed to upload file to Minio', error);

@@ -13,6 +13,7 @@ import {
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { PaymentsService } from './payments.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { LogActivity } from '../activity-logs/activity.decorator';
 
 @ApiTags('Payments')
 @ApiBearerAuth()
@@ -23,6 +24,7 @@ export class PaymentsController {
   // UserPayments
   @UseGuards(JwtAuthGuard)
   @Post('staff')
+  @LogActivity({ action: 'PROCESS_STAFF_PAYMENT', entityName: 'StaffPayment', description: 'Processed driver/staff payment' })
   createStaff(
     @Body()
     body: {
@@ -58,12 +60,14 @@ export class PaymentsController {
 
   @UseGuards(JwtAuthGuard)
   @Delete('staff/:id')
+  @LogActivity({ action: 'DELETE_STAFF_PAYMENT', entityName: 'StaffPayment', description: 'Deleted driver/staff payment' })
   deleteStaff(@Param('id', ParseIntPipe) id: number) {
     return this.paymentsService.deleteStaffPayment(id);
   }
 
   @UseGuards(JwtAuthGuard)
   @Patch('staff/:id')
+  @LogActivity({ action: 'UPDATE_STAFF_PAYMENT', entityName: 'StaffPayment', description: 'Updated driver/staff payment details' })
   updateStaff(
     @Param('id', ParseIntPipe) id: number,
     @Body() body: { amount?: number; note?: string; date?: Date; reference?: string },
@@ -74,6 +78,7 @@ export class PaymentsController {
   // Shop Payments
   @UseGuards(JwtAuthGuard)
   @Post('shop')
+  @LogActivity({ action: 'PROCESS_SHOP_PAYMENT', entityName: 'ShopPayment', description: 'Processed merchant/shop payment' })
   createShop(
     @Body()
     body: {
@@ -113,12 +118,14 @@ export class PaymentsController {
 
   @UseGuards(JwtAuthGuard)
   @Delete('shop/:id')
+  @LogActivity({ action: 'DELETE_SHOP_PAYMENT', entityName: 'ShopPayment', description: 'Deleted merchant/shop payment' })
   deleteShop(@Param('id', ParseIntPipe) id: number) {
     return this.paymentsService.deleteShopPayment(id);
   }
 
   @UseGuards(JwtAuthGuard)
   @Patch('shop/:id')
+  @LogActivity({ action: 'UPDATE_SHOP_PAYMENT', entityName: 'ShopPayment', description: 'Updated merchant/shop payment details' })
   updateShop(
     @Param('id', ParseIntPipe) id: number,
     @Body() body: { amount?: number; note?: string; date?: Date; reference?: string },

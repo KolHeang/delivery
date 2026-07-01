@@ -8,6 +8,8 @@ import { Merchant } from '../merchants/merchant.entity';
 import { Order } from '../orders/order.entity';
 import { OrderHistory } from '../orders/order-history.entity';
 import { PickupRequest } from '../orders/pickup-request.entity';
+import { RefreshToken } from '../auth/refresh-token.entity';
+import { DeviceToken } from '../auth/device-token.entity';
 
 import { AuthController } from './auth/auth.controller';
 import { AuthService } from './auth/auth.service';
@@ -18,7 +20,7 @@ import { MerchantService } from './merchant/merchant.service';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User, Merchant, Order, OrderHistory, PickupRequest]),
+    TypeOrmModule.forFeature([User, Merchant, Order, OrderHistory, PickupRequest, RefreshToken, DeviceToken]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: (config: ConfigService) => ({

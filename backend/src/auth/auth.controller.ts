@@ -41,7 +41,7 @@ export class AuthController {
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Logout and invalidate token (client-side)' })
-  logout() {
-    return { success: true, message: 'Logged out successfully' };
+  logout(@Request() req: any) {
+    return this.authService.logout(req.user.id);
   }
 }

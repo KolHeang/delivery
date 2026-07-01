@@ -1,9 +1,10 @@
-import { Controller, Post, Body, UseGuards } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Request } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { LoginDto } from '../../auth/dto/login.dto';
 import { RefreshTokenDto } from '../../auth/dto/refresh-token.dto';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
+import { SaveDeviceTokenDto } from './dto/save-device-token.dto';
 
 @ApiTags('Mobile Auth')
 @Controller('mobile/auth')
@@ -34,7 +35,15 @@ export class AuthController {
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Logout and invalidate token (client-side)' })
-  logout() {
-    return { success: true, message: 'Logged out successfully' };
+  logout(@Request() req: any) {
+    return this.authService.logout(req.user.role, req.user.id);
+  }
+
+  @Post('device-token')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Register or update Firebase device token' })
+  saveDeviceToken(@Request() req: any, @Body() dto: SaveDeviceTokenDto) {
+    return this.authService.saveDeviceToken(req.user.role, req.user.id, dto);
   }
 }

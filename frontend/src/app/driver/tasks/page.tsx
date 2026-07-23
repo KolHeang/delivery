@@ -43,6 +43,13 @@ const taskTranslations = {
     customer: 'Customer',
     merchant: 'Merchant',
     waitingHubReceive: 'Waiting for Hub Receive',
+    searchPlaceholder: 'Search tracking / customer...',
+    filterAll: 'All',
+    filterAssigned: 'Assigned',
+    filterInTransit: 'In Transit',
+    filterDelivered: 'Delivered',
+    filterFailed: 'Failed',
+    filterReturned: 'Returned',
   },
   km: {
     title: 'ភារកិច្ចរបស់ខ្ញុំ',
@@ -69,6 +76,13 @@ const taskTranslations = {
     customer: 'អតិថិជន',
     merchant: 'ហាង/អ្នកផ្ញើ',
     waitingHubReceive: 'បានប្រមូល - រង់ចាំការទទួលចូលឃ្លាំង',
+    searchPlaceholder: 'ស្វែងរក Tracking / ឈ្មោះអតិថិជន...',
+    filterAll: 'ទាំងអស់',
+    filterAssigned: 'ចាត់តាំង',
+    filterInTransit: 'កំពុងដឹក',
+    filterDelivered: 'ជោគជ័យ',
+    filterFailed: 'មិនជោគជ័យ',
+    filterReturned: 'ត្រឡប់',
   }
 };
 
@@ -80,6 +94,8 @@ export default function DriverTasksPage() {
   const [updatingId, setUpdatingId] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState<'active' | 'completed'>('active');
   const [user, setUser] = useState<any>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
 
   // Problem Dialog state
   const [showDialog, setShowDialog] = useState(false);
@@ -136,11 +152,24 @@ export default function DriverTasksPage() {
   };
 
   const filteredTasks = tasks.filter(task => {
-    if (activeTab === 'active') {
-      return isActiveTask(task);
-    } else {
-      return isCompletedTask(task);
+    // Tab filter
+    const tabMatch = activeTab === 'active' ? isActiveTask(task) : isCompletedTask(task);
+    if (!tabMatch) return false;
+
+    // Status filter
+    if (statusFilter !== 'all' && task.status !== statusFilter) return false;
+
+    // Search filter
+    if (searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase();
+      const trackingMatch = task.trackingCode?.toLowerCase().includes(q);
+      const customerMatch = task.receiverName?.toLowerCase().includes(q);
+      const phoneMatch = task.receiverPhone?.toLowerCase().includes(q);
+      const merchantMatch = task.merchant?.name?.toLowerCase().includes(q);
+      if (!trackingMatch && !customerMatch && !phoneMatch && !merchantMatch) return false;
     }
+
+    return true;
   });
 
   return (
@@ -208,10 +237,11 @@ export default function DriverTasksPage() {
           backdropFilter: 'blur(8px)',
           borderRadius: '16px',
           padding: '4px',
-          gap: '4px'
+          gap: '4px',
+          marginBottom: '12px'
         }}>
           <button
-            onClick={() => setActiveTab('active')}
+            onClick={() => { setActiveTab('active'); setStatusFilter('all'); }}
             style={{
               flex: 1,
               padding: '10px 12px',
@@ -229,7 +259,7 @@ export default function DriverTasksPage() {
             {t.activeTab}
           </button>
           <button
-            onClick={() => setActiveTab('completed')}
+            onClick={() => { setActiveTab('completed'); setStatusFilter('all'); }}
             style={{
               flex: 1,
               padding: '10px 12px',
@@ -246,6 +276,71 @@ export default function DriverTasksPage() {
           >
             {t.completedTab}
           </button>
+        </div>
+
+        {/* Search Bar */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          backgroundColor: 'rgba(255, 255, 255, 0.18)',
+          backdropFilter: 'blur(8px)',
+          border: '1px solid rgba(255, 255, 255, 0.30)',
+          borderRadius: '14px',
+          padding: '8px 14px',
+          marginBottom: '10px'
+        }}>
+          <span style={{ fontSize: '16px', opacity: 0.85 }}>🔍</span>
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            placeholder={t.searchPlaceholder}
+            style={{
+              flex: 1,
+              background: 'transparent',
+              border: 'none',
+              outline: 'none',
+              color: '#ffffff',
+              fontSize: '13px',
+              fontWeight: '600',
+              fontFamily: "'Kantumruy Pro', 'Inter', sans-serif"
+            }}
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              style={{ background: 'rgba(255,255,255,0.2)', border: 'none', color: '#fff', borderRadius: '50%', width: '20px', height: '20px', cursor: 'pointer', fontSize: '11px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            >✕</button>
+          )}
+        </div>
+
+        {/* Status Filter Chips */}
+        <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '4px' }}>
+          {(activeTab === 'active'
+            ? [{ key: 'all', label: t.filterAll }, { key: 'assigned', label: t.filterAssigned }, { key: 'in-transit', label: t.filterInTransit }, { key: 'pending', label: 'Pending' }]
+            : [{ key: 'all', label: t.filterAll }, { key: 'delivered', label: t.filterDelivered }, { key: 'failed', label: t.filterFailed }, { key: 'returned', label: t.filterReturned }]
+          ).map(chip => (
+            <button
+              key={chip.key}
+              onClick={() => setStatusFilter(chip.key)}
+              style={{
+                flexShrink: 0,
+                padding: '5px 12px',
+                borderRadius: '20px',
+                border: 'none',
+                background: statusFilter === chip.key ? '#ffffff' : 'rgba(255,255,255,0.18)',
+                color: statusFilter === chip.key ? '#2563eb' : '#ffffff',
+                fontWeight: statusFilter === chip.key ? '800' : '600',
+                fontSize: '12px',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                backdropFilter: 'blur(4px)'
+              }}
+            >
+              {chip.label}
+            </button>
+          ))}
         </div>
       </div>
 

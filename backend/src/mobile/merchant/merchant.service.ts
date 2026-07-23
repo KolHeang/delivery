@@ -1,6 +1,7 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Like } from 'typeorm';
+import * as bcrypt from 'bcrypt';
 import { Merchant } from '../../merchants/merchant.entity';
 import { Order } from '../../orders/order.entity';
 import { CreateOrderDto } from '../../orders/dto/order.dto';
@@ -25,6 +26,41 @@ export class MerchantService {
     if (!merchant) throw new NotFoundException('Merchant not found');
     const { password, ...safeMerchant } = merchant as any;
     return safeMerchant;
+  }
+
+  async updateProfile(merchantId: number, dto: { name?: string; phone?: string; email?: string; photo?: string; address?: string }) {
+    const updateData: any = {};
+    if (dto.name !== undefined) updateData.name = dto.name;
+    if (dto.phone !== undefined) updateData.phone = dto.phone;
+    if (dto.email !== undefined) updateData.email = dto.email;
+    if (dto.photo !== undefined) updateData.photo = dto.photo;
+    if (dto.address !== undefined) updateData.address = dto.address;
+
+    await this.merchantRepo.update(merchantId, updateData);
+    return this.getProfile(merchantId);
+  }
+
+  async changePassword(merchantId: number, oldPass: string, newPass: string) {
+    const merchant = await this.merchantRepo.findOne({
+      where: { id: merchantId },
+      select: { id: true, password: true },
+    });
+    if (!merchant) throw new NotFoundException('Merchant not found');
+
+    let isValid = false;
+    if (merchant.password) {
+      isValid = await bcrypt.compare(oldPass, merchant.password);
+    } else {
+      isValid = oldPass === '123456';
+    }
+
+    if (!isValid) {
+      throw new BadRequestException('លេខសម្ងាត់ចាស់មិនត្រឹមត្រូវទេ (Current password is incorrect)');
+    }
+
+    const hashed = await bcrypt.hash(newPass, 10);
+    await this.merchantRepo.update(merchantId, { password: hashed });
+    return { success: true, message: 'ពាក្យសម្ងាត់ត្រូវបានផ្លាស់ប្តូរដោយជោគជ័យ' };
   }
 
   async getOrders(merchantId: number, status?: string) {

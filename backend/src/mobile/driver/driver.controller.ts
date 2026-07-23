@@ -27,6 +27,25 @@ export class DriverController {
     return this.driverService.getProfile(req.user.id);
   }
 
+  @Patch('profile')
+  @ApiOperation({ summary: 'Update driver profile and photo' })
+  updateProfile(
+    @Request() req: any,
+    @Body() dto: { name?: string; phone?: string; email?: string; photo?: string; gender?: string; dob?: string; joinDate?: string },
+  ) {
+    return this.driverService.updateProfile(req.user.id, dto);
+  }
+
+  @Patch('change-password')
+  @ApiOperation({ summary: 'Change driver password' })
+  changePassword(
+    @Request() req: any,
+    @Body('oldPassword') oldPass: string,
+    @Body('newPassword') newPass: string,
+  ) {
+    return this.driverService.changePassword(req.user.id, oldPass, newPass);
+  }
+
   @Patch('status')
   @ApiOperation({ summary: 'Update driver online status' })
   updateDriverStatus(
@@ -61,8 +80,13 @@ export class DriverController {
 
   @Get('dashboard')
   @ApiOperation({ summary: 'Get driver dashboard data' })
-  getDashboard(@Request() req: any) {
-    return this.driverService.getDashboard(req.user.id);
+  getDashboard(
+    @Request() req: any,
+    @Query('period') period?: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
+    return this.driverService.getDashboard(req.user.id, period, startDate, endDate);
   }
 
   @Get('pickup-requests')

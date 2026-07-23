@@ -4,11 +4,19 @@ import { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { getUser, isAuthenticated } from '@/lib/auth';
-import { MdDashboard, MdFormatListBulleted, MdPerson, MdInventory2 } from 'react-icons/md';
+import { useLanguage } from '@/lib/LanguageContext';
+import {
+  MdDashboard,
+  MdFormatListBulleted,
+  MdPerson,
+  MdInventory2,
+  MdQrCodeScanner
+} from 'react-icons/md';
 
 export default function DriverLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
+  const { lang } = useLanguage();
   const [mounted, setMounted] = useState(false);
   const [isAuth, setIsAuth] = useState(false);
 
@@ -19,7 +27,26 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
     setIsAuth(authStatus && user?.role === 'driver');
   }, [pathname]);
 
-  // If loading client-side state
+  // Tab translations
+  const tabLabels = {
+    en: {
+      dashboard: 'Home',
+      tasks: 'Tasks',
+      scan: 'Scan QR',
+      pickup: 'Pickup',
+      profile: 'Profile'
+    },
+    km: {
+      dashboard: 'ផ្ទាំងដើម',
+      tasks: 'ភារកិច្ច',
+      scan: 'ស្កែន QR',
+      pickup: 'ទទួលអីវ៉ាន់',
+      profile: 'គណនី'
+    }
+  };
+
+  const labels = tabLabels[lang as 'en' | 'km'] || tabLabels.en;
+
   if (!mounted) {
     return (
       <div style={{
@@ -32,12 +59,12 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
         <div style={{
           width: '40px',
           height: '40px',
-          border: '3px solid rgba(47, 85, 165, 0.1)',
-          borderTopColor: '#2f55a5',
+          border: '3px solid rgba(4, 120, 87, 0.15)',
+          borderTopColor: '#047857',
           borderRadius: '50%',
-          animation: 'spin 1s linear infinite'
+          animation: 'driverSpin 0.8s ease-in-out infinite'
         }} />
-        <style dangerouslySetInnerHTML={{__html: `@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}} />
+        <style dangerouslySetInnerHTML={{__html: `@keyframes driverSpin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}} />
       </div>
     );
   }
@@ -50,83 +77,131 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
       justifyContent: 'center',
       minHeight: '100vh',
       backgroundColor: '#f1f5f9',
-      fontFamily: "'Kantumruy Pro', 'Inter', sans-serif"
+      fontFamily: "'Kantumruy Pro', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+      WebkitFontSmoothing: 'antialiased'
     }}>
       <div className="mobile-phone-frame" style={{
         width: '100%',
         maxWidth: '480px',
-        backgroundColor: '#ffffff',
+        backgroundColor: '#f8fafc',
         minHeight: '100vh',
         display: 'flex',
         flexDirection: 'column',
         position: 'relative',
-        boxShadow: '0 0 24px rgba(15, 23, 42, 0.05)',
+        boxShadow: '0 20px 50px -10px rgba(15, 23, 42, 0.12), 0 0 1px rgba(15, 23, 42, 0.1)',
         borderLeft: '1px solid #e2e8f0',
         borderRight: '1px solid #e2e8f0',
-        paddingBottom: (!isLoginPage && isAuth) ? '64px' : '0'
+        paddingBottom: (!isLoginPage && isAuth) ? '76px' : '0'
       }}>
         <main style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
           {children}
         </main>
 
-        {/* Bottom Tab Bar for Drivers */}
+        {/* Floating Bottom Glassmorphism Navigation Bar */}
         {!isLoginPage && isAuth && (
           <nav className="mobile-bottom-tabs" style={{
-            position: 'absolute',
+            position: 'fixed',
             bottom: 0,
-            left: 0,
-            right: 0,
-            height: '64px',
-            backgroundColor: '#ffffff',
-            borderTop: '1px solid #e2e8f0',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            width: '100%',
+            maxWidth: '480px',
+            height: '74px',
+            backgroundColor: 'rgba(255, 255, 255, 0.95)',
+            backdropFilter: 'blur(16px)',
+            WebkitBackdropFilter: 'blur(16px)',
+            borderTop: '1px solid rgba(226, 232, 240, 0.8)',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'space-around',
-            zIndex: 10,
-            boxShadow: '0 -4px 12px rgba(15, 23, 42, 0.03)'
+            justifyContent: 'space-between',
+            zIndex: 100,
+            boxShadow: '0 -6px 24px rgba(15, 23, 42, 0.08)',
+            padding: '0 10px'
           }}>
-            <Link href="/driver/dashboard" style={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              textDecoration: 'none',
-              color: pathname === '/driver/dashboard' ? '#2f55a5' : '#64748b',
-              gap: '4px',
-              fontSize: '12px',
-              fontWeight: pathname === '/driver/dashboard' ? '700' : '500',
-              transition: 'color 0.2s ease',
-              width: '33%'
-            }}>
+            {/* 1. Home / Dashboard */}
+            <Link
+              href="/driver/dashboard"
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                textDecoration: 'none',
+                color: pathname === '/driver/dashboard' ? '#2563eb' : '#64748b',
+                gap: '3px',
+                padding: '6px',
+                flex: 1
+              }}
+            >
               <MdDashboard size={22} />
-              <span>Dashboard</span>
+              <span style={{ fontSize: '11px', fontWeight: pathname === '/driver/dashboard' ? '800' : '600' }}>
+                {labels.dashboard}
+              </span>
             </Link>
-            <Link href="/driver/tasks" style={{
-              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-              textDecoration: 'none', color: pathname.startsWith('/driver/tasks') ? '#2f55a5' : '#64748b',
-              gap: '4px', fontSize: '12px', fontWeight: pathname.startsWith('/driver/tasks') ? '700' : '500',
-              transition: 'color 0.2s ease', width: '25%'
-            }}>
+
+            {/* 2. Tasks */}
+            <Link
+              href="/driver/tasks"
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                textDecoration: 'none',
+                color: pathname.startsWith('/driver/tasks') ? '#2563eb' : '#64748b',
+                gap: '3px',
+                padding: '6px',
+                flex: 1
+              }}
+            >
               <MdFormatListBulleted size={22} />
-              <span>Tasks</span>
+              <span style={{ fontSize: '11px', fontWeight: pathname.startsWith('/driver/tasks') ? '800' : '600' }}>
+                {labels.tasks}
+              </span>
             </Link>
-            <Link href="/driver/pickups" style={{
-              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-              textDecoration: 'none', color: pathname.startsWith('/driver/pickups') ? '#2f55a5' : '#64748b',
-              gap: '4px', fontSize: '12px', fontWeight: pathname.startsWith('/driver/pickups') ? '700' : '500',
-              transition: 'color 0.2s ease', width: '25%'
-            }}>
+
+
+
+            {/* 4. Pickup */}
+            <Link
+              href="/driver/pickups"
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                textDecoration: 'none',
+                color: pathname.startsWith('/driver/pickups') ? '#2563eb' : '#64748b',
+                gap: '3px',
+                padding: '6px',
+                flex: 1
+              }}
+            >
               <MdInventory2 size={22} />
-              <span>Pickup</span>
+              <span style={{ fontSize: '11px', fontWeight: pathname.startsWith('/driver/pickups') ? '800' : '600' }}>
+                {labels.pickup}
+              </span>
             </Link>
-            <Link href="/driver/profile" style={{
-              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-              textDecoration: 'none', color: pathname === '/driver/profile' ? '#2f55a5' : '#64748b',
-              gap: '4px', fontSize: '12px', fontWeight: pathname === '/driver/profile' ? '700' : '500',
-              transition: 'color 0.2s ease', width: '25%'
-            }}>
+
+            {/* 5. Profile */}
+            <Link
+              href="/driver/profile"
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                textDecoration: 'none',
+                color: pathname === '/driver/profile' ? '#2563eb' : '#64748b',
+                gap: '3px',
+                padding: '6px',
+                flex: 1
+              }}
+            >
               <MdPerson size={22} />
-              <span>Profile</span>
+              <span style={{ fontSize: '11px', fontWeight: pathname === '/driver/profile' ? '800' : '600' }}>
+                {labels.profile}
+              </span>
             </Link>
           </nav>
         )}

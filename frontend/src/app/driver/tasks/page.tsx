@@ -12,7 +12,8 @@ import {
   MdError,
   MdLocalShipping,
   MdArrowBack,
-  MdInfoOutline
+  MdInfoOutline,
+  MdRefresh
 } from 'react-icons/md';
 import Badge from '@/components/ui/Badge';
 
@@ -148,85 +149,108 @@ export default function DriverTasksPage() {
       flexDirection: 'column',
       minHeight: '100vh',
       backgroundColor: '#f8fafc',
-      flex: 1
+      flex: 1,
+      paddingBottom: '32px'
     }}>
-      {/* Top Header */}
+      {/* Top Hero Header */}
       <div style={{
-        backgroundColor: '#ffffff',
-        padding: '16px 20px',
-        display: 'flex',
-        alignItems: 'center',
-        borderBottom: '1px solid #e2e8f0',
+        background: 'linear-gradient(135deg, #1e3a8a 0%, #2563eb 60%, #3b82f6 100%)',
+        padding: '24px 20px 20px',
+        color: '#ffffff',
+        borderBottomLeftRadius: '28px',
+        borderBottomRightRadius: '28px',
+        boxShadow: '0 10px 25px -5px rgba(37, 99, 235, 0.3)',
         position: 'sticky',
         top: 0,
         zIndex: 10
       }}>
-        <button
-          onClick={() => router.push('/driver/dashboard')}
-          style={{
-            background: 'transparent',
-            border: 'none',
-            color: '#0f172a',
-            cursor: 'pointer',
-            padding: 0,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            marginRight: '16px'
-          }}
-        >
-          <MdArrowBack size={24} />
-        </button>
-        <h2 style={{ fontSize: '18px', fontWeight: '800', color: '#0f172a', margin: 0 }}>
-          {t.title}
-        </h2>
-      </div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <button
+              onClick={() => router.push('/driver/dashboard')}
+              style={{
+                background: 'rgba(255, 255, 255, 0.2)',
+                border: 'none',
+                color: '#ffffff',
+                cursor: 'pointer',
+                width: '38px',
+                height: '38px',
+                borderRadius: '12px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                backdropFilter: 'blur(4px)'
+              }}
+            >
+              <MdArrowBack size={22} />
+            </button>
+            <h2 style={{ fontSize: '20px', fontWeight: '800', color: '#ffffff', margin: 0, letterSpacing: '-0.3px' }}>
+              {t.title}
+            </h2>
+          </div>
+          <span style={{
+            fontSize: '11px',
+            backgroundColor: 'rgba(255, 255, 255, 0.2)',
+            color: '#ffffff',
+            padding: '4px 10px',
+            borderRadius: '20px',
+            fontWeight: '700',
+            backdropFilter: 'blur(4px)'
+          }}>
+            {tasks.length} {t.activeTab ? 'Items' : ''}
+          </span>
+        </div>
 
-      {/* Tabs */}
-      <div style={{
-        display: 'flex',
-        backgroundColor: '#ffffff',
-        borderBottom: '1px solid #e2e8f0',
-        padding: '0 8px'
-      }}>
-        <button
-          onClick={() => setActiveTab('active')}
-          style={{
-            flex: 1,
-            padding: '16px 8px',
-            border: 'none',
-            background: 'transparent',
-            color: activeTab === 'active' ? '#2f55a5' : '#64748b',
-            fontWeight: '700',
-            fontSize: '13.5px',
-            borderBottom: activeTab === 'active' ? '3px solid #2f55a5' : '3px solid transparent',
-            cursor: 'pointer',
-            transition: 'all 0.2s'
-          }}
-        >
-          {t.activeTab}
-        </button>
-        <button
-          onClick={() => setActiveTab('completed')}
-          style={{
-            flex: 1,
-            padding: '16px 8px',
-            border: 'none',
-            background: 'transparent',
-            color: activeTab === 'completed' ? '#2f55a5' : '#64748b',
-            fontWeight: '700',
-            fontSize: '13.5px',
-            borderBottom: activeTab === 'completed' ? '3px solid #2f55a5' : '3px solid transparent',
-            cursor: 'pointer',
-            transition: 'all 0.2s'
-          }}
-        >
-          {t.completedTab}
-        </button>
+        {/* Floating Pill Tabs */}
+        <div style={{
+          display: 'flex',
+          backgroundColor: 'rgba(255, 255, 255, 0.15)',
+          backdropFilter: 'blur(8px)',
+          borderRadius: '16px',
+          padding: '4px',
+          gap: '4px'
+        }}>
+          <button
+            onClick={() => setActiveTab('active')}
+            style={{
+              flex: 1,
+              padding: '10px 12px',
+              border: 'none',
+              borderRadius: '12px',
+              background: activeTab === 'active' ? '#ffffff' : 'transparent',
+              color: activeTab === 'active' ? '#2563eb' : '#ffffff',
+              fontWeight: activeTab === 'active' ? '800' : '600',
+              fontSize: '13px',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              boxShadow: activeTab === 'active' ? '0 4px 12px rgba(0,0,0,0.1)' : 'none'
+            }}
+          >
+            {t.activeTab}
+          </button>
+          <button
+            onClick={() => setActiveTab('completed')}
+            style={{
+              flex: 1,
+              padding: '10px 12px',
+              border: 'none',
+              borderRadius: '12px',
+              background: activeTab === 'completed' ? '#ffffff' : 'transparent',
+              color: activeTab === 'completed' ? '#2563eb' : '#ffffff',
+              fontWeight: activeTab === 'completed' ? '800' : '600',
+              fontSize: '13px',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              boxShadow: activeTab === 'completed' ? '0 4px 12px rgba(0,0,0,0.1)' : 'none'
+            }}
+          >
+            {t.completedTab}
+          </button>
+        </div>
       </div>
 
       {/* Content */}
-      <div style={{ padding: '16px', flex: 1, display: 'flex', flexDirection: 'column' }}>
+      <div style={{ padding: '20px 16px', flex: 1, display: 'flex', flexDirection: 'column' }}>
         {loading ? (
           <div style={{
             display: 'flex',
@@ -254,13 +278,54 @@ export default function DriverTasksPage() {
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            padding: '64px 24px',
-            textAlign: 'center'
+            padding: '48px 24px',
+            textAlign: 'center',
+            backgroundColor: '#ffffff',
+            borderRadius: '24px',
+            border: '1px solid rgba(226, 232, 240, 0.8)',
+            boxShadow: '0 8px 24px rgba(15, 23, 42, 0.03)',
+            margin: '12px 0'
           }}>
-            <div style={{ fontSize: '48px', marginBottom: '16px' }}>📦</div>
-            <h3 style={{ fontSize: '15px', fontWeight: '700', color: '#0f172a', margin: '0 0 6px' }}>
+            <div style={{
+              width: '64px',
+              height: '64px',
+              borderRadius: '20px',
+              backgroundColor: '#eff6ff',
+              color: '#2563eb',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '32px',
+              marginBottom: '16px',
+              boxShadow: '0 8px 20px rgba(37, 99, 235, 0.15)'
+            }}>
+              📦
+            </div>
+            <h3 style={{ fontSize: '16px', fontWeight: '800', color: '#0f172a', margin: '0 0 6px' }}>
               {t.noTasks}
             </h3>
+            <p style={{ fontSize: '12.5px', color: '#64748b', margin: '0 0 20px', maxWidth: '280px', lineHeight: 1.5, fontWeight: '500' }}>
+              មិនទាន់មានកញ្ចប់អីវ៉ាន់ថ្មីត្រូវបានចាត់តាំងនៅឡើយទេ។ សូមរង់ចាំការចាត់តាំងពីប្រព័ន្ធ ឬចុចប៊ូតុងខាងក្រោមដើម្បីផ្ទៀងផ្ទាត់ឡើងវិញ។
+            </p>
+            <button
+              onClick={loadTasks}
+              style={{
+                backgroundColor: '#eff6ff',
+                color: '#2563eb',
+                border: 'none',
+                padding: '10px 20px',
+                borderRadius: '14px',
+                fontSize: '13px',
+                fontWeight: '700',
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                transition: 'all 0.2s ease'
+              }}
+            >
+              <MdRefresh size={18} /> ធ្វើបច្ចុប្បន្នភាព (Refresh)
+            </button>
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>

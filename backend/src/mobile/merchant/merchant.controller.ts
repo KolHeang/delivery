@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Post,
+  Patch,
   Body,
   Query,
   UseGuards,
@@ -25,6 +26,25 @@ export class MerchantController {
   @ApiOperation({ summary: 'Get merchant profile' })
   getProfile(@Request() req: any) {
     return this.merchantService.getProfile(req.user.id);
+  }
+
+  @Patch('profile')
+  @ApiOperation({ summary: 'Update merchant profile and photo' })
+  updateProfile(
+    @Request() req: any,
+    @Body() dto: { name?: string; phone?: string; email?: string; photo?: string; address?: string },
+  ) {
+    return this.merchantService.updateProfile(req.user.id, dto);
+  }
+
+  @Patch('change-password')
+  @ApiOperation({ summary: 'Change merchant password' })
+  changePassword(
+    @Request() req: any,
+    @Body('oldPassword') oldPass: string,
+    @Body('newPassword') newPass: string,
+  ) {
+    return this.merchantService.changePassword(req.user.id, oldPass, newPass);
   }
 
   @Get('orders')

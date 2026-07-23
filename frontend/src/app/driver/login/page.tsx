@@ -5,29 +5,31 @@ import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
 import { setAuth, isAuthenticated, getUser } from '@/lib/auth';
 import { useLanguage } from '@/lib/LanguageContext';
-import { MdPerson, MdLock, MdVisibility, MdVisibilityOff } from 'react-icons/md';
+import { MdPerson, MdLock, MdVisibility, MdVisibilityOff, MdLocalShipping } from 'react-icons/md';
 
 const driverLoginTranslations = {
   en: {
-    title: 'Driver Portal',
+    brandName: 'KOL HEANG EXPRESS',
+    portalTag: 'Driver Portal',
     subtitle: 'Sign in to access your delivery tasks',
-    emailLabel: 'Email or Phone',
+    emailLabel: 'Email or Phone Number',
     emailPlaceholder: 'Enter your email or phone number',
     passwordLabel: 'Password',
-    passwordPlaceholder: '••••••••',
+    passwordPlaceholder: 'Enter your password',
     signInBtn: 'Sign In as Driver',
     signingIn: 'Signing in...',
     errorMsg: 'Invalid credentials or you are not registered as a driver.',
   },
   km: {
-    title: 'ផតថលអ្នកបើកបរ',
-    subtitle: 'ចូលប្រព័ន្ធដើម្បីមើលភារកិច្ចដឹកជញ្ជូនរបស់អ្នក',
+    brandName: 'KOL HEANG EXPRESS',
+    portalTag: 'អ្នកដឹកជញ្ជូន (Driver Portal)',
+    subtitle: 'ចូលប្រព័ន្ធដើម្បីមើលភារកិច្ច និងគ្រប់គ្រងការដឹកជញ្ជូន',
     emailLabel: 'អ៊ីមែល ឬលេខទូរស័ព្ទ',
     emailPlaceholder: 'បញ្ចូលអ៊ីមែល ឬលេខទូរស័ព្ទរបស់អ្នក',
     passwordLabel: 'ពាក្យសម្ងាត់',
-    passwordPlaceholder: '••••••••',
-    signInBtn: 'ចូលជាអ្នកដឹកជញ្ជូន',
-    signingIn: 'កំពុងចូល...',
+    passwordPlaceholder: 'បញ្ចូលពាក្យសម្ងាត់របស់អ្នក',
+    signInBtn: 'ចូលប្រព័ន្ធអ្នកដឹកជញ្ជូន',
+    signingIn: 'កំពុងចូលប្រព័ន្ធ...',
     errorMsg: 'អត្តសញ្ញាណខុស ឬអ្នកមិនទាន់បានចុះឈ្មោះជាអ្នកបើកបរឡើយ។',
   }
 };
@@ -55,7 +57,6 @@ export default function DriverLoginPage() {
     setLoading(true);
     setError('');
     try {
-      // Endpoint is mobile/auth/driver/login
       const res = await api.post('/mobile/auth/driver/login', form);
       setAuth(res.data.access_token, res.data.user);
       router.push('/driver/dashboard');
@@ -71,36 +72,53 @@ export default function DriverLoginPage() {
       display: 'flex',
       flexDirection: 'column',
       minHeight: '100vh',
-      padding: '32px 24px',
+      backgroundColor: '#f4f7fc',
+      fontFamily: "'Kantumruy Pro', 'Inter', sans-serif",
       justifyContent: 'center',
-      position: 'relative',
-      backgroundColor: '#ffffff'
+      alignItems: 'center',
+      padding: '24px 16px',
+      position: 'relative'
     }}>
-      {/* Floating Language Switcher */}
+      {/* Background Decorative Gradient Spheres */}
       <div style={{
         position: 'absolute',
-        top: '24px',
-        right: '24px',
-        backgroundColor: '#f1f5f9',
+        top: '-10%',
+        left: '-10%',
+        width: '260px',
+        height: '260px',
+        borderRadius: '50%',
+        background: 'radial-gradient(circle, rgba(37, 99, 235, 0.15) 0%, rgba(37, 99, 235, 0) 70%)',
+        pointerEvents: 'none'
+      }} />
+
+      {/* Floating Language Switcher Top Right */}
+      <div style={{
+        position: 'absolute',
+        top: '20px',
+        right: '20px',
+        backgroundColor: '#ffffff',
         border: '1px solid #e2e8f0',
-        borderRadius: '10px',
-        padding: '2px',
+        borderRadius: '12px',
+        padding: '3px',
         display: 'flex',
-        gap: '2px',
+        gap: '3px',
+        boxShadow: '0 4px 12px rgba(15, 23, 42, 0.04)',
         zIndex: 10
       }}>
         <button
           onClick={() => setLang('en')}
           type="button"
           style={{
-            background: lang === 'en' ? '#ffffff' : 'transparent',
+            background: lang === 'en' ? '#2563eb' : 'transparent',
             border: 'none',
-            color: lang === 'en' ? '#0f172a' : '#64748b',
+            color: lang === 'en' ? '#ffffff' : '#64748b',
             padding: '6px 12px',
-            fontSize: '11px',
-            fontWeight: '700',
-            borderRadius: '6px',
-            cursor: 'pointer'
+            fontSize: '11.5px',
+            fontWeight: '800',
+            borderRadius: '9px',
+            cursor: 'pointer',
+            boxShadow: lang === 'en' ? '0 2px 6px rgba(37, 99, 235, 0.2)' : 'none',
+            transition: 'all 0.2s ease'
           }}
         >
           EN
@@ -109,191 +127,280 @@ export default function DriverLoginPage() {
           onClick={() => setLang('km')}
           type="button"
           style={{
-            background: lang === 'km' ? '#ffffff' : 'transparent',
+            background: lang === 'km' ? '#2563eb' : 'transparent',
             border: 'none',
-            color: lang === 'km' ? '#0f172a' : '#64748b',
+            color: lang === 'km' ? '#ffffff' : '#64748b',
             padding: '6px 12px',
-            fontSize: '11px',
-            fontWeight: '700',
-            borderRadius: '6px',
-            cursor: 'pointer'
+            fontSize: '11.5px',
+            fontWeight: '800',
+            borderRadius: '9px',
+            cursor: 'pointer',
+            boxShadow: lang === 'km' ? '0 2px 6px rgba(37, 99, 235, 0.2)' : 'none',
+            transition: 'all 0.2s ease'
           }}
         >
           ខ្មែរ
         </button>
       </div>
 
+      {/* Main Glassmorphism Login Card */}
       <div style={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        marginBottom: '32px'
+        width: '100%',
+        maxWidth: '400px',
+        backgroundColor: '#ffffff',
+        borderRadius: '28px',
+        padding: '36px 24px',
+        boxShadow: '0 16px 40px rgba(15, 23, 42, 0.06), 0 1px 3px rgba(15, 23, 42, 0.03)',
+        border: '1px solid #e2e8f0',
+        position: 'relative',
+        zIndex: 2
       }}>
+        {/* Brand Header */}
         <div style={{
-          width: '56px',
-          height: '56px',
-          borderRadius: '16px',
-          background: 'linear-gradient(135deg, #2f55a5, #4f46e5)',
           display: 'flex',
+          flexDirection: 'column',
           alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: '28px',
-          boxShadow: '0 4px 12px rgba(47, 85, 165, 0.15)',
-          marginBottom: '16px',
-          color: '#ffffff'
+          textAlign: 'center',
+          marginBottom: '28px'
         }}>
-          🛵
+          {/* Brand Logo Badge matching Web Admin */}
+          <div style={{
+            width: '60px',
+            height: '60px',
+            borderRadius: '18px',
+            background: 'linear-gradient(135deg, #2563eb, #6366f1)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '32px',
+            boxShadow: '0 10px 24px rgba(37, 99, 235, 0.25)',
+            marginBottom: '16px',
+            color: '#ffffff'
+          }}>
+            📦
+          </div>
+
+          <h1 style={{
+            fontSize: '22px',
+            fontWeight: '900',
+            color: '#0f172a',
+            margin: 0,
+            letterSpacing: '-0.4px',
+            lineHeight: 1.3
+          }}>
+            EBS<span style={{ color: '#2563eb' }}>Express</span> Driver
+          </h1>
+
+          <div style={{
+            fontSize: '13px',
+            fontWeight: '800',
+            color: '#2563eb',
+            marginTop: '4px',
+            letterSpacing: '0.2px'
+          }}>
+            {t.portalTag}
+          </div>
+
+          <p style={{
+            color: '#64748b',
+            fontSize: '12px',
+            marginTop: '6px',
+            fontWeight: '500',
+            margin: '6px 0 0'
+          }}>
+            {t.subtitle}
+          </p>
         </div>
-        <h1 style={{
-          fontSize: '22px',
-          fontWeight: '800',
-          color: '#0f172a',
-          margin: 0,
-          letterSpacing: '-0.5px'
-        }}>
-          EBS<span style={{ color: '#2f55a5' }}>Express</span> Driver
-        </h1>
-        <p style={{
-          color: '#64748b',
-          fontSize: '13px',
-          marginTop: '6px',
-          fontWeight: '500',
-          textAlign: 'center'
-        }}>
-          {t.subtitle}
-        </p>
+
+        {/* Login Form */}
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+          {error && (
+            <div style={{
+              background: '#fef2f2',
+              border: '1px solid #fecaca',
+              color: '#dc2626',
+              padding: '12px 14px',
+              borderRadius: '14px',
+              fontSize: '12px',
+              fontWeight: '600',
+              lineHeight: 1.4,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}>
+              <span>⚠️</span>
+              <span>{error}</span>
+            </div>
+          )}
+
+          {/* Email / Phone Field */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <label style={{
+              color: '#334155',
+              fontSize: '12.5px',
+              fontWeight: '800'
+            }}>
+              {t.emailLabel}
+            </label>
+            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+              <div style={{
+                position: 'absolute',
+                left: '14px',
+                color: '#2563eb',
+                display: 'flex',
+                alignItems: 'center'
+              }}>
+                <MdPerson size={20} />
+              </div>
+              <input
+                type="text"
+                placeholder={t.emailPlaceholder}
+                value={form.email}
+                onChange={(e) => setForm({ ...form, email: e.target.value })}
+                required
+                style={{
+                  width: '100%',
+                  padding: '14px 14px 14px 44px',
+                  backgroundColor: '#f8fafc',
+                  border: '1.5px solid #cbd5e1',
+                  borderRadius: '16px',
+                  fontSize: '13.5px',
+                  fontWeight: '600',
+                  color: '#0f172a',
+                  outline: 'none',
+                  transition: 'all 0.2s ease',
+                  boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.02)'
+                }}
+                onFocus={(e) => {
+                  e.target.style.borderColor = '#2563eb';
+                  e.target.style.backgroundColor = '#ffffff';
+                  e.target.style.boxShadow = '0 0 0 4px rgba(37, 99, 235, 0.12)';
+                }}
+                onBlur={(e) => {
+                  e.target.style.borderColor = '#cbd5e1';
+                  e.target.style.backgroundColor = '#f8fafc';
+                  e.target.style.boxShadow = 'inset 0 1px 2px rgba(0,0,0,0.02)';
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Password Field */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <label style={{
+              color: '#334155',
+              fontSize: '12.5px',
+              fontWeight: '800'
+            }}>
+              {t.passwordLabel}
+            </label>
+            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+              <div style={{
+                position: 'absolute',
+                left: '14px',
+                color: '#2563eb',
+                display: 'flex',
+                alignItems: 'center'
+              }}>
+                <MdLock size={20} />
+              </div>
+              <input
+                type={showPassword ? 'text' : 'password'}
+                placeholder={t.passwordPlaceholder}
+                value={form.password}
+                onChange={(e) => setForm({ ...form, password: e.target.value })}
+                required
+                style={{
+                  width: '100%',
+                  padding: '14px 44px 14px 44px',
+                  backgroundColor: '#f8fafc',
+                  border: '1.5px solid #cbd5e1',
+                  borderRadius: '16px',
+                  fontSize: '13.5px',
+                  fontWeight: '600',
+                  color: '#0f172a',
+                  outline: 'none',
+                  transition: 'all 0.2s ease',
+                  boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.02)'
+                }}
+                onFocus={(e) => {
+                  e.target.style.borderColor = '#2563eb';
+                  e.target.style.backgroundColor = '#ffffff';
+                  e.target.style.boxShadow = '0 0 0 4px rgba(37, 99, 235, 0.12)';
+                }}
+                onBlur={(e) => {
+                  e.target.style.borderColor = '#cbd5e1';
+                  e.target.style.backgroundColor = '#f8fafc';
+                  e.target.style.boxShadow = 'inset 0 1px 2px rgba(0,0,0,0.02)';
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                style={{
+                  position: 'absolute',
+                  right: '14px',
+                  background: 'none',
+                  border: 'none',
+                  color: '#64748b',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  padding: 0
+                }}
+              >
+                {showPassword ? <MdVisibilityOff size={20} /> : <MdVisibility size={20} />}
+              </button>
+            </div>
+          </div>
+
+          {/* Submit Button */}
+          <button
+            type="submit"
+            disabled={loading}
+            style={{
+              width: '100%',
+              background: 'linear-gradient(135deg, #1e40af 0%, #2563eb 100%)',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: '16px',
+              padding: '16px 20px',
+              fontSize: '15px',
+              fontWeight: '800',
+              lineHeight: '1.45',
+              cursor: loading ? 'not-allowed' : 'pointer',
+              opacity: loading ? 0.75 : 1,
+              boxShadow: '0 8px 24px rgba(37, 99, 235, 0.3)',
+              marginTop: '8px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              transition: 'all 0.2s ease'
+            }}
+          >
+            {loading ? (
+              <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{
+                  width: '16px',
+                  height: '16px',
+                  border: '2px solid rgba(255,255,255,0.3)',
+                  borderTopColor: '#ffffff',
+                  borderRadius: '50%',
+                  animation: 'spinLogin 0.8s linear infinite',
+                  display: 'inline-block'
+                }} />
+                {t.signingIn}
+              </span>
+            ) : (
+              t.signInBtn
+            )}
+          </button>
+        </form>
       </div>
 
-      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column' }}>
-        {error && (
-          <div style={{
-            background: 'rgba(239, 68, 68, 0.05)',
-            border: '1px solid rgba(239, 68, 68, 0.15)',
-            color: '#b91c1c',
-            padding: '12px 16px',
-            borderRadius: '12px',
-            fontSize: '12.5px',
-            marginBottom: '20px',
-            fontWeight: '500'
-          }}>
-            ⚠️ {error}
-          </div>
-        )}
-
-        <div style={{ marginBottom: '20px', display: 'flex', flexDirection: 'column' }}>
-          <label style={{
-            color: '#475569',
-            fontSize: '12px',
-            fontWeight: '600',
-            marginBottom: '8px'
-          }}>{t.emailLabel}</label>
-          <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-            <MdPerson style={{
-              position: 'absolute',
-              left: '16px',
-              color: '#64748b',
-              fontSize: '18px'
-            }} />
-            <input
-              type="text"
-              placeholder={t.emailPlaceholder}
-              value={form.email}
-              onChange={e => setForm({ ...form, email: e.target.value })}
-              required
-              style={{
-                width: '100%',
-                background: '#ffffff',
-                border: '1.5px solid #cbd5e1',
-                color: '#0f172a',
-                padding: '12px 16px 12px 46px',
-                borderRadius: '12px',
-                fontSize: '14px',
-                fontWeight: '500',
-                outline: 'none',
-                transition: 'border-color 0.2s'
-              }}
-            />
-          </div>
-        </div>
-
-        <div style={{ marginBottom: '28px', display: 'flex', flexDirection: 'column' }}>
-          <label style={{
-            color: '#475569',
-            fontSize: '12px',
-            fontWeight: '600',
-            marginBottom: '8px'
-          }}>{t.passwordLabel}</label>
-          <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-            <MdLock style={{
-              position: 'absolute',
-              left: '16px',
-              color: '#64748b',
-              fontSize: '18px'
-            }} />
-            <input
-              type={showPassword ? 'text' : 'password'}
-              placeholder={t.passwordPlaceholder}
-              value={form.password}
-              onChange={e => setForm({ ...form, password: e.target.value })}
-              required
-              style={{
-                width: '100%',
-                background: '#ffffff',
-                border: '1.5px solid #cbd5e1',
-                color: '#0f172a',
-                padding: '12px 46px 12px 46px',
-                borderRadius: '12px',
-                fontSize: '14px',
-                fontWeight: '500',
-                outline: 'none',
-                transition: 'border-color 0.2s'
-              }}
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              style={{
-                position: 'absolute',
-                right: '16px',
-                background: 'transparent',
-                border: 'none',
-                color: '#64748b',
-                fontSize: '18px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                padding: 0
-              }}
-            >
-              {showPassword ? <MdVisibilityOff /> : <MdVisibility />}
-            </button>
-          </div>
-        </div>
-
-        <button
-          type="submit"
-          disabled={loading}
-          style={{
-            background: '#2f55a5',
-            color: '#ffffff',
-            padding: '13px',
-            borderRadius: '12px',
-            fontSize: '14.5px',
-            fontWeight: '700',
-            border: 'none',
-            cursor: loading ? 'not-allowed' : 'pointer',
-            opacity: loading ? '0.8' : '1',
-            transition: 'background 0.2s',
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            gap: '8px'
-          }}
-        >
-          {loading ? t.signingIn : t.signInBtn}
-        </button>
-      </form>
+      {/* CSS Animation */}
+      <style dangerouslySetInnerHTML={{__html: `@keyframes spinLogin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}} />
     </div>
   );
 }

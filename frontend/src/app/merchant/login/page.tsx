@@ -129,29 +129,30 @@ export default function MerchantLoginPage() {
         alignItems: 'center',
         marginBottom: '32px'
       }}>
+        {/* Brand Logo Badge matching Web Admin */}
         <div style={{
-          width: '56px',
-          height: '56px',
-          borderRadius: '16px',
-          background: 'linear-gradient(135deg, #10b981, #057857)',
+          width: '60px',
+          height: '60px',
+          borderRadius: '18px',
+          background: 'linear-gradient(135deg, #2563eb, #6366f1)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          fontSize: '28px',
-          boxShadow: '0 4px 12px rgba(16, 185, 129, 0.15)',
+          fontSize: '32px',
+          boxShadow: '0 10px 24px rgba(37, 99, 235, 0.25)',
           marginBottom: '16px',
           color: '#ffffff'
         }}>
-          🏪
+          📦
         </div>
         <h1 style={{
           fontSize: '22px',
-          fontWeight: '800',
+          fontWeight: '900',
           color: '#0f172a',
           margin: 0,
-          letterSpacing: '-0.5px'
+          letterSpacing: '-0.4px'
         }}>
-          EBS<span style={{ color: '#10b981' }}>Express</span> Merchant
+          EBS<span style={{ color: '#2563eb' }}>Express</span> Merchant
         </h1>
         <p style={{
           color: '#64748b',

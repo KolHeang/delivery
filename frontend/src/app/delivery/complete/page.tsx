@@ -222,7 +222,7 @@ export default function CompletePackagePage() {
         })
       );
 
-      alert(lang === 'km' ? 'រក្សាទុកទិន្នន័យបានជោគជ័យ!' : 'Batch updated successfully!');
+      alert(lang === 'km' ? 'រក្សាទុកការទូទាត់បានជោគជ័យ!' : 'Settlement saved successfully!');
       setSelectedIds([]);
       await loadActiveOrders();
     } catch (err: any) {
@@ -366,7 +366,7 @@ export default function CompletePackagePage() {
                   cursor: (saving || selectedIds.length === 0) ? 'not-allowed' : 'pointer'
                 }}
               >
-                <span>{saving ? (lang === 'km' ? 'កំពុងរក្សាទុក...' : 'Saving...') : (lang === 'km' ? '+ បញ្ចូលទិន្នន័យជាបាច់' : '+ Save in Batch')}</span>
+                <span>{saving ? (lang === 'km' ? 'កំពុងរក្សាទុក...' : 'Saving...') : (lang === 'km' ? 'រក្សាទុកការទូទាត់' : 'Save Settlement')}</span>
               </button>
             </div>
 

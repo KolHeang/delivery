@@ -27,15 +27,15 @@ export class Income {
     eager: true,
     onDelete: 'SET NULL',
   })
-  @JoinColumn({ name: 'typeId' })
+  @JoinColumn({ name: 'type_id' })
   type: IncomeType;
 
-  @Column({ nullable: true })
+  @Column({ name: 'type_id', nullable: true })
   typeId: number;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 
-  @UpdateDateColumn()
+  @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
 }

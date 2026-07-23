@@ -30,10 +30,10 @@ export class Zone {
   active: boolean;
 
   @ManyToOne('User', { nullable: true })
-  @JoinColumn({ name: 'driverId' })
+  @JoinColumn({ name: 'driver_id' })
   driver: any;
 
-  @Column({ nullable: true })
+  @Column({ name: 'driver_id', nullable: true })
   driverId: number;
 
   @Column({ default: 'EBS Express' })
@@ -42,9 +42,9 @@ export class Zone {
   @OneToMany('SubZone', 'zone', { eager: true })
   subZones: any[];
 
-  @CreateDateColumn()
+  @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 
-  @UpdateDateColumn()
+  @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
 }

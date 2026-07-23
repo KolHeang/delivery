@@ -144,7 +144,11 @@ export default function Rpt1Page() {
                           <td style={{ fontSize: 12 }}>{formatDateToDDMMYYYY(r.date)}</td>
                           <td>{statusBadge(r.status)}</td>
                           <td style={{ fontSize: 12 }}>{r.currency}</td>
-                          <td style={{ fontWeight: 600 }}>${(r.codAmount || 0).toFixed(2)}</td>
+                          <td style={{ fontWeight: 600 }}>
+                            {(r.currency || 'USD') === 'USD'
+                              ? `$${(r.codAmount || 0).toFixed(2)}`
+                              : `${(r.codAmount || 0).toLocaleString()} ៛`}
+                          </td>
                           <td style={{ color: 'var(--success)' }}>${(r.deliveryFee || 0).toFixed(2)}</td>
                           <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>{r.note}</td>
                         </tr>
@@ -153,7 +157,20 @@ export default function Rpt1Page() {
                     {rows.length > 0 && (
                       <tr style={{ background: 'var(--bg-secondary)', fontWeight: 700 }}>
                         <td colSpan={9} style={{ textAlign: 'right' }}>{t('totalRow')}</td>
-                        <td>${rows.reduce((s, r) => s + (r.codAmount || 0), 0).toFixed(2)}</td>
+                        <td>
+                          {(() => {
+                            const usdSum = rows.filter(r => (r.currency || 'USD') === 'USD').reduce((s, r) => s + (r.codAmount || 0), 0);
+                            const khrSum = rows.filter(r => r.currency === 'KHR').reduce((s, r) => s + (r.codAmount || 0), 0);
+                            return (
+                              <>
+                                {usdSum > 0 && `$${usdSum.toFixed(2)}`}
+                                {usdSum > 0 && khrSum > 0 && ' / '}
+                                {khrSum > 0 && `${khrSum.toLocaleString()} ៛`}
+                                {usdSum === 0 && khrSum === 0 && '$0.00'}
+                              </>
+                            );
+                          })()}
+                        </td>
                         <td style={{ color: 'var(--success)' }}>${rows.reduce((s, r) => s + (r.deliveryFee || 0), 0).toFixed(2)}</td>
                         <td></td>
                       </tr>

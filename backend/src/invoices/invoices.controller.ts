@@ -3,6 +3,7 @@ import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { InvoicesService } from './invoices.service';
 import { CreateInvoiceDto } from './dto/create-invoice.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { LogActivity } from '../activity-logs/activity.decorator';
 
 @ApiTags('Invoices')
 @ApiBearerAuth()
@@ -13,6 +14,7 @@ export class InvoicesController {
 
   @Post()
   @ApiOperation({ summary: 'Save printed invoices' })
+  @LogActivity({ action: 'CREATE_INVOICE', entityName: 'Invoice', description: 'Generated and printed invoice' })
   create(@Body() dto: CreateInvoiceDto) {
     return this.invoicesService.createInvoices(dto.orderIds);
   }

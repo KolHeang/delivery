@@ -1,7 +1,9 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
-import { UsersService } from '../users/users.service';
+import { DataSource } from 'typeorm';
+import { User } from '../users/users.entity';
+import { Merchant } from '../merchants/merchant.entity';
 
 interface JwtPayload {
   sub: number;
@@ -11,7 +13,7 @@ interface JwtPayload {
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
-  constructor(private readonly usersService: UsersService) {
+  constructor(private readonly dataSource: DataSource) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
@@ -20,7 +22,31 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   async validate(payload: JwtPayload) {
-    const user = await this.usersService.findOneWithPermissions(payload.sub);
+    if (payload.role === 'merchant') {
+      const merchant = await this.dataSource.getRepository(Merchant).findOne({
+        where: { id: payload.sub },
+      });
+      if (!merchant || !merchant.active) {
+        throw new UnauthorizedException('Merchant not found or inactive');
+      }
+      return {
+        id: merchant.id,
+        email: merchant.email,
+        role: 'merchant',
+        name: merchant.name,
+        permissions: [],
+      };
+    }
+
+    const user = await this.dataSource.getRepository(User).findOne({
+      where: { id: payload.sub },
+      relations: {
+        roleRelation: {
+          permissions: true,
+        },
+      },
+    });
+
     if (!user || !user.active) {
       throw new UnauthorizedException('User not found or inactive');
     }

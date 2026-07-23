@@ -107,6 +107,7 @@ export default function Sidebar() {
         { href: '/setting/role', label: t('permission'), permission: 'users.manage' },
         { href: '/setting/organisation', label: t('organizationSetting') },
         { href: '/setting/general', label: t('generalSettings') },
+        { href: '/setting/activity_log', label: t('activityLogs') || 'Activity Logs' },
       ],
     },
   ];

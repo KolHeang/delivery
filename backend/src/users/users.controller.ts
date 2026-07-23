@@ -19,6 +19,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/permissions.guard';
 import { RequirePermissions } from '../auth/permissions.decorator';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { LogActivity } from '../activity-logs/activity.decorator';
 import { createMulterOptions } from '../config/multer';
 import { MinioService } from '../minio/minio.service';
 
@@ -56,6 +57,7 @@ export class UsersController {
 
   @Post()
   @RequirePermissions('users.create')
+  @LogActivity({ action: 'CREATE_USER', entityName: 'User', description: 'Created new user/staff' })
   @UseInterceptors(
     FileInterceptor('photo', createMulterOptions({ 
       allowedMimeTypes: ['image/jpeg', 'image/png'],
@@ -73,6 +75,7 @@ export class UsersController {
 
   @Patch(':id')
   @RequirePermissions('users.update')
+  @LogActivity({ action: 'UPDATE_USER', entityName: 'User', description: 'Updated user/staff details' })
   @UseInterceptors(
     FileInterceptor('photo', createMulterOptions({ 
       allowedMimeTypes: ['image/jpeg', 'image/png'],
@@ -95,6 +98,7 @@ export class UsersController {
   @Delete(':id')
   @RequirePermissions('users.delete')
   @ApiOperation({ summary: 'Delete user' })
+  @LogActivity({ action: 'DELETE_USER', entityName: 'User', description: 'Deleted user/staff' })
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.usersService.remove(id);
   }

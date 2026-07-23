@@ -22,7 +22,7 @@ export class User {
   @Column()
   name: string;
 
-  @Column({ nullable: true })
+  @Column({ name: 'name_kh', nullable: true })
   nameKh: string;
 
   @Column({ nullable: true })
@@ -38,10 +38,10 @@ export class User {
   role: string;
 
   @ManyToOne(() => Role, (role) => role.users, { nullable: true, eager: true })
-  @JoinColumn({ name: 'roleId' })
+  @JoinColumn({ name: 'role_id' })
   roleRelation: Role;
 
-  @Column({ nullable: true })
+  @Column({ name: 'role_id', nullable: true })
   roleId: number;
 
   @Column({ default: true })
@@ -53,10 +53,10 @@ export class User {
   @Column('decimal', { precision: 3, scale: 1, default: 5.0 })
   rating: number;
 
-  @Column({ default: 0 })
+  @Column({ name: 'total_deliveries', default: 0 })
   totalDeliveries: number;
 
-  @Column({ type: 'date', nullable: true })
+  @Column({ name: 'join_date', type: 'date', nullable: true })
   joinDate: string;
 
   @Column({ type: 'date', nullable: true })
@@ -69,25 +69,25 @@ export class User {
   salary: number;
 
   @ManyToOne(() => Zone, { nullable: true, eager: true })
-  @JoinColumn({ name: 'zoneId' })
+  @JoinColumn({ name: 'zone_id' })
   zone: Zone;
 
-  @Column({ nullable: true })
+  @Column({ name: 'zone_id', nullable: true })
   zoneId: number;
 
   @OneToOne(() => Vehicle, { nullable: true, eager: true })
-  @JoinColumn({ name: 'vehicleId' })
+  @JoinColumn({ name: 'vehicle_id' })
   vehicle: Vehicle;
 
-  @Column({ nullable: true })
+  @Column({ name: 'vehicle_id', nullable: true })
   vehicleId: number;
 
   @Column({ nullable: true })
   photo: string;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 
-  @UpdateDateColumn()
+  @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
 }

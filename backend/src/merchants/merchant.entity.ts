@@ -19,7 +19,7 @@ export class Merchant {
   @Column()
   name: string;
 
-  @Column({ nullable: true })
+  @Column({ name: 'name_kh', nullable: true })
   nameKh: string;
 
   @Column({ nullable: true })
@@ -37,7 +37,7 @@ export class Merchant {
   @Column({ nullable: true })
   address: string;
 
-  @Column({ default: 'standard' })
+  @Column({ name: 'pricing_tier', default: 'standard' })
   pricingTier: PricingTier;
 
   @Column('decimal', { precision: 10, scale: 2, default: 0 })
@@ -47,16 +47,16 @@ export class Merchant {
   active: boolean;
 
   @ManyToOne(() => Zone, { nullable: true, eager: true })
-  @JoinColumn({ name: 'zoneId' })
+  @JoinColumn({ name: 'zone_id' })
   zone: Zone;
 
-  @Column({ nullable: true })
+  @Column({ name: 'zone_id', nullable: true })
   zoneId: number;
 
-  @Column('decimal', { precision: 10, scale: 2, default: 0, nullable: true })
+  @Column('decimal', { name: 'delivery_fee', precision: 10, scale: 2, default: 0, nullable: true })
   deliveryFee: number;
 
-  @Column('decimal', { precision: 10, scale: 2, default: 4100, nullable: true })
+  @Column('decimal', { name: 'exchange_rate', precision: 10, scale: 2, default: 4100, nullable: true })
   exchangeRate: number;
 
   @Column({ type: 'text', nullable: true })
@@ -68,21 +68,21 @@ export class Merchant {
   @Column({ nullable: true })
   photo: string;
 
-  @Column({ nullable: true })
+  @Column({ name: 'qr_link_khr', nullable: true })
   qrLinkKhr: string;
 
-  @Column({ nullable: true })
+  @Column({ name: 'qr_link_usd', nullable: true })
   qrLinkUsd: string;
 
-  @Column({ type: 'text', nullable: true })
+  @Column({ name: 'qr_image_khr', type: 'text', nullable: true })
   qrImageKhr: string;
 
-  @Column({ type: 'text', nullable: true })
+  @Column({ name: 'qr_image_usd', type: 'text', nullable: true })
   qrImageUsd: string;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 
-  @UpdateDateColumn()
+  @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
 }

@@ -8,13 +8,15 @@ import { AuthController } from './auth.controller';
 import { JwtStrategy } from './jwt.strategy';
 import { UsersModule } from '../users/users.module';
 import { User } from '../users/users.entity';
+import { RefreshToken } from './refresh-token.entity';
+import { DeviceToken } from './device-token.entity';
 import { PermissionsGuard } from './permissions.guard';
 
 @Module({
   imports: [
     PassportModule,
     UsersModule,
-    TypeOrmModule.forFeature([User]),
+    TypeOrmModule.forFeature([User, RefreshToken, DeviceToken]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: (config: ConfigService) => ({

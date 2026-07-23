@@ -17,12 +17,12 @@ export class SubZone {
   name: string;
 
   @ManyToOne(() => Zone, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'zoneId' })
+  @JoinColumn({ name: 'zone_id' })
   zone: Zone;
 
-  @Column()
+  @Column({ name: 'zone_id' })
   zoneId: number;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 }

@@ -1630,6 +1630,8 @@ select.form-control {
   /* Inside receipt: make sure everything shows */
   body.receipt-print-active .receipt-print-container * {
     visibility: visible !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
   body.receipt-print-active .receipt-print-container table {
@@ -1660,6 +1662,10 @@ select.form-control {
     border: 1px solid #000000 !important;
     padding: 5px 6px !important;
     font-size: 11px !important;
+  }
+
+  body.receipt-print-active .receipt-print-container th {
+    color: #ffffff !important;
   }
 
   body.receipt-print-active .receipt-print-container h2,

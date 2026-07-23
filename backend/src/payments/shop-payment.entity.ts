@@ -15,10 +15,10 @@ export class ShopPayment {
   id: number;
 
   @ManyToOne(() => Merchant, { eager: true, onDelete: 'SET NULL' })
-  @JoinColumn({ name: 'merchantId' })
+  @JoinColumn({ name: 'merchant_id' })
   merchant: Merchant;
 
-  @Column({ nullable: true })
+  @Column({ name: 'merchant_id', nullable: true })
   merchantId: number;
 
   @Column('decimal', { precision: 10, scale: 2, default: 0 })
@@ -36,12 +36,12 @@ export class ShopPayment {
   @Column({ nullable: true, type: 'text' })
   note: string;
 
-  @Column({ type: 'json', nullable: true })
+  @Column({ name: 'order_ids', type: 'json', nullable: true })
   orderIds: number[];
 
-  @CreateDateColumn()
+  @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 
-  @UpdateDateColumn()
+  @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
 }

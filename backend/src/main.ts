@@ -31,6 +31,6 @@ async function bootstrap() {
   await app.listen(port);
   console.log(`🚀 Backend running on http://localhost:${port}`);
   console.log(`📚 Swagger: http://localhost:${port}/api/docs`);
-  // trigger restart
+  // trigger restart - db reset
 }
 bootstrap();

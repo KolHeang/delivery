@@ -73,7 +73,12 @@ export class Order {
   @Column({ name: 'cod_currency', default: 'USD' })
   codCurrency: string;
 
-  @Column('decimal', { name: 'delivery_fee', precision: 10, scale: 2, default: 0 })
+  @Column('decimal', {
+    name: 'delivery_fee',
+    precision: 10,
+    scale: 2,
+    default: 0,
+  })
   deliveryFee: number;
 
   @Column({ name: 'payment_status', default: 'pending' })
@@ -88,10 +93,20 @@ export class Order {
   @Column({ name: 'payment_method', nullable: true })
   paymentMethod: string;
 
-  @Column('decimal', { name: 'received_amount_usd', precision: 10, scale: 2, default: 0 })
+  @Column('decimal', {
+    name: 'received_amount_usd',
+    precision: 10,
+    scale: 2,
+    default: 0,
+  })
   receivedAmountUSD: number;
 
-  @Column('decimal', { name: 'received_amount_khr', precision: 10, scale: 2, default: 0 })
+  @Column('decimal', {
+    name: 'received_amount_khr',
+    precision: 10,
+    scale: 2,
+    default: 0,
+  })
   receivedAmountKHR: number;
 
   // Timestamps
@@ -99,10 +114,10 @@ export class Order {
   pickedUpAt: Date;
 
   @Column({ name: 'warehouse_at', type: 'timestamp', nullable: true })
-  warehouseAt: Date;       // When parcel arrived at warehouse (via-warehouse flow)
+  warehouseAt: Date; // When parcel arrived at warehouse (via-warehouse flow)
 
   @Column({ name: 'assigned_at', type: 'timestamp', nullable: true })
-  assignedAt: Date;        // When delivery driver was assigned
+  assignedAt: Date; // When delivery driver was assigned
 
   @Column({ name: 'delivered_at', type: 'timestamp', nullable: true })
   deliveredAt: Date;
@@ -145,7 +160,10 @@ export class Order {
   @Column({ name: 'zone_id', nullable: true })
   zoneId: number;
 
-  @ManyToOne(() => PickupRequest, (pr) => pr.orders, { nullable: true, onDelete: 'SET NULL' })
+  @ManyToOne(() => PickupRequest, (pr) => pr.orders, {
+    nullable: true,
+    onDelete: 'SET NULL',
+  })
   @JoinColumn({ name: 'pickup_request_id' })
   pickupRequest: PickupRequest;
 

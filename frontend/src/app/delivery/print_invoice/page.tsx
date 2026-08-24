@@ -6,42 +6,49 @@ import { isAuthenticated } from '@/lib/auth';
 import Sidebar from '@/components/layout/Sidebar';
 import Topbar from '@/components/layout/Topbar';
 import api from '@/lib/api';
-import { MdPrint, MdClose, MdFilterList, MdSelectAll } from 'react-icons/md';
+import { MdPrint, MdArrowBack, MdPhone, MdInventory } from 'react-icons/md';
 import { useLanguage } from '@/lib/LanguageContext';
 import DateInput, { getLocalDateString, formatDateToDDMMYYYY } from '@/components/ui/DateInput';
 
-const getLocalFirstDayOfMonthString = () => {
-  const d = new Date();
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  return `${year}-${month}-01`;
-};
-
 const formatCOD = (cod: any, currency: string) => {
-  if (!cod || parseFloat(cod) === 0) return '—';
-  if (currency === 'KHR') return `${parseInt(cod).toLocaleString()} ៛`;
-  return `$${parseFloat(cod).toFixed(2)}`;
+  if (currency === 'KHR') return `${parseInt(cod || 0).toLocaleString()} ៛`;
+  return `$${parseFloat(cod || 0).toFixed(2)}`;
 };
 
-const STATUS_OPTIONS = [
-  { value: 'all', labelEn: 'All Status', labelKh: 'ស្ថានភាពទាំងអស់' },
-  { value: 'pending', labelEn: 'Pending', labelKh: 'រង់ចាំ' },
-  { value: 'in-warehouse', labelEn: 'In Warehouse', labelKh: 'ក្នុងឃ្លាំង' },
-  { value: 'assigned', labelEn: 'Assigned', labelKh: 'បានចាត់ចែង' },
-  { value: 'picked-up', labelEn: 'Picked Up', labelKh: 'បានប្រមូល' },
-  { value: 'in-transit', labelEn: 'In Transit', labelKh: 'កំពុងដឹក' },
-  { value: 'delivered', labelEn: 'Delivered', labelKh: 'ដឹកជោគជ័យ' },
-  { value: 'failed', labelEn: 'Failed', labelKh: 'មិនជោគជ័យ' },
-  { value: 'returned', labelEn: 'Returned', labelKh: 'បានត្រឡប់' },
-];
+const getStatusLabel = (status: string, lang: string) => {
+  switch (status) {
+    case 'pending':
+      return <span style={{ background: '#78716c', color: '#fff', padding: '4px 10px', borderRadius: 4, fontSize: 11, fontWeight: 'bold' }}>{lang === 'km' ? 'បញ្ចូលចុង' : 'Pending'}</span>;
+    case 'assigned':
+      return <span style={{ background: '#3b82f6', color: '#fff', padding: '4px 10px', borderRadius: 4, fontSize: 11, fontWeight: 'bold' }}>{lang === 'km' ? 'ចាត់តាំងរួច' : 'Assigned'}</span>;
+    case 'picked-up':
+      return <span style={{ background: '#8b5cf6', color: '#fff', padding: '4px 10px', borderRadius: 4, fontSize: 11, fontWeight: 'bold' }}>{lang === 'km' ? 'បានទទួល' : 'Picked Up'}</span>;
+    case 'in-transit':
+      return <span style={{ background: '#0d9488', color: '#fff', padding: '4px 10px', borderRadius: 4, fontSize: 11, fontWeight: 'bold' }}>{lang === 'km' ? 'កំពុងដំណើរការដឹក' : 'In Transit'}</span>;
+    case 'delivered':
+      return <span style={{ background: '#10b981', color: '#fff', padding: '4px 10px', borderRadius: 4, fontSize: 11, fontWeight: 'bold' }}>{lang === 'km' ? 'ដឹកជោគជ័យ' : 'Delivered'}</span>;
+    case 'failed':
+      return <span style={{ background: '#ef4444', color: '#fff', padding: '4px 10px', borderRadius: 4, fontSize: 11, fontWeight: 'bold' }}>{lang === 'km' ? 'មិនជោគជ័យ' : 'Failed'}</span>;
+    case 'returned':
+      return <span style={{ background: '#6b7280', color: '#fff', padding: '4px 10px', borderRadius: 4, fontSize: 11, fontWeight: 'bold' }}>{lang === 'km' ? 'បង្វិលត្រឡប់' : 'Returned'}</span>;
+    default:
+      return <span style={{ background: '#6b7280', color: '#fff', padding: '4px 10px', borderRadius: 4, fontSize: 11, fontWeight: 'bold' }}>{status}</span>;
+  }
+};
 
-export default function PrintInvoiceDeliveryPage() {
+const getDriverLabel = (driver: any, lang: string) => {
+  if (!driver) {
+    return <span style={{ background: '#0284c7', color: '#fff', padding: '4px 10px', borderRadius: 4, fontSize: 11, fontWeight: 'bold' }}>{lang === 'km' ? 'មិនទាន់ធ្វើការ assign អ្នកដឹក' : 'Driver not assigned'}</span>;
+  }
+  return <span style={{ fontWeight: 'bold', color: '#0f172a' }}>{lang === 'km' && driver.nameKh ? driver.nameKh : driver.name}</span>;
+};
+
+export default function PrintInvoicePage() {
   const router = useRouter();
-  const { lang } = useLanguage();
   const [orders, setOrders] = useState<any[]>([]);
-  const [filteredOrders, setFilteredOrders] = useState<any[]>([]);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [loading, setLoading] = useState(true);
+
   const [merchants, setMerchants] = useState<any[]>([]);
   const [drivers, setDrivers] = useState<any[]>([]);
   const [search, setSearch] = useState('');
@@ -50,83 +57,105 @@ export default function PrintInvoiceDeliveryPage() {
   const [driverFilter, setDriverFilter] = useState('');
   const [startDate, setStartDate] = useState(() => getLocalDateString());
   const [endDate, setEndDate] = useState(() => getLocalDateString());
-  const [isPrinting, setIsPrinting] = useState(false);
+  const [filteredOrders, setFilteredOrders] = useState<any[]>([]);
+  const { lang } = useLanguage();
+  const [isDirectMode, setIsDirectMode] = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated()) { router.push('/'); return; }
     Promise.all([
       api.get('/orders'),
       api.get('/merchants'),
-      api.get('/drivers'),
-    ]).then(([oRes, mRes, dRes]) => {
-      const orderData = oRes.data || [];
-      setOrders(orderData);
-      setMerchants(mRes.data || []);
-      setDrivers(dRes.data || []);
-      // Pre-select IDs from query param if present
-      const params = new URLSearchParams(window.location.search);
-      const ids = params.get('id');
-      if (ids) {
-        const parsed = ids.split(',').map(x => parseInt(x)).filter(x => !isNaN(x));
-        setSelectedIds(parsed);
-      } else {
-        setSelectedIds(orderData.map((o: any) => o.id));
-      }
-    }).catch(() => {}).finally(() => setLoading(false));
+      api.get('/drivers')
+    ])
+      .then(([oRes, mRes, dRes]) => {
+        const orderData = oRes.data || [];
+        setOrders(orderData);
+        setMerchants(mRes.data || []);
+        setDrivers(dRes.data || []);
+        
+        const params = new URLSearchParams(window.location.search);
+        const singleId = params.get('id');
+        if (singleId) {
+          setIsDirectMode(true);
+          if (singleId.includes(',')) {
+            const parsedIds = singleId.split(',').map(x => parseInt(x)).filter(x => !isNaN(x));
+            setSelectedIds(parsedIds);
+            const matchedOrders = orderData.filter((o: any) => parsedIds.includes(o.id));
+            setOrders(matchedOrders);
+          } else {
+            const parsedId = parseInt(singleId);
+            setSelectedIds([parsedId]);
+            const matchedOrder = orderData.find((o: any) => o.id === parsedId);
+            if (matchedOrder) {
+              setSearch(matchedOrder.trackingCode || '');
+            }
+            setOrders(orderData);
+          }
+        } else {
+          setSelectedIds(orderData.map((o: any) => o.id));
+          setOrders(orderData);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
   }, [router]);
 
-  // Filter logic
   useEffect(() => {
-    let list = [...orders];
+    let list = orders;
     if (statusFilter !== 'all') list = list.filter(o => o.status === statusFilter);
-    if (driverFilter) list = list.filter(o => String(o.driverId) === driverFilter);
-    if (merchantFilter) list = list.filter(o => String(o.merchantId) === merchantFilter);
+    if (driverFilter) list = list.filter(o => o.driverId === parseInt(driverFilter));
+    if (merchantFilter) list = list.filter(o => o.merchantId === parseInt(merchantFilter));
     if (startDate) {
-      const s = new Date(startDate); s.setHours(0, 0, 0, 0);
-      list = list.filter(o => new Date(o.createdAt) >= s);
+      const start = new Date(startDate);
+      start.setHours(0, 0, 0, 0);
+      list = list.filter(o => new Date(o.createdAt) >= start);
     }
     if (endDate) {
-      const e = new Date(endDate); e.setHours(23, 59, 59, 999);
-      list = list.filter(o => new Date(o.createdAt) <= e);
+      const end = new Date(endDate);
+      end.setHours(23, 59, 59, 999);
+      list = list.filter(o => new Date(o.createdAt) <= end);
     }
-    if (search.trim()) {
+    if (search) {
       const q = search.toLowerCase();
       list = list.filter(o =>
         o.trackingCode?.toLowerCase().includes(q) ||
         o.receiverName?.toLowerCase().includes(q) ||
         o.receiverPhone?.includes(q) ||
-        o.receiverAddress?.toLowerCase().includes(q) ||
         o.merchant?.name?.toLowerCase().includes(q) ||
-        o.merchant?.nameKh?.toLowerCase().includes(q)
+        o.merchant?.nameKh?.toLowerCase().includes(q) ||
+        o.driver?.name?.toLowerCase().includes(q) ||
+        o.driver?.nameKh?.toLowerCase().includes(q)
       );
     }
     setFilteredOrders(list);
-  }, [orders, statusFilter, driverFilter, merchantFilter, startDate, endDate, search]);
+  }, [orders, search, statusFilter, driverFilter, merchantFilter, startDate, endDate]);
 
-  const allSelected = filteredOrders.length > 0 && filteredOrders.every(o => selectedIds.includes(o.id));
-
-  const toggleAll = () => {
-    const ids = filteredOrders.map(o => o.id);
-    if (allSelected) {
-      setSelectedIds(prev => prev.filter(id => !ids.includes(id)));
-    } else {
-      setSelectedIds(prev => Array.from(new Set([...prev, ...ids])));
-    }
-  };
-
-  const toggleOne = (id: number) => {
+  const toggleSelect = (id: number) => {
     setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
   };
 
-  const handlePrint = () => {
-    setIsPrinting(true);
-    setTimeout(() => {
-      window.print();
-      setIsPrinting(false);
-    }, 200);
+  const allFilteredSelected = filteredOrders.length > 0 && filteredOrders.every(o => selectedIds.includes(o.id));
+
+  const toggleAll = () => {
+    const filteredIds = filteredOrders.map(o => o.id);
+    if (allFilteredSelected) {
+      setSelectedIds(prev => prev.filter(id => !filteredIds.includes(id)));
+    } else {
+      setSelectedIds(prev => Array.from(new Set([...prev, ...filteredIds])));
+    }
   };
 
-  const selectedOrders = orders.filter(o => selectedIds.includes(o.id));
+  const handlePrint = async () => {
+    try {
+      await api.post('/invoices', { orderIds: selectedIds });
+    } catch (err) {
+      console.error('Failed to save printed invoices:', err);
+    }
+    setTimeout(() => {
+      window.print();
+    }, 100);
+  };
 
   if (loading) return (
     <div className="app-layout">
@@ -137,53 +166,195 @@ export default function PrintInvoiceDeliveryPage() {
     </div>
   );
 
+  const selectedOrders = filteredOrders.filter(o => selectedIds.includes(o.id));
+
   return (
-    <div className="app-layout">
+    <div className="app-layout" style={{ display: 'block', minHeight: '100vh', background: '#f1f5f9' }}>
       <style dangerouslySetInnerHTML={{ __html: `
+        @media screen {
+          .no-print {
+            display: flex !important;
+          }
+          ${isDirectMode ? `
+            .sidebar, .topbar, .filter-section, .table-container, .select-all-bar {
+              display: none !important;
+            }
+            .main-content {
+              margin-left: 0 !important;
+              width: 100% !important;
+              min-height: 100vh;
+              background: #f1f5f9 !important;
+            }
+            .print-only-container {
+              display: grid !important;
+              grid-template-columns: 1fr !important;
+              justify-content: center !important;
+              gap: 24px !important;
+              padding: 30px 20px 60px !important;
+              width: 100% !important;
+              max-width: ${selectedOrders.length > 1 ? '1040px' : '520px'} !important;
+              margin: 0 auto !important;
+            }
+            @media (min-width: 1024px) {
+              .print-only-container {
+                grid-template-columns: ${selectedOrders.length > 1 ? 'repeat(2, minmax(0, 480px))' : '1fr'} !important;
+              }
+            }
+          ` : `
+            .print-only-container {
+              display: none !important;
+            }
+          `}
+        }
         @media print {
-          .no-print, .sidebar, .topbar, .filter-panel, .order-table-panel, .select-bar {
+          .no-print {
             display: none !important;
           }
-          .main-content { margin-left: 0 !important; }
-          body, .page-content { background: #fff !important; padding: 0 !important; }
-          .print-area { display: block !important; }
-          .invoice-slip {
+          .sidebar, .topbar, .filter-section, .table-container, .select-all-bar {
+            display: none !important;
+          }
+          .main-content {
+            margin-left: 0 !important;
+            width: 100% !important;
+            padding: 0 !important;
+            background: #fff !important;
+          }
+          body, .page-content, .app-layout {
+            background: #fff !important;
+            padding: 0 !important;
+            margin: 0 !important;
+          }
+          .print-only-container {
+            display: block !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            width: 100% !important;
+          }
+          .invoice-card {
             break-inside: avoid !important;
             page-break-inside: avoid !important;
+            page-break-after: always !important;
+            border: 2px solid #000 !important;
             box-shadow: none !important;
-            border: 1.5px solid #000 !important;
-            margin-bottom: 0 !important;
+            margin: 0 auto 20px !important;
           }
-          .invoice-grid {
-            display: grid !important;
-            grid-template-columns: 1fr 1fr !important;
-            gap: 8mm !important;
-            padding: 6mm !important;
-          }
-        }
-        @media screen {
-          .print-area { display: none !important; }
         }
       `}} />
 
-      <Sidebar />
-      <div className="main-content">
-        <Topbar
-          title={lang === 'km' ? 'បោះពុម្ពវិក្កយបត្រ' : 'Print Invoice'}
-          subtitle={lang === 'km' ? `${selectedIds.length} រាយការណ៍ដែលបានជ្រើសរើស` : `${selectedIds.length} items selected`}
-        />
+      {!isDirectMode && <Sidebar />}
+      <div className="main-content" style={isDirectMode ? { marginLeft: 0, width: '100%', background: '#f1f5f9' } : {}}>
+        
+        {/* Direct Mode Header Toolbar */}
+        {isDirectMode ? (
+          <header className="no-print" style={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center',
+            padding: '14px 28px', 
+            background: '#ffffff',
+            borderBottom: '1px solid #e2e8f0',
+            position: 'sticky',
+            top: 0,
+            zIndex: 100,
+            boxShadow: '0 2px 8px rgba(15, 23, 42, 0.06)'
+          }}>
+            {/* Left Button */}
+            <button 
+              className="btn btn-outline" 
+              onClick={() => router.push('/delivery')}
+              style={{ 
+                fontWeight: 600, 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: 6, 
+                padding: '8px 16px',
+                borderRadius: 8,
+                fontSize: 13,
+                color: '#475569',
+                borderColor: '#cbd5e1',
+                background: '#fff',
+                cursor: 'pointer',
+                transition: 'all 0.2s'
+              }}
+            >
+              <MdArrowBack size={18} /> {lang === 'km' ? 'ត្រឡប់ក្រោយ' : 'Go Back'}
+            </button>
 
-        <div className="page-content">
+            {/* Center Info */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ fontSize: 16, fontWeight: 700, color: '#0f172a' }}>
+                {lang === 'km' ? 'គំរូវិក្កយបត្រ (Invoice Preview)' : 'Invoice Preview'}
+              </span>
+              <span style={{ 
+                background: '#e0e7ff', 
+                color: '#3730a3', 
+                fontSize: 12, 
+                fontWeight: 700, 
+                padding: '3px 10px', 
+                borderRadius: 20 
+              }}>
+                {selectedOrders.length} {lang === 'km' ? 'កញ្ចប់' : 'Parcels'}
+              </span>
+            </div>
 
-          {/* ── Filter Panel ── */}
-          <div className="card filter-panel" style={{ marginBottom: 16, padding: '16px 20px' }}>
+            {/* Right Action */}
+            <button 
+              className="btn" 
+              onClick={handlePrint}
+              style={{ 
+                fontWeight: 700, 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: 8, 
+                padding: '9px 22px',
+                borderRadius: 8,
+                fontSize: 14,
+                background: 'linear-gradient(135deg, #10b981, #059669)',
+                color: '#fff',
+                border: 'none',
+                cursor: 'pointer',
+                boxShadow: '0 4px 12px rgba(16, 185, 129, 0.25)',
+                transition: 'all 0.2s'
+              }}
+            >
+              <MdPrint size={20} /> {lang === 'km' ? 'បោះពុម្ពវិក្កយបត្រ' : 'Print Invoice'}
+            </button>
+          </header>
+        ) : (
+          <Topbar 
+            title={lang === 'km' ? 'បោះពុម្ពវិក្កយបត្រ' : 'Print Invoice Delivery'} 
+            subtitle={lang === 'km' ? 'បោះពុម្ពស្លាកវិក្កយបត្រ និង QR Code សម្រាប់បិទលើកញ្ចប់ទំនិញ' : 'Print delivery invoice and QR code parcel labels'} 
+          />
+        )}
+
+        <div className="page-content" style={isDirectMode ? { padding: 0 } : {}}>
+          
+          {/* Filters & Selection (only shown when in normal table view) */}
+          <div className="card filter-section" style={{ marginBottom: 20, padding: '16px 20px', background: '#ffffff', borderRadius: 10, border: '1px solid #e2e8f0' }}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12, marginBottom: 12 }}>
-              {/* Status */}
+
+              {/* Driver Filter */}
               <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label" style={{ fontSize: 11 }}>{lang === 'km' ? 'ស្ថានភាព' : 'Status'}</label>
-                <select className="form-control" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
-                  {STATUS_OPTIONS.map(s => (
-                    <option key={s.value} value={s.value}>{lang === 'km' ? s.labelKh : s.labelEn}</option>
+                <label className="form-label" style={{ fontWeight: 'bold', fontSize: 13, marginBottom: 6, display: 'block', color: '#1e293b' }}>{lang === 'km' ? 'អ្នកដឹក' : 'Driver'}</label>
+                <select className="form-control" value={driverFilter} onChange={e => setDriverFilter(e.target.value)} style={{ background: '#fff', border: '1px solid #cbd5e1' }}>
+                  <option value="">{lang === 'km' ? '-- ទាំងអស់ --' : '-- All --'}</option>
+                  {drivers.map(d => (
+                    <option key={d.id} value={d.id}>
+                      {d.nameKh || d.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Shop Filter */}
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label" style={{ fontWeight: 'bold', fontSize: 13, marginBottom: 6, display: 'block', color: '#1e293b' }}>{lang === 'km' ? 'ហាង' : 'Shop'}</label>
+                <select className="form-control" value={merchantFilter} onChange={e => setMerchantFilter(e.target.value)} style={{ background: '#fff', border: '1px solid #cbd5e1' }}>
+                  <option value="">{lang === 'km' ? '-- ទាំងអស់ --' : '-- All --'}</option>
+                  {merchants.map(m => (
+                    <option key={m.id} value={m.id}>
+                      {m.nameKh ? `${m.nameKh} (${m.name})` : m.name}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -204,256 +375,258 @@ export default function PrintInvoiceDeliveryPage() {
                 onChange={setEndDate}
               />
 
-              {/* Driver */}
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label" style={{ fontSize: 11 }}>{lang === 'km' ? 'អ្នកដឹក' : 'Driver'}</label>
-                <select className="form-control" value={driverFilter} onChange={e => setDriverFilter(e.target.value)}>
-                  <option value="">{lang === 'km' ? '-- ទាំងអស់ --' : '-- All --'}</option>
-                  {drivers.map(d => (
-                    <option key={d.id} value={d.id}>{d.nameKh || d.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Merchant */}
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label" style={{ fontSize: 11 }}>{lang === 'km' ? 'ហាង' : 'Shop'}</label>
-                <select className="form-control" value={merchantFilter} onChange={e => setMerchantFilter(e.target.value)}>
-                  <option value="">{lang === 'km' ? '-- ទាំងអស់ --' : '-- All --'}</option>
-                  {merchants.map(m => (
-                    <option key={m.id} value={m.id}>{m.nameKh ? `${m.nameKh} (${m.name})` : m.name}</option>
-                  ))}
-                </select>
-              </div>
             </div>
 
-            {/* Search + Action buttons */}
-            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
-              <div style={{ flex: 1, minWidth: 200, position: 'relative' }}>
-                <input
-                  className="form-control"
-                  placeholder={lang === 'km' ? 'ស្វែងរក...' : 'Search tracking, receiver, shop...'}
-                  value={search}
-                  onChange={e => setSearch(e.target.value)}
-                  style={{ paddingLeft: 12 }}
-                />
-              </div>
-              <button
-                className="btn btn-outline btn-sm"
-                onClick={toggleAll}
-                style={{ display: 'flex', alignItems: 'center', gap: 4 }}
-              >
-                <MdSelectAll size={16} />
-                {allSelected
-                  ? (lang === 'km' ? 'លុបការជ្រើស' : 'Deselect All')
-                  : (lang === 'km' ? 'ជ្រើសទាំងអស់' : 'Select All')}
-              </button>
-              <button
-                className="btn btn-primary btn-sm"
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', flexWrap: 'wrap', alignItems: 'center' }}>
+              <button 
                 onClick={handlePrint}
-                disabled={selectedIds.length === 0 || isPrinting}
-                style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700 }}
+                disabled={selectedOrders.length === 0}
+                className="btn" 
+                style={{ 
+                  background: 'var(--accent)', 
+                  color: '#fff', 
+                  height: 38, 
+                  padding: '0 20px', 
+                  borderRadius: 6, 
+                  fontWeight: 'bold',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  cursor: selectedOrders.length === 0 ? 'not-allowed' : 'pointer',
+                  border: 'none'
+                }}
               >
-                <MdPrint size={16} />
-                {lang === 'km'
-                  ? `បោះពុម្ព (${selectedIds.length})`
-                  : `Print (${selectedIds.length})`}
-              </button>
-              <button
-                className="btn btn-ghost btn-sm"
-                onClick={() => router.push('/delivery')}
-                style={{ display: 'flex', alignItems: 'center', gap: 4 }}
-              >
-                <MdClose size={16} />
-                {lang === 'km' ? 'ត្រឡប់' : 'Back'}
+                <MdPrint size={18} /> {lang === 'km' ? `បោះពុម្ពដែលបានជ្រើសរើស (${selectedOrders.length})` : `Print Selected (${selectedOrders.length})`}
               </button>
             </div>
           </div>
 
-          {/* ── Orders Table ── */}
-          <div className="card order-table-panel" style={{ padding: 0, overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 900 }}>
+          {/* Select All Checkbox Bar */}
+          <div className="select-all-bar" style={{ 
+            background: '#ffffff', 
+            padding: '12px 20px', 
+            borderRadius: 8, 
+            border: '1px solid #e2e8f0',
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: 10,
+            marginBottom: 20
+          }}>
+            <input
+              type="checkbox"
+              checked={allFilteredSelected}
+              onChange={toggleAll}
+              style={{ width: 18, height: 18, accentColor: 'var(--accent)', cursor: 'pointer' }}
+            />
+            <span style={{ fontWeight: 'bold', fontSize: 13, color: '#334155' }}>{lang === 'km' ? 'ទាំងអស់' : 'All'}</span>
+          </div>
+
+          {/* Orders Table */}
+          <div className="card table-container" style={{ padding: '0px', overflowX: 'auto', border: '1px solid #e2e8f0', borderRadius: 8, marginBottom: 30 }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 1000 }}>
               <thead>
-                <tr style={{ background: 'var(--bg-secondary)', borderBottom: '2px solid var(--border)' }}>
-                  <th style={{ padding: '10px 12px', width: 44, textAlign: 'center' }}>
-                    <input
-                      type="checkbox"
-                      checked={allSelected}
-                      onChange={toggleAll}
-                      style={{ cursor: 'pointer', width: 15, height: 15 }}
-                    />
-                  </th>
-                  <th style={{ padding: '10px 12px', textAlign: 'left' }}>{lang === 'km' ? 'ល.រ' : 'No.'}</th>
-                  <th style={{ padding: '10px 12px', textAlign: 'left' }}>{lang === 'km' ? 'លេខ' : 'Tracking'}</th>
-                  <th style={{ padding: '10px 12px', textAlign: 'left' }}>{lang === 'km' ? 'កាលបរិច្ឆេទ' : 'Date'}</th>
-                  <th style={{ padding: '10px 12px', textAlign: 'left' }}>{lang === 'km' ? 'ហាង' : 'Shop'}</th>
-                  <th style={{ padding: '10px 12px', textAlign: 'left' }}>{lang === 'km' ? 'អ្នកទទួល' : 'Receiver'}</th>
-                  <th style={{ padding: '10px 12px', textAlign: 'left' }}>{lang === 'km' ? 'អាសយដ្ឋាន' : 'Address'}</th>
-                  <th style={{ padding: '10px 12px', textAlign: 'left' }}>{lang === 'km' ? 'ទូរស័ព្ទ' : 'Phone'}</th>
-                  <th style={{ padding: '10px 12px', textAlign: 'right' }}>COD</th>
-                  <th style={{ padding: '10px 12px', textAlign: 'left' }}>{lang === 'km' ? 'អ្នកដឹក' : 'Driver'}</th>
+                <tr style={{ background: '#f8fafc', borderBottom: '2px solid #dee2e6' }}>
+                  <th style={{ padding: '12px 10px', textAlign: 'center', fontWeight: 'bold', borderRight: '1px solid #dee2e6', width: 50 }}>{lang === 'km' ? 'ល.រ' : 'No.'}</th>
+                  <th style={{ padding: '12px 10px', textAlign: 'center', fontWeight: 'bold', borderRight: '1px solid #dee2e6', width: 80 }}>{lang === 'km' ? 'ជ្រើសរើស' : 'Select'}</th>
+                  <th style={{ padding: '12px 10px', textAlign: 'left', fontWeight: 'bold', borderRight: '1px solid #dee2e6' }}>{lang === 'km' ? 'លេខបញ្ជូន' : 'Delivery Number'}</th>
+                  <th style={{ padding: '12px 10px', textAlign: 'left', fontWeight: 'bold', borderRight: '1px solid #dee2e6' }}>{lang === 'km' ? 'កាលបរិច្ឆេទ' : 'Date'}</th>
+                  <th style={{ padding: '12px 10px', textAlign: 'left', fontWeight: 'bold', borderRight: '1px solid #dee2e6' }}>{lang === 'km' ? 'ឈ្មោះហាង' : 'Shop Name'}</th>
+                  <th style={{ padding: '12px 10px', textAlign: 'left', fontWeight: 'bold', borderRight: '1px solid #dee2e6' }}>{lang === 'km' ? 'អាសយដ្ឋាន' : 'Address'}</th>
+                  <th style={{ padding: '12px 10px', textAlign: 'left', fontWeight: 'bold', borderRight: '1px solid #dee2e6' }}>{lang === 'km' ? 'លេខអ្នកទទួល' : 'Receiver Phone'}</th>
+                  <th style={{ padding: '12px 10px', textAlign: 'right', fontWeight: 'bold', borderRight: '1px solid #dee2e6' }}>{lang === 'km' ? 'ចំនួនប្រាក់' : 'Amount'}</th>
+                  <th style={{ padding: '12px 10px', textAlign: 'left', fontWeight: 'bold', borderRight: '1px solid #dee2e6' }}>{lang === 'km' ? 'ដឹកដោយ' : 'Driver'}</th>
+                  <th style={{ padding: '12px 10px', textAlign: 'center', fontWeight: 'bold' }}>{lang === 'km' ? 'ស្ថានភាព' : 'Status'}</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredOrders.length === 0 ? (
                   <tr>
-                    <td colSpan={10} style={{ textAlign: 'center', padding: '32px 0', color: 'var(--text-muted)' }}>
-                      {lang === 'km' ? 'គ្មានទិន្នន័យ' : 'No orders found'}
-                    </td>
+                    <td colSpan={10} style={{ textAlign: 'center', padding: '30px 0', color: '#64748b' }}>{lang === 'km' ? 'គ្មានទិន្នន័យ' : 'No Data'}</td>
                   </tr>
-                ) : filteredOrders.map((o, idx) => (
-                  <tr
-                    key={o.id}
-                    style={{
-                      borderBottom: '1px solid var(--border)',
-                      background: selectedIds.includes(o.id) ? '#eff6ff' : 'transparent',
-                      cursor: 'pointer',
-                    }}
-                    onClick={() => toggleOne(o.id)}
-                  >
-                    <td style={{ padding: '8px 12px', textAlign: 'center' }}>
-                      <input
-                        type="checkbox"
-                        checked={selectedIds.includes(o.id)}
-                        onChange={() => toggleOne(o.id)}
-                        onClick={e => e.stopPropagation()}
-                        style={{ cursor: 'pointer', width: 15, height: 15 }}
-                      />
-                    </td>
-                    <td style={{ padding: '8px 12px', color: 'var(--text-muted)', fontSize: 12 }}>{idx + 1}</td>
-                    <td style={{ padding: '8px 12px', fontWeight: 600, color: '#2563eb' }}>{o.trackingCode}</td>
-                    <td style={{ padding: '8px 12px', fontSize: 12, whiteSpace: 'nowrap' }}>{formatDateToDDMMYYYY(o.createdAt)}</td>
-                    <td style={{ padding: '8px 12px', fontWeight: 600 }}>{o.merchant?.nameKh || o.merchant?.name || '—'}</td>
-                    <td style={{ padding: '8px 12px' }}>{o.receiverName || '—'}</td>
-                    <td style={{ padding: '8px 12px', fontSize: 12 }}>{o.receiverAddress || '—'}</td>
-                    <td style={{ padding: '8px 12px', fontWeight: 600 }}>{o.receiverPhone || '—'}</td>
-                    <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 700, color: '#dc2626' }}>
-                      {formatCOD(o.cod, o.codCurrency || 'USD')}
-                    </td>
-                    <td style={{ padding: '8px 12px', fontSize: 12 }}>{o.driver?.nameKh || o.driver?.name || '—'}</td>
-                  </tr>
-                ))}
+                ) : (
+                  filteredOrders.map((o, idx) => (
+                    <tr key={o.id} style={{ borderBottom: '1px solid #dee2e6', background: selectedIds.includes(o.id) ? '#f1f5f9' : '#fff' }}>
+                      <td style={{ padding: '12px 10px', textAlign: 'center', borderRight: '1px solid #dee2e6', color: '#64748b', fontWeight: 'bold' }}>{idx + 1}</td>
+                      <td style={{ padding: '12px 10px', textAlign: 'center', borderRight: '1px solid #dee2e6' }}>
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.includes(o.id)}
+                          onChange={() => toggleSelect(o.id)}
+                          style={{ width: 16, height: 16, accentColor: 'var(--accent)', cursor: 'pointer' }}
+                        />
+                      </td>
+                      <td style={{ padding: '12px 10px', borderRight: '1px solid #dee2e6', fontWeight: '500' }}>{o.trackingCode}</td>
+                      <td style={{ padding: '12px 10px', borderRight: '1px solid #dee2e6' }}>
+                        {o.createdAt ? formatDateToDDMMYYYY(o.createdAt) : '—'}
+                      </td>
+                      <td style={{ padding: '12px 10px', borderRight: '1px solid #dee2e6', fontWeight: 600 }}>{o.merchant?.nameKh || o.merchant?.name || o.senderName}</td>
+                      <td style={{ padding: '12px 10px', borderRight: '1px solid #dee2e6' }}>{o.receiverAddress || '—'}</td>
+                      <td style={{ padding: '12px 10px', borderRight: '1px solid #dee2e6' }}>{o.receiverPhone}</td>
+                      <td style={{ padding: '12px 10px', textAlign: 'right', borderRight: '1px solid #dee2e6', fontWeight: 'bold', color: '#dc2626' }}>
+                        {parseFloat(o.cod).toFixed(2)} ({o.codCurrency || 'USD'})
+                      </td>
+                      <td style={{ padding: '12px 10px', borderRight: '1px solid #dee2e6' }}>
+                        {getDriverLabel(o.driver, lang)}
+                      </td>
+                      <td style={{ padding: '12px 10px', textAlign: 'center' }}>
+                        {getStatusLabel(o.status, lang)}
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
-        </div>
-      </div>
 
-      {/* ══════════════════════════════════════════
-          PRINT AREA — hidden on screen, shown on print
-      ══════════════════════════════════════════ */}
-      <div className="print-area">
-        <div className="invoice-grid">
-          {selectedOrders.map(o => (
-            <div
-              key={o.id}
-              className="invoice-slip"
-              style={{
-                border: '1.5px solid #000',
-                borderRadius: 0,
-                background: '#fff',
-                color: '#000',
-                fontFamily: "'Kantumruy Pro', sans-serif",
-                padding: '10px 14px',
-                fontSize: 11,
-                width: '100%',
-                boxSizing: 'border-box',
-              }}
-            >
-              {/* Header: Logo + QR */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <div style={{
-                    width: 28, height: 28, borderRadius: 6,
-                    background: '#000',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    color: '#fff', fontSize: 14,
-                    flexShrink: 0,
-                    WebkitPrintColorAdjust: 'exact',
-                    printColorAdjust: 'exact'
-                  }}>
-                    📦
+          {/* Printable Sticker Cards Preview */}
+          <div className="print-only-container">
+            {selectedOrders.map(o => (
+              <div
+                key={o.id}
+                className="invoice-card"
+                style={{
+                  padding: '20px 24px',
+                  border: '2px solid #0f172a',
+                  borderRadius: isDirectMode ? 8 : 0,
+                  background: '#ffffff',
+                  maxWidth: 500,
+                  margin: '0 auto 28px',
+                  width: '100%',
+                  color: '#0f172a',
+                  fontFamily: "'Kantumruy Pro', sans-serif",
+                  boxShadow: isDirectMode ? '0 10px 25px -5px rgba(15, 23, 42, 0.1), 0 8px 10px -6px rgba(15, 23, 42, 0.06)' : 'none',
+                  boxSizing: 'border-box',
+                }}
+              >
+                {/* Header: Logo + Brand + QR Code */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div style={{
+                      width: 40, height: 40, borderRadius: 10,
+                      background: 'linear-gradient(135deg, #2563eb, #4f46e5)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      color: '#fff', fontSize: 20,
+                      flexShrink: 0,
+                      boxShadow: '0 4px 8px rgba(37, 99, 235, 0.25)',
+                      WebkitPrintColorAdjust: 'exact',
+                      printColorAdjust: 'exact'
+                    }}>
+                      📦
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <span style={{ fontSize: 18, fontWeight: 900, color: '#1e3a8a', letterSpacing: '0.5px', lineHeight: 1.1, WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
+                        EBS<span style={{ color: '#2563eb' }}>Express</span>
+                      </span>
+                      <span style={{ fontSize: 9, color: '#64748b', marginTop: 2, letterSpacing: '0.4px', fontWeight: 600 }}>
+                        Delivery System
+                      </span>
+                    </div>
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                    <span style={{ fontSize: 14, fontWeight: 800, color: '#000', letterSpacing: '0.5px', lineHeight: 1.1 }}>EBS<span style={{ color: '#555' }}>Express</span></span>
-                    <span style={{ fontSize: 8, color: '#555', marginTop: 1, letterSpacing: '0.2px' }}>Delivery System</span>
-                  </div>
-                </div>
-                <div style={{ textAlign: 'center' }}>
-                  <img
-                    src={`https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${o.trackingCode}`}
-                    alt="QR"
-                    style={{ width: 60, height: 60 }}
-                  />
-                  <div style={{ fontSize: 8, marginTop: 2, fontWeight: 'bold', letterSpacing: '0.5px' }}>{o.trackingCode}</div>
-                </div>
-              </div>
 
-              {/* Title */}
-              <div style={{ textAlign: 'center', borderTop: '2px solid #000', borderBottom: '2px solid #000', padding: '4px 0', marginBottom: 6 }}>
-                <span style={{ fontSize: 13, fontWeight: 'bold', letterSpacing: '1px' }}>
-                  {lang === 'km' ? 'វិក្កយបត្រ' : 'DELIVERY INVOICE'}
-                </span>
-              </div>
-
-              {/* Sender row */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #ccc', paddingBottom: 4, marginBottom: 4, fontSize: 10 }}>
-                <div>
-                  <span style={{ color: '#555' }}>{lang === 'km' ? 'ហាង: ' : 'Shop: '}</span>
-                  <strong>{o.merchant?.nameKh || o.merchant?.name || o.senderName || '—'}</strong>
-                </div>
-                <div>
-                  <span style={{ color: '#555' }}>{lang === 'km' ? 'កាលបរិច្ឆេទ: ' : 'Date: '}</span>
-                  <strong>{o.createdAt ? formatDateToDDMMYYYY(o.createdAt) : '—'}</strong>
-                </div>
-              </div>
-
-              {/* Receiver block */}
-              <div style={{ border: '1px solid #999', borderRadius: 3, padding: '5px 8px', marginBottom: 6 }}>
-                <div style={{ fontSize: 9, fontWeight: 'bold', color: '#555', marginBottom: 3, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                  {lang === 'km' ? 'ព័ត៌មានអ្នកទទួល' : 'Receiver Info'}
-                </div>
-                <div style={{ fontWeight: 'bold', fontSize: 12, marginBottom: 2 }}>{o.receiverName || '—'}</div>
-                <div style={{ fontSize: 10, marginBottom: 2 }}>📞 {o.receiverPhone || '—'}</div>
-                <div style={{ fontSize: 10, color: '#333' }}>📍 {o.receiverAddress || '—'}</div>
-              </div>
-
-              {/* COD + Delivery Fee row */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 6 }}>
-                <div style={{ border: '1px solid #999', borderRadius: 3, padding: '4px 8px', textAlign: 'center' }}>
-                  <div style={{ fontSize: 8, color: '#555', marginBottom: 2 }}>COD</div>
-                  <div style={{ fontWeight: 'bold', fontSize: 13, color: '#dc2626' }}>
-                    {formatCOD(o.cod, o.codCurrency || 'USD')}
+                  {/* QR Code image */}
+                  <div style={{ textAlign: 'center' }}>
+                    <img 
+                      src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${o.trackingCode}`} 
+                      alt="QR Code" 
+                      style={{ width: 72, height: 72, display: 'block', imageRendering: 'crisp-edges' }} 
+                    />
                   </div>
                 </div>
-                <div style={{ border: '1px solid #999', borderRadius: 3, padding: '4px 8px', textAlign: 'center' }}>
-                  <div style={{ fontSize: 8, color: '#555', marginBottom: 2 }}>{lang === 'km' ? 'ថ្លៃដឹក' : 'Delivery Fee'}</div>
-                  <div style={{ fontWeight: 'bold', fontSize: 13 }}>
-                    ${parseFloat(o.deliveryFee || 0).toFixed(2)}
+
+                {/* Tracking Title */}
+                <div style={{ textAlign: 'center', margin: '12px 0 8px' }}>
+                  <h2 style={{ fontSize: 22, fontWeight: 900, margin: 0, letterSpacing: '1px', color: '#0f172a' }}>
+                    {lang === 'km' ? 'វិក្កយបត្រ' : 'INVOICE'} : {o.trackingCode}
+                  </h2>
+                </div>
+
+                {/* Separator */}
+                <div style={{ width: '100%', height: 2, background: '#0f172a', margin: '6px 0 0 0' }} />
+
+                {/* Shop Name & Phone */}
+                <div style={{ 
+                  display: 'flex', 
+                  justifyContent: 'space-between', 
+                  alignItems: 'center',
+                  padding: '8px 4px', 
+                  borderBottom: '2px solid #0f172a', 
+                  fontWeight: 700, 
+                  fontSize: 13 
+                }}>
+                  <div>
+                    {lang === 'km' ? 'ឈ្មោះហាង' : 'Shop Name'} : <span style={{ textTransform: 'uppercase', color: '#0f172a' }}>{o.merchant?.nameKh || o.merchant?.name || o.senderName || '—'}</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#0f172a' }}>
+                    <span style={{ color: '#e11d48' }}>📞</span> {o.senderPhone || o.merchant?.phone || '—'}
                   </div>
                 </div>
-              </div>
 
-              {/* Driver + Status */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, borderTop: '1px solid #ccc', paddingTop: 4 }}>
-                <div>
-                  <span style={{ color: '#555' }}>{lang === 'km' ? 'អ្នកដឹក: ' : 'Driver: '}</span>
-                  <strong>{o.driver?.nameKh || o.driver?.name || (lang === 'km' ? 'មិនទាន់ assign' : 'Unassigned')}</strong>
-                </div>
-                <div>
-                  <span style={{ color: '#555' }}>{lang === 'km' ? 'ស្ថានភាព: ' : 'Status: '}</span>
-                  <strong>{o.status}</strong>
-                </div>
-              </div>
+                {/* 2-Column Details Box */}
+                <div style={{ display: 'flex', fontSize: 12, borderBottom: '2px solid #0f172a', minHeight: 80 }}>
+                  {/* Left Column: Receiver Info */}
+                  <div style={{ flex: 1.3, padding: '10px 8px 10px 4px', borderRight: '2px solid #0f172a', display: 'flex', flexDirection: 'column', gap: 8, justifyContent: 'center' }}>
+                    <div>
+                      <span style={{ fontWeight: 800, color: '#0f172a' }}>{lang === 'km' ? 'លេខអ្នកទទួល' : 'Receiver Phone'} :</span>{' '}
+                      <span style={{ fontWeight: 700 }}>{o.receiverPhone}</span>
+                    </div>
+                    <div>
+                      <span style={{ fontWeight: 800, color: '#0f172a' }}>{lang === 'km' ? 'អាសយដ្ឋានអ្នកទទួល' : 'Receive Address'} :</span>{' '}
+                      <span>{o.receiverAddress || '—'}</span>
+                    </div>
+                  </div>
 
-              {/* Footer note */}
-              <div style={{ marginTop: 5, fontSize: 8, color: '#777', borderTop: '1px dashed #ccc', paddingTop: 4, textAlign: 'center' }}>
-                {lang === 'km'
-                  ? 'ក្រុមហ៊ុនមិនទទួលបញ្ញើដែលច្បាប់ហាមឃាត់'
-                  : 'Company does not accept prohibited goods'}
+                  {/* Right Column: COD & Date */}
+                  <div style={{ flex: 0.9, padding: '10px 10px', display: 'flex', flexDirection: 'column', gap: 8, justifyContent: 'center' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontWeight: 600, color: '#334155' }}>{lang === 'km' ? 'តម្លៃឥវ៉ាន់' : 'COD'} :</span>
+                      <span style={{ fontWeight: 800, color: '#0f172a' }}>{formatCOD(o.cod, o.codCurrency || 'USD')}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontWeight: 600, color: '#334155' }}>{lang === 'km' ? 'កាលបរិច្ឆេទ' : 'Date'} :</span>
+                      <span style={{ fontWeight: 600, color: '#0f172a' }}>{o.createdAt ? formatDateToDDMMYYYY(o.createdAt) : ''}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Bottom Footer Notice & Total Amount */}
+                <div style={{ 
+                  border: '2px solid #0f172a', 
+                  borderRadius: 6,
+                  margin: '14px 0 2px', 
+                  padding: '8px 14px', 
+                  display: 'flex', 
+                  justifyContent: 'space-between', 
+                  alignItems: 'center',
+                  fontSize: 11,
+                  background: '#f8fafc',
+                  WebkitPrintColorAdjust: 'exact', 
+                  printColorAdjust: 'exact' 
+                }}>
+                  <div style={{ fontWeight: 700, flex: 1, paddingRight: 10, color: '#475569', fontSize: 11, lineHeight: 1.3 }}>
+                    {lang === 'km' ? 'ក្រុមហ៊ុនមិនទទួលបញ្ញើដែលច្បាប់ហាមឃាត់' : 'Company does not accept contraband goods'}
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                    <span style={{ fontWeight: 800, fontSize: 12, color: '#0f172a' }}>{lang === 'km' ? 'តម្លៃសរុប' : 'Total'} :</span>
+                    <div style={{ 
+                      background: '#ffffff', 
+                      padding: '4px 14px', 
+                      borderRadius: 6, 
+                      fontWeight: 900, 
+                      fontSize: 15, 
+                      color: '#0f172a', 
+                      border: '2px solid #0f172a', 
+                      WebkitPrintColorAdjust: 'exact', 
+                      printColorAdjust: 'exact' 
+                    }}>
+                      {formatCOD(o.cod, o.codCurrency || 'USD')}
+                    </div>
+                  </div>
+                </div>
+
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
+
         </div>
       </div>
     </div>

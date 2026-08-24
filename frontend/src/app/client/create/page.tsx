@@ -7,10 +7,12 @@ import Sidebar from '@/components/layout/Sidebar';
 import Topbar from '@/components/layout/Topbar';
 import api from '@/lib/api';
 import { useLanguage } from '@/lib/LanguageContext';
+import { useSettings } from '@/lib/SettingsContext';
 
 export default function CreateShopPage() {
   const router = useRouter();
   const { t } = useLanguage();
+  const { khrRate } = useSettings();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
@@ -23,12 +25,21 @@ export default function CreateShopPage() {
     pricingTier: 'standard',
     zoneId: '',
     deliveryFee: '0',
-    exchangeRate: '4100',
+    exchangeRate: khrRate ? khrRate.toString() : '4100',
     note: '',
     telegram: '',
     qrLinkKhr: '',
     qrLinkUsd: '',
   });
+
+  useEffect(() => {
+    if (khrRate) {
+      setForm(prev => ({
+        ...prev,
+        exchangeRate: prev.exchangeRate === '4100' ? khrRate.toString() : prev.exchangeRate,
+      }));
+    }
+  }, [khrRate]);
 
   const [qrKhrFile, setQrKhrFile] = useState<File | null>(null);
   const [qrUsdFile, setQrUsdFile] = useState<File | null>(null);

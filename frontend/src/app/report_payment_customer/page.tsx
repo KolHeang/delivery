@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from 'react';
 import api from '@/lib/api';
 import { formatDateToDDMMYYYY } from '@/components/ui/DateInput';
+import { useSettings } from '@/lib/SettingsContext';
 
 const getKhmerDateString = (date: Date = new Date()) => {
   const days = ['អាទិត្យ', 'ចន្ទ', 'អង្គារ', 'ពុធ', 'ព្រហស្បតិ៍', 'សុក្រ', 'សៅរ៍'];
@@ -27,6 +28,7 @@ const getKhmerDateString = (date: Date = new Date()) => {
 };
 
 export default function ReportPaymentCustomerPage() {
+  const { khrRate } = useSettings();
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -98,7 +100,7 @@ export default function ReportPaymentCustomerPage() {
   const delKHR = deliveredOrders.filter((o: any) => o.codCurrency === 'KHR').reduce((sum: number, o: any) => sum + parseFloat(o.cod || 0), 0);
   const delFee = deliveredOrders.reduce((sum: number, o: any) => sum + parseFloat(o.deliveryFee || 0), 0);
 
-  const customerRate = merchant ? parseFloat(merchant.exchangeRate as any || 4100) : 4100;
+  const customerRate = merchant ? parseFloat(merchant.exchangeRate as any || (khrRate || 4100)) : (khrRate || 4100);
   const payableUSD = Math.max(0, delUSD - delFee);
   const remainingUSD = Math.max(0, delFee - delUSD);
   const payableKHR = Math.max(0, delKHR - (remainingUSD * customerRate));

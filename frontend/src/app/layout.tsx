@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import '@/styles/globals.css';
 import { LanguageProvider } from '@/lib/LanguageContext';
+import { SettingsProvider } from '@/lib/SettingsContext';
 
 export const metadata: Metadata = {
   title: 'EBS Digital Solutions — Delivery Management System',
@@ -12,7 +13,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" suppressHydrationWarning>
       <body>
         <LanguageProvider>
-          {children}
+          <SettingsProvider>
+            {children}
+          </SettingsProvider>
         </LanguageProvider>
       </body>
     </html>

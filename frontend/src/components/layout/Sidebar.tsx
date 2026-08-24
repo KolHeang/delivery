@@ -37,7 +37,7 @@ export default function Sidebar() {
       items: [
         { href: '/delivery/entry_data_item', label: t('batchEntryData'), permission: 'orders.create' },
         { href: '/delivery', label: t('listOfDelivery') },
-        { href: '/delivery/list_print_qrcode', label: t('printInvoiceDelivery') },
+        { href: '/delivery/print_invoice', label: t('printInvoiceDelivery') },
         { href: '/delivery/pickup_requests', label: t('pickupRequests'), permission: 'orders.read' },
         // { href: '/delivery/assignpickup', label: t('processForPickup'), permission: 'orders.update' },
         { href: '/delivery/assigndeliveryby', label: t('processForAssign'), permission: 'orders.update' },

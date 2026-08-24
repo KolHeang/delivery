@@ -9,6 +9,7 @@ import {
   Query,
   Delete,
   Patch,
+  Request,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { PaymentsService } from './payments.service';
@@ -35,6 +36,7 @@ export class PaymentsController {
       note?: string;
       orderIds?: number[];
     },
+    @Request() req: any,
   ) {
     return this.paymentsService.createStaffPayment(
       body.driverId,
@@ -43,6 +45,7 @@ export class PaymentsController {
       body.reference,
       body.note,
       body.orderIds,
+      req.user?.id,
     );
   }
 
@@ -71,8 +74,9 @@ export class PaymentsController {
   updateStaff(
     @Param('id', ParseIntPipe) id: number,
     @Body() body: { amount?: number; note?: string; date?: Date; reference?: string },
+    @Request() req: any,
   ) {
-    return this.paymentsService.updateStaffPayment(id, body);
+    return this.paymentsService.updateStaffPayment(id, body, req.user?.id);
   }
 
   // Shop Payments
@@ -91,6 +95,7 @@ export class PaymentsController {
       orderIds?: number[];
       telegramReport?: any;
     },
+    @Request() req: any,
   ) {
     return this.paymentsService.createShopPayment(
       body.merchantId,
@@ -101,6 +106,7 @@ export class PaymentsController {
       body.note,
       body.orderIds,
       body.telegramReport,
+      req.user?.id,
     );
   }
 
@@ -129,8 +135,9 @@ export class PaymentsController {
   updateShop(
     @Param('id', ParseIntPipe) id: number,
     @Body() body: { amount?: number; note?: string; date?: Date; reference?: string },
+    @Request() req: any,
   ) {
-    return this.paymentsService.updateShopPayment(id, body);
+    return this.paymentsService.updateShopPayment(id, body, req.user?.id);
   }
 
   // Public Invoice Report (Unauthenticated)

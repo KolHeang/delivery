@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { User } from '../users/users.entity';
+import { User } from '../users/entities/users.entity';
 import { CreateDriverDto, UpdateDriverDto } from './dto/driver.dto';
 import * as bcrypt from 'bcrypt';
 

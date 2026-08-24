@@ -1,8 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Expense } from './expense.entity';
-import { ExpenseType } from './expense-type.entity';
+import { Expense } from './entities/expense.entity';
+import { ExpenseType } from './entities/expense-type.entity';
 import { paginateRepo } from '../config/pagination';
 
 @Injectable()

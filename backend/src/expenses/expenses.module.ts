@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { Expense } from './expense.entity';
-import { ExpenseType } from './expense-type.entity';
+import { Expense } from './entities/expense.entity';
+import { ExpenseType } from './entities/expense-type.entity';
 import { ExpensesService } from './expenses.service';
 import { ExpensesController } from './expenses.controller';
 

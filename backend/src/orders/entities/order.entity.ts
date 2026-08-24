@@ -9,10 +9,10 @@ import {
   BeforeInsert,
   OneToMany,
 } from 'typeorm';
-import { Merchant } from '../merchants/merchant.entity';
-import { Customer } from '../customers/customer.entity';
-import { User } from '../users/users.entity';
-import { Zone } from '../zones/zone.entity';
+import { Merchant } from '../../merchants/entities/merchant.entity';
+import { Customer } from '../../customers/entities/customer.entity';
+import { User } from '../../users/entities/users.entity';
+import { Zone } from '../../zones/entities/zone.entity';
 import { OrderHistory } from './order-history.entity';
 import { PickupRequest } from './pickup-request.entity';
 
@@ -138,12 +138,29 @@ export class Order {
   @Column({ name: 'pickup_driver_id', nullable: true })
   pickupDriverId: number;
 
+  // Zone
   @ManyToOne(() => Zone, { nullable: true, eager: true })
   @JoinColumn({ name: 'zone_id' })
   zone: Zone;
 
   @Column({ name: 'zone_id', nullable: true })
   zoneId: number;
+
+  // User who created the order (Admin/Staff/User ID)
+  @ManyToOne(() => User, { nullable: true, eager: true })
+  @JoinColumn({ name: 'created_by_id' })
+  creator: User;
+
+  @Column({ name: 'created_by_id', nullable: true })
+  createdById: number;
+
+  // User who updated/completed the order (Driver/Staff/Admin User ID)
+  @ManyToOne(() => User, { nullable: true, eager: true })
+  @JoinColumn({ name: 'updated_by_id' })
+  updater: User;
+
+  @Column({ name: 'updated_by_id', nullable: true })
+  updatedById: number;
 
   @ManyToOne(() => PickupRequest, (pr) => pr.orders, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'pickup_request_id' })

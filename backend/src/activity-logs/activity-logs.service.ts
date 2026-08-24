@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { ActivityLog } from './activity-log.entity';
+import { ActivityLog } from './entities/activity-log.entity';
 
 export interface CreateLogParams {
   action: string;

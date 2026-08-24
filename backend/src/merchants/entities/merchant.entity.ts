@@ -7,7 +7,7 @@ import {
   ManyToOne,
   JoinColumn,
 } from 'typeorm';
-import { Zone } from '../zones/zone.entity';
+import { Zone } from '../../zones/entities/zone.entity';
 
 export type PricingTier = 'basic' | 'standard' | 'premium';
 

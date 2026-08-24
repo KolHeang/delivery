@@ -2,11 +2,11 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
 import * as bcrypt from 'bcrypt';
-import { User } from '../../users/users.entity';
-import { Order } from '../../orders/order.entity';
-import { OrderHistory } from '../../orders/order-history.entity';
+import { User } from '../../users/entities/users.entity';
+import { Order } from '../../orders/entities/order.entity';
+import { OrderHistory } from '../../orders/entities/order-history.entity';
 import { UpdateOrderStatusDto } from '../../orders/dto/order.dto';
-import { PickupRequest } from '../../orders/pickup-request.entity';
+import { PickupRequest } from '../../orders/entities/pickup-request.entity';
 import { ConfirmPickupDto } from '../../orders/dto/pickup-request.dto';
 
 @Injectable()
@@ -104,7 +104,10 @@ export class DriverService {
     if (!order)
       throw new NotFoundException('Order not found or not assigned to you');
 
-    const updates: Partial<Order> = { status: dto.status as any };
+    const updates: Partial<Order> = {
+      status: dto.status as any,
+      updatedById: dto.updatedById || driverId,
+    };
     if (dto.status === 'picked-up') updates.pickedUpAt = new Date();
     if (dto.status === 'delivered') updates.deliveredAt = new Date();
     if (dto.status === 'in-warehouse') updates.warehouseAt = new Date();
@@ -363,5 +366,135 @@ export class DriverService {
     request.actualQuantity = dto.actualQuantity;
     request.status = 'picked-up';
     return this.pickupRequestRepo.save(request);
+  }
+
+  /**
+   * Scan QR code or barcode to get package details and driver permissions
+   */
+  async scanOrder(driverId: number, rawCode: string) {
+    if (!rawCode || typeof rawCode !== 'string') {
+      throw new BadRequestException('សូមបញ្ជាក់លេខកូដ QR / Tracking Code (QR/Tracking code is required)');
+    }
+
+    let code = rawCode.trim();
+    // Handle URL formatted QR codes (e.g. http://.../orders/T123456 or ?code=T123456)
+    if (code.includes('?')) {
+      const urlParams = new URLSearchParams(code.split('?')[1]);
+      if (urlParams.get('code')) {
+        code = urlParams.get('code')!.trim();
+      } else if (urlParams.get('tracking')) {
+        code = urlParams.get('tracking')!.trim();
+      }
+    }
+    if (code.includes('/')) {
+      const segments = code.split('/').filter(Boolean);
+      code = segments[segments.length - 1].trim();
+    }
+
+    const isNumericId = /^\d+$/.test(code);
+
+    const order = await this.orderRepo.findOne({
+      where: isNumericId
+        ? [{ trackingCode: code }, { id: parseInt(code, 10) }]
+        : [{ trackingCode: code }],
+      relations: {
+        customer: true,
+        merchant: true,
+        zone: true,
+        driver: true,
+        pickupDriver: true,
+        histories: true,
+      },
+    });
+
+    if (!order) {
+      throw new NotFoundException(`រកមិនឃើញទំនិញដែលមានលេខកូដ "${rawCode}" ទេ`);
+    }
+
+    const isDeliveryDriver = order.driverId === driverId;
+    const isPickupDriver = order.pickupDriverId === driverId;
+    const isAssignedToMe = isDeliveryDriver || isPickupDriver;
+
+    let driverRole: 'delivery_driver' | 'pickup_driver' | 'unassigned' | 'assigned_to_other' = 'unassigned';
+    if (isDeliveryDriver) {
+      driverRole = 'delivery_driver';
+    } else if (isPickupDriver) {
+      driverRole = 'pickup_driver';
+    } else if (order.driverId && order.driverId !== driverId) {
+      driverRole = 'assigned_to_other';
+    }
+
+    // Determine possible actions driver can do right after scan
+    const availableActions: string[] = [];
+    if (!order.driverId && (order.status === 'pending' || order.status === 'in-warehouse')) {
+      availableActions.push('claim');
+    }
+    if (isPickupDriver && order.status === 'pending') {
+      availableActions.push('pickup');
+    }
+    if (isDeliveryDriver && (order.status === 'assigned' || order.status === 'in-transit' || order.status === 'picked-up')) {
+      availableActions.push('deliver');
+      availableActions.push('failed');
+    }
+    if (isDeliveryDriver && order.status === 'assigned') {
+      availableActions.push('in-transit');
+    }
+
+    return {
+      order,
+      scanInfo: {
+        scannedCode: rawCode,
+        extractedCode: code,
+        isAssignedToMe,
+        driverRole,
+        canUpdateStatus: isAssignedToMe || (!order.driverId && ['pending', 'in-warehouse'].includes(order.status)),
+        availableActions,
+      },
+    };
+  }
+
+  /**
+   * Driver claims an unassigned package by scanning QR code
+   */
+  async claimScannedOrder(driverId: number, rawCode: string) {
+    const { order } = await this.scanOrder(driverId, rawCode);
+
+    if (order.driverId && order.driverId !== driverId) {
+      throw new BadRequestException('ទំនិញនេះត្រូវបានប្រគល់ទៅឱ្យអ្នកដឹកផ្សេងរួចហើយ');
+    }
+
+    order.driverId = driverId;
+    order.updatedById = driverId;
+    if (order.status === 'pending' || order.status === 'in-warehouse') {
+      order.status = 'assigned';
+      order.assignedAt = new Date();
+    }
+
+    await this.orderRepo.save(order);
+
+    try {
+      const history = this.historyRepo.create({
+        orderId: order.id,
+        status: order.status,
+        note: `Driver #${driverId} scanned and claimed order`,
+      });
+      await this.historyRepo.save(history);
+    } catch (err) {
+      console.error('History log error:', err);
+    }
+
+    return this.scanOrder(driverId, order.trackingCode);
+  }
+
+  /**
+   * Driver updates order status directly via QR scan
+   */
+  async updateScannedOrderStatus(
+    driverId: number,
+    rawCode: string,
+    dto: UpdateOrderStatusDto,
+  ) {
+    const { order } = await this.scanOrder(driverId, rawCode);
+    return this.updateOrderStatus(driverId, order.id, dto);
   }
 }

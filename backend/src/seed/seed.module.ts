@@ -1,10 +1,10 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { User } from '../users/users.entity';
-import { ExpenseType } from '../expenses/expense-type.entity';
-import { IncomeType } from '../incomes/income-type.entity';
-import { Role } from '../roles/role.entity';
-import { Permission } from '../roles/permission.entity';
+import { User } from '../users/entities/users.entity';
+import { ExpenseType } from '../expenses/entities/expense-type.entity';
+import { IncomeType } from '../incomes/entities/income-type.entity';
+import { Role } from '../roles/entities/role.entity';
+import { Permission } from '../roles/entities/permission.entity';
 import { SeedService } from './seed.service';
 
 @Module({

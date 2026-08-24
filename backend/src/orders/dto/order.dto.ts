@@ -85,6 +85,11 @@ export class CreateOrderDto {
   @IsOptional()
   @IsString()
   createdAt?: string;
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsNumber()
+  @Type(() => Number)
+  createdById?: number;
 }
 
 export class UpdateOrderDto {
@@ -111,6 +116,8 @@ export class UpdateOrderDto {
   @IsOptional() @IsNumber() @Type(() => Number) pickupDriverId?: number;
   @IsOptional() @IsString() createdAt?: string;
   @IsOptional() @IsString() deliveredAt?: string;
+  @IsOptional() @IsNumber() @Type(() => Number) createdById?: number;
+  @IsOptional() @IsNumber() @Type(() => Number) updatedById?: number;
 }
 
 export class UpdateOrderStatusDto {
@@ -142,6 +149,12 @@ export class UpdateOrderStatusDto {
   @IsOptional()
   @IsString()
   note?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsNumber()
+  @Type(() => Number)
+  updatedById?: number;
 }
 
 /** Assign a driver for direct delivery (Flow 1: pending → picked-up) */

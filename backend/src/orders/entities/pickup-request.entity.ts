@@ -8,8 +8,8 @@ import {
   OneToMany,
   JoinColumn,
 } from 'typeorm';
-import { Merchant } from '../merchants/merchant.entity';
-import { User } from '../users/users.entity';
+import { Merchant } from '../../merchants/entities/merchant.entity';
+import { User } from '../../users/entities/users.entity';
 import { Order } from './order.entity';
 
 export type PickupRequestStatus = 'pending' | 'picked-up' | 'in-warehouse' | 'completed';

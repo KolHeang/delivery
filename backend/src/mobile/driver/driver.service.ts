@@ -22,7 +22,7 @@ export class DriverService {
     private readonly historyRepo: Repository<OrderHistory>,
     @InjectRepository(PickupRequest)
     private readonly pickupRequestRepo: Repository<PickupRequest>,
-  ) {}
+  ) { }
 
   async getProfile(driverId: number) {
     const driver = await this.userRepo.findOne({
@@ -75,7 +75,7 @@ export class DriverService {
 
     if (!isValid) {
       throw new BadRequestException(
-        'លេខសម្ងាត់ចាស់មិនត្រឹមត្រូវទេ (Current password is incorrect)',
+        'លេខសម្ងាត់ចាស់មិនត្រឹមត្រូវទេ',
       );
     }
 
@@ -98,6 +98,8 @@ export class DriverService {
     search?: string,
     startDate?: string,
     endDate?: string,
+    page?: number,
+    limit?: number,
   ) {
     const query = this.orderRepo
       .createQueryBuilder('order')
@@ -127,12 +129,15 @@ export class DriverService {
       query.andWhere(
         new Brackets((qb) => {
           const searchTerm = `%${search}%`;
-          // Replace these with the actual fields you want to search by!
           qb.where('order.tracking_code::text ILIKE :searchTerm', {
             searchTerm,
-          }).orWhere('order.receiver_phone::text ILIKE :searchTerm', {
-            searchTerm,
-          });
+          })
+            .orWhere('order.receiver_phone::text ILIKE :searchTerm', {
+              searchTerm,
+            })
+            .orWhere('order.receiver_address::text ILIKE :searchTerm', {
+              searchTerm,
+            });
         }),
       );
     }
@@ -144,7 +149,20 @@ export class DriverService {
         .andWhere('order.assignedAt <= :endDate', { endDate });
     }
 
-    return query.getMany();
+    // 4. Pagination
+    const pageNum = page ? Math.max(1, parseInt(page as any, 10)) : 1;
+    const limitNum = limit ? Math.max(1, parseInt(limit as any, 10)) : 20;
+    const skip = (pageNum - 1) * limitNum;
+
+    const [data, total] = await query.skip(skip).take(limitNum).getManyAndCount();
+
+    return {
+      data,
+      total,
+      page: pageNum,
+      limit: limitNum,
+      totalPages: Math.ceil(total / limitNum),
+    };
   }
 
   async updateOrderStatus(

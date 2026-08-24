@@ -9,7 +9,7 @@ import {
   UseGuards,
   Request,
 } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth, ApiOperation, ApiBody } from '@nestjs/swagger';
+import { ApiTags, ApiBearerAuth, ApiOperation, ApiBody, ApiQuery } from '@nestjs/swagger';
 import { DriverService } from './driver.service';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { UpdateOrderStatusDto } from '../../orders/dto/order.dto';
@@ -112,13 +112,21 @@ export class DriverController {
   }
 
   @Get('tasks')
-  @ApiOperation({ summary: 'Get assigned tasks' })
+  @ApiOperation({ summary: 'Get assigned tasks with optional pagination' })
+  @ApiQuery({ name: 'page', required: false, type: Number, description: 'Page number (1-based)' })
+  @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Items per page' })
+  @ApiQuery({ name: 'status', required: false, type: String })
+  @ApiQuery({ name: 'search', required: false, type: String })
+  @ApiQuery({ name: 'startDate', required: false, type: String })
+  @ApiQuery({ name: 'endDate', required: false, type: String })
   getTasks(
     @Request() req: any,
     @Query('status') status?: string,
     @Query('search') search?: string,
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
   ) {
     return this.driverService.getTasks(
       req.user.id,
@@ -126,6 +134,8 @@ export class DriverController {
       search,
       startDate,
       endDate,
+      page,
+      limit,
     );
   }
 

@@ -154,14 +154,16 @@ export default function Topbar({ title, subtitle }: TopbarProps) {
           )}
         </div>
       </header>
-      <div className="page-header-container">
-        <div className="page-header" style={{ marginBottom: 0 }}>
-          <div className="page-header-left">
-            <h1>{title}</h1>
-            {subtitle && <p>{subtitle}</p>}
+      {title ? (
+        <div className="page-header-container">
+          <div className="page-header" style={{ marginBottom: 0 }}>
+            <div className="page-header-left">
+              <h1>{title}</h1>
+              {subtitle && <p>{subtitle}</p>}
+            </div>
           </div>
         </div>
-      </div>
+      ) : null}
     </>
   );
 }

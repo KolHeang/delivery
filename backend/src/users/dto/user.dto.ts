@@ -98,7 +98,16 @@ export class CreateUserDto {
     return value;
   })
   @IsBoolean()
-  active?: boolean;
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsNumber()
+  @Type(() => Number)
+  tenantId?: number;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  tenantSubdomain?: string;
 }
 
 export class UpdateUserDto {
@@ -129,4 +138,6 @@ export class UpdateUserDto {
   @IsOptional() @IsString() photo?: string;
   @IsOptional() @IsString() dob?: string;
   @IsOptional() @IsString() gender?: string;
+  @IsOptional() @IsNumber() @Type(() => Number) tenantId?: number;
+  @IsOptional() @IsString() tenantSubdomain?: string;
 }

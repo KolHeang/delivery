@@ -85,6 +85,12 @@ export class User {
   @Column({ nullable: true })
   photo: string;
 
+  @Column({ name: 'tenant_id', nullable: true })
+  tenantId: number;
+
+  @Column({ name: 'tenant_subdomain', nullable: true })
+  tenantSubdomain: string;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 

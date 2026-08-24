@@ -27,7 +27,13 @@ export class AuthService {
     const permissions = userWithPerms?.roleRelation?.permissions?.map(p => p.name) || [];
 
     const { password: _, ...userWithoutPassword } = user;
-    const payload = { sub: user.id, email: user.email, role: user.role };
+    const payload = {
+      sub: user.id,
+      email: user.email,
+      role: user.role,
+      tenantId: user.tenantId,
+      tenantSubdomain: user.tenantSubdomain,
+    };
     
     const access_token = this.jwtService.sign(payload);
     const refresh_token = this.jwtService.sign(payload, { expiresIn: '30d' });

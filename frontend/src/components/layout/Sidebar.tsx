@@ -5,10 +5,13 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { getUser, hasPermission } from '@/lib/auth';
 import { useLanguage } from '@/lib/LanguageContext';
+import { useTenant } from '@/lib/TenantContext';
+import { saasApi } from '@/lib/saas-api';
 import {
   MdDashboard, MdStorefront, MdPeople, MdLocalShipping,
   MdAccountBalanceWallet, MdReceipt, MdSettings,
   MdKeyboardArrowDown, MdKeyboardArrowUp, MdBarChart,
+  MdWorkspacePremium,
 } from 'react-icons/md';
 
 export default function Sidebar() {
@@ -103,6 +106,7 @@ export default function Sidebar() {
       icon: MdSettings,
       permission: 'settings.manage',
       items: [
+        { href: '/billing', label: 'គម្រោង & វិក្កយបត្រ (Billing)' },
         { href: '/setting/zone_type', label: t('zoneType'), permission: 'zones.read' },
         { href: '/setting/role', label: t('permission'), permission: 'users.manage' },
         { href: '/setting/organisation', label: t('organizationSetting') },
@@ -122,13 +126,28 @@ export default function Sidebar() {
     settings: false,
   });
 
+  const [subscription, setSubscription] = useState<any>(null);
+
   // Load user client-side and set up listeners
   useEffect(() => {
     setMounted(true);
     setUser(getUser());
 
+    const loadSubscription = async () => {
+      try {
+        const sub = await saasApi.getMySubscription();
+        if (sub && sub.hasSubscription) {
+          setSubscription(sub);
+        }
+      } catch (err) {
+        // Ignore if not subscribed
+      }
+    };
+    loadSubscription();
+
     const handleUserUpdate = () => {
       setUser(getUser());
+      loadSubscription();
     };
     window.addEventListener('storage', handleUserUpdate);
     window.addEventListener('user-updated', handleUserUpdate);
@@ -153,12 +172,14 @@ export default function Sidebar() {
     setOpenGroups(prev => ({ ...prev, [key]: !prev[key] }));
   };
 
-
+  const { tenant, isTenant } = useTenant();
+  const activeCompanyName = tenant?.companyName || subscription?.companyName;
+  const activeSubdomain = tenant?.subdomain || subscription?.subdomain;
 
   return (
     <aside className="sidebar" style={{ width: 260 }}>
       {/* Brand Logo */}
-      <div className="sidebar-logo" style={{ height: 76, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, padding: '0 16px', borderBottom: '1px solid rgba(255,255,255,0.12)' }}>
+      <div className="sidebar-logo" style={{ height: 76, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: 12, padding: '0 16px', borderBottom: '1px solid rgba(255,255,255,0.12)' }}>
         <div style={{
           width: 40, height: 40, borderRadius: 12,
           background: 'linear-gradient(135deg, var(--accent), #6366f1)',
@@ -168,9 +189,34 @@ export default function Sidebar() {
         }}>
           📦
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-          <span style={{ fontSize: 18, fontWeight: 800, color: '#fff', letterSpacing: '0.5px', lineHeight: 1.1 }}>EBS<span style={{ color: '#93c5fd' }}>Express</span></span>
-          <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', fontWeight: 500, marginTop: 2, letterSpacing: '0.2px' }}>Delivery System</span>
+        <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', minWidth: 0, overflow: 'hidden' }}>
+          <span style={{
+            fontSize: 16,
+            fontWeight: 800,
+            color: '#fff',
+            letterSpacing: '0.5px',
+            lineHeight: 1.2,
+            whiteSpace: 'nowrap',
+            textOverflow: 'ellipsis',
+            overflow: 'hidden',
+            textTransform: activeCompanyName ? 'capitalize' : 'none'
+          }}>
+            {activeCompanyName || (
+              <>EBS<span style={{ color: '#93c5fd' }}>Express</span></>
+            )}
+          </span>
+          <span style={{
+            fontSize: 11,
+            color: activeSubdomain ? '#93c5fd' : 'rgba(255,255,255,0.5)',
+            fontWeight: 600,
+            marginTop: 2,
+            letterSpacing: '0.2px',
+            whiteSpace: 'nowrap',
+            textOverflow: 'ellipsis',
+            overflow: 'hidden'
+          }}>
+            {activeSubdomain ? `${activeSubdomain}.ebsexpress.com` : 'Delivery System'}
+          </span>
         </div>
       </div>
 
@@ -213,7 +259,7 @@ export default function Sidebar() {
             );
 
             const visibleItems = 'items' in group && group.items
-              ? group.items.filter(item => !item.permission || hasPermission(item.permission))
+              ? (group.items as any[]).filter((item: any) => !item.permission || hasPermission(item.permission))
               : [];
 
             if (visibleItems.length === 0) return null;

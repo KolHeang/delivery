@@ -1,10 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
+import { saasApi } from '@/lib/saas-api';
 import { setAuth } from '@/lib/auth';
 import { useLanguage } from '@/lib/LanguageContext';
+import { useTenant } from '@/lib/TenantContext';
 import { MdEmail, MdLock, MdVisibility, MdVisibilityOff } from 'react-icons/md';
 
 const loginTranslations: Record<string, Record<string, string>> = {
@@ -35,6 +37,7 @@ const loginTranslations: Record<string, Record<string, string>> = {
 export default function LoginPage() {
   const router = useRouter();
   const { lang, setLang } = useLanguage();
+  const { tenant, subdomain: workspaceSubdomain, isTenant } = useTenant();
   const [form, setForm] = useState({ email: '', password: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -56,7 +59,25 @@ export default function LoginPage() {
       setAuth(res.data.access_token, res.data.user);
       router.push('/dashboard');
     } catch (err: any) {
-      // ចាប់យក Error message ពី Backend បើមាន, បើគ្មានបង្ហាញពាក្យទូទៅ
+      try {
+        const saasRes = await saasApi.adminLogin(form.email, form.password);
+        if (saasRes && saasRes.access_token && saasRes.admin) {
+          setAuth(saasRes.access_token, {
+            id: saasRes.admin.id,
+            name: saasRes.admin.name,
+            email: saasRes.admin.email,
+            role: 'admin',
+            active: saasRes.admin.isActive,
+            permissions: ['*'],
+          });
+          localStorage.setItem('saas_admin', JSON.stringify(saasRes.admin));
+          router.push('/admin/saas');
+          return;
+        }
+      } catch (saasErr) {
+        // fallback to standard error
+      }
+
       setError(err.response?.data?.message || 'អ៊ីមែល ឬ ពាក្យសម្ងាត់មិនត្រឹមត្រូវទេ');
     } finally {
       setLoading(false);
@@ -461,10 +482,35 @@ export default function LoginPage() {
               📦
             </div>
             <h1 className="logo-title">
-              EBS<span className="logo-accent">Express</span>
+              {tenant ? (
+                <span style={{ textTransform: 'capitalize' }}>{tenant.companyName}</span>
+              ) : workspaceSubdomain ? (
+                <span style={{ textTransform: 'capitalize' }}>{workspaceSubdomain} Express</span>
+              ) : (
+                <>EBS<span className="logo-accent">Express</span></>
+              )}
             </h1>
+            {workspaceSubdomain && (
+              <div
+                style={{
+                  background: '#eff6ff',
+                  color: '#2563eb',
+                  padding: '3px 14px',
+                  borderRadius: 20,
+                  fontSize: 12,
+                  fontWeight: 700,
+                  marginTop: 8,
+                  border: '1px solid #bfdbfe',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                }}
+              >
+                🏢 Workspace: {workspaceSubdomain}.ebsexpress.com
+              </div>
+            )}
             <p className="logo-subtitle">
-              {t.subtitle}
+              {tenant ? `ចូលគ្រប់គ្រងប្រព័ន្ធដឹកជញ្ជូន ${tenant.companyName.toUpperCase()}` : t.subtitle}
             </p>
           </div>
 

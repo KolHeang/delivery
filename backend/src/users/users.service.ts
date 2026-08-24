@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   ConflictException,
+  OnModuleInit,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, ILike } from 'typeorm';
@@ -11,23 +12,52 @@ import { CreateUserDto, UpdateUserDto } from './dto/user.dto';
 import { paginateRepo } from '../config/pagination';
 
 @Injectable()
-export class UsersService {
+export class UsersService implements OnModuleInit {
   constructor(
     @InjectRepository(User) private readonly repo: Repository<User>,
   ) { }
 
-  async findAll(query?: { page?: number; limit?: number; search?: string }): Promise<any> {
+  async onModuleInit() {
+    try {
+      await this.repo.query(`
+        UPDATE users u 
+        SET tenant_id = s.id, tenant_subdomain = s.subdomain 
+        FROM saas_subscriptions s 
+        WHERE u.id = s.user_id AND (u.tenant_id IS NULL OR u.tenant_subdomain IS NULL);
+      `);
+    } catch (e) {
+      // ignore
+    }
+  }
+
+  async findAll(query?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    tenantId?: number;
+    tenantSubdomain?: string;
+  }): Promise<any> {
     let where: any = {};
+    const tenantFilter: any = {};
+    if (query?.tenantId) {
+      tenantFilter.tenantId = query.tenantId;
+    } else if (query?.tenantSubdomain) {
+      tenantFilter.tenantSubdomain = query.tenantSubdomain;
+    }
+
     if (query?.search) {
       const term = `%${query.search}%`;
       where = [
-        { name: ILike(term) },
-        { nameKh: ILike(term) },
-        { phone: ILike(term) },
-        { email: ILike(term) },
-        { role: ILike(term) },
+        { ...tenantFilter, name: ILike(term) },
+        { ...tenantFilter, nameKh: ILike(term) },
+        { ...tenantFilter, phone: ILike(term) },
+        { ...tenantFilter, email: ILike(term) },
+        { ...tenantFilter, role: ILike(term) },
       ];
+    } else if (Object.keys(tenantFilter).length > 0) {
+      where = tenantFilter;
     }
+
     return paginateRepo(this.repo, query || {}, {
       where,
       relations: { zone: true, vehicle: true },
@@ -64,7 +94,10 @@ export class UsersService {
     });
   }
 
-  async create(dto: CreateUserDto): Promise<Omit<User, 'password'>> {
+  async create(
+    dto: CreateUserDto,
+    tenantContext?: { tenantId?: number; tenantSubdomain?: string },
+  ): Promise<Omit<User, 'password'>> {
     if (dto.email && dto.email.trim() !== '') {
       const exists = await this.repo.findOne({ where: { email: dto.email } });
       if (exists) throw new ConflictException('Email already exists');
@@ -79,6 +112,8 @@ export class UsersService {
       zoneId: dto.zoneId || null,
       vehicleId: dto.vehicleId || null,
       status: dto.status || 'offline',
+      tenantId: dto.tenantId || tenantContext?.tenantId || null,
+      tenantSubdomain: dto.tenantSubdomain || tenantContext?.tenantSubdomain || null,
     };
 
     const user = this.repo.create(payload as User);

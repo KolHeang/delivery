@@ -20,7 +20,7 @@ import { ConfirmPickupDto } from '../../orders/dto/pickup-request.dto';
 @UseGuards(JwtAuthGuard)
 @Controller('mobile/driver')
 export class DriverController {
-  constructor(private readonly driverService: DriverService) {}
+  constructor(private readonly driverService: DriverService) { }
 
   @Get('profile')
   @ApiOperation({ summary: 'Get driver profile' })
@@ -32,7 +32,16 @@ export class DriverController {
   @ApiOperation({ summary: 'Update driver profile and photo' })
   updateProfile(
     @Request() req: any,
-    @Body() dto: { name?: string; phone?: string; email?: string; photo?: string; gender?: string; dob?: string; joinDate?: string },
+    @Body()
+    dto: {
+      name?: string;
+      phone?: string;
+      email?: string;
+      photo?: string;
+      gender?: string;
+      dob?: string;
+      joinDate?: string;
+    },
   ) {
     return this.driverService.updateProfile(req.user.id, dto);
   }
@@ -49,10 +58,7 @@ export class DriverController {
 
   @Patch('status')
   @ApiOperation({ summary: 'Update driver online status' })
-  updateDriverStatus(
-    @Request() req: any,
-    @Body('status') status: string,
-  ) {
+  updateDriverStatus(@Request() req: any, @Body('status') status: string) {
     return this.driverService.updateDriverStatus(req.user.id, status);
   }
 
@@ -107,8 +113,20 @@ export class DriverController {
 
   @Get('tasks')
   @ApiOperation({ summary: 'Get assigned tasks' })
-  getTasks(@Request() req: any, @Query('status') status?: string) {
-    return this.driverService.getTasks(req.user.id, status);
+  getTasks(
+    @Request() req: any,
+    @Query('status') status?: string,
+    @Query('search') search?: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
+    return this.driverService.getTasks(
+      req.user.id,
+      status,
+      search,
+      startDate,
+      endDate,
+    );
   }
 
   @Patch('tasks/:id/status')
@@ -135,7 +153,12 @@ export class DriverController {
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
   ) {
-    return this.driverService.getDashboard(req.user.id, period, startDate, endDate);
+    return this.driverService.getDashboard(
+      req.user.id,
+      period,
+      startDate,
+      endDate,
+    );
   }
 
   @Get('pickup-requests')

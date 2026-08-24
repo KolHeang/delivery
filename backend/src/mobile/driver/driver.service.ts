@@ -1,6 +1,10 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In } from 'typeorm';
+import { Repository, In, Brackets } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { User } from '../../users/entities/users.entity';
 import { Order } from '../../orders/entities/order.entity';
@@ -14,9 +18,11 @@ export class DriverService {
   constructor(
     @InjectRepository(User) private readonly userRepo: Repository<User>,
     @InjectRepository(Order) private readonly orderRepo: Repository<Order>,
-    @InjectRepository(OrderHistory) private readonly historyRepo: Repository<OrderHistory>,
-    @InjectRepository(PickupRequest) private readonly pickupRequestRepo: Repository<PickupRequest>,
-  ) { }
+    @InjectRepository(OrderHistory)
+    private readonly historyRepo: Repository<OrderHistory>,
+    @InjectRepository(PickupRequest)
+    private readonly pickupRequestRepo: Repository<PickupRequest>,
+  ) {}
 
   async getProfile(driverId: number) {
     const driver = await this.userRepo.findOne({
@@ -28,7 +34,18 @@ export class DriverService {
     return safeDriver;
   }
 
-  async updateProfile(driverId: number, dto: { name?: string; phone?: string; email?: string; photo?: string; gender?: string; dob?: string; joinDate?: string }) {
+  async updateProfile(
+    driverId: number,
+    dto: {
+      name?: string;
+      phone?: string;
+      email?: string;
+      photo?: string;
+      gender?: string;
+      dob?: string;
+      joinDate?: string;
+    },
+  ) {
     const updateData: any = {};
     if (dto.name !== undefined) updateData.name = dto.name;
     if (dto.phone !== undefined) updateData.phone = dto.phone;
@@ -57,12 +74,17 @@ export class DriverService {
     }
 
     if (!isValid) {
-      throw new BadRequestException('លេខសម្ងាត់ចាស់មិនត្រឹមត្រូវទេ (Current password is incorrect)');
+      throw new BadRequestException(
+        'លេខសម្ងាត់ចាស់មិនត្រឹមត្រូវទេ (Current password is incorrect)',
+      );
     }
 
     const hashed = await bcrypt.hash(newPass, 10);
     await this.userRepo.update(driverId, { password: hashed });
-    return { success: true, message: 'ពាក្យសម្ងាត់ត្រូវបានផ្លាស់ប្តូរដោយជោគជ័យ' };
+    return {
+      success: true,
+      message: 'ពាក្យសម្ងាត់ត្រូវបានផ្លាស់ប្តូរដោយជោគជ័យ',
+    };
   }
 
   async updateDriverStatus(driverId: number, status: string) {
@@ -70,24 +92,59 @@ export class DriverService {
     return this.getProfile(driverId);
   }
 
+  async getTasks(
+    driverId: number,
+    status?: string,
+    search?: string,
+    startDate?: string,
+    endDate?: string,
+  ) {
+    const query = this.orderRepo
+      .createQueryBuilder('order')
+      .leftJoinAndSelect('order.customer', 'customer')
+      .leftJoinAndSelect('order.merchant', 'merchant')
+      .leftJoinAndSelect('order.zone', 'zone')
+      .orderBy('order.createdAt', 'DESC');
 
-  async getTasks(driverId: number, status?: string) {
+    // 1. Apply Status & Driver Logic
     if (status) {
-      return this.orderRepo.find({
-        where: { driverId, status: status as any },
-        relations: { customer: true, merchant: true, zone: true },
-        order: { createdAt: 'DESC' },
-      });
+      query
+        .andWhere('order.driverId = :driverId', { driverId })
+        .andWhere('order.status = :status', { status });
+    } else {
+      query.andWhere(
+        new Brackets((qb) => {
+          qb.where('order.driverId = :driverId', { driverId }).orWhere(
+            'order.pickupDriverId = :driverId',
+            { driverId },
+          );
+        }),
+      );
     }
 
-    return this.orderRepo.find({
-      where: [
-        { driverId, status: In(['assigned', 'picked-up', 'in-transit', 'pending'] as any) },
-        { pickupDriverId: driverId, status: 'pending' }
-      ],
-      relations: { customer: true, merchant: true, zone: true },
-      order: { createdAt: 'DESC' },
-    });
+    // 2. Apply Search Logic
+    if (search) {
+      query.andWhere(
+        new Brackets((qb) => {
+          const searchTerm = `%${search}%`;
+          // Replace these with the actual fields you want to search by!
+          qb.where('order.tracking_code::text ILIKE :searchTerm', {
+            searchTerm,
+          }).orWhere('order.receiver_phone::text ILIKE :searchTerm', {
+            searchTerm,
+          });
+        }),
+      );
+    }
+
+    // 3. Apply Date Filter Logic
+    if (startDate && endDate) {
+      query
+        .andWhere('order.assignedAt >= :startDate', { startDate })
+        .andWhere('order.assignedAt <= :endDate', { endDate });
+    }
+
+    return query.getMany();
   }
 
   async updateOrderStatus(
@@ -98,7 +155,7 @@ export class DriverService {
     const order = await this.orderRepo.findOne({
       where: [
         { id: orderId, driverId },
-        { id: orderId, pickupDriverId: driverId }
+        { id: orderId, pickupDriverId: driverId },
       ],
     });
     if (!order)
@@ -124,7 +181,10 @@ export class DriverService {
         });
         await this.historyRepo.save(history);
       } catch (err) {
-        console.error(`Failed to log history for order #${orderId} update by driver`, err);
+        console.error(
+          `Failed to log history for order #${orderId} update by driver`,
+          err,
+        );
       }
     }
 
@@ -232,10 +292,16 @@ export class DriverService {
     // Today/Period total packages (assigned or picked up)
     const pkgQuery = this.orderRepo
       .createQueryBuilder('order')
-      .where('(order.driverId = :driverId OR order.pickupDriverId = :driverId)', { driverId });
+      .where(
+        '(order.driverId = :driverId OR order.pickupDriverId = :driverId)',
+        { driverId },
+      );
 
     if (start && end) {
-      pkgQuery.andWhere('order.createdAt >= :start AND order.createdAt <= :end', { start, end });
+      pkgQuery.andWhere(
+        'order.assignedAt >= :start AND order.assignedAt <= :end',
+        { start, end },
+      );
     }
     const totalPackage = await pkgQuery.getCount();
 
@@ -247,7 +313,10 @@ export class DriverService {
       .where('order.driverId = :driverId', { driverId });
 
     if (start && end) {
-      statusQuery.andWhere('order.createdAt >= :start AND order.createdAt <= :end', { start, end });
+      statusQuery.andWhere(
+        'order.assignedAt >= :start AND order.assignedAt <= :end',
+        { start, end },
+      );
     }
     const statusCounts = await statusQuery.groupBy('order.status').getRawMany();
 
@@ -263,7 +332,10 @@ export class DriverService {
       .andWhere('req.status = :status', { status: 'pending' });
 
     if (start && end) {
-      pickupReqQuery.andWhere('req.createdAt >= :start AND req.createdAt <= :end', { start, end });
+      pickupReqQuery.andWhere(
+        'req.createdAt >= :start AND req.createdAt <= :end',
+        { start, end },
+      );
     }
     const pickupRequestCount = await pickupReqQuery.getCount();
 
@@ -273,7 +345,10 @@ export class DriverService {
       .andWhere('req.status = :status', { status: 'picked-up' });
 
     if (start && end) {
-      pickedUpWaitQuery.andWhere('req.createdAt >= :start AND req.createdAt <= :end', { start, end });
+      pickedUpWaitQuery.andWhere(
+        'req.createdAt >= :start AND req.createdAt <= :end',
+        { start, end },
+      );
     }
     const pickedUpWaitingCount = await pickedUpWaitQuery.getCount();
 
@@ -281,11 +356,21 @@ export class DriverService {
       .createQueryBuilder('order')
       .where('order.pickupDriverId = :driverId', { driverId })
       .andWhere('order.status IN (:...statuses)', {
-        statuses: ['in-warehouse', 'assigned', 'in-transit', 'delivered', 'failed', 'returned'],
+        statuses: [
+          'in-warehouse',
+          'assigned',
+          'in-transit',
+          'delivered',
+          'failed',
+          'returned',
+        ],
       });
 
     if (start && end) {
-      broughtToHubQuery.andWhere('order.createdAt >= :start AND order.createdAt <= :end', { start, end });
+      broughtToHubQuery.andWhere(
+        'order.assignedAt >= :start AND order.assignedAt <= :end',
+        { start, end },
+      );
     }
     const broughtToHub = await broughtToHubQuery.getCount();
 
@@ -299,9 +384,14 @@ export class DriverService {
       .andWhere('order.driverPaymentStatus = :payment', { payment: 'unpaid' });
 
     if (start && end) {
-      codQuery.andWhere('order.updatedAt >= :start AND order.updatedAt <= :end', { start, end });
+      codQuery.andWhere(
+        'order.updatedAt >= :start AND order.updatedAt <= :end',
+        { start, end },
+      );
     }
-    const codCollected = await codQuery.groupBy('order.codCurrency').getRawMany();
+    const codCollected = await codQuery
+      .groupBy('order.codCurrency')
+      .getRawMany();
 
     const codPendingUSD = parseFloat(
       codCollected.find((c) => c.currency === 'USD')?.total || 0,
@@ -318,16 +408,25 @@ export class DriverService {
       .andWhere('order.status = :status', { status: 'delivered' });
 
     if (start && end) {
-      feeQuery.andWhere('order.deliveredAt >= :start AND order.deliveredAt <= :end', { start, end });
+      feeQuery.andWhere(
+        'order.deliveredAt >= :start AND order.deliveredAt <= :end',
+        { start, end },
+      );
     }
     const feeResult = await feeQuery.getRawOne();
     const deliveryFeeTotal = parseFloat(feeResult?.total || 0);
 
     const totalSuccessful = stats['delivered'] || 0;
-    const assignedParcels = (stats['assigned'] || 0) + (stats['in-transit'] || 0);
+    const assignedParcels =
+      (stats['assigned'] || 0) + (stats['in-transit'] || 0);
     const totalProblem = stats['failed'] || stats['problem'] || 0;
     const totalReturn = (stats['returned'] || 0) + (stats['rejected'] || 0);
-    const sumTotalPackage = totalSuccessful + assignedParcels + pickupRequestCount + totalProblem + totalReturn;
+    const sumTotalPackage =
+      totalSuccessful +
+      assignedParcels +
+      pickupRequestCount +
+      totalProblem +
+      totalReturn;
 
     return {
       period,
@@ -361,7 +460,10 @@ export class DriverService {
     const request = await this.pickupRequestRepo.findOne({
       where: { id, pickupDriverId: driverId },
     });
-    if (!request) throw new NotFoundException(`Pickup request #${id} not found or not assigned to you`);
+    if (!request)
+      throw new NotFoundException(
+        `Pickup request not found or not assigned to you`,
+      );
 
     request.actualQuantity = dto.actualQuantity;
     request.status = 'picked-up';

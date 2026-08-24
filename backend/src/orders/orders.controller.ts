@@ -9,6 +9,7 @@ import {
   UseGuards,
   ParseIntPipe,
   Query,
+  Request,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { OrdersService } from './orders.service';
@@ -166,14 +167,24 @@ export class OrdersController {
   @Post()
   @RequirePermissions('orders.create')
   @LogActivity({ action: 'CREATE_ORDER', entityName: 'Order', description: 'Created new order' })
-  create(@Body() dto: CreateOrderDto) {
+  create(@Body() dto: CreateOrderDto, @Request() req: any) {
+    if (!dto.createdById && req?.user?.id) {
+      dto.createdById = req.user.id;
+    }
     return this.ordersService.create(dto);
   }
 
   @Patch(':id')
   @RequirePermissions('orders.update')
   @LogActivity({ action: 'UPDATE_ORDER', entityName: 'Order', description: 'Updated order details' })
-  update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateOrderDto) {
+  update(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateOrderDto,
+    @Request() req: any,
+  ) {
+    if (!dto.updatedById && req?.user?.id) {
+      dto.updatedById = req.user.id;
+    }
     return this.ordersService.update(id, dto);
   }
 
@@ -183,7 +194,11 @@ export class OrdersController {
   updateStatus(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateOrderStatusDto,
+    @Request() req: any,
   ) {
+    if (!dto.updatedById && req?.user?.id) {
+      dto.updatedById = req.user.id;
+    }
     return this.ordersService.updateStatus(id, dto);
   }
 

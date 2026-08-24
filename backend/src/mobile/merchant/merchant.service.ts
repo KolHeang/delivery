@@ -2,10 +2,10 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Like } from 'typeorm';
 import * as bcrypt from 'bcrypt';
-import { Merchant } from '../../merchants/merchant.entity';
-import { Order } from '../../orders/order.entity';
+import { Merchant } from '../../merchants/entities/merchant.entity';
+import { Order } from '../../orders/entities/order.entity';
 import { CreateOrderDto } from '../../orders/dto/order.dto';
-import { PickupRequest } from '../../orders/pickup-request.entity';
+import { PickupRequest } from '../../orders/entities/pickup-request.entity';
 import { CreatePickupRequestDto } from '../../orders/dto/pickup-request.dto';
 
 @Injectable()

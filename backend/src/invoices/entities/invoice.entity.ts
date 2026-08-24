@@ -6,7 +6,7 @@ import {
   ManyToOne,
   JoinColumn,
 } from 'typeorm';
-import { Order } from '../orders/order.entity';
+import { Order } from '../../orders/entities/order.entity';
 
 @Entity('invoices')
 export class Invoice {

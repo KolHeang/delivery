@@ -7,9 +7,9 @@ import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { JwtStrategy } from './jwt.strategy';
 import { UsersModule } from '../users/users.module';
-import { User } from '../users/users.entity';
-import { RefreshToken } from './refresh-token.entity';
-import { DeviceToken } from './device-token.entity';
+import { User } from '../users/entities/users.entity';
+import { RefreshToken } from './entities/refresh-token.entity';
+import { DeviceToken } from './entities/device-token.entity';
 import { PermissionsGuard } from './permissions.guard';
 
 @Module({

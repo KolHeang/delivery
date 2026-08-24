@@ -7,7 +7,7 @@ import {
   ManyToOne,
   JoinColumn,
 } from 'typeorm';
-import { User } from '../users/users.entity';
+import { User } from '../../users/entities/users.entity';
 
 @Entity('staff_payments')
 export class StaffPayment {
@@ -35,6 +35,20 @@ export class StaffPayment {
 
   @Column({ name: 'order_ids', type: 'json', nullable: true })
   orderIds: number[];
+
+  @ManyToOne(() => User, { nullable: true, eager: true })
+  @JoinColumn({ name: 'created_by_id' })
+  creator: User;
+
+  @Column({ name: 'created_by_id', nullable: true })
+  createdById: number;
+
+  @ManyToOne(() => User, { nullable: true, eager: true })
+  @JoinColumn({ name: 'updated_by_id' })
+  updater: User;
+
+  @Column({ name: 'updated_by_id', nullable: true })
+  updatedById: number;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;

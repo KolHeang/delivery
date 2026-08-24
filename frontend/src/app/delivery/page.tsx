@@ -350,19 +350,10 @@ export default function DeliveriesPage() {
                 <button
                   className="btn btn-outline btn-sm"
                   onClick={() => router.push(selectedIds.length > 0 ? `/delivery/print_invoice?id=${selectedIds.join(',')}` : '/delivery/print_invoice')}
-                  style={{ display: 'flex', alignItems: 'center', gap: 4, borderColor: '#7c3aed', color: '#7c3aed' }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 4, borderColor: '#2563eb', color: '#2563eb', fontWeight: 600 }}
                 >
-                  <MdPrint size={14} /> {lang === 'km' ? 'វិក្កយបត្រ' : 'Invoice'}{selectedIds.length > 0 ? ` (${selectedIds.length})` : ''}
+                  <MdPrint size={14} /> {lang === 'km' ? 'បោះពុម្ពវិក្កយបត្រ (QR)' : 'Print Invoice (QR)'}{selectedIds.length > 0 ? ` (${selectedIds.length})` : ''}
                 </button>
-                {selectedIds.length > 0 && (
-                  <button 
-                    className="btn btn-success btn-sm" 
-                    onClick={() => router.push(`/delivery/list_print_qrcode?id=${selectedIds.join(',')}`)}
-                    style={{ display: 'flex', alignItems: 'center', gap: 4 }}
-                  >
-                    <MdPrint size={14} /> {lang === 'km' ? 'QR បោះពុម្ព' : 'Print QR'} ({selectedIds.length})
-                  </button>
-                )}
                 {/* {selectedIds.length > 0 && selectedIds.some(id => orders.find(o => o.id === id)?.status === 'picked-up') && (
                   <button 
                     className="btn btn-sm" 
@@ -598,12 +589,12 @@ export default function DeliveriesPage() {
                             />
                           </td>
                           <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                            {o.merchant?.nameKh || o.merchant?.name || o.senderName || 'admin'}
+                            {o.creator?.nameKh || o.creator?.name || o.merchant?.nameKh || o.merchant?.name || o.senderName || 'admin'}
                           </td>
                           <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                            {['delivered', 'failed', 'returned'].includes(o.status) 
+                            {o.updater?.nameKh || o.updater?.name || (['delivered', 'failed', 'returned'].includes(o.status) 
                               ? (o.driver?.nameKh || o.driver?.name || 'admin') 
-                              : '—'}
+                              : '—')}
                           </td>
                           <td>
                             <div style={{ display: 'flex', gap: 4 }}>

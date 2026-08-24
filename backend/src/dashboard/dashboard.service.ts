@@ -1,10 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
-import { Order } from '../orders/order.entity';
-import { User } from '../users/users.entity';
-import { Customer } from '../customers/customer.entity';
-import { Merchant } from '../merchants/merchant.entity';
+import { Order } from '../orders/entities/order.entity';
+import { User } from '../users/entities/users.entity';
+import { Customer } from '../customers/entities/customer.entity';
+import { Merchant } from '../merchants/entities/merchant.entity';
 
 @Injectable()
 export class DashboardService {

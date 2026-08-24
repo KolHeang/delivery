@@ -3,13 +3,13 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 
-import { User } from '../users/users.entity';
-import { Merchant } from '../merchants/merchant.entity';
-import { Order } from '../orders/order.entity';
-import { OrderHistory } from '../orders/order-history.entity';
-import { PickupRequest } from '../orders/pickup-request.entity';
-import { RefreshToken } from '../auth/refresh-token.entity';
-import { DeviceToken } from '../auth/device-token.entity';
+import { User } from '../users/entities/users.entity';
+import { Merchant } from '../merchants/entities/merchant.entity';
+import { Order } from '../orders/entities/order.entity';
+import { OrderHistory } from '../orders/entities/order-history.entity';
+import { PickupRequest } from '../orders/entities/pickup-request.entity';
+import { RefreshToken } from '../auth/entities/refresh-token.entity';
+import { DeviceToken } from '../auth/entities/device-token.entity';
 
 import { AuthController } from './auth/auth.controller';
 import { AuthService } from './auth/auth.service';

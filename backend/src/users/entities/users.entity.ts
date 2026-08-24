@@ -8,9 +8,9 @@ import {
   JoinColumn,
   OneToOne,
 } from 'typeorm';
-import { Zone } from '../zones/zone.entity';
-import { Vehicle } from '../vehicles/vehicle.entity';
-import { Role } from '../roles/role.entity';
+import { Zone } from '../../zones/entities/zone.entity';
+import { Vehicle } from '../../vehicles/entities/vehicle.entity';
+import { Role } from '../../roles/entities/role.entity';
 
 export type DriverStatus = 'available' | 'on-delivery' | 'offline';
 

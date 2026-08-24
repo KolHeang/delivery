@@ -1,9 +1,9 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { Order } from '../orders/order.entity';
-import { User } from '../users/users.entity';
-import { Customer } from '../customers/customer.entity';
-import { Merchant } from '../merchants/merchant.entity';
+import { Order } from '../orders/entities/order.entity';
+import { User } from '../users/entities/users.entity';
+import { Customer } from '../customers/entities/customer.entity';
+import { Merchant } from '../merchants/entities/merchant.entity';
 import { DashboardService } from './dashboard.service';
 import { DashboardController } from './dashboard.controller';
 

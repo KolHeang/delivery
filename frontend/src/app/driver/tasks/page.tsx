@@ -108,7 +108,8 @@ export default function DriverTasksPage() {
     setLoading(true);
     try {
       const res = await api.get('/mobile/driver/tasks');
-      setTasks(res.data);
+      const data = res.data;
+      setTasks(Array.isArray(data) ? data : (data?.data || []));
     } catch (err) {
       console.error('Failed to load driver tasks', err);
     } finally {
@@ -132,7 +133,8 @@ export default function DriverTasksPage() {
       await api.patch(`/mobile/driver/tasks/${id}/status`, { status: newStatus, note });
       // Reload task list
       const res = await api.get('/mobile/driver/tasks');
-      setTasks(res.data);
+      const data = res.data;
+      setTasks(Array.isArray(data) ? data : (data?.data || []));
     } catch (err) {
       console.error('Failed to update task status', err);
       alert('Failed to update status. Please try again.');

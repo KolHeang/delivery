@@ -1,12 +1,12 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { StaffPayment } from './staff-payment.entity';
-import { ShopPayment } from './shop-payment.entity';
-import { User } from '../users/users.entity';
-import { Merchant } from '../merchants/merchant.entity';
-import { Order } from '../orders/order.entity';
-import { Organisation } from '../settings/organisation.entity';
+import { StaffPayment } from './entities/staff-payment.entity';
+import { ShopPayment } from './entities/shop-payment.entity';
+import { User } from '../users/entities/users.entity';
+import { Merchant } from '../merchants/entities/merchant.entity';
+import { Order } from '../orders/entities/order.entity';
+import { Organisation } from '../settings/entities/organisation.entity';
 
 @Injectable()
 export class PaymentsService {
@@ -27,6 +27,7 @@ export class PaymentsService {
     reference?: string,
     note?: string,
     orderIds?: number[],
+    userId?: number,
   ) {
     const driver = await this.driverRepo.findOne({
       where: { id: driverId, role: 'driver' },
@@ -40,6 +41,7 @@ export class PaymentsService {
       reference,
       note,
       orderIds,
+      createdById: userId,
     });
     const saved = await this.staffRepo.save(payment);
 
@@ -58,7 +60,7 @@ export class PaymentsService {
 
   async findAllStaffPayments() {
     return this.staffRepo.find({
-      relations: { driver: true },
+      relations: { driver: true, creator: true, updater: true },
       order: { date: 'DESC', createdAt: 'DESC' },
     });
   }
@@ -88,6 +90,7 @@ export class PaymentsService {
       payableKHR: number;
       detailUrl?: string;
     },
+    userId?: number,
   ) {
     const merchant = await this.merchantRepo.findOne({
       where: { id: merchantId },
@@ -102,6 +105,7 @@ export class PaymentsService {
       reference,
       note,
       orderIds,
+      createdById: userId,
     });
     const saved = await this.shopRepo.save(payment);
 
@@ -153,7 +157,7 @@ export class PaymentsService {
 
   async findAllShopPayments() {
     return this.shopRepo.find({
-      relations: { merchant: true },
+      relations: { merchant: true, creator: true, updater: true },
       order: { date: 'DESC', createdAt: 'DESC' },
     });
   }
@@ -315,6 +319,7 @@ export class PaymentsService {
   async updateStaffPayment(
     id: number,
     body: { amount?: number; note?: string; date?: Date; reference?: string },
+    userId?: number,
   ) {
     const payment = await this.staffRepo.findOne({ where: { id } });
     if (!payment) throw new NotFoundException('Payment record not found');
@@ -323,6 +328,7 @@ export class PaymentsService {
     if (body.note !== undefined) payment.note = body.note;
     if (body.date !== undefined) payment.date = body.date;
     if (body.reference !== undefined) payment.reference = body.reference;
+    if (userId) payment.updatedById = userId;
 
     return this.staffRepo.save(payment);
   }
@@ -354,6 +360,7 @@ export class PaymentsService {
   async updateShopPayment(
     id: number,
     body: { amount?: number; note?: string; date?: Date; reference?: string },
+    userId?: number,
   ) {
     const payment = await this.shopRepo.findOne({ where: { id } });
     if (!payment) throw new NotFoundException('Payment record not found');
@@ -374,6 +381,7 @@ export class PaymentsService {
     if (body.note !== undefined) payment.note = body.note;
     if (body.date !== undefined) payment.date = body.date;
     if (body.reference !== undefined) payment.reference = body.reference;
+    if (userId) payment.updatedById = userId;
 
     return this.shopRepo.save(payment);
   }

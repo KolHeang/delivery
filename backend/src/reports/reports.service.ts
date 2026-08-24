@@ -1,10 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Order } from '../orders/order.entity';
-import { User } from '../users/users.entity';
-import { Expense } from '../expenses/expense.entity';
-import { Income } from '../incomes/income.entity';
+import { Order } from '../orders/entities/order.entity';
+import { User } from '../users/entities/users.entity';
+import { Expense } from '../expenses/entities/expense.entity';
+import { Income } from '../incomes/entities/income.entity';
 
 @Injectable()
 export class ReportsService {

@@ -3,27 +3,25 @@ import {
   PrimaryGeneratedColumn,
   Column,
   CreateDateColumn,
+  UpdateDateColumn,
   ManyToOne,
   JoinColumn,
   Index,
 } from 'typeorm';
-import { User } from '../users/users.entity';
-import { Merchant } from '../merchants/merchant.entity';
+import { User } from '../../users/entities/users.entity';
+import { Merchant } from '../../merchants/entities/merchant.entity';
 
-@Entity('refresh_tokens')
-export class RefreshToken {
+@Entity('device_tokens')
+export class DeviceToken {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ type: 'text' })
+  @Column({ unique: true })
   @Index()
   token: string;
 
-  @Column({ name: 'expires_at' })
-  expiresAt: Date;
-
-  @Column({ default: false, name: 'is_revoked' })
-  isRevoked: boolean;
+  @Column({ nullable: true, name: 'device_type' })
+  deviceType: string;
 
   @Column({ nullable: true, name: 'user_id' })
   userId: number | null;
@@ -41,4 +39,7 @@ export class RefreshToken {
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
+
+  @UpdateDateColumn({ name: 'updated_at' })
+  updatedAt: Date;
 }

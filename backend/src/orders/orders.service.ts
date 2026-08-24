@@ -5,11 +5,11 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Like, ILike, Between, MoreThanOrEqual, LessThanOrEqual, In } from 'typeorm';
-import { Order } from './order.entity';
-import { OrderHistory } from './order-history.entity';
-import { PickupRequest } from './pickup-request.entity';
-import { Zone } from '../zones/zone.entity';
-import { Merchant } from '../merchants/merchant.entity';
+import { Order } from './entities/order.entity';
+import { OrderHistory } from './entities/order-history.entity';
+import { PickupRequest } from './entities/pickup-request.entity';
+import { Zone } from '../zones/entities/zone.entity';
+import { Merchant } from '../merchants/entities/merchant.entity';
 import {
   CreateOrderDto,
   UpdateOrderDto,
@@ -35,6 +35,8 @@ export class OrdersService {
       customer: true,
       driver: { zone: true, vehicle: true },
       pickupDriver: true,
+      creator: true,
+      updater: true,
       zone: true,
       histories: true,
     };

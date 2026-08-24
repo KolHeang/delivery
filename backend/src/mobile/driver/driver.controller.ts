@@ -1,6 +1,7 @@
 import {
   Controller,
   Get,
+  Post,
   Patch,
   Param,
   Body,
@@ -8,7 +9,7 @@ import {
   UseGuards,
   Request,
 } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
+import { ApiTags, ApiBearerAuth, ApiOperation, ApiBody, ApiQuery } from '@nestjs/swagger';
 import { DriverService } from './driver.service';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { UpdateOrderStatusDto } from '../../orders/dto/order.dto';
@@ -19,7 +20,7 @@ import { ConfirmPickupDto } from '../../orders/dto/pickup-request.dto';
 @UseGuards(JwtAuthGuard)
 @Controller('mobile/driver')
 export class DriverController {
-  constructor(private readonly driverService: DriverService) {}
+  constructor(private readonly driverService: DriverService) { }
 
   @Get('profile')
   @ApiOperation({ summary: 'Get driver profile' })
@@ -61,14 +62,71 @@ export class DriverController {
     return this.driverService.updateDriverStatus(req.user.id, status);
   }
 
+  @Get('scan/:code')
+  @ApiOperation({ summary: 'Scan QR code / tracking code to look up order details' })
+  scanOrderByCode(
+    @Request() req: any,
+    @Param('code') code: string,
+  ) {
+    return this.driverService.scanOrder(req.user.id, code);
+  }
+
+  @Post('scan')
+  @ApiOperation({ summary: 'Scan QR code / barcode payload to look up order details' })
+  @ApiBody({ schema: { type: 'object', properties: { code: { type: 'string' } } } })
+  scanOrder(
+    @Request() req: any,
+    @Body('code') code: string,
+  ) {
+    return this.driverService.scanOrder(req.user.id, code);
+  }
+
+  @Post('scan/claim')
+  @ApiOperation({ summary: 'Driver scans QR code to claim unassigned parcel' })
+  @ApiBody({ schema: { type: 'object', properties: { code: { type: 'string' } } } })
+  claimScannedOrder(
+    @Request() req: any,
+    @Body('code') code: string,
+  ) {
+    return this.driverService.claimScannedOrder(req.user.id, code);
+  }
+
+  @Post('scan/update-status')
+  @ApiOperation({ summary: 'Driver scans QR code and updates parcel status' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        code: { type: 'string' },
+        status: { type: 'string', enum: ['picked-up', 'in-transit', 'delivered', 'failed', 'returned'] },
+        note: { type: 'string' },
+      },
+    },
+  })
+  updateScannedStatus(
+    @Request() req: any,
+    @Body('code') code: string,
+    @Body() dto: UpdateOrderStatusDto,
+  ) {
+    return this.driverService.updateScannedOrderStatus(req.user.id, code, dto);
+  }
+
   @Get('tasks')
-  @ApiOperation({ summary: 'Get assigned tasks' })
+  @ApiOperation({ summary: 'Get assigned tasks with optional pagination' })
+  @ApiQuery({ name: 'page', required: false, type: Number, description: 'Page number (1-based)' })
+  @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Items per page' })
+  @ApiQuery({ name: 'status', required: false, type: String })
+  @ApiQuery({ name: 'search', required: false, type: String })
+  @ApiQuery({ name: 'startDate', required: false, type: String })
+  @ApiQuery({ name: 'endDate', required: false, type: String })
   getTasks(
     @Request() req: any,
     @Query('status') status?: string,
     @Query('search') search?: string,
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
   ) {
     return this.driverService.getTasks(
       req.user.id,
@@ -76,6 +134,8 @@ export class DriverController {
       search,
       startDate,
       endDate,
+      page,
+      limit,
     );
   }
 
@@ -127,3 +187,4 @@ export class DriverController {
     return this.driverService.confirmPickup(req.user.id, +id, dto);
   }
 }
+

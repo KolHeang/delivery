@@ -1,8 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Income } from './income.entity';
-import { IncomeType } from './income-type.entity';
+import { Income } from './entities/income.entity';
+import { IncomeType } from './entities/income-type.entity';
 import { paginateRepo } from '../config/pagination';
 
 @Injectable()

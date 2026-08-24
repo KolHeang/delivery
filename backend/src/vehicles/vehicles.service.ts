@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Vehicle } from './vehicle.entity';
+import { Vehicle } from './entities/vehicle.entity';
 import { CreateVehicleDto, UpdateVehicleDto } from './dto/vehicle.dto';
 import { paginateRepo } from '../config/pagination';
 

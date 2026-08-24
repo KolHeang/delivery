@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, ILike } from 'typeorm';
-import { Merchant } from './merchant.entity';
+import { Merchant } from './entities/merchant.entity';
 import { CreateMerchantDto, UpdateMerchantDto } from './dto/merchant.dto';
 import { paginateRepo } from '../config/pagination';
 

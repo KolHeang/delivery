@@ -7,8 +7,8 @@ import {
   JoinColumn,
   Index,
 } from 'typeorm';
-import { User } from '../users/users.entity';
-import { Merchant } from '../merchants/merchant.entity';
+import { User } from '../../users/entities/users.entity';
+import { Merchant } from '../../merchants/entities/merchant.entity';
 
 @Entity('activity_logs')
 export class ActivityLog {

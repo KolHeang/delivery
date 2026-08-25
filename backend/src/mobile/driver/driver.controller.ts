@@ -9,7 +9,13 @@ import {
   UseGuards,
   Request,
 } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth, ApiOperation, ApiBody, ApiQuery } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiBearerAuth,
+  ApiOperation,
+  ApiBody,
+  ApiQuery,
+} from '@nestjs/swagger';
 import { DriverService } from './driver.service';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { UpdateOrderStatusDto } from '../../orders/dto/order.dto';
@@ -20,7 +26,7 @@ import { ConfirmPickupDto } from '../../orders/dto/pickup-request.dto';
 @UseGuards(JwtAuthGuard)
 @Controller('mobile/driver')
 export class DriverController {
-  constructor(private readonly driverService: DriverService) { }
+  constructor(private readonly driverService: DriverService) {}
 
   @Get('profile')
   @ApiOperation({ summary: 'Get driver profile' })
@@ -63,31 +69,30 @@ export class DriverController {
   }
 
   @Get('scan/:code')
-  @ApiOperation({ summary: 'Scan QR code / tracking code to look up order details' })
-  scanOrderByCode(
-    @Request() req: any,
-    @Param('code') code: string,
-  ) {
+  @ApiOperation({
+    summary: 'Scan QR code / tracking code to look up order details',
+  })
+  scanOrderByCode(@Request() req: any, @Param('code') code: string) {
     return this.driverService.scanOrder(req.user.id, code);
   }
 
   @Post('scan')
-  @ApiOperation({ summary: 'Scan QR code / barcode payload to look up order details' })
-  @ApiBody({ schema: { type: 'object', properties: { code: { type: 'string' } } } })
-  scanOrder(
-    @Request() req: any,
-    @Body('code') code: string,
-  ) {
+  @ApiOperation({
+    summary: 'Scan QR code / barcode payload to look up order details',
+  })
+  @ApiBody({
+    schema: { type: 'object', properties: { code: { type: 'string' } } },
+  })
+  scanOrder(@Request() req: any, @Body('code') code: string) {
     return this.driverService.scanOrder(req.user.id, code);
   }
 
   @Post('scan/claim')
   @ApiOperation({ summary: 'Driver scans QR code to claim unassigned parcel' })
-  @ApiBody({ schema: { type: 'object', properties: { code: { type: 'string' } } } })
-  claimScannedOrder(
-    @Request() req: any,
-    @Body('code') code: string,
-  ) {
+  @ApiBody({
+    schema: { type: 'object', properties: { code: { type: 'string' } } },
+  })
+  claimScannedOrder(@Request() req: any, @Body('code') code: string) {
     return this.driverService.claimScannedOrder(req.user.id, code);
   }
 
@@ -98,7 +103,10 @@ export class DriverController {
       type: 'object',
       properties: {
         code: { type: 'string' },
-        status: { type: 'string', enum: ['picked-up', 'in-transit', 'delivered', 'failed', 'returned'] },
+        status: {
+          type: 'string',
+          enum: ['picked-up', 'in-transit', 'delivered', 'failed', 'returned'],
+        },
         note: { type: 'string' },
       },
     },
@@ -113,8 +121,18 @@ export class DriverController {
 
   @Get('tasks')
   @ApiOperation({ summary: 'Get assigned tasks with optional pagination' })
-  @ApiQuery({ name: 'page', required: false, type: Number, description: 'Page number (1-based)' })
-  @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Items per page' })
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    type: Number,
+    description: 'Page number (1-based)',
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    type: Number,
+    description: 'Items per page',
+  })
   @ApiQuery({ name: 'status', required: false, type: String })
   @ApiQuery({ name: 'search', required: false, type: String })
   @ApiQuery({ name: 'startDate', required: false, type: String })
@@ -136,6 +154,27 @@ export class DriverController {
       endDate,
       page,
       limit,
+    );
+  }
+
+  @Get('tasks/status-counts')
+  @ApiOperation({
+    summary: 'Get task counts grouped by status for driver mobile app',
+  })
+  @ApiQuery({ name: 'search', required: false, type: String })
+  @ApiQuery({ name: 'startDate', required: false, type: String })
+  @ApiQuery({ name: 'endDate', required: false, type: String })
+  getTaskStatusCounts(
+    @Request() req: any,
+    @Query('search') search?: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
+    return this.driverService.getTaskStatusCounts(
+      req.user.id,
+      search,
+      startDate,
+      endDate,
     );
   }
 
@@ -187,4 +226,3 @@ export class DriverController {
     return this.driverService.confirmPickup(req.user.id, +id, dto);
   }
 }
-

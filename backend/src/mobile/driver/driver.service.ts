@@ -22,7 +22,7 @@ export class DriverService {
     private readonly historyRepo: Repository<OrderHistory>,
     @InjectRepository(PickupRequest)
     private readonly pickupRequestRepo: Repository<PickupRequest>,
-  ) { }
+  ) {}
 
   async getProfile(driverId: number) {
     const driver = await this.userRepo.findOne({
@@ -74,9 +74,7 @@ export class DriverService {
     }
 
     if (!isValid) {
-      throw new BadRequestException(
-        'លេខសម្ងាត់ចាស់មិនត្រឹមត្រូវទេ',
-      );
+      throw new BadRequestException('លេខសម្ងាត់ចាស់មិនត្រឹមត្រូវទេ');
     }
 
     const hashed = await bcrypt.hash(newPass, 10);
@@ -102,22 +100,22 @@ export class DriverService {
     limit?: number,
   ) {
     const query = this.orderRepo
-      .createQueryBuilder('order')
-      .leftJoinAndSelect('order.customer', 'customer')
-      .leftJoinAndSelect('order.merchant', 'merchant')
-      .leftJoinAndSelect('order.zone', 'zone')
-      .orderBy('order.createdAt', 'DESC');
+      .createQueryBuilder('ord')
+      .leftJoinAndSelect('ord.customer', 'customer')
+      .leftJoinAndSelect('ord.merchant', 'merchant')
+      .leftJoinAndSelect('ord.zone', 'zone')
+      .orderBy('ord.createdAt', 'DESC');
 
     // 1. Apply Status & Driver Logic
     if (status) {
       query
-        .andWhere('order.driverId = :driverId', { driverId })
-        .andWhere('order.status = :status', { status });
+        .andWhere('ord.driverId = :driverId', { driverId })
+        .andWhere('ord.status = :status', { status });
     } else {
       query.andWhere(
         new Brackets((qb) => {
-          qb.where('order.driverId = :driverId', { driverId }).orWhere(
-            'order.pickupDriverId = :driverId',
+          qb.where('ord.driverId = :driverId', { driverId }).orWhere(
+            'ord.pickupDriverId = :driverId',
             { driverId },
           );
         }),
@@ -129,13 +127,13 @@ export class DriverService {
       query.andWhere(
         new Brackets((qb) => {
           const searchTerm = `%${search}%`;
-          qb.where('order.tracking_code::text ILIKE :searchTerm', {
+          qb.where('ord.tracking_code::text ILIKE :searchTerm', {
             searchTerm,
           })
-            .orWhere('order.receiver_phone::text ILIKE :searchTerm', {
+            .orWhere('ord.receiver_phone::text ILIKE :searchTerm', {
               searchTerm,
             })
-            .orWhere('order.receiver_address::text ILIKE :searchTerm', {
+            .orWhere('ord.receiver_address::text ILIKE :searchTerm', {
               searchTerm,
             });
         }),
@@ -145,8 +143,8 @@ export class DriverService {
     // 3. Apply Date Filter Logic
     if (startDate && endDate) {
       query
-        .andWhere('order.assignedAt >= :startDate', { startDate })
-        .andWhere('order.assignedAt <= :endDate', { endDate });
+        .andWhere('ord.assignedAt >= :startDate', { startDate })
+        .andWhere('ord.assignedAt <= :endDate', { endDate });
     }
 
     // 4. Pagination
@@ -154,7 +152,10 @@ export class DriverService {
     const limitNum = limit ? Math.max(1, parseInt(limit as any, 10)) : 20;
     const skip = (pageNum - 1) * limitNum;
 
-    const [data, total] = await query.skip(skip).take(limitNum).getManyAndCount();
+    const [data, total] = await query
+      .skip(skip)
+      .take(limitNum)
+      .getManyAndCount();
 
     return {
       data,
@@ -162,6 +163,85 @@ export class DriverService {
       page: pageNum,
       limit: limitNum,
       totalPages: Math.ceil(total / limitNum),
+    };
+  }
+
+  async getTaskStatusCounts(
+    driverId: number,
+    search?: string,
+    startDate?: string,
+    endDate?: string,
+  ) {
+    const query = this.orderRepo
+      .createQueryBuilder('ord')
+      .select('ord.status', 'status')
+      .addSelect('COUNT(*)', 'count')
+      .where(
+        new Brackets((qb) => {
+          qb.where('ord.driverId = :driverId', { driverId }).orWhere(
+            'ord.pickupDriverId = :driverId',
+            { driverId },
+          );
+        }),
+      );
+
+    if (search) {
+      query.andWhere(
+        new Brackets((qb) => {
+          const searchTerm = `%${search}%`;
+          qb.where('ord.tracking_code::text ILIKE :searchTerm', {
+            searchTerm,
+          })
+            .orWhere('ord.receiver_phone::text ILIKE :searchTerm', {
+              searchTerm,
+            })
+            .orWhere('ord.receiver_address::text ILIKE :searchTerm', {
+              searchTerm,
+            });
+        }),
+      );
+    }
+
+    if (startDate && endDate) {
+      query
+        .andWhere('ord.assignedAt >= :startDate', { startDate })
+        .andWhere('ord.assignedAt <= :endDate', { endDate });
+    }
+
+    const rawCounts = await query.groupBy('ord.status').getRawMany();
+
+    const counts: Record<string, number> = {
+      all: 0,
+      pending: 0,
+      'in-warehouse': 0,
+      assigned: 0,
+      'picked-up': 0,
+      'in-transit': 0,
+      delivered: 0,
+      failed: 0,
+      returned: 0,
+    };
+
+    let totalAll = 0;
+    rawCounts.forEach((r) => {
+      const c = parseInt(r.count, 10) || 0;
+      counts[r.status] = c;
+      totalAll += c;
+    });
+
+    counts.all = totalAll;
+
+    return {
+      all: counts.all,
+      pending: counts['pending'] || 0,
+      inWarehouse: counts['in-warehouse'] || 0,
+      assigned: counts['assigned'] || 0,
+      pickedUp: counts['picked-up'] || 0,
+      inTransit: counts['in-transit'] || 0,
+      delivered: counts['delivered'] || 0,
+      failed: counts['failed'] || 0,
+      returned: counts['returned'] || 0,
+      byStatus: counts,
     };
   }
 
@@ -493,7 +573,9 @@ export class DriverService {
    */
   async scanOrder(driverId: number, rawCode: string) {
     if (!rawCode || typeof rawCode !== 'string') {
-      throw new BadRequestException('សូមបញ្ជាក់លេខកូដ QR / Tracking Code (QR/Tracking code is required)');
+      throw new BadRequestException(
+        'សូមបញ្ជាក់លេខកូដ QR / Tracking Code (QR/Tracking code is required)',
+      );
     }
 
     let code = rawCode.trim();
@@ -535,7 +617,11 @@ export class DriverService {
     const isPickupDriver = order.pickupDriverId === driverId;
     const isAssignedToMe = isDeliveryDriver || isPickupDriver;
 
-    let driverRole: 'delivery_driver' | 'pickup_driver' | 'unassigned' | 'assigned_to_other' = 'unassigned';
+    let driverRole:
+      | 'delivery_driver'
+      | 'pickup_driver'
+      | 'unassigned'
+      | 'assigned_to_other' = 'unassigned';
     if (isDeliveryDriver) {
       driverRole = 'delivery_driver';
     } else if (isPickupDriver) {
@@ -546,13 +632,21 @@ export class DriverService {
 
     // Determine possible actions driver can do right after scan
     const availableActions: string[] = [];
-    if (!order.driverId && (order.status === 'pending' || order.status === 'in-warehouse')) {
+    if (
+      !order.driverId &&
+      (order.status === 'pending' || order.status === 'in-warehouse')
+    ) {
       availableActions.push('claim');
     }
     if (isPickupDriver && order.status === 'pending') {
       availableActions.push('pickup');
     }
-    if (isDeliveryDriver && (order.status === 'assigned' || order.status === 'in-transit' || order.status === 'picked-up')) {
+    if (
+      isDeliveryDriver &&
+      (order.status === 'assigned' ||
+        order.status === 'in-transit' ||
+        order.status === 'picked-up')
+    ) {
       availableActions.push('deliver');
       availableActions.push('failed');
     }
@@ -567,7 +661,10 @@ export class DriverService {
         extractedCode: code,
         isAssignedToMe,
         driverRole,
-        canUpdateStatus: isAssignedToMe || (!order.driverId && ['pending', 'in-warehouse'].includes(order.status)),
+        canUpdateStatus:
+          isAssignedToMe ||
+          (!order.driverId &&
+            ['pending', 'in-warehouse'].includes(order.status)),
         availableActions,
       },
     };
@@ -580,7 +677,9 @@ export class DriverService {
     const { order } = await this.scanOrder(driverId, rawCode);
 
     if (order.driverId && order.driverId !== driverId) {
-      throw new BadRequestException('ទំនិញនេះត្រូវបានប្រគល់ទៅឱ្យអ្នកដឹកផ្សេងរួចហើយ');
+      throw new BadRequestException(
+        'ទំនិញនេះត្រូវបានប្រគល់ទៅឱ្យអ្នកដឹកផ្សេងរួចហើយ',
+      );
     }
 
     order.driverId = driverId;

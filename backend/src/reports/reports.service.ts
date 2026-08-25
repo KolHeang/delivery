@@ -50,7 +50,8 @@ export class ReportsService {
       .createQueryBuilder('driver')
       .leftJoinAndSelect('driver.zone', 'zone')
       .leftJoinAndSelect('driver.vehicle', 'vehicle')
-      .where('driver.role = :role', { role: 'driver' })
+      .leftJoinAndSelect('driver.roleRelation', 'roleRelation')
+      .where('roleRelation.name = :role', { role: 'driver' })
       .orderBy('driver.totalDeliveries', 'DESC')
       .getMany();
   }

@@ -138,10 +138,6 @@ export class RolesService {
     }
 
     user.roleId = role.id;
-    
-    // Crucial: Keep the string role column in sync with the role name for compatibility with existing queries.
-    user.role = role.name as any;
-
     return this.staffRepo.save(user);
   }
 }

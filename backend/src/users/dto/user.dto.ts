@@ -30,10 +30,16 @@ export class CreateUserDto {
   @MinLength(6)
   password?: string;
 
-  @ApiProperty({ enum: ['admin', 'staff', 'driver'], default: 'staff' })
-  @IsEnum(['admin', 'staff', 'driver'])
+  @ApiProperty({ required: false })
   @IsOptional()
-  role?: 'admin' | 'staff' | 'driver';
+  @IsNumber()
+  @Type(() => Number)
+  roleId?: number;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  role?: string;
 
   @ApiProperty({ required: false })
   @IsOptional()
@@ -105,10 +111,8 @@ export class UpdateUserDto {
   @IsOptional() @IsString() name?: string;
   @IsOptional() @IsEmail() email?: string;
   @IsOptional() @MinLength(6) password?: string;
-  @IsOptional() @IsEnum(['admin', 'staff', 'driver']) role?:
-    | 'admin'
-    | 'staff'
-    | 'driver';
+  @IsOptional() @IsNumber() @Type(() => Number) roleId?: number;
+  @IsOptional() @IsString() role?: string;
   @IsOptional()
   @Transform(({ value }) => {
     if (value === 'true') return true;

@@ -10,8 +10,6 @@ import { ApiProperty } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
 
 export class CreateOrderDto {
-  @ApiProperty() @IsNotEmpty() @IsString() senderName: string;
-  @ApiProperty() @IsNotEmpty() @IsString() senderPhone: string;
   @ApiProperty() @IsNotEmpty() @IsString() receiverName: string;
   @ApiProperty() @IsNotEmpty() @IsString() receiverPhone: string;
   @ApiProperty() @IsNotEmpty() @IsString() receiverAddress: string;
@@ -93,8 +91,6 @@ export class CreateOrderDto {
 }
 
 export class UpdateOrderDto {
-  @IsOptional() @IsString() senderName?: string;
-  @IsOptional() @IsString() senderPhone?: string;
   @IsOptional() @IsString() receiverName?: string;
   @IsOptional() @IsString() receiverPhone?: string;
   @IsOptional() @IsString() receiverAddress?: string;
@@ -149,6 +145,11 @@ export class UpdateOrderStatusDto {
   @IsOptional()
   @IsString()
   note?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  remark?: string;
 
   @ApiProperty({ required: false })
   @IsOptional()

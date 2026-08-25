@@ -30,7 +30,7 @@ export class PaymentsService {
     userId?: number,
   ) {
     const driver = await this.driverRepo.findOne({
-      where: { id: driverId, role: 'driver' },
+      where: { id: driverId },
     });
     if (!driver) throw new NotFoundException('Driver not found');
 
@@ -164,7 +164,7 @@ export class PaymentsService {
 
   async getDriverPaymentStats(driverId: number) {
     const driver = await this.driverRepo.findOne({
-      where: { id: driverId, role: 'driver' },
+      where: { id: driverId },
     });
     if (!driver) throw new NotFoundException('Driver not found');
 

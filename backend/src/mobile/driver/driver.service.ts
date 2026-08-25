@@ -109,7 +109,14 @@ export class DriverService {
     // 1. Apply Status & Driver Logic
     if (status) {
       query
-        .andWhere('ord.driverId = :driverId', { driverId })
+        .andWhere(
+          new Brackets((qb) => {
+            qb.where('ord.driverId = :driverId', { driverId }).orWhere(
+              'ord.pickupDriverId = :driverId',
+              { driverId },
+            );
+          }),
+        )
         .andWhere('ord.status = :status', { status });
     } else {
       query.andWhere(
@@ -142,9 +149,10 @@ export class DriverService {
 
     // 3. Apply Date Filter Logic
     if (startDate && endDate) {
-      query
-        .andWhere('ord.assignedAt >= :startDate', { startDate })
-        .andWhere('ord.assignedAt <= :endDate', { endDate });
+      query.andWhere(
+        'COALESCE(ord.deliveredAt, ord.assignedAt, ord.updatedAt, ord.createdAt) >= :startDate AND COALESCE(ord.deliveredAt, ord.assignedAt, ord.updatedAt, ord.createdAt) <= :endDate',
+        { startDate, endDate },
+      );
     }
 
     // 4. Pagination
@@ -203,9 +211,10 @@ export class DriverService {
     }
 
     if (startDate && endDate) {
-      query
-        .andWhere('ord.assignedAt >= :startDate', { startDate })
-        .andWhere('ord.assignedAt <= :endDate', { endDate });
+      query.andWhere(
+        'COALESCE(ord.deliveredAt, ord.assignedAt, ord.updatedAt, ord.createdAt) >= :startDate AND COALESCE(ord.deliveredAt, ord.assignedAt, ord.updatedAt, ord.createdAt) <= :endDate',
+        { startDate, endDate },
+      );
     }
 
     const rawCounts = await query.groupBy('ord.status').getRawMany();
@@ -259,6 +268,7 @@ export class DriverService {
     if (!order)
       throw new NotFoundException('Order not found or not assigned to you');
 
+    const finalNote = dto.remark !== undefined ? dto.remark : dto.note;
     const updates: Partial<Order> = {
       status: dto.status as any,
       updatedById: dto.updatedById || driverId,
@@ -266,16 +276,16 @@ export class DriverService {
     if (dto.status === 'picked-up') updates.pickedUpAt = new Date();
     if (dto.status === 'delivered') updates.deliveredAt = new Date();
     if (dto.status === 'in-warehouse') updates.warehouseAt = new Date();
-    if (dto.note) updates.note = dto.note;
+    if (finalNote !== undefined) updates.note = finalNote;
 
     await this.orderRepo.update(orderId, updates);
 
-    if (dto.status !== order.status) {
+    if (dto.status !== order.status || finalNote) {
       try {
         const history = this.historyRepo.create({
           orderId,
           status: dto.status,
-          note: dto.note || order.note || undefined,
+          note: finalNote || order.note || undefined,
         });
         await this.historyRepo.save(history);
       } catch (err) {
@@ -397,7 +407,7 @@ export class DriverService {
 
     if (start && end) {
       pkgQuery.andWhere(
-        'order.assignedAt >= :start AND order.assignedAt <= :end',
+        'COALESCE(order.deliveredAt, order.assignedAt, order.updatedAt, order.createdAt) >= :start AND COALESCE(order.deliveredAt, order.assignedAt, order.updatedAt, order.createdAt) <= :end',
         { start, end },
       );
     }
@@ -408,11 +418,14 @@ export class DriverService {
       .createQueryBuilder('order')
       .select('order.status', 'status')
       .addSelect('COUNT(*)', 'count')
-      .where('order.driverId = :driverId', { driverId });
+      .where(
+        '(order.driverId = :driverId OR order.pickupDriverId = :driverId)',
+        { driverId },
+      );
 
     if (start && end) {
       statusQuery.andWhere(
-        'order.assignedAt >= :start AND order.assignedAt <= :end',
+        'COALESCE(order.deliveredAt, order.assignedAt, order.updatedAt, order.createdAt) >= :start AND COALESCE(order.deliveredAt, order.assignedAt, order.updatedAt, order.createdAt) <= :end',
         { start, end },
       );
     }
@@ -435,7 +448,19 @@ export class DriverService {
         { start, end },
       );
     }
-    const pickupRequestCount = await pickupReqQuery.getCount();
+    let pickupRequestCount = await pickupReqQuery.getCount();
+
+    const pendingOrdersQuery = this.orderRepo
+      .createQueryBuilder('order')
+      .where('order.pickupDriverId = :driverId', { driverId })
+      .andWhere('order.status = :status', { status: 'pending' });
+    if (start && end) {
+      pendingOrdersQuery.andWhere(
+        'COALESCE(order.assignedAt, order.createdAt) >= :start AND COALESCE(order.assignedAt, order.createdAt) <= :end',
+        { start, end },
+      );
+    }
+    pickupRequestCount += await pendingOrdersQuery.getCount();
 
     const pickedUpWaitQuery = this.pickupRequestRepo
       .createQueryBuilder('req')
@@ -466,7 +491,7 @@ export class DriverService {
 
     if (start && end) {
       broughtToHubQuery.andWhere(
-        'order.assignedAt >= :start AND order.assignedAt <= :end',
+        'COALESCE(order.warehouseAt, order.updatedAt, order.createdAt) >= :start AND COALESCE(order.warehouseAt, order.updatedAt, order.createdAt) <= :end',
         { start, end },
       );
     }

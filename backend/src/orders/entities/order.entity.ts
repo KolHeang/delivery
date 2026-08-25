@@ -39,14 +39,6 @@ export class Order {
   @Column({ default: 'pending' })
   status: OrderStatus;
 
-  // Sender info
-  @Column({ name: 'sender_name' })
-  senderName: string;
-
-  @Column({ name: 'sender_phone' })
-  senderPhone: string;
-
-  // Receiver info
   @Column({ name: 'receiver_name' })
   receiverName: string;
 
@@ -56,7 +48,6 @@ export class Order {
   @Column({ name: 'receiver_address', type: 'text' })
   receiverAddress: string;
 
-  // Package details
   @Column('decimal', { precision: 8, scale: 2, default: 0 })
   weight: number;
 
@@ -66,7 +57,6 @@ export class Order {
   @Column({ nullable: true, type: 'text' })
   note: string;
 
-  // Financial
   @Column('decimal', { precision: 10, scale: 2, default: 0 })
   cod: number;
 
@@ -109,20 +99,18 @@ export class Order {
   })
   receivedAmountKHR: number;
 
-  // Timestamps
   @Column({ name: 'picked_up_at', type: 'timestamp', nullable: true })
   pickedUpAt: Date;
 
   @Column({ name: 'warehouse_at', type: 'timestamp', nullable: true })
-  warehouseAt: Date; // When parcel arrived at warehouse (via-warehouse flow)
+  warehouseAt: Date;
 
   @Column({ name: 'assigned_at', type: 'timestamp', nullable: true })
-  assignedAt: Date; // When delivery driver was assigned
+  assignedAt: Date;
 
   @Column({ name: 'delivered_at', type: 'timestamp', nullable: true })
   deliveredAt: Date;
 
-  // Relations
   @ManyToOne(() => Merchant, { nullable: true, eager: true })
   @JoinColumn({ name: 'merchant_id' })
   merchant: Merchant;
@@ -137,7 +125,6 @@ export class Order {
   @Column({ name: 'customer_id', nullable: true })
   customerId: number;
 
-  // Delivery driver (delivers to customer)
   @ManyToOne(() => User, { nullable: true, eager: true })
   @JoinColumn({ name: 'driver_id' })
   driver: User;
@@ -145,7 +132,6 @@ export class Order {
   @Column({ name: 'driver_id', nullable: true })
   driverId: number;
 
-  // Pickup driver (collects parcel from merchant store → warehouse)
   @ManyToOne(() => User, { nullable: true, eager: true })
   @JoinColumn({ name: 'pickup_driver_id' })
   pickupDriver: User;
@@ -153,7 +139,6 @@ export class Order {
   @Column({ name: 'pickup_driver_id', nullable: true })
   pickupDriverId: number;
 
-  // Zone
   @ManyToOne(() => Zone, { nullable: true, eager: true })
   @JoinColumn({ name: 'zone_id' })
   zone: Zone;
@@ -161,7 +146,6 @@ export class Order {
   @Column({ name: 'zone_id', nullable: true })
   zoneId: number;
 
-  // User who created the order (Admin/Staff/User ID)
   @ManyToOne(() => User, { nullable: true, eager: true })
   @JoinColumn({ name: 'created_by_id' })
   creator: User;
@@ -169,7 +153,6 @@ export class Order {
   @Column({ name: 'created_by_id', nullable: true })
   createdById: number;
 
-  // User who updated/completed the order (Driver/Staff/Admin User ID)
   @ManyToOne(() => User, { nullable: true, eager: true })
   @JoinColumn({ name: 'updated_by_id' })
   updater: User;
@@ -196,9 +179,8 @@ export class Order {
   @BeforeInsert()
   generateTrackingCode() {
     if (!this.trackingCode) {
-      const timestamp = Date.now().toString().slice(-6);
-      const random = Math.random().toString(36).substring(2, 4).toUpperCase();
-      this.trackingCode = `T${timestamp}${random}`;
+      const timestamp = Date.now().toString().slice(-8);
+      this.trackingCode = `CO${timestamp}`;
     }
   }
 }

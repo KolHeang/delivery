@@ -79,21 +79,22 @@ export class MerchantService {
     try {
       const result = await this.orderRepo.query("SELECT nextval('tracking_code_seq') as nextval");
       const nextval = parseInt(result[0].nextval, 10);
-      return `T${String(nextval).padStart(6, '0')}`;
+      return `CO${String(nextval).padStart(8, '0')}`;
     } catch (err) {
-      await this.orderRepo.query("CREATE SEQUENCE IF NOT EXISTS tracking_code_seq START WITH 1");
+      await this.orderRepo.query("CREATE SEQUENCE IF NOT EXISTS tracking_code_seq START WITH 30220626");
       const lastOrders = await this.orderRepo.find({
-        where: {
-          trackingCode: Like('T%'),
-        },
+        where: [
+          { trackingCode: Like('CO%') },
+          { trackingCode: Like('T%') },
+        ],
         order: { id: 'DESC' },
         take: 100,
       });
 
-      let maxNumber = 0;
+      let maxNumber = 30220625;
       for (const order of lastOrders) {
         if (order.trackingCode) {
-          const match = order.trackingCode.match(/^T(\d{6})$/);
+          const match = order.trackingCode.match(/^CO(\d+)$/);
           if (match) {
             const num = parseInt(match[1], 10);
             if (num > maxNumber) {
@@ -109,7 +110,7 @@ export class MerchantService {
 
       const result = await this.orderRepo.query("SELECT nextval('tracking_code_seq') as nextval");
       const nextval = parseInt(result[0].nextval, 10);
-      return `T${String(nextval).padStart(6, '0')}`;
+      return `CO${String(nextval).padStart(8, '0')}`;
     }
   }
 

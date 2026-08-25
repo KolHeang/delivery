@@ -123,7 +123,7 @@ export class OrdersService {
       where: [
         { trackingCode: term },
         { receiverPhone: Like(`%${term}%`) },
-        { senderPhone: Like(`%${term}%`) },
+        { merchant: { phone: Like(`%${term}%`) } },
       ],
       relations: this.relations,
       order: { createdAt: 'DESC' }
@@ -174,7 +174,7 @@ export class OrdersService {
     return this.repo.find({
       where: { status: In(['in-warehouse', 'pending', 'assigned', 'failed']) },
       relations: this.relations,
-      order: { warehouseAt: 'DESC' },
+      order: { id: 'DESC' },
     });
   }
 
@@ -182,21 +182,22 @@ export class OrdersService {
     try {
       const result = await this.repo.query("SELECT nextval('tracking_code_seq') as nextval");
       const nextval = parseInt(result[0].nextval, 10);
-      return `T${String(nextval).padStart(6, '0')}`;
+      return `CO${String(nextval).padStart(8, '0')}`;
     } catch (err) {
-      await this.repo.query("CREATE SEQUENCE IF NOT EXISTS tracking_code_seq START WITH 1");
+      await this.repo.query("CREATE SEQUENCE IF NOT EXISTS tracking_code_seq START WITH 30220626");
       const lastOrders = await this.repo.find({
-        where: {
-          trackingCode: Like('T%'),
-        },
+        where: [
+          { trackingCode: Like('CO%') },
+          { trackingCode: Like('T%') },
+        ],
         order: { id: 'DESC' },
         take: 100,
       });
 
-      let maxNumber = 0;
+      let maxNumber = 30220625;
       for (const order of lastOrders) {
         if (order.trackingCode) {
-          const match = order.trackingCode.match(/^T(\d{6})$/);
+          const match = order.trackingCode.match(/^CO(\d+)$/);
           if (match) {
             const num = parseInt(match[1], 10);
             if (num > maxNumber) {
@@ -212,7 +213,7 @@ export class OrdersService {
 
       const result = await this.repo.query("SELECT nextval('tracking_code_seq') as nextval");
       const nextval = parseInt(result[0].nextval, 10);
-      return `T${String(nextval).padStart(6, '0')}`;
+      return `CO${String(nextval).padStart(8, '0')}`;
     }
   }
 
@@ -245,8 +246,8 @@ export class OrdersService {
     // Auto-update status when delivery driver (driverId) is updated
     if (dto.driverId !== undefined) {
       if (dto.driverId) {
-        if (updates.status === undefined || updates.status === 'pending' || updates.status === 'in-warehouse') {
-          if (order.status === 'pending' || order.status === 'in-warehouse') {
+        if (updates.status === undefined || updates.status === 'pending' || updates.status === 'in-warehouse' || updates.status === 'failed') {
+          if (order.status === 'pending' || order.status === 'in-warehouse' || order.status === 'failed') {
             updates.status = 'assigned';
             updates.assignedAt = new Date();
           }
@@ -293,10 +294,12 @@ export class OrdersService {
 
   async updateStatus(id: number, dto: UpdateOrderStatusDto): Promise<Order> {
     const order = await this.findOne(id);
+    const finalNote = dto.remark !== undefined ? dto.remark : dto.note;
     const updates: Partial<Order> = { status: dto.status as any };
     if (dto.status === 'picked-up') updates.pickedUpAt = new Date();
     if (dto.status === 'in-warehouse') updates.warehouseAt = new Date();
     if (dto.status === 'delivered') updates.deliveredAt = new Date();
+    if (finalNote !== undefined) updates.note = finalNote;
 
     if (['pending', 'in-warehouse', 'assigned', 'picked-up', 'in-transit'].includes(dto.status)) {
       updates.driverPaymentStatus = 'unpaid';
@@ -307,8 +310,8 @@ export class OrdersService {
     }
 
     await this.repo.update(id, updates);
-    if (dto.status !== order.status) {
-      await this.addHistory(id, dto.status, dto.note);
+    if (dto.status !== order.status || finalNote) {
+      await this.addHistory(id, dto.status, finalNote);
     }
     return this.findOne(id);
   }
@@ -475,8 +478,6 @@ export class OrdersService {
 
     const order = this.repo.create({
       ...dto,
-      senderName: request.merchant?.name || 'Shop',
-      senderPhone: request.merchant?.phone || '000',
       merchantId: request.merchantId,
       pickupRequestId: id,
       pickupDriverId: request.pickupDriverId || undefined,

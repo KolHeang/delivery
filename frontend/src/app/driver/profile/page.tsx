@@ -1,4 +1,3 @@
-'use/client';
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -149,6 +148,7 @@ export default function DriverProfilePage() {
   // Edit Profile Modal State
   const [showEditProfileModal, setShowEditProfileModal] = useState(false);
   const [editName, setEditName] = useState('');
+  const [editNameKh, setEditNameKh] = useState('');
   const [editPhone, setEditPhone] = useState('');
   const [editEmail, setEditEmail] = useState('');
   const [editGender, setEditGender] = useState('male');
@@ -160,6 +160,7 @@ export default function DriverProfilePage() {
 
   const openEditProfileModal = () => {
     setEditName(profile?.name || '');
+    setEditNameKh(profile?.nameKh || '');
     setEditPhone(profile?.phone || '');
     setEditEmail(profile?.email || '');
     setEditGender(profile?.gender || 'male');
@@ -178,6 +179,7 @@ export default function DriverProfilePage() {
     try {
       const res = await api.patch('/mobile/driver/profile', {
         name: editName,
+        nameKh: editNameKh,
         phone: editPhone,
         email: editEmail,
         gender: editGender,
@@ -331,6 +333,8 @@ export default function DriverProfilePage() {
   const totalSuccessful = stats?.totalSuccessful || 0;
   const feePerPkg = totalSuccessful > 0 ? (deliveryFeeTotal / totalSuccessful).toFixed(2) : '0.00';
 
+  const displayName = lang === 'km' && profile?.nameKh ? profile.nameKh : (profile?.name || 'Sok Dara');
+
   return (
     <div style={{
       display: 'flex',
@@ -390,7 +394,7 @@ export default function DriverProfilePage() {
                 style={{ width: '100%', height: '100%', objectFit: 'cover' }}
               />
             ) : (
-              getInitials(profile?.name)
+              getInitials(displayName)
             )}
           </div>
 
@@ -434,7 +438,7 @@ export default function DriverProfilePage() {
           zIndex: 1,
           textShadow: '0 2px 4px rgba(0,0,0,0.1)'
         }}>
-          {profile?.name || 'Kol Heang'}
+          {displayName}
         </h2>
       </div>
 
@@ -862,7 +866,7 @@ export default function DriverProfilePage() {
                 </div>
                 <div>
                   <span style={{ fontSize: '12px', color: '#64748b', fontWeight: '600', marginRight: '6px' }}>{t.phoneLabel}:</span>
-                  <span style={{ fontSize: '14px', color: '#0f172a', fontWeight: '800' }}>{profile?.phone || '0963610103'}</span>
+                  <span style={{ fontSize: '14px', color: '#0f172a', fontWeight: '800' }}>{profile?.phone || '012-345-678'}</span>
                 </div>
               </div>
 
@@ -876,7 +880,7 @@ export default function DriverProfilePage() {
                 </div>
                 <div>
                   <span style={{ fontSize: '12px', color: '#64748b', fontWeight: '600', marginRight: '6px' }}>{t.emailLabel}:</span>
-                  <span style={{ fontSize: '14px', color: '#0f172a', fontWeight: '800' }}>{profile?.email || 'kolheang777@gmail.com'}</span>
+                  <span style={{ fontSize: '14px', color: '#0f172a', fontWeight: '800' }}>{profile?.email || 'driver@gmail.com'}</span>
                 </div>
               </div>
 
@@ -1299,6 +1303,7 @@ export default function DriverProfilePage() {
           </div>
         </div>
       )}
+
       {/* Edit Profile Modal */}
       {showEditProfileModal && (
         <div style={{
@@ -1401,14 +1406,36 @@ export default function DriverProfilePage() {
             <form onSubmit={handleEditProfileSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div>
                 <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569', display: 'block', marginBottom: '6px' }}>
-                  {lang === 'km' ? 'ឈ្មោះអ្នកបើកបរ' : 'Driver Name'}
+                  {lang === 'km' ? 'ឈ្មោះអ្នកបើកបរ (English)' : 'Driver Name'}
                 </label>
                 <input
                   type="text"
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
-                  placeholder="e.g. Kol Heang"
+                  placeholder="e.g. Sok Dara"
                   required
+                  style={{
+                    width: '100%',
+                    padding: '12px 14px',
+                    borderRadius: '14px',
+                    border: '1.5px solid #cbd5e1',
+                    fontSize: '14px',
+                    outline: 'none',
+                    backgroundColor: '#f8fafc',
+                    boxSizing: 'border-box'
+                  }}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: '700', color: '#475569', display: 'block', marginBottom: '6px' }}>
+                  {lang === 'km' ? 'ឈ្មោះជាភាសាខ្មែរ' : 'Khmer Name'}
+                </label>
+                <input
+                  type="text"
+                  value={editNameKh}
+                  onChange={(e) => setEditNameKh(e.target.value)}
+                  placeholder="e.g. សុខ តារា"
                   style={{
                     width: '100%',
                     padding: '12px 14px',
@@ -1430,7 +1457,7 @@ export default function DriverProfilePage() {
                   type="text"
                   value={editPhone}
                   onChange={(e) => setEditPhone(e.target.value)}
-                  placeholder="e.g. 0963610103"
+                  placeholder="e.g. 012345678"
                   required
                   style={{
                     width: '100%',
@@ -1453,7 +1480,7 @@ export default function DriverProfilePage() {
                   type="email"
                   value={editEmail}
                   onChange={(e) => setEditEmail(e.target.value)}
-                  placeholder="e.g. driver@example.com"
+                  placeholder="e.g. driver@gmail.com"
                   style={{
                     width: '100%',
                     padding: '12px 14px',

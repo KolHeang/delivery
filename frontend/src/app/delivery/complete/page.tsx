@@ -51,9 +51,9 @@ export default function CompletePackagePage() {
   const loadActiveOrders = async () => {
     try {
       const res = await api.get('/orders');
-      // Only show active / non-final orders (picked-up, in-transit)
+      // Show all active & unfinalized orders (pending, in-warehouse, assigned, picked-up, in-transit, failed)
       const activeOrders = (res.data || []).filter((o: any) =>
-        o.status === 'in-transit' || o.status === 'picked-up' || o.status === 'assigned'
+        ['pending', 'in-warehouse', 'assigned', 'picked-up', 'in-transit', 'failed'].includes(o.status)
       );
 
       // Pre-fill default inputs for COD currencies
@@ -282,9 +282,12 @@ export default function CompletePackagePage() {
                   style={{ height: '38px', padding: '8px 12px', borderRadius: '6px', border: '1px solid #d1d5db', backgroundColor: '#fff' }}
                 >
                   <option value="">{lang === 'km' ? '— ទាំងអស់ —' : '— All —'}</option>
+                  <option value="pending">{lang === 'km' ? 'រង់ចាំ' : 'Pending'}</option>
+                  <option value="in-warehouse">{lang === 'km' ? 'ក្នុងឃ្លាំង' : 'In Warehouse'}</option>
                   <option value="assigned">{lang === 'km' ? 'បានចាត់ចែង' : 'Assigned'}</option>
                   <option value="picked-up">{lang === 'km' ? 'បានប្រមូល' : 'Picked Up'}</option>
                   <option value="in-transit">{lang === 'km' ? 'កំពុងដឹក' : 'In Transit'}</option>
+                  <option value="failed">{lang === 'km' ? 'មិនបានសម្រេច' : 'Failed'}</option>
                 </select>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: '250px' }}>
@@ -401,69 +404,59 @@ export default function CompletePackagePage() {
             </div>
 
             {/* Data Table */}
-            <div className="table-responsive" style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #e5e7eb' }}>
+            <div className="table-responsive" style={{ overflowX: 'auto', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-card)' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                 <thead>
-                  <tr style={{ backgroundColor: '#f3f4f6', borderBottom: '2px solid #e5e7eb' }}>
-                    <th rowSpan={2} style={{ padding: '12px 8px', border: '1px solid #e5e7eb', textAlign: 'center', fontSize: '13px', fontWeight: 'bold' }}>
+                  <tr style={{ background: '#2f55a5' }}>
+                    <th style={{ padding: '12px 10px', textAlign: 'center', width: 44, background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>
                       {lang === 'km' ? 'ល.រ' : 'No.'}
                     </th>
-                    <th rowSpan={2} style={{ padding: '12px 8px', border: '1px solid #e5e7eb', textAlign: 'left', fontSize: '13px', fontWeight: 'bold' }}>
-                      {lang === 'km' ? 'កូដ' : 'Tracking Code'}
+                    <th style={{ padding: '12px 10px', textAlign: 'left', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>
+                      {lang === 'km' ? 'លេខកូដ' : 'Tracking Code'}
                     </th>
-                    <th rowSpan={2} style={{ padding: '12px 8px', border: '1px solid #e5e7eb', textAlign: 'left', fontSize: '13px', fontWeight: 'bold' }}>
+                    <th style={{ padding: '12px 10px', textAlign: 'left', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>
                       {lang === 'km' ? 'ឈ្មោះហាង' : 'Shop/Merchant'}
                     </th>
-                    <th rowSpan={2} style={{ padding: '12px 8px', border: '1px solid #e5e7eb', textAlign: 'left', fontSize: '13px', fontWeight: 'bold' }}>
+                    <th style={{ padding: '12px 10px', textAlign: 'left', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>
                       {lang === 'km' ? 'លេខអ្នកទទួល' : 'Receiver Phone'}
                     </th>
-                    <th rowSpan={2} style={{ padding: '12px 8px', border: '1px solid #e5e7eb', textAlign: 'left', fontSize: '13px', fontWeight: 'bold' }}>
-                      {lang === 'km' ? 'កាលបរិច្ឆេទ' : 'Date (Created)'}
+                    <th style={{ padding: '12px 10px', textAlign: 'left', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>
+                      {lang === 'km' ? 'កាលបរិច្ឆេទ' : 'Date'}
                     </th>
-                    <th rowSpan={2} style={{ padding: '12px 8px', border: '1px solid #e5e7eb', textAlign: 'left', fontSize: '13px', fontWeight: 'bold' }}>
-                      {lang === 'km' ? 'កាលបរិច្ឆេទបញ្ចប់' : 'End Date (Completed)'}
-                    </th>
-                    <th rowSpan={2} style={{ padding: '12px 8px', border: '1px solid #e5e7eb', textAlign: 'left', fontSize: '13px', fontWeight: 'bold' }}>
+                    <th style={{ padding: '12px 10px', textAlign: 'left', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>
                       {lang === 'km' ? 'ទីតាំង' : 'Location'}
                     </th>
-                    <th rowSpan={2} style={{ padding: '12px 8px', border: '1px solid #e5e7eb', textAlign: 'right', fontSize: '13px', fontWeight: 'bold' }}>
+                    <th style={{ padding: '12px 10px', textAlign: 'right', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>
                       {lang === 'km' ? 'សេវាដឹក' : 'Delivery Fee'}
                     </th>
-                    <th rowSpan={2} style={{ padding: '12px 8px', border: '1px solid #e5e7eb', textAlign: 'right', fontSize: '13px', fontWeight: 'bold' }}>
-                      {lang === 'km' ? 'ទឹកប្រាក់ត្រូវទូទាត់' : 'Amount/COD'}
+                    <th style={{ padding: '12px 10px', textAlign: 'right', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>
+                      {lang === 'km' ? 'ប្រាក់ COD' : 'Amount/COD'}
                     </th>
-                    <th rowSpan={2} style={{ padding: '12px 8px', border: '1px solid #e5e7eb', textAlign: 'center', fontSize: '13px', fontWeight: 'bold', width: '80px' }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-                        <span>{lang === 'km' ? 'ជ្រើសរើស' : 'Select'}</span>
-                        <input
-                          type="checkbox"
-                          checked={currentPageItems.length > 0 && currentPageItems.every(item => selectedIds.includes(item.id))}
-                          onChange={handleSelectAll}
-                          style={{ width: '16px', height: '16px', cursor: 'pointer' }}
-                        />
-                      </div>
+                    <th style={{ padding: '12px 10px', textAlign: 'center', width: 60, background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>
+                      <input
+                        type="checkbox"
+                        checked={currentPageItems.length > 0 && currentPageItems.every(item => selectedIds.includes(item.id))}
+                        onChange={handleSelectAll}
+                        style={{ width: '16px', height: '16px', cursor: 'pointer', verticalAlign: 'middle', accentColor: '#2563eb' }}
+                        title={lang === 'km' ? 'ជ្រើសរើសទាំងអស់' : 'Select All'}
+                      />
                     </th>
-                    <th colSpan={2} style={{ padding: '8px', border: '1px solid #e5e7eb', textAlign: 'center', fontSize: '13px', fontWeight: 'bold' }}>
-                      {lang === 'km' ? 'សាច់ប្រាក់' : 'Cash'}
-                    </th>
-                    <th rowSpan={2} style={{ padding: '12px 8px', border: '1px solid #e5e7eb', textAlign: 'left', fontSize: '13px', fontWeight: 'bold', width: '160px' }}>
-                      {lang === 'km' ? 'ស្ថានភាព / វិធីសាស្ត្រទូទាត់' : 'Status / Payment Method'}
-                    </th>
-                  </tr>
-                  <tr style={{ backgroundColor: '#f3f4f6', borderBottom: '2px solid #e5e7eb' }}>
-                    <th style={{ padding: '8px', border: '1px solid #e5e7eb', textAlign: 'center', fontSize: '12px', fontWeight: 'normal' }}>
+                    <th style={{ padding: '12px 10px', textAlign: 'center', width: 110, background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>
                       {lang === 'km' ? 'សាច់ប្រាក់ KHR' : 'Cash KHR'}
                     </th>
-                    <th style={{ padding: '8px', border: '1px solid #e5e7eb', textAlign: 'center', fontSize: '12px', fontWeight: 'normal' }}>
+                    <th style={{ padding: '12px 10px', textAlign: 'center', width: 110, background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>
                       {lang === 'km' ? 'សាច់ប្រាក់ USD' : 'Cash USD'}
+                    </th>
+                    <th style={{ padding: '12px 10px', textAlign: 'left', width: 160, background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>
+                      {lang === 'km' ? 'វិធីសាស្ត្រទូទាត់' : 'Payment Method'}
                     </th>
                   </tr>
                 </thead>
                 <tbody>
                   {currentPageItems.length === 0 ? (
                     <tr>
-                      <td colSpan={13} style={{ textAlign: 'center', padding: '32px', color: '#6b7280', fontSize: '14px' }}>
-                        No data available in table
+                      <td colSpan={12} style={{ textAlign: 'center', padding: '36px', color: 'var(--text-muted)', fontSize: '13px' }}>
+                        {lang === 'km' ? 'គ្មានទិន្នន័យក្នុងតារាងទេ' : 'No data available in table'}
                       </td>
                     </tr>
                   ) : (
@@ -473,76 +466,96 @@ export default function CompletePackagePage() {
                         <tr
                           key={o.id}
                           style={{
-                            borderBottom: '1px solid #e5e7eb',
-                            backgroundColor: isSelected ? '#eff6ff' : 'transparent',
+                            borderBottom: '1px solid #f1f5f9',
+                            backgroundColor: isSelected ? 'rgba(37, 99, 235, 0.04)' : 'transparent',
                             transition: 'background-color 0.15s ease'
                           }}
                         >
-                          <td style={{ padding: '10px 8px', border: '1px solid #e5e7eb', textAlign: 'center', fontSize: '13px', color: '#6b7280' }}>
+                          <td style={{ padding: '10px', textAlign: 'center', fontSize: '13px', color: 'var(--text-muted)' }}>
                             {(currentPage - 1) * pageSize + idx + 1}
                           </td>
-                          <td style={{ padding: '10px 8px', border: '1px solid #e5e7eb', fontSize: '13px', fontWeight: '600' }}>
-                            <code>{o.trackingCode}</code>
+                          <td style={{ padding: '10px', fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                            {o.trackingCode}
                           </td>
-                          <td style={{ padding: '10px 8px', border: '1px solid #e5e7eb', fontSize: '13px' }}>
-                            {lang === 'km' && o.merchant?.nameKh ? o.merchant.nameKh : (o.merchant?.name || '—')}
+                          <td style={{ padding: '10px', fontSize: '13px', color: 'var(--text-primary)' }}>
+                            {lang === 'km' && o.merchant?.nameKh ? o.merchant.nameKh : ((o.merchant?.name && o.merchant.name !== '-' && o.merchant.name !== '—') ? o.merchant.name : '')}
                           </td>
-                          <td style={{ padding: '10px 8px', border: '1px solid #e5e7eb', fontSize: '13px', fontWeight: '600' }}>
-                            {o.receiverPhone}
+                          <td style={{ padding: '10px', fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)' }}>
+                            {(o.receiverPhone && o.receiverPhone !== '-' && o.receiverPhone !== '—') ? o.receiverPhone : ''}
                           </td>
-                          <td style={{ padding: '10px 8px', border: '1px solid #e5e7eb', fontSize: '13px', color: '#4b5563' }}>
+                          <td style={{ padding: '10px', fontSize: '13px', color: 'var(--text-secondary)' }}>
                             {formatDateToDDMMYYYY(o.createdAt)}
                           </td>
-                          <td style={{ padding: '6px 8px', border: '1px solid #e5e7eb' }}>
-                            <DateInput
-                              value={rowCompletedDate[o.id] || appliedFilters.date}
-                              onChange={val => handleCompletedDateChange(o.id, val)}
-                              inputStyle={{ width: '130px', minWidth: '130px', height: 32, padding: '2px 6px', borderRadius: '4px', border: '1px solid #d1d5db', backgroundColor: '#f3f4f6', fontSize: '12px' }}
-                            />
+                          <td style={{ padding: '10px', fontSize: '13px', color: 'var(--text-secondary)', maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {(o.receiverAddress && o.receiverAddress !== '-' && o.receiverAddress !== '—') ? o.receiverAddress : ''}
                           </td>
-                          <td style={{ padding: '10px 8px', border: '1px solid #e5e7eb', fontSize: '12px', color: '#4b5563', maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {o.receiverAddress}
-                          </td>
-                          <td style={{ padding: '10px 8px', border: '1px solid #e5e7eb', textAlign: 'right', fontSize: '13px', fontWeight: '600' }}>
+                          <td style={{ padding: '10px', textAlign: 'right', fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>
                             {formatFee(o.deliveryFee)}
                           </td>
-                          <td style={{ padding: '10px 8px', border: '1px solid #e5e7eb', textAlign: 'right', fontSize: '13px', fontWeight: 'bold' }}>
+                          <td style={{ padding: '10px', textAlign: 'right', fontSize: '13px', fontWeight: 700, color: '#16a34a' }}>
                             {formatCODDisplay(o.cod, o.codCurrency)}
                           </td>
-                          <td style={{ padding: '10px 8px', border: '1px solid #e5e7eb', textAlign: 'center' }}>
+                          <td style={{ padding: '10px', textAlign: 'center' }}>
                             <input
                               type="checkbox"
                               checked={isSelected}
                               onChange={() => toggleSelectRow(o.id)}
-                              style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                              style={{ width: '16px', height: '16px', cursor: 'pointer' }}
                             />
                           </td>
-                          <td style={{ padding: '6px 8px', border: '1px solid #e5e7eb' }}>
+                          <td style={{ padding: '6px 8px' }}>
                             <input
                               type="number"
-                              className="form-control"
                               value={rowCashKHR[o.id] ?? ''}
                               onChange={e => handleCashKHRChange(o.id, e.target.value)}
                               disabled={rowPaymentMethod[o.id] === 'failed' || rowPaymentMethod[o.id] === 'returned'}
-                              style={{ width: '100px', height: '32px', padding: '2px 6px', borderRadius: '4px', border: '1px solid #d1d5db', fontSize: '13px', textAlign: 'center' }}
+                              style={{
+                                width: '100%',
+                                height: '32px',
+                                padding: '2px 8px',
+                                borderRadius: '6px',
+                                border: '1px solid #d1d5db',
+                                fontSize: '13px',
+                                textAlign: 'center',
+                                outline: 'none',
+                                background: '#fff'
+                              }}
                             />
                           </td>
-                          <td style={{ padding: '6px 8px', border: '1px solid #e5e7eb' }}>
+                          <td style={{ padding: '6px 8px' }}>
                             <input
                               type="number"
-                              className="form-control"
                               value={rowCashUSD[o.id] ?? ''}
                               onChange={e => handleCashUSDChange(o.id, e.target.value)}
                               disabled={rowPaymentMethod[o.id] === 'failed' || rowPaymentMethod[o.id] === 'returned'}
-                              style={{ width: '100px', height: '32px', padding: '2px 6px', borderRadius: '4px', border: '1px solid #d1d5db', fontSize: '13px', textAlign: 'center' }}
+                              style={{
+                                width: '100%',
+                                height: '32px',
+                                padding: '2px 8px',
+                                borderRadius: '6px',
+                                border: '1px solid #d1d5db',
+                                fontSize: '13px',
+                                textAlign: 'center',
+                                outline: 'none',
+                                background: '#fff'
+                              }}
                             />
                           </td>
-                          <td style={{ padding: '6px 8px', border: '1px solid #e5e7eb' }}>
+                          <td style={{ padding: '6px 8px' }}>
                             <select
-                              className="form-control"
                               value={rowPaymentMethod[o.id] || 'cash'}
                               onChange={e => handlePaymentMethodChange(o.id, e.target.value)}
-                              style={{ width: '100%', height: '32px', padding: '2px 6px', borderRadius: '4px', border: '1px solid #d1d5db', backgroundColor: '#fff', fontSize: '12px', cursor: 'pointer' }}
+                              style={{
+                                width: '100%',
+                                height: '32px',
+                                padding: '2px 8px',
+                                borderRadius: '6px',
+                                border: '1px solid #d1d5db',
+                                backgroundColor: '#fff',
+                                fontSize: '12px',
+                                cursor: 'pointer',
+                                outline: 'none'
+                              }}
                             >
                               <option value="cash">{lang === 'km' ? 'ទទួលសាច់ប្រាក់' : 'Receive Cash'}</option>
                               <option value="bank">{lang === 'km' ? 'ទូទាត់តាមធនាគារ' : 'Bank Transfer'}</option>

@@ -10,12 +10,13 @@ import Badge from '@/components/ui/Badge';
 import api from '@/lib/api';
 import { MdAdd, MdEdit, MdDelete } from 'react-icons/md';
 import Pagination from '@/components/ui/Pagination';
-
+import { useLanguage } from '@/lib/LanguageContext';
 
 const TYPES = ['motorbike', 'car', 'van', 'truck', 'tuk-tuk'];
 
 export default function VehiclesPage() {
   const router = useRouter();
+  const { t, lang } = useLanguage();
   const [items, setItems] = useState<any[]>([]);
   const [totalItems, setTotalItems] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -67,7 +68,7 @@ export default function VehiclesPage() {
               <>
                 <div style={{ overflowX: 'auto' }}>
                   <table>
-                    <thead><tr><th>#</th><th>Type</th><th>Plate</th><th>Brand & Model</th><th>Year</th><th>Status</th><th>Actions</th></tr></thead>
+                    <thead><tr><th>{lang === 'km' ? 'ល.រ' : 'No.'}</th><th>Type</th><th>Plate</th><th>Brand & Model</th><th>Year</th><th>Status</th><th>Actions</th></tr></thead>
                     <tbody>
                       {items.map((v: any, i) => (
                         <tr key={v.id}>

@@ -76,7 +76,7 @@ export default function ExpenseListPage() {
                   <table>
                     <thead>
                       <tr>
-                        <th>#</th>
+                        <th>{t('colNo') || 'No.'}</th>
                         <th>{t('description') || 'Description'}</th>
                         <th>{t('expenseType') || 'Expense Type'}</th>
                         <th>{t('amountUSD') || 'Amount ($)'}</th>

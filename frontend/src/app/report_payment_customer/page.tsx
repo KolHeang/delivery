@@ -110,7 +110,15 @@ export default function ReportPaymentCustomerPage() {
   return (
     <div className="receipt-page-wrapper" style={{ background: '#94a3b8', minHeight: '100vh', padding: '40px 20px', display: 'flex', justifyContent: 'center', alignItems: 'flex-start', boxSizing: 'border-box' }}>
       <style dangerouslySetInnerHTML={{ __html: `
+        @page {
+          size: auto;
+          margin: 0mm;
+        }
         @media print {
+          @page {
+            size: auto;
+            margin: 0mm;
+          }
           body, .receipt-page-wrapper {
             background: #ffffff !important;
             padding: 0 !important;

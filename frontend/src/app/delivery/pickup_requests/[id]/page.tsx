@@ -176,8 +176,6 @@ export default function PickupRequestDetailPage() {
     setSubmitting(true);
     try {
       await api.post(`/orders/pickup-requests/${id}/parcels`, {
-        senderName:      request?.merchant?.name || '-',
-        senderPhone:     request?.merchant?.phone || '-',
         receiverName:    form.receiverName.trim() || '-',
         receiverPhone:   form.receiverPhone.trim(),
         receiverAddress: form.receiverAddress.trim(),
@@ -254,8 +252,6 @@ export default function PickupRequestDetailPage() {
       const zoneId = row.zoneId ? Number(row.zoneId) : defaultZoneId;
       try {
         await api.post(`/orders/pickup-requests/${id}/parcels`, {
-          senderName:      request?.merchant?.name || '-',
-          senderPhone:     request?.merchant?.phone || '-',
           receiverName:    '-',
           receiverPhone:   row.receiverPhone.trim(),
           receiverAddress: row.receiverAddress.trim(),
@@ -302,7 +298,7 @@ export default function PickupRequestDetailPage() {
       @media print {
         body > *:not(#print-root) { display: none !important; }
         #print-root { display: block !important; }
-        @page { size: A4 portrait; margin: 15mm; }
+        @page { size: auto; margin: 0mm; }
       }
     `;
     document.head.appendChild(style);
@@ -452,7 +448,7 @@ export default function PickupRequestDetailPage() {
                       <table>
                         <thead style={{ position: 'sticky', top: 0, zIndex: 5, background: 'var(--bg-primary)', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
                           <tr>
-                            <th style={{ paddingLeft: 20 }}>#</th>
+                            <th style={{ paddingLeft: 20 }}>{t('colNo')}</th>
                             <th>{t('trackingCode')}</th>
                             <th>{t('receiverName')}</th>
                             <th>{t('receiverPhone')}</th>

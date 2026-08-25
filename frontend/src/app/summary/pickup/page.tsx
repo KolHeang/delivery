@@ -200,7 +200,7 @@ export default function PickUpSummaryPage() {
               <table>
                 <thead>
                   <tr>
-                    <th style={{ width: 50, textAlign: 'center' }}>#</th>
+                    <th style={{ width: 50, textAlign: 'center' }}>{lang === 'km' ? 'ល.រ' : 'No.'}</th>
                     <th>{lang === 'km' ? 'អ្នកប្រមូលកញ្ចប់' : 'Pickup Driver'}</th>
                     <th style={{ textAlign: 'center' }}>{lang === 'km' ? 'ចំនួនហាង' : 'Shop Count'}</th>
                     <th style={{ textAlign: 'center' }}>{lang === 'km' ? 'ចំនួនកញ្ចប់' : 'Parcel Count'}</th>

@@ -206,7 +206,15 @@ export default function PrintInvoicePage() {
             }
           `}
         }
+        @page {
+          size: auto;
+          margin: 0mm;
+        }
         @media print {
+          @page {
+            size: auto;
+            margin: 0mm;
+          }
           .no-print {
             display: none !important;
           }
@@ -425,17 +433,17 @@ export default function PrintInvoicePage() {
           <div className="card table-container" style={{ padding: '0px', overflowX: 'auto', border: '1px solid #e2e8f0', borderRadius: 8, marginBottom: 30 }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 1000 }}>
               <thead>
-                <tr style={{ background: '#f8fafc', borderBottom: '2px solid #dee2e6' }}>
-                  <th style={{ padding: '12px 10px', textAlign: 'center', fontWeight: 'bold', borderRight: '1px solid #dee2e6', width: 50 }}>{lang === 'km' ? 'ល.រ' : 'No.'}</th>
-                  <th style={{ padding: '12px 10px', textAlign: 'center', fontWeight: 'bold', borderRight: '1px solid #dee2e6', width: 80 }}>{lang === 'km' ? 'ជ្រើសរើស' : 'Select'}</th>
-                  <th style={{ padding: '12px 10px', textAlign: 'left', fontWeight: 'bold', borderRight: '1px solid #dee2e6' }}>{lang === 'km' ? 'លេខបញ្ជូន' : 'Delivery Number'}</th>
-                  <th style={{ padding: '12px 10px', textAlign: 'left', fontWeight: 'bold', borderRight: '1px solid #dee2e6' }}>{lang === 'km' ? 'កាលបរិច្ឆេទ' : 'Date'}</th>
-                  <th style={{ padding: '12px 10px', textAlign: 'left', fontWeight: 'bold', borderRight: '1px solid #dee2e6' }}>{lang === 'km' ? 'ឈ្មោះហាង' : 'Shop Name'}</th>
-                  <th style={{ padding: '12px 10px', textAlign: 'left', fontWeight: 'bold', borderRight: '1px solid #dee2e6' }}>{lang === 'km' ? 'អាសយដ្ឋាន' : 'Address'}</th>
-                  <th style={{ padding: '12px 10px', textAlign: 'left', fontWeight: 'bold', borderRight: '1px solid #dee2e6' }}>{lang === 'km' ? 'លេខអ្នកទទួល' : 'Receiver Phone'}</th>
-                  <th style={{ padding: '12px 10px', textAlign: 'right', fontWeight: 'bold', borderRight: '1px solid #dee2e6' }}>{lang === 'km' ? 'ចំនួនប្រាក់' : 'Amount'}</th>
-                  <th style={{ padding: '12px 10px', textAlign: 'left', fontWeight: 'bold', borderRight: '1px solid #dee2e6' }}>{lang === 'km' ? 'ដឹកដោយ' : 'Driver'}</th>
-                  <th style={{ padding: '12px 10px', textAlign: 'center', fontWeight: 'bold' }}>{lang === 'km' ? 'ស្ថានភាព' : 'Status'}</th>
+                <tr style={{ background: '#2f55a5' }}>
+                  <th style={{ padding: '12px 10px', textAlign: 'center', fontWeight: 'bold', width: 50, background: '#2f55a5', color: '#ffffff', border: 'none' }}>{lang === 'km' ? 'ល.រ' : 'No.'}</th>
+                  <th style={{ padding: '12px 10px', textAlign: 'center', fontWeight: 'bold', width: 80, background: '#2f55a5', color: '#ffffff', border: 'none' }}>{lang === 'km' ? 'ជ្រើសរើស' : 'Select'}</th>
+                  <th style={{ padding: '12px 10px', textAlign: 'left', fontWeight: 'bold', background: '#2f55a5', color: '#ffffff', border: 'none' }}>{lang === 'km' ? 'លេខបញ្ជូន' : 'Delivery Number'}</th>
+                  <th style={{ padding: '12px 10px', textAlign: 'left', fontWeight: 'bold', background: '#2f55a5', color: '#ffffff', border: 'none' }}>{lang === 'km' ? 'កាលបរិច្ឆេទ' : 'Date'}</th>
+                  <th style={{ padding: '12px 10px', textAlign: 'left', fontWeight: 'bold', background: '#2f55a5', color: '#ffffff', border: 'none' }}>{lang === 'km' ? 'ឈ្មោះហាង' : 'Shop Name'}</th>
+                  <th style={{ padding: '12px 10px', textAlign: 'left', fontWeight: 'bold', background: '#2f55a5', color: '#ffffff', border: 'none' }}>{lang === 'km' ? 'អាសយដ្ឋាន' : 'Address'}</th>
+                  <th style={{ padding: '12px 10px', textAlign: 'left', fontWeight: 'bold', background: '#2f55a5', color: '#ffffff', border: 'none' }}>{lang === 'km' ? 'លេខអ្នកទទួល' : 'Receiver Phone'}</th>
+                  <th style={{ padding: '12px 10px', textAlign: 'right', fontWeight: 'bold', background: '#2f55a5', color: '#ffffff', border: 'none' }}>{lang === 'km' ? 'ចំនួនប្រាក់' : 'Amount'}</th>
+                  <th style={{ padding: '12px 10px', textAlign: 'left', fontWeight: 'bold', background: '#2f55a5', color: '#ffffff', border: 'none' }}>{lang === 'km' ? 'ដឹកដោយ' : 'Driver'}</th>
+                  <th style={{ padding: '12px 10px', textAlign: 'center', fontWeight: 'bold', background: '#2f55a5', color: '#ffffff', border: 'none' }}>{lang === 'km' ? 'ស្ថានភាព' : 'Status'}</th>
                 </tr>
               </thead>
               <tbody>
@@ -445,30 +453,30 @@ export default function PrintInvoicePage() {
                   </tr>
                 ) : (
                   filteredOrders.map((o, idx) => (
-                    <tr key={o.id} style={{ borderBottom: '1px solid #dee2e6', background: selectedIds.includes(o.id) ? '#f1f5f9' : '#fff' }}>
-                      <td style={{ padding: '12px 10px', textAlign: 'center', borderRight: '1px solid #dee2e6', color: '#64748b', fontWeight: 'bold' }}>{idx + 1}</td>
-                      <td style={{ padding: '12px 10px', textAlign: 'center', borderRight: '1px solid #dee2e6' }}>
+                    <tr key={o.id} style={{ borderBottom: '1px solid #f1f5f9', background: selectedIds.includes(o.id) ? '#f0f7ff' : '#ffffff', transition: 'background-color 0.15s' }}>
+                      <td style={{ padding: '12px 10px', textAlign: 'center', color: '#64748b', fontWeight: 'bold', border: 'none' }}>{idx + 1}</td>
+                      <td style={{ padding: '12px 10px', textAlign: 'center', border: 'none' }}>
                         <input
                           type="checkbox"
                           checked={selectedIds.includes(o.id)}
                           onChange={() => toggleSelect(o.id)}
-                          style={{ width: 16, height: 16, accentColor: 'var(--accent)', cursor: 'pointer' }}
+                          style={{ width: 16, height: 16, accentColor: '#2f55a5', cursor: 'pointer' }}
                         />
                       </td>
-                      <td style={{ padding: '12px 10px', borderRight: '1px solid #dee2e6', fontWeight: '500' }}>{o.trackingCode}</td>
-                      <td style={{ padding: '12px 10px', borderRight: '1px solid #dee2e6' }}>
-                        {o.createdAt ? formatDateToDDMMYYYY(o.createdAt) : '—'}
+                      <td style={{ padding: '12px 10px', fontWeight: '600', color: '#0f172a', border: 'none' }}>{o.trackingCode}</td>
+                      <td style={{ padding: '12px 10px', color: '#64748b', border: 'none' }}>
+                        {o.createdAt ? formatDateToDDMMYYYY(o.createdAt) : ''}
                       </td>
-                      <td style={{ padding: '12px 10px', borderRight: '1px solid #dee2e6', fontWeight: 600 }}>{o.merchant?.nameKh || o.merchant?.name || o.senderName}</td>
-                      <td style={{ padding: '12px 10px', borderRight: '1px solid #dee2e6' }}>{o.receiverAddress || '—'}</td>
-                      <td style={{ padding: '12px 10px', borderRight: '1px solid #dee2e6' }}>{o.receiverPhone}</td>
-                      <td style={{ padding: '12px 10px', textAlign: 'right', borderRight: '1px solid #dee2e6', fontWeight: 'bold', color: '#dc2626' }}>
-                        {parseFloat(o.cod).toFixed(2)} ({o.codCurrency || 'USD'})
+                      <td style={{ padding: '12px 10px', fontWeight: '600', color: '#0f172a', border: 'none' }}>{o.merchant?.nameKh || o.merchant?.name || ''}</td>
+                      <td style={{ padding: '12px 10px', color: '#475569', border: 'none' }}>{o.receiverAddress || ''}</td>
+                      <td style={{ padding: '12px 10px', color: '#475569', border: 'none' }}>{o.receiverPhone || ''}</td>
+                      <td style={{ padding: '12px 10px', textAlign: 'right', fontWeight: 'bold', color: '#dc2626', border: 'none' }}>
+                        {parseFloat(o.cod || 0).toFixed(2)} ({o.codCurrency || 'USD'})
                       </td>
-                      <td style={{ padding: '12px 10px', borderRight: '1px solid #dee2e6' }}>
+                      <td style={{ padding: '12px 10px', fontWeight: '600', color: '#0f172a', border: 'none' }}>
                         {getDriverLabel(o.driver, lang)}
                       </td>
-                      <td style={{ padding: '12px 10px', textAlign: 'center' }}>
+                      <td style={{ padding: '12px 10px', textAlign: 'center', border: 'none' }}>
                         {getStatusLabel(o.status, lang)}
                       </td>
                     </tr>
@@ -554,10 +562,10 @@ export default function PrintInvoicePage() {
                   fontSize: 13 
                 }}>
                   <div>
-                    {lang === 'km' ? 'ឈ្មោះហាង' : 'Shop Name'} : <span style={{ textTransform: 'uppercase', color: '#0f172a' }}>{o.merchant?.nameKh || o.merchant?.name || o.senderName || '—'}</span>
+                    {lang === 'km' ? 'ឈ្មោះហាង' : 'Shop Name'} : <span style={{ textTransform: 'uppercase', color: '#0f172a' }}>{o.merchant?.nameKh || o.merchant?.name || '—'}</span>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#0f172a' }}>
-                    <span style={{ color: '#e11d48' }}>📞</span> {o.senderPhone || o.merchant?.phone || '—'}
+                    <span style={{ color: '#e11d48' }}>📞</span> {o.merchant?.phone || '—'}
                   </div>
                 </div>
 

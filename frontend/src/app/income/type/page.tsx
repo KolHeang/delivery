@@ -112,7 +112,7 @@ export default function IncomeTypePage() {
                 <table>
                   <thead>
                     <tr>
-                      <th style={{ width: 50 }}>#</th>
+                      <th style={{ width: 50 }}>{t('colNo') || 'No.'}</th>
                       <th>{t('categoryName') || 'Category Name'}</th>
                       <th>{t('description') || 'Description'}</th>
                       <th style={{ width: 80, textAlign: 'center' }}>{t('reportAction') || 'Action'}</th>

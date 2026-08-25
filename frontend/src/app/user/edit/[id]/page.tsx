@@ -53,9 +53,9 @@ export default function EditStaffPage() {
           api.get(`/users/${params.id}`),
           api.get('/roles')
         ]);
-        setZones(z.data);
-        setVehicles(v.data);
-        setRoles(r.data);
+        setZones(Array.isArray(z.data) ? z.data : (z.data?.data || []));
+        setVehicles(Array.isArray(v.data) ? v.data : (v.data?.data || []));
+        setRoles(Array.isArray(r.data) ? r.data : (r.data?.data || []));
 
         const i = userRes.data;
         if (i) {
@@ -64,7 +64,7 @@ export default function EditStaffPage() {
             nameKh: i.nameKh || '',
             phone: i.phone || '',
             email: i.email || '',
-            role: i.role,
+            role: i.role || i.roleRelation?.name || 'staff',
             active: i.active ?? true,
             status: i.status || 'offline',
             zoneId: i.zoneId || '',

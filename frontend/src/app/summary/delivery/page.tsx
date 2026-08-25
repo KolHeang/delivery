@@ -189,28 +189,25 @@ export default function DeliverySummaryPage() {
             </div>
 
             <div style={{ overflowX: 'auto' }}>
-              <table>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
-                  <tr>
-                    <th rowSpan={2} style={{ textAlign: 'center', verticalAlign: 'middle', borderRight: '1px solid var(--border)' }}>#</th>
-                    <th rowSpan={2} style={{ verticalAlign: 'middle', borderRight: '1px solid var(--border)' }}>{lang === 'km' ? 'ឈ្មោះអ្នកដឹក' : 'Driver Name'}</th>
-                    <th rowSpan={2} style={{ textAlign: 'center', verticalAlign: 'middle', borderRight: '1px solid var(--border)' }}>{lang === 'km' ? 'ដឹកជញ្ជូនរួច' : 'Delivered'}</th>
-                    <th rowSpan={2} style={{ textAlign: 'center', verticalAlign: 'middle', borderRight: '1px solid var(--border)' }}>{lang === 'km' ? 'បរាជ័យ' : 'Failed'}</th>
-                    <th rowSpan={2} style={{ textAlign: 'center', verticalAlign: 'middle', borderRight: '1px solid var(--border)' }}>{lang === 'km' ? 'ប្រគល់' : 'Returned'}</th>
-                    <th colSpan={2} style={{ textAlign: 'center', borderRight: '1px solid var(--border)', borderBottom: '1px solid var(--border)' }}>COD</th>
-                    <th rowSpan={2} style={{ textAlign: 'center', verticalAlign: 'middle' }}>{lang === 'km' ? 'សេវាដឹក' : 'Delivery Fee'}</th>
-                  </tr>
-                  <tr>
-                    <th style={{ textAlign: 'center', borderRight: '1px solid var(--border)', borderTop: 'none' }}>USD</th>
-                    <th style={{ textAlign: 'center', borderRight: '1px solid var(--border)', borderTop: 'none' }}>KHR</th>
+                  <tr style={{ background: '#2f55a5' }}>
+                    <th style={{ padding: '12px 10px', textAlign: 'center', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'ល.រ' : 'No.'}</th>
+                    <th style={{ padding: '12px 10px', textAlign: 'left', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'ឈ្មោះអ្នកដឹក' : 'Driver Name'}</th>
+                    <th style={{ padding: '12px 10px', textAlign: 'center', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'ដឹកជញ្ជូនរួច' : 'Delivered'}</th>
+                    <th style={{ padding: '12px 10px', textAlign: 'center', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'បរាជ័យ' : 'Failed'}</th>
+                    <th style={{ padding: '12px 10px', textAlign: 'center', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'ប្រគល់' : 'Returned'}</th>
+                    <th style={{ padding: '12px 10px', textAlign: 'right', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'COD ($)' : 'COD ($)'}</th>
+                    <th style={{ padding: '12px 10px', textAlign: 'right', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'COD (៛)' : 'COD (៛)'}</th>
+                    <th style={{ padding: '12px 10px', textAlign: 'right', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'សេវាដឹក' : 'Delivery Fee'}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {loading ? (
-                    <tr><td colSpan={8} style={{ textAlign: 'center', padding: '40px 0' }}><div className="spinner" style={{ margin: '0 auto' }} /></td></tr>
+                    <tr><td colSpan={8} style={{ textAlign: 'center', padding: '40px 0', border: 'none' }}><div className="spinner" style={{ margin: '0 auto' }} /></td></tr>
                   ) : currentPageItems.length === 0 ? (
                     <tr>
-                      <td colSpan={8} style={{ padding: '60px 0', borderBottom: 'none' }}>
+                      <td colSpan={8} style={{ padding: '60px 0', border: 'none' }}>
                         <div className="empty-state" style={{ background: 'transparent', border: 'none', padding: 0 }}>
                           <div className="empty-state-icon" style={{ fontSize: 48, marginBottom: 16 }}>🚚</div>
                           <div className="empty-state-title">{lang === 'km' ? 'គ្មានទិន្នន័យទេ' : 'No data available'}</div>
@@ -221,31 +218,31 @@ export default function DeliverySummaryPage() {
                   ) : (
                     <>
                       {currentPageItems.map((row, index) => (
-                        <tr key={row.id}>
-                          <td style={{ color: 'var(--text-muted)', fontSize: 12, textAlign: 'center', borderRight: '1px solid var(--border-light)' }}>{(currentPage - 1) * pageSize + index + 1}</td>
-                          <td style={{ fontWeight: 600, borderRight: '1px solid var(--border-light)' }}>{row.name}</td>
-                           <td style={{ textAlign: 'center', borderRight: '1px solid var(--border-light)' }}>
+                        <tr key={row.id} style={{ borderBottom: '1px solid #f1f5f9', background: '#ffffff' }}>
+                          <td style={{ padding: '12px 10px', color: 'var(--text-muted)', fontSize: 12, textAlign: 'center', border: 'none' }}>{(currentPage - 1) * pageSize + index + 1}</td>
+                          <td style={{ padding: '12px 10px', fontWeight: 600, border: 'none' }}>{row.name}</td>
+                           <td style={{ padding: '12px 10px', textAlign: 'center', border: 'none' }}>
                             <span style={{ background: 'var(--success)', color: 'white', padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600 }}>{row.delivered} {lang === 'km' ? 'កញ្ចប់' : 'parcels'}</span>
                           </td>
-                          <td style={{ textAlign: 'center', borderRight: '1px solid var(--border-light)' }}>
+                          <td style={{ padding: '12px 10px', textAlign: 'center', border: 'none' }}>
                             <span style={{ background: 'var(--danger)', color: 'white', padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600 }}>{row.failed} {lang === 'km' ? 'កញ្ចប់' : 'parcels'}</span>
                           </td>
-                          <td style={{ textAlign: 'center', borderRight: '1px solid var(--border-light)' }}>
+                          <td style={{ padding: '12px 10px', textAlign: 'center', border: 'none' }}>
                             <span style={{ background: 'var(--warning)', color: 'white', padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600 }}>{row.returned} {lang === 'km' ? 'កញ្ចប់' : 'parcels'}</span>
                           </td>
-                          <td style={{ textAlign: 'center', borderRight: '1px solid var(--border-light)', fontWeight: 600 }}>${(row.codUSD || 0).toFixed(2)}</td>
-                          <td style={{ textAlign: 'center', borderRight: '1px solid var(--border-light)', fontWeight: 600 }}>៛{(row.codKHR || 0).toLocaleString()}</td>
-                          <td style={{ textAlign: 'center', fontWeight: 600, color: 'var(--success)' }}>${(row.fee || 0).toFixed(2)}</td>
+                          <td style={{ padding: '12px 10px', textAlign: 'right', fontWeight: 600, border: 'none' }}>${(row.codUSD || 0).toFixed(2)}</td>
+                          <td style={{ padding: '12px 10px', textAlign: 'right', fontWeight: 600, border: 'none' }}>៛{(row.codKHR || 0).toLocaleString()}</td>
+                          <td style={{ padding: '12px 10px', textAlign: 'right', fontWeight: 600, color: 'var(--success)', border: 'none' }}>${(row.fee || 0).toFixed(2)}</td>
                         </tr>
                       ))}
-                      <tr style={{ background: 'var(--bg-primary)', fontWeight: 700 }}>
-                        <td colSpan={2} style={{ textAlign: 'right', paddingRight: 20, borderRight: '1px solid var(--border)' }}>{lang === 'km' ? 'សរុប' : 'Total'}</td>
-                        <td style={{ textAlign: 'center', borderRight: '1px solid var(--border)' }}>{totalDelivered} {lang === 'km' ? 'កញ្ចប់' : 'parcels'}</td>
-                        <td style={{ textAlign: 'center', borderRight: '1px solid var(--border)' }}>{totalFailed} {lang === 'km' ? 'កញ្ចប់' : 'parcels'}</td>
-                        <td style={{ textAlign: 'center', borderRight: '1px solid var(--border)' }}>{totalReturned} {lang === 'km' ? 'កញ្ចប់' : 'parcels'}</td>
-                        <td style={{ textAlign: 'center', borderRight: '1px solid var(--border)' }}>${totalCodUSD.toFixed(2)}</td>
-                        <td style={{ textAlign: 'center', borderRight: '1px solid var(--border)' }}>៛{totalCodKHR.toLocaleString()}</td>
-                        <td style={{ textAlign: 'center', color: 'var(--success)' }}>${totalFee.toFixed(2)}</td>
+                      <tr style={{ background: '#f8fafc', fontWeight: 700, borderTop: '2px solid #e2e8f0' }}>
+                        <td colSpan={2} style={{ padding: '14px 10px', textAlign: 'right', paddingRight: 20, border: 'none' }}>{lang === 'km' ? 'សរុប' : 'Total'}</td>
+                        <td style={{ padding: '14px 10px', textAlign: 'center', border: 'none' }}>{totalDelivered} {lang === 'km' ? 'កញ្ចប់' : 'parcels'}</td>
+                        <td style={{ padding: '14px 10px', textAlign: 'center', border: 'none' }}>{totalFailed} {lang === 'km' ? 'កញ្ចប់' : 'parcels'}</td>
+                        <td style={{ padding: '14px 10px', textAlign: 'center', border: 'none' }}>{totalReturned} {lang === 'km' ? 'កញ្ចប់' : 'parcels'}</td>
+                        <td style={{ padding: '14px 10px', textAlign: 'right', border: 'none' }}>${totalCodUSD.toFixed(2)}</td>
+                        <td style={{ padding: '14px 10px', textAlign: 'right', border: 'none' }}>៛{totalCodKHR.toLocaleString()}</td>
+                        <td style={{ padding: '14px 10px', textAlign: 'right', color: 'var(--success)', border: 'none' }}>${totalFee.toFixed(2)}</td>
                       </tr>
                     </>
                   )}

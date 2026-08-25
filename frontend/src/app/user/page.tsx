@@ -16,7 +16,7 @@ import Pagination from '@/components/ui/Pagination';
 export default function StaffPage() {
   const router = useRouter();
   const currentUser = getUser();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
 
   const [items, setItems] = useState<any[]>([]);
   const [filtered, setFiltered] = useState<any[]>([]);
@@ -137,9 +137,10 @@ export default function StaffPage() {
                   <table>
                     <thead>
                       <tr>
-                        <th>#</th>
+                        <th>{t('colNo')}</th>
                         <th>{t('name')}</th>
                         <th>{t('phone')}</th>
+                        <th>{t('email')}</th>
                         <th>Role</th>
                         <th>{t('gender')}</th>
                         <th>{t('dob')}</th>
@@ -159,32 +160,25 @@ export default function StaffPage() {
                                 {d.photo ? (
                                   <img src={d.photo} alt={d.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                 ) : (
-                                  d.name ? d.name.charAt(0).toUpperCase() : 'S'
+                                  (lang === 'km' && d.nameKh ? d.nameKh : d.name ? d.name : 'U').charAt(0).toUpperCase()
                                 )}
                               </div>
                               <div>
                                 <div style={{ fontWeight: 700 }}>
-                                  {d.name}
+                                  {lang === 'km' ? (d.nameKh || d.name || '—') : (d.name || d.nameKh || '—')}
                                   {d.id === currentUser?.id && (
                                     <span style={{ fontSize: 10, color: 'var(--accent)', marginLeft: 6 }}>
-                                      (You)
+                                      {lang === 'km' ? '(អ្នក)' : '(You)'}
                                     </span>
                                   )}
-                                </div>
-                                {d.nameKh && (
-                                  <div style={{ fontSize: 12, color: 'var(--accent)', fontWeight: 600 }}>
-                                    {d.nameKh}
-                                  </div>
-                                )}
-                                <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-                                  {d.email || '—'}
                                 </div>
                               </div>
                             </div>
                           </td>
                           <td style={{ fontSize: 12 }}>{d.phone || '—'}</td>
+                          <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>{d.email || '—'}</td>
                           <td>
-                            <Badge status={d.role} />
+                            <Badge status={d.role || d.roleRelation?.name || 'staff'} />
                           </td>
                           <td style={{ fontSize: 12 }}>
                             {d.gender ? (d.gender === 'other' ? t('otherGender') : t(d.gender) || d.gender) : '—'}
@@ -193,7 +187,7 @@ export default function StaffPage() {
                             {d.dob || '—'}
                           </td>
                           <td>
-                            {d.role === 'driver' ? (
+                            {(d.role || d.roleRelation?.name) === 'driver' ? (
                               <Badge status={d.status} />
                             ) : (
                               <Badge status={d.active ? 'active' : 'inactive'} />

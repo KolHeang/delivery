@@ -21,7 +21,7 @@ export default function AssignPickupPage() {
   const router = useRouter();
   const [pendingOrders, setPendingOrders] = useState<any[]>([]);
   const [drivers, setDrivers] = useState<any[]>([]);
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const [selected, setSelected] = useState<number[]>([]);
   const [selectedDriver, setSelectedDriver] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
@@ -198,36 +198,44 @@ export default function AssignPickupPage() {
                 </div>
 
                 {/* Table */}
-                {loading ? (
-                  <div className="loading-wrapper"><div className="spinner" /></div>
-                ) : filtered.length === 0 ? (
-                  <div className="empty-state" style={{ margin: 'auto' }}>
-                    <div className="empty-state-icon">{search ? '🔍' : '✅'}</div>
-                    <div className="empty-state-title">{search ? 'No results found' : 'No pending parcels!'}</div>
-                    <div className="empty-state-text">{search ? `No orders match "${search}"` : 'All pending parcels have been assigned for pickup'}</div>
-                  </div>
-                ) : (
-                  <div style={{ overflowY: 'auto', flex: 1 }}>
-                    <table>
-                      <thead style={{ position: 'sticky', top: 0, zIndex: 10, background: 'var(--bg-primary)', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
+                <div style={{ overflowY: 'auto', flex: 1 }}>
+                  <table>
+                    <thead style={{ position: 'sticky', top: 0, zIndex: 10, background: 'var(--bg-primary)', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
+                      <tr>
+                        <th style={{ width: 40, paddingLeft: 24 }}>
+                          <input type="checkbox"
+                            style={{ width: 16, height: 16, cursor: 'pointer' }}
+                            checked={allPageSelected}
+                            onChange={e => togglePageAll(e.target.checked)}
+                          />
+                        </th>
+                        <th>{t('trackingCode')}</th>
+                        <th>{t('merchant')}</th>
+                        <th>{t('receiver')}</th>
+                        <th>{t('address')}</th>
+                        <th>{t('cod')}</th>
+                        <th>{t('deliveryFee')}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {loading ? (
                         <tr>
-                          <th style={{ width: 40, paddingLeft: 24 }}>
-                            <input type="checkbox"
-                              style={{ width: 16, height: 16, cursor: 'pointer' }}
-                              checked={allPageSelected}
-                              onChange={e => togglePageAll(e.target.checked)}
-                            />
-                          </th>
-                          <th>{t('trackingCode')}</th>
-                          <th>{t('merchant')}</th>
-                          <th>{t('receiver')}</th>
-                          <th>{t('address')}</th>
-                          <th>{t('cod')}</th>
-                          <th>{t('deliveryFee')}</th>
+                          <td colSpan={7} style={{ padding: '40px 0', textAlign: 'center' }}>
+                            <div className="loading-wrapper"><div className="spinner" /></div>
+                          </td>
                         </tr>
-                      </thead>
-                      <tbody>
-                        {paginated.map((o: any) => (
+                      ) : filtered.length === 0 ? (
+                        <tr>
+                          <td colSpan={7} style={{ padding: '60px 20px', textAlign: 'center' }}>
+                            <div className="empty-state" style={{ margin: 'auto' }}>
+                              <div className="empty-state-icon">{search ? '🔍' : '✅'}</div>
+                              <div className="empty-state-title">{search ? (lang === 'km' ? 'រកមិនឃើញទិន្នន័យ' : 'No results found') : (lang === 'km' ? 'គ្មានទំនិញរង់ចាំទទួលទេ' : 'No pending parcels!')}</div>
+                              <div className="empty-state-text">{search ? (lang === 'km' ? `គ្មានការបញ្ជាទិញត្រូវនឹង "${search}" ឡើយ` : `No orders match "${search}"`) : (lang === 'km' ? 'រាល់ទំនិញត្រូវបានចាត់តាំងរួចរាល់' : 'All pending parcels have been assigned for pickup')}</div>
+                            </div>
+                          </td>
+                        </tr>
+                      ) : (
+                        paginated.map((o: any) => (
                           <tr key={o.id} onClick={() => toggleOrder(o.id)}
                             style={{
                               cursor: 'pointer',
@@ -243,25 +251,22 @@ export default function AssignPickupPage() {
                                 onClick={e => e.stopPropagation()}
                               />
                             </td>
-                            <td><code style={{ fontSize: 12, background: 'rgba(0,0,0,0.05)', padding: '4px 8px', borderRadius: 6, fontWeight: 600 }}>{o.trackingCode}</code></td>
-                            <td>
-                              <div style={{ fontWeight: 600, fontSize: 13 }}>{o.merchant?.name || '—'}</div>
-                              {o.merchant?.nameKh && <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{o.merchant.nameKh}</div>}
+                            <td style={{ fontWeight: 600, fontSize: 13, color: 'var(--text-primary)' }}>{o.trackingCode}</td>
+                            <td style={{ fontSize: 13 }}>
+                              {lang === 'km' ? (o.merchant?.nameKh || ((o.merchant?.name && o.merchant.name !== '-' && o.merchant.name !== '—') ? o.merchant.name : '')) : ((o.merchant?.name && o.merchant.name !== '-' && o.merchant.name !== '—') ? o.merchant.name : '')}
                             </td>
-                            <td><div style={{ fontWeight: 600, fontSize: 13 }}>{o.receiverPhone}</div></td>
-                            <td>
-                              <div style={{ fontSize: 12, color: 'var(--text-primary)', maxWidth: 160, wordBreak: 'break-word', lineHeight: 1.4 }}>
-                                {o.receiverAddress || <span style={{ color: 'var(--text-muted)' }}>—</span>}
-                              </div>
+                            <td style={{ fontSize: 13, fontWeight: 600 }}>{(o.receiverPhone && o.receiverPhone !== '-' && o.receiverPhone !== '—') ? o.receiverPhone : ''}</td>
+                            <td style={{ fontSize: 12, color: 'var(--text-primary)', maxWidth: 180 }}>
+                              {(o.receiverAddress && o.receiverAddress !== '-' && o.receiverAddress !== '—') ? o.receiverAddress : ''}
                             </td>
                             <td style={{ fontWeight: 700 }}>{formatCOD(o.cod, o.codCurrency || 'USD')}</td>
                             <td style={{ color: 'var(--success)', fontWeight: 600 }}>${parseFloat(o.deliveryFee).toFixed(2)}</td>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
 
                 {/* Pagination */}
                 {!loading && filtered.length > 0 && (
@@ -338,46 +343,48 @@ export default function AssignPickupPage() {
                       <div className="empty-state-text">All drivers might be busy or offline.</div>
                     </div>
                   ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                      {filteredDrivers.map((d: any) => (
-                        <div key={d.id}
-                          onClick={() => setSelectedDriver(d.id)}
-                          style={{
-                            display: 'flex', alignItems: 'center', gap: 14,
-                            padding: '14px 16px', borderRadius: '12px',
-                            border: `2px solid ${selectedDriver === d.id ? '#d97706' : 'var(--border)'}`,
-                            background: selectedDriver === d.id ? '#fef3c7' : 'var(--bg-card)',
-                            boxShadow: selectedDriver === d.id ? '0 4px 12px rgba(217,119,6,0.15)' : 'none',
-                            cursor: 'pointer', transition: 'all 0.2s ease',
-                            transform: selectedDriver === d.id ? 'translateY(-2px)' : 'none'
-                          }}>
-                          <div style={{
-                            width: 44, height: 44, borderRadius: '50%',
-                            background: selectedDriver === d.id ? '#d97706' : 'var(--bg-primary)',
-                            color: selectedDriver === d.id ? '#fff' : 'var(--text-secondary)',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            fontWeight: 700, fontSize: 16, transition: 'all 0.2s'
-                          }}>
-                            {d.name.charAt(0)}
-                          </div>
-                          <div style={{ flex: 1 }}>
-                            <div style={{ fontWeight: 700, fontSize: 14, color: selectedDriver === d.id ? '#92400e' : 'var(--text-primary)' }}>
-                              {d.name} {d.nameKh && <span style={{ fontWeight: 500, fontSize: 13 }}>({d.nameKh})</span>}
-                            </div>
-                            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
-                              📍 {d.zone?.name || t('noZone')}
-                            </div>
-                          </div>
-                          <div style={{ textAlign: 'right' }}>
-                            <Badge status={d.status} />
-                            {selectedDriver === d.id && (
-                              <div style={{ marginTop: 6, color: '#d97706', fontSize: 18 }}>
-                                <MdWarehouse />
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      {filteredDrivers.map((d: any) => {
+                        const isSelected = selectedDriver === d.id;
+                        return (
+                          <div
+                            key={d.id}
+                            onClick={() => setSelectedDriver(d.id)}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 12,
+                              padding: '10px 14px',
+                              borderRadius: 8,
+                              border: `1.5px solid ${isSelected ? '#d97706' : 'var(--border)'}`,
+                              background: isSelected ? '#fef3c7' : 'var(--bg-card)',
+                              cursor: 'pointer',
+                              transition: 'all 0.15s ease',
+                            }}
+                          >
+                            <input
+                              type="radio"
+                              name="selectedPickupDriver"
+                              checked={isSelected}
+                              onChange={() => setSelectedDriver(d.id)}
+                              style={{ width: 16, height: 16, cursor: 'pointer', accentColor: '#d97706', flexShrink: 0 }}
+                            />
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ fontWeight: 600, fontSize: 13, color: isSelected ? '#92400e' : 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                {lang === 'km' ? (d.nameKh || d.name) : d.name}
+                                {d.nameKh && lang !== 'km' && <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 400, marginLeft: 4 }}>({d.nameKh})</span>}
                               </div>
-                            )}
+                              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2, display: 'flex', alignItems: 'center', gap: 6 }}>
+                                <span>{d.phone || '—'}</span>
+                                {d.zone?.name && <span>• 📍 {d.zone.name}</span>}
+                              </div>
+                            </div>
+                            <span className={`badge badge-${d.status === 'available' ? 'success' : 'warning'}`} style={{ fontSize: 10, padding: '2px 8px', flexShrink: 0 }}>
+                              {d.status || 'available'}
+                            </span>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </div>

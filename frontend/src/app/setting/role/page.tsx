@@ -127,7 +127,7 @@ export default function RolesListPage() {
                   <table>
                     <thead>
                       <tr>
-                        <th style={{ width: '50px' }}>#</th>
+                        <th style={{ width: '50px' }}>{t('colNo')}</th>
                         <th style={{ width: '150px' }}>{t('roleName')}</th>
                         <th>{t('roleDescription')}</th>
                         <th style={{ width: '180px' }}>{t('permissionsCount')}</th>

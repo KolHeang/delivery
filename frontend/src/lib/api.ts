@@ -21,9 +21,15 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401 && typeof window !== 'undefined') {
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('user');
-      window.location.href = '/';
+      const pathname = window.location.pathname;
+      const isAuthPage = pathname === '/auth' || pathname === '/driver/login' || pathname === '/merchant/login' || pathname === '/';
+      const isLoginRequest = error.config?.url?.includes('/auth/login') || error.config?.url?.includes('/mobile/auth/');
+
+      if (!isAuthPage && !isLoginRequest) {
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('user');
+        window.location.href = '/auth';
+      }
     }
     return Promise.reject(error);
   },

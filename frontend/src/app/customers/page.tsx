@@ -93,7 +93,7 @@ export default function CustomersPage() {
               <>
                 <div style={{ overflowX: 'auto' }}>
                   <table>
-                    <thead><tr><th>#</th><th>{t('name')}</th><th>{t('phone')}</th><th>{t('email')}</th><th>{t('address')}</th><th>{t('date')}</th><th>{t('actions')}</th></tr></thead>
+                    <thead><tr><th>{t('colNo')}</th><th>{t('name')}</th><th>{t('phone')}</th><th>{t('email')}</th><th>{t('address')}</th><th>{t('date')}</th><th>{t('actions')}</th></tr></thead>
                     <tbody>
                       {filtered.map((c: any, i) => (
                         <tr key={c.id}>

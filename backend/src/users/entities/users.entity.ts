@@ -7,6 +7,7 @@ import {
   ManyToOne,
   JoinColumn,
   OneToOne,
+  AfterLoad,
 } from 'typeorm';
 import { Zone } from '../../zones/entities/zone.entity';
 import { Vehicle } from '../../vehicles/entities/vehicle.entity';
@@ -34,12 +35,16 @@ export class User {
   @Column({ select: false })
   password: string;
 
-  @Column({ default: 'staff' })
-  role: string;
-
   @ManyToOne(() => Role, (role) => role.users, { nullable: true, eager: true })
   @JoinColumn({ name: 'role_id' })
   roleRelation: Role;
+
+  role: string;
+
+  @AfterLoad()
+  populateRole() {
+    this.role = this.roleRelation?.name || 'staff';
+  }
 
   @Column({ name: 'role_id', nullable: true })
   roleId: number;

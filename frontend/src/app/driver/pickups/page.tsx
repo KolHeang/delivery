@@ -40,7 +40,8 @@ export default function DriverPickupsPage() {
     setLoading(true);
     try {
       const res = await api.get('/mobile/driver/pickup-requests');
-      setRequests(res.data);
+      const list = Array.isArray(res.data) ? res.data : (res.data?.data || []);
+      setRequests(list);
     } catch { /* silent */ }
     setLoading(false);
   }, []);

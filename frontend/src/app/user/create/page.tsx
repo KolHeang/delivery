@@ -51,9 +51,9 @@ export default function CreateStaffPage() {
           api.get('/vehicles'),
           api.get('/roles')
         ]);
-        setZones(z.data);
-        setVehicles(v.data);
-        setRoles(r.data);
+        setZones(Array.isArray(z.data) ? z.data : (z.data?.data || []));
+        setVehicles(Array.isArray(v.data) ? v.data : (v.data?.data || []));
+        setRoles(Array.isArray(r.data) ? r.data : (r.data?.data || []));
       } catch (err) {
         console.error(err);
       }

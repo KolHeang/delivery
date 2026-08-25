@@ -589,7 +589,7 @@ export default function DeliveriesPage() {
                             />
                           </td>
                           <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                            {o.creator?.nameKh || o.creator?.name || o.merchant?.nameKh || o.merchant?.name || o.senderName || 'admin'}
+                            {o.creator?.nameKh || o.creator?.name || o.merchant?.nameKh || o.merchant?.name || 'admin'}
                           </td>
                           <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>
                             {o.updater?.nameKh || o.updater?.name || (['delivered', 'failed', 'returned'].includes(o.status) 
@@ -630,7 +630,7 @@ export default function DeliveriesPage() {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
             <div>
               <h4 style={{ fontWeight: 700, marginBottom: 12, color: 'var(--text-secondary)', fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Sender</h4>
-              <p style={{ fontWeight: 600 }}>{viewModal.merchant?.name || viewModal.senderName}</p>
+              <p style={{ fontWeight: 600 }}>{viewModal.merchant?.name || '—'}</p>
             </div>
             <div>
               <h4 style={{ fontWeight: 700, marginBottom: 12, color: 'var(--text-secondary)', fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Receiver</h4>

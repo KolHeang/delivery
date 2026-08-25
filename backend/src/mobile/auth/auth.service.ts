@@ -25,9 +25,10 @@ export class AuthService {
   async driverLogin(phoneOrEmail: string, password: string) {
     const user = await this.userRepo
       .createQueryBuilder('user')
+      .leftJoinAndSelect('user.roleRelation', 'roleRelation')
       .addSelect('user.password')
       .where('(user.email = :id OR user.phone = :id)', { id: phoneOrEmail })
-      .andWhere('user.role = :role', { role: 'driver' })
+      .andWhere('roleRelation.name = :role', { role: 'driver' })
       .getOne();
 
     if (!user) throw new UnauthorizedException('Invalid driver credentials');

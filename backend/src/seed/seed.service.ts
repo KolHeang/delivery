@@ -8,6 +8,10 @@ import { IncomeType } from '../incomes/entities/income-type.entity';
 import { Role } from '../roles/entities/role.entity';
 import { Permission } from '../roles/entities/permission.entity';
 
+import { Order } from '../orders/entities/order.entity';
+import { Merchant } from '../merchants/entities/merchant.entity';
+import { Zone } from '../zones/entities/zone.entity';
+
 @Injectable()
 export class SeedService implements OnApplicationBootstrap {
   private readonly logger = new Logger(SeedService.name);
@@ -165,34 +169,61 @@ export class SeedService implements OnApplicationBootstrap {
   }
 
   private async seedUsers() {
-    const count = await this.userRepo.count({
-      where: { role: In(['admin', 'staff']) },
-    });
-    if (count > 0) return;
-
     const adminRole = await this.roleRepo.findOne({ where: { name: 'admin' } });
     const staffRole = await this.roleRepo.findOne({ where: { name: 'staff' } });
+    const driverRole = await this.roleRepo.findOne({ where: { name: 'driver' } });
 
-    const users = [
+    const usersToSeed = [
       {
         name: 'Admin User',
         email: 'admin@gmail.com',
         password: await bcrypt.hash('123456', 10),
-        role: 'admin' as const,
         roleId: adminRole?.id,
         phone: '012-000-001',
+        active: true,
       },
       {
         name: 'UserMember',
         email: 'staff@gmail.com',
         password: await bcrypt.hash('123456', 10),
-        role: 'staff' as const,
         roleId: staffRole?.id,
         phone: '012-000-002',
+        active: true,
+      },
+      {
+        name: 'Sok Dara',
+        nameKh: 'សុខ តារា',
+        email: 'sokdara@gmail.com',
+        password: await bcrypt.hash('123456', 10),
+        roleId: driverRole?.id,
+        phone: '012-345-678',
+        active: true,
+        status: 'available' as const,
+      },
+      {
+        name: 'Driver Test',
+        nameKh: 'អ្នកបើកបរ សាកល្បង',
+        email: 'driver@gmail.com',
+        password: await bcrypt.hash('123456', 10),
+        roleId: driverRole?.id,
+        phone: '012-000-003',
+        active: true,
+        status: 'available' as const,
       },
     ];
-    await this.userRepo.save(this.userRepo.create(users));
-    this.logger.log('✅ Users seeded');
+
+    for (const u of usersToSeed) {
+      const existing = await this.userRepo.findOne({ where: { email: u.email } });
+      if (!existing) {
+        await this.userRepo.save(this.userRepo.create(u as any));
+        this.logger.log(`✅ Seeded user: ${u.email}`);
+      } else if (existing.roleId !== u.roleId || !existing.active) {
+        if (u.roleId !== undefined) existing.roleId = u.roleId;
+        existing.active = true;
+        existing.password = u.password;
+        await this.userRepo.save(existing);
+      }
+    }
   }
 
 

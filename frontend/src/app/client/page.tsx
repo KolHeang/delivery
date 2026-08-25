@@ -102,7 +102,7 @@ export default function ShopsPage() {
                   <table>
                     <thead>
                       <tr>
-                        <th>#</th>
+                        <th>{t('colNo')}</th>
                         <th>{t('code')}</th>
                         <th>{t('name')}</th>
                         <th>{t('phone')}</th>

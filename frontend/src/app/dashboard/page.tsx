@@ -24,7 +24,7 @@ const STATUS_COLORS: Record<string, string> = {
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const [stats, setStats] = useState<any>(null);
   const [chartData, setChartData] = useState<any>(null);
   const [recentOrders, setRecentOrders] = useState<any[]>([]);
@@ -121,9 +121,40 @@ export default function DashboardPage() {
     </div>
   );
 
-  const pieData = chartData?.statusBreakdown?.map((s: any) => ({
-    name: s.status, value: parseInt(s.count),
-  })) || [];
+  const STATUS_LABELS: Record<string, { km: string; en: string }> = {
+    pending: { km: 'រង់ចាំ', en: 'Pending' },
+    'in-warehouse': { km: 'ក្នុងឃ្លាំង', en: 'In Warehouse' },
+    assigned: { km: 'បានចាត់តាំង', en: 'Assigned' },
+    'picked-up': { km: 'ទទួលអីវ៉ាន់', en: 'Picked Up' },
+    'in-transit': { km: 'កំពុងដឹក', en: 'In Transit' },
+    delivered: { km: 'ដឹកជោគជ័យ', en: 'Delivered' },
+    failed: { km: 'បរាជ័យ', en: 'Failed' },
+    returned: { km: 'ត្រឡប់មកវិញ', en: 'Returned' },
+  };
+
+  const formatDateTick = (dateStr: string) => {
+    if (!dateStr) return '';
+    const parts = dateStr.split('-');
+    if (parts.length === 3) {
+      return `${parts[2]}/${parts[1]}`;
+    }
+    return dateStr;
+  };
+
+  const pieData = (chartData?.statusBreakdown || [])
+    .filter((s: any) => parseInt(s.count) > 0)
+    .map((s: any) => {
+      const statusKey = s.status;
+      const labelObj = STATUS_LABELS[statusKey];
+      const label = lang === 'km' ? (labelObj?.km || statusKey) : (labelObj?.en || statusKey);
+      return {
+        rawStatus: statusKey,
+        name: label,
+        value: parseInt(s.count),
+      };
+    });
+
+  const totalStatusCount = pieData.reduce((sum: number, item: any) => sum + item.value, 0);
 
   return (
     <div className="app-layout">
@@ -176,8 +207,10 @@ export default function DashboardPage() {
           {/* Stats Grid */}
           <div className="stats-grid">
             <StatsCard icon="/3d/3d_box.png" label={t('totalParcelDashboard')} value={stats?.totalOrders ?? 0} color="#2f55a5" bg="#eef2fa" />
-            <StatsCard icon="/3d/3d_check.png" label={t('totalCompleteParcel')} value={stats?.delivered ?? 0} color="#10b981" bg="#ecfdf5" />
+            <StatsCard icon="/3d/3d_box.png" label={lang === 'km' ? 'ចំនួនកញ្ចប់រង់ចាំ' : 'Pending Parcels'} value={stats?.pending ?? 0} color="#d97706" bg="#fef3c7" />
+            <StatsCard icon="/3d/3d_truck.png" label={lang === 'km' ? 'ចំនួនកញ្ចប់បានចាត់តាំង' : 'Assigned Parcels'} value={stats?.assigned ?? 0} color="#4338ca" bg="#e0e7ff" />
             <StatsCard icon="/3d/3d_truck.png" label={t('totalProcessParcel')} value={stats?.inTransit ?? 0} color="#8b5cf6" bg="#f5f3ff" />
+            <StatsCard icon="/3d/3d_check.png" label={t('totalCompleteParcel')} value={stats?.delivered ?? 0} color="#10b981" bg="#ecfdf5" />
             <StatsCard icon="/3d/3d_cross.png" label={t('totalCanceledParcel')} value={stats?.failed ?? 0} color="#ef4444" bg="#fef2f2" />
             <StatsCard icon="/3d/3d_refresh.png" label={t('totalReturnParcel')} value={stats?.returned ?? 0} color="#6b7280" bg="#f3f4f6" />
             <StatsCard icon="/3d/3d_cash.png" label={t('totalDeliveryFeeDashboard')} value={`$${(stats?.totalDeliveryFee ?? 0).toFixed(2)}`} color="#10b981" bg="#ecfdf5" />
@@ -287,25 +320,100 @@ export default function DashboardPage() {
 
           {/* Charts */}
           <div className="charts-grid">
-            {/* Area Chart */}
+            {/* Area Chart: Daily Deliveries */}
             <div className="card">
-              <div className="card-header"><span className="card-title">📊 {t('dailyDeliveries')}</span></div>
-              <div className="card-body" style={{ height: 240 }}>
+              <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span className="card-title">📊 {t('dailyDeliveries')}</span>
+                <span style={{ fontSize: '12px', fontWeight: '700', color: '#64748b' }}>
+                  {lang === 'km' ? 'និន្នាការតាមថ្ងៃ' : 'Daily Trends'}
+                </span>
+              </div>
+              <div className="card-body" style={{ height: 260 }}>
                 {chartData?.dailyData?.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-                    <AreaChart data={chartData.dailyData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+                    <AreaChart data={chartData.dailyData} margin={{ top: 10, right: 15, left: -20, bottom: 0 }}>
                       <defs>
+                        <linearGradient id="colorTotalOrders" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#2563eb" stopOpacity={0.25} />
+                          <stop offset="95%" stopColor="#2563eb" stopOpacity={0} />
+                        </linearGradient>
                         <linearGradient id="colorDelivered" x1="0" y1="0" x2="0" y2="1">
                           <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
                           <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
                         </linearGradient>
+                        <linearGradient id="colorFailed" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#ef4444" stopOpacity={0.2} />
+                          <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
+                        </linearGradient>
                       </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                      <XAxis dataKey="day" tick={{ fontSize: 11 }} />
-                      <YAxis tick={{ fontSize: 11 }} />
-                      <Tooltip />
-                      <Area type="monotone" dataKey="delivered" stroke="#10b981" fill="url(#colorDelivered)" name="Delivered" />
-                      <Area type="monotone" dataKey="failed" stroke="#ef4444" fill="rgba(239,68,68,0.1)" name="Failed" />
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                      <XAxis
+                        dataKey="day"
+                        tickFormatter={formatDateTick}
+                        tick={{ fontSize: 11, fill: '#64748b', fontWeight: '600' }}
+                        axisLine={{ stroke: '#e2e8f0' }}
+                        tickLine={false}
+                      />
+                      <YAxis
+                        tick={{ fontSize: 11, fill: '#64748b', fontWeight: '600' }}
+                        axisLine={{ stroke: '#e2e8f0' }}
+                        tickLine={false}
+                        allowDecimals={false}
+                      />
+                      <Tooltip content={({ active, payload, label }) => {
+                        if (active && payload && payload.length) {
+                          return (
+                            <div style={{
+                              backgroundColor: '#ffffff',
+                              border: '1.5px solid #e2e8f0',
+                              borderRadius: '12px',
+                              padding: '10px 14px',
+                              boxShadow: '0 8px 24px rgba(15, 23, 42, 0.08)'
+                            }}>
+                              <div style={{ fontSize: '12px', fontWeight: '800', color: '#0f172a', marginBottom: '6px' }}>
+                                📅 {label}
+                              </div>
+                              {payload.map((entry: any, index: number) => (
+                                <div key={index} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11.5px', color: '#475569', marginTop: '2px' }}>
+                                  <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: entry.color }} />
+                                  <span>{entry.name}:</span>
+                                  <strong style={{ color: '#0f172a', marginLeft: 'auto' }}>{entry.value}</strong>
+                                </div>
+                              ))}
+                            </div>
+                          );
+                        }
+                        return null;
+                      }} />
+                      <Area
+                        type="monotone"
+                        dataKey="total"
+                        stroke="#2563eb"
+                        strokeWidth={2.5}
+                        fill="url(#colorTotalOrders)"
+                        name={lang === 'km' ? 'កញ្ចប់សរុប' : 'Total Parcels'}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="delivered"
+                        stroke="#10b981"
+                        strokeWidth={2.5}
+                        fill="url(#colorDelivered)"
+                        name={lang === 'km' ? 'ដឹកជោគជ័យ' : 'Delivered'}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="failed"
+                        stroke="#ef4444"
+                        strokeWidth={2}
+                        fill="url(#colorFailed)"
+                        name={lang === 'km' ? 'បរាជ័យ' : 'Failed'}
+                      />
+                      <Legend
+                        wrapperStyle={{ fontSize: '11.5px', fontWeight: '700', paddingTop: '10px' }}
+                        iconType="circle"
+                        iconSize={8}
+                      />
                     </AreaChart>
                   </ResponsiveContainer>
                 ) : (
@@ -318,26 +426,82 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {/* Pie Chart */}
+            {/* Pie / Doughnut Chart: Order Status Breakdown */}
             <div className="card">
-              <div className="card-header"><span className="card-title">🥧 {t('orderStatusBreakdown')}</span></div>
-              <div className="card-body" style={{ height: 240 }}>
+              <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span className="card-title">🎨 {t('orderStatusBreakdown')}</span>
+                <span style={{ fontSize: '12px', fontWeight: '800', color: '#2563eb', backgroundColor: '#eff6ff', padding: '3px 8px', borderRadius: '8px' }}>
+                  {totalStatusCount} {lang === 'km' ? 'កញ្ចប់' : 'parcels'}
+                </span>
+              </div>
+              <div className="card-body" style={{ height: 260, position: 'relative' }}>
                 {pieData.length > 0 ? (
-                  <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-                    <PieChart>
-                      <Pie data={pieData} cx="50%" cy="50%" innerRadius={60} outerRadius={90}
-                        paddingAngle={3} dataKey="value">
-                        {pieData.map((entry: any, i: number) => (
-                          <Cell key={i} fill={STATUS_COLORS[entry.name] || '#6b7280'} />
-                        ))}
-                      </Pie>
-                      <Tooltip formatter={(v: any, n: any) => [v, n]} />
-                      <Legend iconSize={10} />
-                    </PieChart>
-                  </ResponsiveContainer>
+                  <>
+                    <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+                      <PieChart>
+                        <Pie
+                          data={pieData}
+                          cx="50%"
+                          cy="48%"
+                          innerRadius={62}
+                          outerRadius={92}
+                          paddingAngle={4}
+                          dataKey="value"
+                          stroke="#ffffff"
+                          strokeWidth={2}
+                        >
+                          {pieData.map((entry: any, i: number) => (
+                            <Cell key={i} fill={STATUS_COLORS[entry.rawStatus] || '#64748b'} />
+                          ))}
+                        </Pie>
+                        <Tooltip content={({ active, payload }) => {
+                          if (active && payload && payload.length) {
+                            const p = payload[0];
+                            const percent = totalStatusCount > 0 ? ((p.value as number / totalStatusCount) * 100).toFixed(1) : '0';
+                            return (
+                              <div style={{
+                                backgroundColor: '#ffffff',
+                                border: '1.5px solid #e2e8f0',
+                                borderRadius: '12px',
+                                padding: '8px 12px',
+                                boxShadow: '0 8px 24px rgba(15, 23, 42, 0.08)',
+                                fontSize: '12px'
+                              }}>
+                                <div style={{ fontWeight: '800', color: '#0f172a' }}>{p.name}</div>
+                                <div style={{ color: '#64748b', marginTop: '2px' }}>
+                                  <strong style={{ color: '#2563eb' }}>{p.value}</strong> {lang === 'km' ? 'កញ្ចប់' : 'parcels'} ({percent}%)
+                                </div>
+                              </div>
+                            );
+                          }
+                          return null;
+                        }} />
+                        <Legend
+                          wrapperStyle={{ fontSize: '11px', fontWeight: '700', bottom: 0 }}
+                          iconType="circle"
+                          iconSize={8}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <div style={{
+                      position: 'absolute',
+                      top: '46%',
+                      left: '50%',
+                      transform: 'translate(-50%, -50%)',
+                      textAlign: 'center',
+                      pointerEvents: 'none'
+                    }}>
+                      <div style={{ fontSize: '24px', fontWeight: '900', color: '#0f172a', lineHeight: 1 }}>
+                        {totalStatusCount}
+                      </div>
+                      <div style={{ fontSize: '10px', fontWeight: '800', color: '#64748b', marginTop: '4px', textTransform: 'uppercase' }}>
+                        {lang === 'km' ? 'សរុប' : 'Total'}
+                      </div>
+                    </div>
+                  </>
                 ) : (
                   <div className="empty-state">
-                    <div className="empty-state-icon">🥧</div>
+                    <div className="empty-state-icon">🎨</div>
                     <div className="empty-state-title">No status data yet</div>
                   </div>
                 )}
@@ -406,7 +570,9 @@ export default function DashboardPage() {
                     </div>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontWeight: 600, fontSize: 13 }}>{d.name}</div>
-                      <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{d.zone?.name || t('noZone')}</div>
+                      {d.zone?.name && (
+                        <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{d.zone.name}</div>
+                      )}
                     </div>
                     <div style={{ textAlign: 'right' }}>
                       <div style={{ fontWeight: 700, fontSize: 14 }}>{d.totalDeliveries}</div>

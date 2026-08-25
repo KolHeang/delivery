@@ -75,7 +75,7 @@ export default function IncomeListPage() {
                   <table>
                     <thead>
                       <tr>
-                        <th>#</th>
+                        <th>{t('colNo') || 'No.'}</th>
                         <th>{t('description') || 'Description'}</th>
                         <th>{t('incomeType') || 'Income Type'}</th>
                         <th>{t('amountUSD') || 'Amount ($)'}</th>

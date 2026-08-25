@@ -46,7 +46,7 @@ function formatDate(d: string | null | undefined) {
 
 export default function PickupRequestsPage() {
   const router = useRouter();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
 
   const [requests, setRequests] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -181,19 +181,19 @@ export default function PickupRequestsPage() {
               </div>
             ) : (
               <div style={{ overflowX: 'auto', flex: 1 }}>
-                <table>
-                  <thead style={{ position: 'sticky', top: 0, zIndex: 10, background: 'var(--bg-primary)', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
-                    <tr>
-                      <th style={{ paddingLeft: 24 }}>{t('requestNo')}</th>
-                      <th>{t('merchant')}</th>
-                      <th>{t('location')}</th>
-                      <th>{t('pickupDriver')}</th>
-                      <th>{t('declaredQty')}</th>
-                      <th>{t('actualQty')}</th>
-                      <th>{t('completedQty')}</th>
-                      <th>{t('scheduledAt')}</th>
-                      <th>{t('status')}</th>
-                      <th>{t('actions')}</th>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                  <thead style={{ position: 'sticky', top: 0, zIndex: 10, background: '#2f55a5' }}>
+                    <tr style={{ background: '#2f55a5' }}>
+                      <th style={{ padding: '12px 10px', paddingLeft: 24, background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'ល.រ' : 'No.'}</th>
+                      <th style={{ padding: '12px 10px', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('merchant')}</th>
+                      <th style={{ padding: '12px 10px', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('location')}</th>
+                      <th style={{ padding: '12px 10px', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('pickupDriver')}</th>
+                      <th style={{ padding: '12px 10px', textAlign: 'center', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('declaredQty')}</th>
+                      <th style={{ padding: '12px 10px', textAlign: 'center', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('actualQty')}</th>
+                      <th style={{ padding: '12px 10px', textAlign: 'center', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('completedQty')}</th>
+                      <th style={{ padding: '12px 10px', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('scheduledAt')}</th>
+                      <th style={{ padding: '12px 10px', textAlign: 'center', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('status')}</th>
+                      <th style={{ padding: '12px 10px', textAlign: 'center', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('actions')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -201,54 +201,52 @@ export default function PickupRequestsPage() {
                       const completedCount = r.orders?.length ?? 0;
                       const progress = r.declaredQuantity > 0 ? Math.round((completedCount / r.declaredQuantity) * 100) : 0;
                       return (
-                        <tr key={r.id}>
-                          <td style={{ paddingLeft: 24 }}>
-                            <code style={{ fontSize: 12, background: 'rgba(0,0,0,0.05)', padding: '3px 8px', borderRadius: 6, fontWeight: 700 }}>
+                        <tr key={r.id} style={{ borderBottom: '1px solid #f1f5f9', transition: 'background-color 0.15s' }}>
+                          <td style={{ padding: '12px 10px', paddingLeft: 24, border: 'none' }}>
+                            <code style={{ fontSize: 12, background: 'rgba(47,85,165,0.08)', color: '#2f55a5', padding: '3px 8px', borderRadius: 6, fontWeight: 700 }}>
                               #{r.id}
                             </code>
                           </td>
-                          <td>
-                            <div style={{ fontWeight: 600, fontSize: 13 }}>{r.merchant?.name || '—'}</div>
-                            {r.merchant?.nameKh && <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{r.merchant.nameKh}</div>}
+                          <td style={{ padding: '12px 10px', border: 'none' }}>
+                            <div style={{ fontWeight: 600, fontSize: 13, color: '#0f172a' }}>{r.merchant?.nameKh || r.merchant?.name || ''}</div>
                             {r.merchant?.phone && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>📞 {r.merchant.phone}</div>}
                           </td>
-                          <td>
-                            <div style={{ fontSize: 12, maxWidth: 150, wordBreak: 'break-word', lineHeight: 1.4 }}>
-                              {r.pickupAddress || <span style={{ color: 'var(--text-muted)' }}>—</span>}
+                          <td style={{ padding: '12px 10px', border: 'none' }}>
+                            <div style={{ fontSize: 12, maxWidth: 180, wordBreak: 'break-word', lineHeight: 1.4, color: '#475569' }}>
+                              {r.pickupAddress || ''}
                             </div>
                           </td>
-                          <td>
+                          <td style={{ padding: '12px 10px', border: 'none' }}>
                             {r.pickupDriver ? (
                               <div>
-                                <div style={{ fontWeight: 600, fontSize: 13 }}>{r.pickupDriver.name}</div>
-                                {r.pickupDriver.nameKh && <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{r.pickupDriver.nameKh}</div>}
+                                <div style={{ fontWeight: 600, fontSize: 13, color: '#0f172a' }}>{r.pickupDriver.nameKh || r.pickupDriver.name}</div>
                               </div>
                             ) : (
-                              <span style={{ fontSize: 12, color: 'var(--text-muted)', fontStyle: 'italic' }}>Unassigned</span>
+                              <span style={{ fontSize: 12, color: 'var(--text-muted)' }}></span>
                             )}
                           </td>
-                          <td style={{ textAlign: 'center', fontWeight: 700 }}>{r.declaredQuantity ?? '—'}</td>
-                          <td style={{ textAlign: 'center', fontWeight: 700 }}>{r.actualQuantity ?? '—'}</td>
-                          <td style={{ textAlign: 'center' }}>
+                          <td style={{ padding: '12px 10px', textAlign: 'center', fontWeight: 700, border: 'none' }}>{r.declaredQuantity ?? ''}</td>
+                          <td style={{ padding: '12px 10px', textAlign: 'center', fontWeight: 700, border: 'none' }}>{r.actualQuantity ?? ''}</td>
+                          <td style={{ padding: '12px 10px', textAlign: 'center', border: 'none' }}>
                             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
                               <span style={{ fontWeight: 700, color: completedCount >= (r.declaredQuantity ?? 0) && r.declaredQuantity > 0 ? '#16a34a' : 'var(--text-primary)' }}>
                                 {completedCount}{r.declaredQuantity ? ` / ${r.declaredQuantity}` : ''}
                               </span>
                               {r.declaredQuantity > 0 && (
                                 <div style={{ width: 60, height: 5, borderRadius: 9999, background: 'var(--border)', overflow: 'hidden' }}>
-                                  <div style={{ width: `${progress}%`, height: '100%', borderRadius: 9999, background: progress >= 100 ? '#16a34a' : '#d97706', transition: 'width 0.4s' }} />
+                                  <div style={{ width: `${progress}%`, height: '100%', borderRadius: 9999, background: progress >= 100 ? '#16a34a' : '#2f55a5', transition: 'width 0.4s' }} />
                                 </div>
                               )}
                             </div>
                           </td>
-                          <td style={{ fontSize: 12 }}>{formatDate(r.pickupTime)}</td>
-                          <td><StatusBadge status={r.status} /></td>
-                          <td>
+                          <td style={{ padding: '12px 10px', fontSize: 12, color: '#64748b', border: 'none' }}>{formatDate(r.pickupTime)}</td>
+                          <td style={{ padding: '12px 10px', textAlign: 'center', border: 'none' }}><StatusBadge status={r.status} /></td>
+                          <td style={{ padding: '12px 10px', textAlign: 'center', border: 'none' }}>
                             <button
                               onClick={() => router.push(`/delivery/pickup_requests/${r.id}`)}
-                              style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 12px', borderRadius: 8, border: '1.5px solid #d97706', background: '#fef3c7', color: '#d97706', fontSize: 12, fontWeight: 700, cursor: 'pointer', transition: 'all 0.15s', whiteSpace: 'nowrap' }}
-                              onMouseEnter={e => { (e.currentTarget as any).style.background = '#d97706'; (e.currentTarget as any).style.color = '#fff'; }}
-                              onMouseLeave={e => { (e.currentTarget as any).style.background = '#fef3c7'; (e.currentTarget as any).style.color = '#d97706'; }}
+                              style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 14px', borderRadius: 8, border: '1.5px solid #2f55a5', background: '#eff6ff', color: '#2f55a5', fontSize: 12, fontWeight: 700, cursor: 'pointer', transition: 'all 0.15s', whiteSpace: 'nowrap' }}
+                              onMouseEnter={e => { (e.currentTarget as any).style.background = '#2f55a5'; (e.currentTarget as any).style.color = '#fff'; }}
+                              onMouseLeave={e => { (e.currentTarget as any).style.background = '#eff6ff'; (e.currentTarget as any).style.color = '#2f55a5'; }}
                             >
                               <MdVisibility size={14} /> {t('viewInbound')}
                             </button>

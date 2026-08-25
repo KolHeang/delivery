@@ -565,7 +565,7 @@ export const translations = {
     frpt2Desc: 'Summary of daily collected amounts by driver',
     frpt3Desc: 'Summary of current balance and savings',
     // Column headers
-    colNo: '#',
+    colNo: 'No.',
     colTrackingCode: 'Tracking Code',
     colDriver: 'Driver',
     colShop: 'Shop',
@@ -1203,7 +1203,7 @@ export const translations = {
     frpt2Desc: 'សង្ខេបចំនួនប្រមូលបានប្រចាំថ្ងៃតាមអ្នកបើកបរ',
     frpt3Desc: 'សង្ខេបសមតុល្យ និងប្រាក់ចំណើម',
     // Column headers
-    colNo: 'លរ',
+    colNo: 'ល.រ',
     colTrackingCode: 'លេខតាមដាន',
     colDriver: 'អ្នកដឹក',
     colShop: 'ហាង',

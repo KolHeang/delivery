@@ -120,8 +120,6 @@ export default function BatchEntryPage() {
         }
 
         const basePayload = {
-          senderName: merchant?.name || 'Shop',
-          senderPhone: merchant?.phone || '000',
           merchantId: parseInt(selectedMerchantId),
           receiverName: r.receiverName,
           receiverPhone: r.receiverPhone,

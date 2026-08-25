@@ -37,8 +37,12 @@ export class DashboardService {
   async getStats(startDate?: string, endDate?: string) {
     const [totalDrivers, totalStaff, totalCustomers, totalMerchants] =
       await Promise.all([
-        this.driverRepo.count({ where: { role: 'driver' } }),
-        this.driverRepo.count({ where: { role: In(['admin', 'staff']) } }),
+        this.driverRepo.count({
+          where: { roleRelation: { name: 'driver' } },
+        }),
+        this.driverRepo.count({
+          where: { roleRelation: { name: In(['admin', 'staff']) } },
+        }),
         this.customerRepo.count(),
         this.merchantRepo.count(),
       ]);
@@ -113,7 +117,7 @@ export class DashboardService {
     const feeResult = await feeQuery.getRawOne();
 
     const availableDrivers = await this.driverRepo.count({
-      where: { status: 'available' },
+      where: { status: 'available', roleRelation: { name: 'driver' } },
     });
 
     const collectedCashUSD = parseFloat(
@@ -147,10 +151,23 @@ export class DashboardService {
   }
 
   async getChartData(startDate?: string, endDate?: string) {
+    // Determine date range (default last 14 days if not provided)
+    let startD = startDate
+      ? new Date(startDate)
+      : new Date(Date.now() - 13 * 24 * 60 * 60 * 1000);
+    let endD = endDate ? new Date(endDate) : new Date();
+
+    if (startD > endD) {
+      const temp = startD;
+      startD = endD;
+      endD = temp;
+    }
+
     // Daily deliveries
     const dailyDataQuery = this.orderRepo
       .createQueryBuilder('order')
-      .select('DATE(order.createdAt)', 'day')
+      .select("TO_CHAR(order.created_at, 'YYYY-MM-DD')", 'day')
+      .addSelect('COUNT(*)', 'total')
       .addSelect(
         "SUM(CASE WHEN order.status = 'delivered' THEN 1 ELSE 0 END)",
         'delivered',
@@ -163,27 +180,73 @@ export class DashboardService {
         "SUM(CASE WHEN order.status = 'returned' THEN 1 ELSE 0 END)",
         'returned',
       )
-      .groupBy('DATE(order.createdAt)')
-      .orderBy('DATE(order.createdAt)', 'ASC');
+      .groupBy("TO_CHAR(order.created_at, 'YYYY-MM-DD')")
+      .orderBy("TO_CHAR(order.created_at, 'YYYY-MM-DD')", 'ASC');
 
     if (startDate || endDate) {
       dailyDataQuery.where('1=1');
       this.applyDateFilter(dailyDataQuery, 'order', startDate, endDate);
     } else {
-      dailyDataQuery.where("order.createdAt >= NOW() - INTERVAL '30 days'");
+      dailyDataQuery.where("order.created_at >= NOW() - INTERVAL '30 days'");
     }
-    const dailyData = await dailyDataQuery.getRawMany();
+    const rawDailyData = await dailyDataQuery.getRawMany();
+
+    const dataMap = new Map<string, any>();
+    for (const r of rawDailyData) {
+      dataMap.set(r.day, {
+        day: r.day,
+        total: parseInt(r.total || '0', 10),
+        delivered: parseInt(r.delivered || '0', 10),
+        failed: parseInt(r.failed || '0', 10),
+        returned: parseInt(r.returned || '0', 10),
+      });
+    }
+
+    const dailyData: any[] = [];
+    const curr = new Date(startD);
+    curr.setHours(0, 0, 0, 0);
+    const endLimit = new Date(endD);
+    endLimit.setHours(23, 59, 59, 999);
+
+    let maxSteps = 0;
+    while (curr <= endLimit && maxSteps < 60) {
+      const dayKey = curr.toISOString().split('T')[0];
+      if (dataMap.has(dayKey)) {
+        dailyData.push(dataMap.get(dayKey));
+      } else {
+        dailyData.push({
+          day: dayKey,
+          total: 0,
+          delivered: 0,
+          failed: 0,
+          returned: 0,
+        });
+      }
+      curr.setDate(curr.getDate() + 1);
+      maxSteps++;
+    }
+
+    if (dailyData.length === 0) {
+      const todayKey = new Date().toISOString().split('T')[0];
+      dailyData.push({
+        day: todayKey,
+        total: 0,
+        delivered: 0,
+        failed: 0,
+        returned: 0,
+      });
+    }
 
     // Monthly revenue
     const monthlyRevenueQuery = this.orderRepo
       .createQueryBuilder('order')
-      .select("TO_CHAR(order.createdAt, 'Mon')", 'month')
+      .select("TO_CHAR(order.created_at, 'Mon')", 'month')
       .addSelect('SUM(order.deliveryFee)', 'revenue')
       .where("order.status = 'delivered'")
       .groupBy(
-        "TO_CHAR(order.createdAt, 'Mon'), DATE_TRUNC('month', order.createdAt)",
+        "TO_CHAR(order.created_at, 'Mon'), DATE_TRUNC('month', order.created_at)",
       )
-      .orderBy("DATE_TRUNC('month', order.createdAt)", 'ASC');
+      .orderBy("DATE_TRUNC('month', order.created_at)", 'ASC');
 
     this.applyDateFilter(monthlyRevenueQuery, 'order', startDate, endDate);
     const monthlyRevenue = await monthlyRevenueQuery.getRawMany();
@@ -222,48 +285,67 @@ export class DashboardService {
       // Find top drivers based on orders delivered in the selected range
       const qb = this.orderRepo
         .createQueryBuilder('order')
-        .select('order.driverId', 'driverId')
+        .select('order.driver_id', 'driverId')
         .addSelect('COUNT(*)', 'totalDeliveries')
         .where("order.status = 'delivered'")
-        .andWhere('order.driverId IS NOT NULL')
-        .groupBy('order.driverId')
+        .andWhere('order.driver_id IS NOT NULL')
+        .groupBy('order.driver_id')
         .orderBy('COUNT(*)', 'DESC')
         .limit(5);
 
       this.applyDateFilter(qb, 'order', startDate, endDate);
       const rawDrivers = await qb.getRawMany();
 
-      if (rawDrivers.length === 0) {
-        return [];
+      if (rawDrivers.length > 0) {
+        const driverIds = rawDrivers.map((rd) => rd.driverId).filter(Boolean);
+        const drivers = await this.driverRepo
+          .createQueryBuilder('driver')
+          .leftJoinAndSelect('driver.zone', 'zone')
+          .leftJoinAndSelect('driver.roleRelation', 'roleRelation')
+          .where('driver.id IN (:...driverIds)', { driverIds })
+          .getMany();
+
+        return rawDrivers.map((rd) => {
+          const driver = drivers.find((d) => d.id === rd.driverId);
+          return {
+            id: rd.driverId,
+            name: driver?.name || 'Driver',
+            nameKh: driver?.nameKh,
+            zone: driver?.zone,
+            totalDeliveries: parseInt(rd.totalDeliveries || '0', 10),
+          };
+        });
       }
-
-      // Load driver entities for these IDs
-      const driverIds = rawDrivers.map((rd) => rd.driverId);
-      const drivers = await this.driverRepo
-        .createQueryBuilder('driver')
-        .leftJoinAndSelect('driver.zone', 'zone')
-        .where('driver.id IN (:...driverIds)', { driverIds })
-        .andWhere('driver.role = :role', { role: 'driver' })
-        .getMany();
-
-      // Return mapped results ordered by deliveries count
-      return rawDrivers.map((rd) => {
-        const driver = drivers.find((d) => d.id === rd.driverId);
-        return {
-          id: rd.driverId,
-          name: driver?.name || 'Driver',
-          nameKh: driver?.nameKh,
-          zone: driver?.zone,
-          totalDeliveries: parseInt(rd.totalDeliveries),
-        };
-      });
     }
 
-    return this.driverRepo.find({
-      where: { role: 'driver' },
-      relations: { zone: true },
-      order: { totalDeliveries: 'DESC' },
+    // Default: load drivers and their real delivered count from orders
+    const drivers = await this.driverRepo.find({
+      where: {
+        roleRelation: {
+          name: 'driver',
+        },
+      },
+      relations: { zone: true, roleRelation: true },
       take: 5,
     });
+
+    const driversWithStats = await Promise.all(
+      drivers.map(async (d) => {
+        const count = await this.orderRepo.count({
+          where: { driverId: d.id, status: 'delivered' },
+        });
+        return {
+          id: d.id,
+          name: d.name,
+          nameKh: d.nameKh,
+          zone: d.zone,
+          totalDeliveries: count || d.totalDeliveries || 0,
+        };
+      }),
+    );
+
+    return driversWithStats.sort(
+      (a, b) => b.totalDeliveries - a.totalDeliveries,
+    );
   }
 }

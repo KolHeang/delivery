@@ -1,6 +1,7 @@
 import {
   IsEmail,
   IsEnum,
+  IsIn,
   IsNotEmpty,
   IsOptional,
   IsString,
@@ -56,7 +57,8 @@ export class CreateUserDto {
     required: false,
   })
   @IsOptional()
-  @IsEnum(['available', 'on-delivery', 'offline'])
+  @Transform(({ value }) => value || undefined)
+  @IsIn(['available', 'on-delivery', 'offline'])
   status?: string;
 
   @ApiProperty({ required: false })
@@ -124,7 +126,8 @@ export class UpdateUserDto {
   @IsOptional() @IsString() nameKh?: string;
   @IsOptional() @IsString() phone?: string;
   @IsOptional()
-  @IsEnum(['available', 'on-delivery', 'offline'])
+  @Transform(({ value }) => value || undefined)
+  @IsIn(['available', 'on-delivery', 'offline'])
   status?: string;
   @IsOptional() @IsNumber() @Min(0) @Max(5) @Type(() => Number) rating?: number;
   @IsOptional() @IsNumber() @Type(() => Number) zoneId?: number;

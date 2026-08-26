@@ -106,7 +106,37 @@ export class CreateUserDto {
     return value;
   })
   @IsBoolean()
+  isActive?: boolean;
+
+  @ApiProperty({ required: false, default: true })
+  @IsOptional()
+  @Transform(({ value }) => {
+    if (value === 'true') return true;
+    if (value === 'false') return false;
+    return value;
+  })
+  @IsBoolean()
   active?: boolean;
+
+  @ApiProperty({ required: false, default: false })
+  @IsOptional()
+  @Transform(({ value }) => {
+    if (value === 'true') return true;
+    if (value === 'false') return false;
+    return value;
+  })
+  @IsBoolean()
+  isStaff?: boolean;
+
+  @ApiProperty({ required: false, default: false })
+  @IsOptional()
+  @Transform(({ value }) => {
+    if (value === 'true') return true;
+    if (value === 'false') return false;
+    return value;
+  })
+  @IsBoolean()
+  isDriver?: boolean;
 }
 
 export class UpdateUserDto {
@@ -122,13 +152,37 @@ export class UpdateUserDto {
     return value;
   })
   @IsBoolean()
+  isActive?: boolean;
+
+  @IsOptional()
+  @Transform(({ value }) => {
+    if (value === 'true') return true;
+    if (value === 'false') return false;
+    return value;
+  })
+  @IsBoolean()
   active?: boolean;
+
+  @IsOptional()
+  @Transform(({ value }) => {
+    if (value === 'true') return true;
+    if (value === 'false') return false;
+    return value;
+  })
+  @IsBoolean()
+  isStaff?: boolean;
+
+  @IsOptional()
+  @Transform(({ value }) => {
+    if (value === 'true') return true;
+    if (value === 'false') return false;
+    return value;
+  })
+  @IsBoolean()
+  isDriver?: boolean;
+
   @IsOptional() @IsString() nameKh?: string;
   @IsOptional() @IsString() phone?: string;
-  @IsOptional()
-  @Transform(({ value }) => value || undefined)
-  @IsIn(['available', 'on-delivery', 'offline'])
-  status?: string;
   @IsOptional() @IsNumber() @Min(0) @Max(5) @Type(() => Number) rating?: number;
   @IsOptional() @IsNumber() @Type(() => Number) zoneId?: number;
   @IsOptional() @IsNumber() @Type(() => Number) vehicleId?: number;

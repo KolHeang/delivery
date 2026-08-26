@@ -38,10 +38,10 @@ export class DashboardService {
     const [totalDrivers, totalStaff, totalCustomers, totalMerchants] =
       await Promise.all([
         this.driverRepo.count({
-          where: { roleRelation: { name: 'driver' } },
+          where: { isDriver: true },
         }),
         this.driverRepo.count({
-          where: { roleRelation: { name: In(['admin', 'staff']) } },
+          where: { isStaff: true },
         }),
         this.customerRepo.count(),
         this.merchantRepo.count(),
@@ -117,7 +117,7 @@ export class DashboardService {
     const feeResult = await feeQuery.getRawOne();
 
     const availableDrivers = await this.driverRepo.count({
-      where: { status: 'available', roleRelation: { name: 'driver' } },
+      where: { isDriver: true, isActive: true },
     });
 
     const collectedCashUSD = parseFloat(
@@ -320,11 +320,7 @@ export class DashboardService {
 
     // Default: load drivers and their real delivered count from orders
     const drivers = await this.driverRepo.find({
-      where: {
-        roleRelation: {
-          name: 'driver',
-        },
-      },
+      where: { isDriver: true, isActive: true },
       relations: { zone: true, roleRelation: true },
       take: 5,
     });

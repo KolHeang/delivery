@@ -175,12 +175,14 @@ export class SeedService implements OnApplicationBootstrap {
 
     const usersToSeed = [
       {
-        name: 'Admin User',
+        name: 'Admin',
         email: 'admin@gmail.com',
         password: await bcrypt.hash('123456', 10),
         roleId: adminRole?.id,
         phone: '012-000-001',
-        active: true,
+        isActive: true,
+        isStaff: true,
+        isDriver: false,
       },
       {
         name: 'UserMember',
@@ -188,7 +190,9 @@ export class SeedService implements OnApplicationBootstrap {
         password: await bcrypt.hash('123456', 10),
         roleId: staffRole?.id,
         phone: '012-000-002',
-        active: true,
+        isActive: true,
+        isStaff: true,
+        isDriver: false,
       },
       {
         name: 'Sok Dara',
@@ -197,8 +201,9 @@ export class SeedService implements OnApplicationBootstrap {
         password: await bcrypt.hash('123456', 10),
         roleId: driverRole?.id,
         phone: '012-345-678',
-        active: true,
-        status: 'available' as const,
+        isActive: true,
+        isStaff: false,
+        isDriver: true,
       },
       {
         name: 'Driver Test',
@@ -207,8 +212,9 @@ export class SeedService implements OnApplicationBootstrap {
         password: await bcrypt.hash('123456', 10),
         roleId: driverRole?.id,
         phone: '012-000-003',
-        active: true,
-        status: 'available' as const,
+        isActive: true,
+        isStaff: false,
+        isDriver: true,
       },
     ];
 
@@ -217,9 +223,11 @@ export class SeedService implements OnApplicationBootstrap {
       if (!existing) {
         await this.userRepo.save(this.userRepo.create(u as any));
         this.logger.log(`✅ Seeded user: ${u.email}`);
-      } else if (existing.roleId !== u.roleId || !existing.active) {
+      } else if (existing.roleId !== u.roleId || !existing.isActive) {
         if (u.roleId !== undefined) existing.roleId = u.roleId;
-        existing.active = true;
+        existing.isActive = true;
+        existing.isStaff = u.isStaff;
+        existing.isDriver = u.isDriver;
         existing.password = u.password;
         await this.userRepo.save(existing);
       }

@@ -51,7 +51,7 @@ export class UsersService {
       .leftJoinAndSelect('staff.roleRelation', 'roleRelation')
       .addSelect('staff.password')
       .where('staff.email = :email', { email })
-      .andWhere('(roleRelation.name IN (:...roles))', { roles: ['admin', 'staff'] })
+      .andWhere('staff.isStaff = true')
       .getOne();
   }
 
@@ -83,17 +83,34 @@ export class UsersService {
       const defaultRole = await this.roleRepo.findOne({ where: { name: 'staff' } });
       if (defaultRole) roleId = defaultRole.id;
     }
+    const targetRole = roleId ? await this.roleRepo.findOne({ where: { id: roleId } }) : null;
+    const roleName = targetRole?.name || dto.role || 'staff';
+
+    let isStaff = dto.isStaff;
+    if (isStaff === undefined) {
+      isStaff = roleName === 'admin' || roleName === 'staff';
+    }
+
+    let isDriver = dto.isDriver;
+    if (isDriver === undefined) {
+      isDriver = roleName === 'driver';
+    }
+
+    const isActive = dto.isActive !== undefined ? dto.isActive : (dto.active !== undefined ? dto.active : true);
 
     const payload: any = {
       ...dto,
       password: hashed,
       roleId,
+      isActive,
+      isStaff,
+      isDriver,
       salary: dto.salary ? parseFloat(dto.salary as any) : 0.0,
       zoneId: dto.zoneId ? Number(dto.zoneId) : null,
       vehicleId: dto.vehicleId ? Number(dto.vehicleId) : null,
-      status: dto.status || 'offline',
     };
     delete payload.role;
+    delete payload.active;
 
     const user = this.repo.create(payload as User);
     const saved = await this.repo.save(user);
@@ -122,6 +139,13 @@ export class UsersService {
       payload.vehicleId = dto.vehicleId ? Number(dto.vehicleId) : null;
     }
 
+    if (dto.isActive !== undefined) {
+      payload.isActive = dto.isActive;
+    } else if (dto.active !== undefined) {
+      payload.isActive = dto.active;
+    }
+    delete payload.active;
+
     let roleId = dto.roleId;
     if (!roleId && dto.role) {
       const r = await this.roleRepo.findOne({ where: { name: dto.role } });
@@ -132,10 +156,17 @@ export class UsersService {
     }
 
     const targetRole = roleId ? await this.roleRepo.findOne({ where: { id: roleId } }) : null;
-    if (targetRole && targetRole.name !== 'driver') {
-      payload.zoneId = null;
-      payload.vehicleId = null;
-      payload.status = 'offline';
+    if (targetRole) {
+      if (dto.isStaff === undefined) {
+        payload.isStaff = targetRole.name === 'admin' || targetRole.name === 'staff';
+      }
+      if (dto.isDriver === undefined) {
+        payload.isDriver = targetRole.name === 'driver';
+      }
+      if (targetRole.name !== 'driver') {
+        payload.zoneId = null;
+        payload.vehicleId = null;
+      }
     }
     delete payload.role;
 

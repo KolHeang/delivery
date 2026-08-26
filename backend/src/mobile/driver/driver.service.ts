@@ -89,7 +89,7 @@ export class DriverService {
   }
 
   async updateDriverStatus(driverId: number, status: string) {
-    await this.userRepo.update(driverId, { status: status as any });
+    await this.userRepo.update(driverId, { isActive: status === 'available' || status === 'true' });
     return this.getProfile(driverId);
   }
 
@@ -850,7 +850,9 @@ export class DriverService {
         name: driver.name,
         phone: driver.phone,
         email: driver.email,
-        status: driver.status,
+        isActive: driver.isActive,
+        active: driver.isActive,
+        status: driver.isActive ? 'available' : 'offline',
         zone: driver.zone?.name,
         vehicle: driver.vehicle ? `${driver.vehicle.brand || ''} ${driver.vehicle.model || ''} (${driver.vehicle.plate || ''})`.trim() : null,
       },

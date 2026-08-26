@@ -215,8 +215,6 @@ export default function CompletePackagePage() {
           await api.patch(`/orders/${id}`, {
             status,
             paymentMethod: method,
-            receivedAmountKHR: khr,
-            receivedAmountUSD: usd,
             deliveredAt: completedDate ? new Date(completedDate).toISOString() : undefined,
           });
         })

@@ -12,6 +12,7 @@ import { OrderHistory } from '../../orders/entities/order-history.entity';
 import { UpdateOrderStatusDto } from '../../orders/dto/order.dto';
 import { PickupRequest } from '../../orders/entities/pickup-request.entity';
 import { ConfirmPickupDto } from '../../orders/dto/pickup-request.dto';
+import { StaffPayment } from '../../payments/entities/staff-payment.entity';
 
 @Injectable()
 export class DriverService {
@@ -22,7 +23,9 @@ export class DriverService {
     private readonly historyRepo: Repository<OrderHistory>,
     @InjectRepository(PickupRequest)
     private readonly pickupRequestRepo: Repository<PickupRequest>,
-  ) {}
+    @InjectRepository(StaffPayment)
+    private readonly staffPaymentRepo: Repository<StaffPayment>,
+  ) { }
 
   async getProfile(driverId: number) {
     const driver = await this.userRepo.findOne({
@@ -253,6 +256,7 @@ export class DriverService {
   }
 
   async getTaskDetail(driverId: number, taskId: number) {
+
     const order = await this.orderRepo.findOne({
       where: [
         { id: taskId, driverId },
@@ -641,6 +645,264 @@ export class DriverService {
     };
   }
 
+  async getReport(
+    driverId: number,
+    period: string = 'today',
+    startDate?: string,
+    endDate?: string,
+    status?: string,
+  ) {
+    const driver = await this.userRepo.findOne({
+      where: { id: driverId },
+      relations: { zone: true, vehicle: true },
+    });
+    if (!driver) throw new NotFoundException('Driver not found');
+
+    let start: Date | null = new Date();
+    let end: Date | null = new Date();
+
+    if (startDate || endDate || period === 'custom') {
+      if (startDate) {
+        start = new Date(startDate);
+        start.setHours(0, 0, 0, 0);
+      } else {
+        start = null;
+      }
+      if (endDate) {
+        end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+      } else {
+        end = null;
+      }
+    } else if (period === 'yesterday') {
+      start = new Date();
+      start.setDate(start.getDate() - 1);
+      start.setHours(0, 0, 0, 0);
+      end = new Date();
+      end.setDate(end.getDate() - 1);
+      end.setHours(23, 59, 59, 999);
+    } else if (period === 'week') {
+      start = new Date();
+      start.setDate(start.getDate() - 7);
+      start.setHours(0, 0, 0, 0);
+      end = new Date();
+      end.setHours(23, 59, 59, 999);
+    } else if (period === 'month') {
+      start = new Date();
+      start.setDate(1);
+      start.setHours(0, 0, 0, 0);
+      end = new Date();
+      end.setHours(23, 59, 59, 999);
+    } else if (period === 'all') {
+      start = null;
+      end = null;
+    } else {
+      // Default 'today'
+      start.setHours(0, 0, 0, 0);
+      end.setHours(23, 59, 59, 999);
+    }
+
+    const baseOrderQuery = this.orderRepo
+      .createQueryBuilder('order')
+      .leftJoinAndSelect('order.merchant', 'merchant')
+      .leftJoinAndSelect('order.customer', 'customer')
+      .leftJoinAndSelect('order.zone', 'zone')
+      .where(
+        new Brackets((qb) => {
+          qb.where('order.driverId = :driverId', { driverId }).orWhere(
+            'order.pickupDriverId = :driverId',
+            { driverId },
+          );
+        }),
+      );
+
+    if (start && end) {
+      baseOrderQuery.andWhere(
+        'COALESCE(order.deliveredAt, order.assignedAt, order.updatedAt, order.createdAt) >= :start AND COALESCE(order.deliveredAt, order.assignedAt, order.updatedAt, order.createdAt) <= :end',
+        { start, end },
+      );
+    }
+
+    if (status && status !== 'all') {
+      baseOrderQuery.andWhere('order.status = :status', { status });
+    }
+
+    const orders = await baseOrderQuery
+      .orderBy('order.createdAt', 'DESC')
+      .getMany();
+
+    // Calculate Summary Metrics
+    let totalAssigned = 0;
+    let totalDelivered = 0;
+    let totalFailed = 0;
+    let totalReturned = 0;
+    let totalInTransit = 0;
+    let totalPickedUp = 0;
+    let totalPending = 0;
+    let totalDeliveryFee = 0;
+
+    let codDeliveredUSD = 0;
+    let codDeliveredKHR = 0;
+    let codUnpaidUSD = 0;
+    let codUnpaidKHR = 0;
+    let codPaidUSD = 0;
+    let codPaidKHR = 0;
+
+    const dailyMap = new Map<
+      string,
+      {
+        date: string;
+        delivered: number;
+        failed: number;
+        returned: number;
+        totalOrders: number;
+        codUSD: number;
+        codKHR: number;
+        deliveryFee: number;
+      }
+    >();
+
+    for (const ord of orders) {
+      totalAssigned++;
+      const isDelivered = ord.status === 'delivered';
+      const isFailed = ord.status === 'failed';
+      const isReturned = ord.status === 'returned';
+      const isInTransit = ord.status === 'in-transit';
+      const isPickedUp = ord.status === 'picked-up';
+      const isPending = ord.status === 'pending';
+
+      if (isDelivered) totalDelivered++;
+      if (isFailed) totalFailed++;
+      if (isReturned) totalReturned++;
+      if (isInTransit) totalInTransit++;
+      if (isPickedUp) totalPickedUp++;
+      if (isPending) totalPending++;
+
+      const codVal = parseFloat(ord.cod as any) || 0;
+      const feeVal = parseFloat(ord.deliveryFee as any) || 0;
+
+      if (isDelivered) {
+        totalDeliveryFee += feeVal;
+        if (ord.codCurrency === 'KHR') {
+          codDeliveredKHR += codVal;
+          if (ord.driverPaymentStatus === 'paid') {
+            codPaidKHR += codVal;
+          } else {
+            codUnpaidKHR += codVal;
+          }
+        } else {
+          codDeliveredUSD += codVal;
+          if (ord.driverPaymentStatus === 'paid') {
+            codPaidUSD += codVal;
+          } else {
+            codUnpaidUSD += codVal;
+          }
+        }
+      }
+
+      // Group by date (delivered date, or updated date, or created date)
+      const targetDate = ord.deliveredAt || ord.updatedAt || ord.createdAt;
+      const dateKey = targetDate
+        ? new Date(targetDate).toISOString().split('T')[0]
+        : 'unknown';
+
+      if (!dailyMap.has(dateKey)) {
+        dailyMap.set(dateKey, {
+          date: dateKey,
+          delivered: 0,
+          failed: 0,
+          returned: 0,
+          totalOrders: 0,
+          codUSD: 0,
+          codKHR: 0,
+          deliveryFee: 0,
+        });
+      }
+
+      const dayItem = dailyMap.get(dateKey)!;
+      dayItem.totalOrders++;
+      if (isDelivered) {
+        dayItem.delivered++;
+        dayItem.deliveryFee += feeVal;
+        if (ord.codCurrency === 'KHR') {
+          dayItem.codKHR += codVal;
+        } else {
+          dayItem.codUSD += codVal;
+        }
+      }
+      if (isFailed) dayItem.failed++;
+      if (isReturned) dayItem.returned++;
+    }
+
+    const completedTotal = totalDelivered + totalFailed + totalReturned;
+    const successRate =
+      completedTotal > 0
+        ? Math.round((totalDelivered / completedTotal) * 100 * 10) / 10
+        : 0;
+
+    const timeline = Array.from(dailyMap.values()).sort((a, b) =>
+      a.date.localeCompare(b.date),
+    );
+
+    return {
+      driver: {
+        id: driver.id,
+        name: driver.name,
+        phone: driver.phone,
+        email: driver.email,
+        status: driver.status,
+        zone: driver.zone?.name,
+        vehicle: driver.vehicle ? `${driver.vehicle.brand || ''} ${driver.vehicle.model || ''} (${driver.vehicle.plate || ''})`.trim() : null,
+      },
+      filter: {
+        period,
+        startDate: start ? start.toISOString() : null,
+        endDate: end ? end.toISOString() : null,
+        status: status || 'all',
+      },
+      summary: {
+        totalOrders: totalAssigned,
+        totalDelivered,
+        totalFailed,
+        totalReturned,
+        totalInTransit,
+        totalPickedUp,
+        totalPending,
+        successRate,
+        deliveryFeeTotal: Math.round(totalDeliveryFee * 100) / 100,
+        cod: {
+          usd: {
+            totalDelivered: codDeliveredUSD,
+            paidToCompany: codPaidUSD,
+            pendingCollection: codUnpaidUSD,
+          },
+          khr: {
+            totalDelivered: codDeliveredKHR,
+            paidToCompany: codPaidKHR,
+            pendingCollection: codUnpaidKHR,
+          },
+        },
+      },
+      timeline,
+      orders: orders.map((o) => ({
+        id: o.id,
+        trackingCode: o.trackingCode,
+        status: o.status,
+        receiverName: o.receiverName,
+        receiverPhone: o.receiverPhone,
+        receiverAddress: o.receiverAddress,
+        cod: parseFloat(o.cod as any) || 0,
+        codCurrency: o.codCurrency || 'USD',
+        deliveryFee: parseFloat(o.deliveryFee as any) || 0,
+        paymentStatus: o.paymentStatus,
+        driverPaymentStatus: o.driverPaymentStatus,
+        merchantName: o.merchant?.name || o.merchant?.nameKh || null,
+        deliveredAt: o.deliveredAt,
+        createdAt: o.createdAt,
+      })),
+    };
+  }
+
   async getPickupRequests(driverId: number) {
     return this.pickupRequestRepo.find({
       where: { pickupDriverId: driverId },
@@ -663,9 +925,6 @@ export class DriverService {
     return this.pickupRequestRepo.save(request);
   }
 
-  /**
-   * Scan QR code or barcode to get package details and driver permissions
-   */
   async scanOrder(driverId: number, rawCode: string) {
     if (!rawCode || typeof rawCode !== 'string') {
       throw new BadRequestException(
@@ -674,7 +933,6 @@ export class DriverService {
     }
 
     let code = rawCode.trim();
-    // Handle URL formatted QR codes (e.g. http://.../orders/T123456 or ?code=T123456)
     if (code.includes('?')) {
       const urlParams = new URLSearchParams(code.split('?')[1]);
       if (urlParams.get('code')) {
@@ -765,9 +1023,6 @@ export class DriverService {
     };
   }
 
-  /**
-   * Driver claims an unassigned package by scanning QR code
-   */
   async claimScannedOrder(driverId: number, rawCode: string) {
     const { order } = await this.scanOrder(driverId, rawCode);
 
@@ -800,9 +1055,6 @@ export class DriverService {
     return this.scanOrder(driverId, order.trackingCode);
   }
 
-  /**
-   * Driver updates order status directly via QR scan
-   */
   async updateScannedOrderStatus(
     driverId: number,
     rawCode: string,
@@ -810,5 +1062,271 @@ export class DriverService {
   ) {
     const { order } = await this.scanOrder(driverId, rawCode);
     return this.updateOrderStatus(driverId, order.id, dto);
+  }
+
+  async getPayments(driverId: number, page?: number, limit?: number, month?: string) {
+    const driver = await this.userRepo.findOne({ where: { id: driverId } });
+    const pageNum = page ? Math.max(1, parseInt(page as any, 10)) : 1;
+    const limitNum = limit ? Math.max(1, parseInt(limit as any, 10)) : 20;
+    const skip = (pageNum - 1) * limitNum;
+
+    const query = this.staffPaymentRepo
+      .createQueryBuilder('payment')
+      .leftJoinAndSelect('payment.creator', 'creator')
+      .where('payment.driverId = :driverId', { driverId })
+      .orderBy('payment.date', 'DESC')
+      .addOrderBy('payment.createdAt', 'DESC');
+
+    if (month) {
+      // Month formatted as YYYY-MM
+      query.andWhere("TO_CHAR(payment.date, 'YYYY-MM') = :month", { month });
+    }
+
+    const [data, total] = await query.skip(skip).take(limitNum).getManyAndCount();
+
+    // Fetch all orders for these payments to compute accurate USD/KHR breakdown
+    const allOrderIds: number[] = [];
+    data.forEach((p) => {
+      if (Array.isArray(p.orderIds)) {
+        allOrderIds.push(...p.orderIds);
+      }
+    });
+
+    let ordersMap = new Map<number, Order>();
+    if (allOrderIds.length > 0) {
+      const orders = await this.orderRepo.find({
+        where: { id: In(allOrderIds) },
+        relations: { merchant: true, zone: true },
+      });
+      orders.forEach((o) => ordersMap.set(o.id, o));
+    }
+
+    const exchangeRate = 4100;
+
+    const formattedData = data.map((p) => {
+      let usd = 0;
+      let khr = 0;
+      let orderCount = 0;
+
+      if (Array.isArray(p.orderIds) && p.orderIds.length > 0) {
+        orderCount = p.orderIds.length;
+        p.orderIds.forEach((oid) => {
+          const ord = ordersMap.get(oid);
+          if (ord) {
+            const codVal = parseFloat(ord.cod as any) || 0;
+            if (ord.codCurrency === 'KHR') {
+              khr += codVal;
+            } else {
+              usd += codVal;
+            }
+          }
+        });
+      } else {
+        usd = parseFloat(p.amount as any) || 0;
+      }
+
+      const totalUSD = Math.round((usd + (khr / exchangeRate)) * 100) / 100;
+
+      return {
+        id: p.id,
+        driverName: driver?.nameKh || driver?.name || 'Driver',
+        amount: parseFloat(p.amount as any) || 0,
+        usdAmount: Math.round(usd * 100) / 100,
+        khrAmount: Math.round(khr),
+        totalUSD: totalUSD > 0 ? totalUSD : parseFloat(p.amount as any) || 0,
+        date: p.date,
+        reference: p.reference || `REF-${p.id}`,
+        note: p.note,
+        checkBy: p.creator?.phone || p.creator?.name || '014388403',
+        orderIds: p.orderIds || [],
+        orderCount,
+        createdAt: p.createdAt,
+      };
+    });
+
+    return {
+      data: formattedData,
+      total,
+      page: pageNum,
+      limit: limitNum,
+      totalPages: Math.ceil(total / limitNum),
+    };
+  }
+
+  async getPaymentSummary(driverId: number) {
+    const driver = await this.userRepo.findOne({ where: { id: driverId } });
+    if (!driver) throw new NotFoundException('Driver not found');
+
+    // Total settlements/payouts recorded for this driver
+    const settledResult = await this.staffPaymentRepo
+      .createQueryBuilder('payment')
+      .select('SUM(payment.amount)', 'total')
+      .where('payment.driverId = :driverId', { driverId })
+      .getRawOne();
+
+    // Total COD USD delivered by this driver
+    const codUsdDelivered = await this.orderRepo
+      .createQueryBuilder('order')
+      .select('SUM(order.cod)', 'total')
+      .where('order.driverId = :driverId', { driverId })
+      .andWhere("order.status = 'delivered'")
+      .andWhere("order.codCurrency = 'USD'")
+      .getRawOne();
+
+    // Total COD KHR delivered by this driver
+    const codKhrDelivered = await this.orderRepo
+      .createQueryBuilder('order')
+      .select('SUM(order.cod)', 'total')
+      .where('order.driverId = :driverId', { driverId })
+      .andWhere("order.status = 'delivered'")
+      .andWhere("order.codCurrency = 'KHR'")
+      .getRawOne();
+
+    // Handed over COD (USD & KHR) - driverPaymentStatus = 'paid'
+    const codUsdPaid = await this.orderRepo
+      .createQueryBuilder('order')
+      .select('SUM(order.cod)', 'total')
+      .where('order.driverId = :driverId', { driverId })
+      .andWhere("order.status = 'delivered'")
+      .andWhere("order.codCurrency = 'USD'")
+      .andWhere("order.driverPaymentStatus = 'paid'")
+      .getRawOne();
+
+    const codKhrPaid = await this.orderRepo
+      .createQueryBuilder('order')
+      .select('SUM(order.cod)', 'total')
+      .where('order.driverId = :driverId', { driverId })
+      .andWhere("order.status = 'delivered'")
+      .andWhere("order.codCurrency = 'KHR'")
+      .andWhere("order.driverPaymentStatus = 'paid'")
+      .getRawOne();
+
+    // Pending handover COD (USD & KHR) - driverPaymentStatus = 'unpaid'
+    const codUsdPending = await this.orderRepo
+      .createQueryBuilder('order')
+      .select('SUM(order.cod)', 'total')
+      .where('order.driverId = :driverId', { driverId })
+      .andWhere("order.status = 'delivered'")
+      .andWhere("order.codCurrency = 'USD'")
+      .andWhere("order.driverPaymentStatus = 'unpaid'")
+      .getRawOne();
+
+    const codKhrPending = await this.orderRepo
+      .createQueryBuilder('order')
+      .select('SUM(order.cod)', 'total')
+      .where('order.driverId = :driverId', { driverId })
+      .andWhere("order.status = 'delivered'")
+      .andWhere("order.codCurrency = 'KHR'")
+      .andWhere("order.driverPaymentStatus = 'unpaid'")
+      .getRawOne();
+
+    // Delivery fee earned
+    const deliveryFeeResult = await this.orderRepo
+      .createQueryBuilder('order')
+      .select('SUM(order.deliveryFee)', 'total')
+      .where('order.driverId = :driverId', { driverId })
+      .andWhere("order.status = 'delivered'")
+      .getRawOne();
+
+    return {
+      driver: {
+        id: driver.id,
+        name: driver.nameKh || driver.name,
+        salary: parseFloat((driver.salary as any) || '0'),
+      },
+      settlements: {
+        totalReceivedFromCompany: parseFloat(settledResult?.total || '0'),
+        deliveryFeeEarned: parseFloat(deliveryFeeResult?.total || '0'),
+      },
+      cod: {
+        usd: {
+          totalDelivered: parseFloat(codUsdDelivered?.total || '0'),
+          handedOverToCompany: parseFloat(codUsdPaid?.total || '0'),
+          pendingHandover: parseFloat(codUsdPending?.total || '0'),
+        },
+        khr: {
+          totalDelivered: parseFloat(codKhrDelivered?.total || '0'),
+          handedOverToCompany: parseFloat(codKhrPaid?.total || '0'),
+          pendingHandover: parseFloat(codKhrPending?.total || '0'),
+        },
+      },
+    };
+  }
+
+  async getPaymentDetail(driverId: number, paymentId: number) {
+    if (!paymentId || isNaN(paymentId)) {
+      throw new BadRequestException('Invalid payment ID');
+    }
+
+    const driver = await this.userRepo.findOne({ where: { id: driverId } });
+
+    const payment = await this.staffPaymentRepo.findOne({
+      where: { id: paymentId, driverId },
+      relations: { creator: true, updater: true },
+    });
+
+    if (!payment) {
+      throw new NotFoundException('Payment record not found');
+    }
+
+    let orders: Order[] = [];
+    if (payment.orderIds && payment.orderIds.length > 0) {
+      orders = await this.orderRepo.find({
+        where: { id: In(payment.orderIds) },
+        relations: { customer: true, merchant: true, zone: true, driver: true },
+      });
+    }
+
+    let usdTotal = 0;
+    let khrTotal = 0;
+
+    const formattedOrders = orders.map((o) => {
+      const codVal = parseFloat(o.cod as any) || 0;
+      if (o.codCurrency === 'KHR') {
+        khrTotal += codVal;
+      } else {
+        usdTotal += codVal;
+      }
+
+      return {
+        id: o.id,
+        trackingCode: o.trackingCode,
+        status: o.status,
+        zoneName: o.zone?.name || 'ទូទៅ',
+        merchantName: o.merchant?.name || o.merchant?.nameKh || 'Shop',
+        driverName: o.driver?.nameKh || o.driver?.name || driver?.nameKh || driver?.name || 'Driver',
+        receiverName: o.receiverName,
+        receiverPhone: o.receiverPhone,
+        receiverAddress: o.receiverAddress,
+        deliveryFee: parseFloat(o.deliveryFee as any) || 0,
+        cod: codVal,
+        codCurrency: o.codCurrency || 'USD',
+        paymentStatus: o.paymentStatus,
+        driverPaymentStatus: o.driverPaymentStatus,
+        date: o.deliveredAt || o.createdAt,
+      };
+    });
+
+    if (orders.length === 0) {
+      usdTotal = parseFloat(payment.amount as any) || 0;
+    }
+
+    return {
+      payment: {
+        id: payment.id,
+        driverName: driver?.nameKh || driver?.name || 'Driver',
+        amount: parseFloat(payment.amount as any) || 0,
+        usdTotal: Math.round(usdTotal * 100) / 100,
+        khrTotal: Math.round(khrTotal),
+        date: payment.date,
+        reference: payment.reference || `REF-${payment.id}`,
+        note: payment.note,
+        checkBy: payment.creator?.phone || payment.creator?.name || '014388403',
+        orderIds: payment.orderIds || [],
+        orderCount: orders.length,
+        createdAt: payment.createdAt,
+      },
+      orders: formattedOrders,
+    };
   }
 }

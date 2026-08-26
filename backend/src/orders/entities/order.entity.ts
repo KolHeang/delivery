@@ -83,22 +83,6 @@ export class Order {
   @Column({ name: 'payment_method', nullable: true })
   paymentMethod: string;
 
-  @Column('decimal', {
-    name: 'received_amount_usd',
-    precision: 10,
-    scale: 2,
-    default: 0,
-  })
-  receivedAmountUSD: number;
-
-  @Column('decimal', {
-    name: 'received_amount_khr',
-    precision: 10,
-    scale: 2,
-    default: 0,
-  })
-  receivedAmountKHR: number;
-
   @Column({ name: 'picked_up_at', type: 'timestamp', nullable: true })
   pickedUpAt: Date;
 

@@ -101,9 +101,7 @@ export class DriverService {
   ) {
     const query = this.orderRepo
       .createQueryBuilder('ord')
-      .leftJoinAndSelect('ord.customer', 'customer')
       .leftJoinAndSelect('ord.merchant', 'merchant')
-      .leftJoinAndSelect('ord.zone', 'zone')
       .orderBy('ord.createdAt', 'DESC');
 
     // 1. Apply Status & Driver Logic
@@ -251,6 +249,78 @@ export class DriverService {
       failed: counts['failed'] || 0,
       returned: counts['returned'] || 0,
       byStatus: counts,
+    };
+  }
+
+  async getTaskDetail(driverId: number, taskId: number) {
+    const order = await this.orderRepo.findOne({
+      where: [
+        { id: taskId, driverId },
+        { id: taskId, pickupDriverId: driverId },
+      ],
+      relations: {
+        customer: true,
+        merchant: true,
+        zone: true,
+        driver: true,
+        pickupDriver: true,
+        histories: true,
+        pickupRequest: true,
+      },
+      order: {
+        histories: {
+          createdAt: 'ASC',
+        },
+      },
+    });
+
+    if (!order) {
+      const exists = await this.orderRepo.findOne({ where: { id: taskId } });
+      if (!exists) {
+        throw new NotFoundException(
+          `រកមិនឃើញកិច្ចការលេខ #${taskId} ទេ (Task #${taskId} not found)`,
+        );
+      }
+      throw new BadRequestException(
+        'កិច្ចការនេះមិនត្រូវបានចាត់ចែងឱ្យអ្នកទេ (Task is not assigned to you)',
+      );
+    }
+
+    const isDeliveryDriver = order.driverId === driverId;
+    const isPickupDriver = order.pickupDriverId === driverId;
+
+    let driverRole:
+      | 'delivery_driver'
+      | 'pickup_driver'
+      | 'unassigned'
+      | 'assigned_to_other' = 'unassigned';
+    if (isDeliveryDriver) {
+      driverRole = 'delivery_driver';
+    } else if (isPickupDriver) {
+      driverRole = 'pickup_driver';
+    }
+
+    const availableActions: string[] = [];
+    if (isPickupDriver && order.status === 'pending') {
+      availableActions.push('pickup');
+    }
+    if (
+      isDeliveryDriver &&
+      (order.status === 'assigned' ||
+        order.status === 'in-transit' ||
+        order.status === 'picked-up')
+    ) {
+      availableActions.push('deliver');
+      availableActions.push('failed');
+    }
+    if (isDeliveryDriver && order.status === 'assigned') {
+      availableActions.push('in-transit');
+    }
+
+    return {
+      ...order,
+      driverRole,
+      availableActions,
     };
   }
 

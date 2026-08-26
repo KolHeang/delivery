@@ -157,6 +157,12 @@ export class DriverController {
     );
   }
 
+  @Get('tasks/:id')
+  @ApiOperation({ summary: 'Get task detail by ID for driver' })
+  getTaskDetail(@Request() req: any, @Param('id') id: string) {
+    return this.driverService.getTaskDetail(req.user.id, +id);
+  }
+
   @Get('tasks/status-counts')
   @ApiOperation({
     summary: 'Get task counts grouped by status for driver mobile app',

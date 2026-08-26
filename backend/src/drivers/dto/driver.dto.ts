@@ -4,12 +4,13 @@ import {
   IsOptional,
   IsEmail,
   IsEnum,
+  IsIn,
   IsNumber,
   Min,
   Max,
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
+import { Type, Transform } from 'class-transformer';
 
 export class CreateDriverDto {
   @ApiProperty() @IsNotEmpty() @IsString() name: string;
@@ -21,7 +22,8 @@ export class CreateDriverDto {
     required: false,
   })
   @IsOptional()
-  @IsEnum(['available', 'on-delivery', 'offline'])
+  @Transform(({ value }) => value || undefined)
+  @IsIn(['available', 'on-delivery', 'offline'])
   status?: string;
   @ApiProperty({ required: false })
   @IsOptional()
@@ -48,7 +50,8 @@ export class UpdateDriverDto {
   @IsOptional() @IsString() phone?: string;
   @IsOptional() @IsEmail() email?: string;
   @IsOptional()
-  @IsEnum(['available', 'on-delivery', 'offline'])
+  @Transform(({ value }) => value || undefined)
+  @IsIn(['available', 'on-delivery', 'offline'])
   status?: string;
   @IsOptional() @IsNumber() @Min(0) @Max(5) @Type(() => Number) rating?: number;
   @IsOptional() @IsNumber() @Type(() => Number) zoneId?: number;

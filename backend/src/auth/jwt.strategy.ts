@@ -47,7 +47,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       },
     });
 
-    if (!user || !user.active) {
+    if (!user || !user.isActive) {
       throw new UnauthorizedException('User not found or inactive');
     }
     const permissions = user.roleRelation?.permissions?.map((p) => p.name) || [];

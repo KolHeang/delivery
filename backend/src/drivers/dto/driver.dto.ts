@@ -8,6 +8,7 @@ import {
   IsNumber,
   Min,
   Max,
+  IsBoolean,
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { Type, Transform } from 'class-transformer';
@@ -17,14 +18,16 @@ export class CreateDriverDto {
   @ApiProperty({ required: false }) @IsOptional() @IsString() nameKh?: string;
   @ApiProperty() @IsNotEmpty() @IsString() phone: string;
   @ApiProperty({ required: false }) @IsOptional() @IsEmail() email?: string;
-  @ApiProperty({
-    enum: ['available', 'on-delivery', 'offline'],
-    required: false,
-  })
+  @ApiProperty({ required: false }) @IsOptional() @IsNumber() @Type(() => Number) roleId?: number;
+  @ApiProperty({ required: false, default: true })
   @IsOptional()
-  @Transform(({ value }) => value || undefined)
-  @IsIn(['available', 'on-delivery', 'offline'])
-  status?: string;
+  @Transform(({ value }) => {
+    if (value === 'true') return true;
+    if (value === 'false') return false;
+    return value;
+  })
+  @IsBoolean()
+  isActive?: boolean;
   @ApiProperty({ required: false })
   @IsOptional()
   @IsNumber()
@@ -49,10 +52,15 @@ export class UpdateDriverDto {
   @IsOptional() @IsString() nameKh?: string;
   @IsOptional() @IsString() phone?: string;
   @IsOptional() @IsEmail() email?: string;
+  @IsOptional() @IsNumber() @Type(() => Number) roleId?: number;
   @IsOptional()
-  @Transform(({ value }) => value || undefined)
-  @IsIn(['available', 'on-delivery', 'offline'])
-  status?: string;
+  @Transform(({ value }) => {
+    if (value === 'true') return true;
+    if (value === 'false') return false;
+    return value;
+  })
+  @IsBoolean()
+  isActive?: boolean;
   @IsOptional() @IsNumber() @Min(0) @Max(5) @Type(() => Number) rating?: number;
   @IsOptional() @IsNumber() @Type(() => Number) zoneId?: number;
   @IsOptional() @IsNumber() @Type(() => Number) vehicleId?: number;

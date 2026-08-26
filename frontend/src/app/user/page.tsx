@@ -133,7 +133,6 @@ export default function StaffPage() {
                     <th>Role</th>
                     <th>{t('gender')}</th>
                     <th>{t('dob')}</th>
-                    <th>{t('status')}</th>
                     <th>{t('joinDate')}</th>
                     <th>{t('salary')}</th>
                     <th>{t('actions')}</th>
@@ -142,13 +141,13 @@ export default function StaffPage() {
                 <tbody>
                   {loading ? (
                     <tr>
-                      <td colSpan={11} style={{ padding: '40px 0', textAlign: 'center' }}>
+                      <td colSpan={10} style={{ padding: '40px 0', textAlign: 'center' }}>
                         <div className="loading-wrapper"><div className="spinner" /></div>
                       </td>
                     </tr>
                   ) : filtered.length === 0 ? (
                     <tr>
-                      <td colSpan={11} style={{ padding: '36px 20px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
+                      <td colSpan={10} style={{ padding: '36px 20px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
                         {t('noDataFound') || 'គ្មានទិន្នន័យ'}
                       </td>
                     </tr>
@@ -180,11 +179,6 @@ export default function StaffPage() {
                         </td>
                         <td>{d.gender || '—'}</td>
                         <td>{d.dateOfBirth ? new Date(d.dateOfBirth).toLocaleDateString() : '—'}</td>
-                        <td>
-                          <span className={`badge ${d.status === 'inactive' ? 'badge-cancelled' : 'badge-delivered'}`} style={{ textTransform: 'capitalize' }}>
-                            {d.status || 'Active'}
-                          </span>
-                        </td>
                         <td>{d.joinedDate ? new Date(d.joinedDate).toLocaleDateString() : '—'}</td>
                         <td style={{ fontWeight: 600 }}>
                           {d.salary != null && d.salary !== '' && !isNaN(Number(d.salary))

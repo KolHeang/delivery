@@ -28,7 +28,7 @@ export class AuthService {
       .leftJoinAndSelect('user.roleRelation', 'roleRelation')
       .addSelect('user.password')
       .where('(user.email = :id OR user.phone = :id)', { id: phoneOrEmail })
-      .andWhere('roleRelation.name = :role', { role: 'driver' })
+      .andWhere('user.isDriver = true')
       .getOne();
 
     if (!user) throw new UnauthorizedException('Invalid driver credentials');
@@ -42,7 +42,7 @@ export class AuthService {
     }
 
     if (!isValid) throw new UnauthorizedException('Invalid credentials');
-    if (!user.active) throw new UnauthorizedException('Account is disabled');
+    if (!user.isActive) throw new UnauthorizedException('Account is disabled');
 
     const { password: _, ...userWithoutPassword } = user;
     const payload = { sub: user.id, email: user.email, role: 'driver' };

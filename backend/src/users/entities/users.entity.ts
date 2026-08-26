@@ -13,8 +13,6 @@ import { Zone } from '../../zones/entities/zone.entity';
 import { Vehicle } from '../../vehicles/entities/vehicle.entity';
 import { Role } from '../../roles/entities/role.entity';
 
-export type DriverStatus = 'available' | 'on-delivery' | 'offline';
-
 @Entity('users')
 export class User {
   @PrimaryGeneratedColumn()
@@ -49,11 +47,14 @@ export class User {
   @Column({ name: 'role_id', nullable: true })
   roleId: number;
 
-  @Column({ default: true })
-  active: boolean;
+  @Column({ name: 'is_active', default: true })
+  isActive: boolean;
 
-  @Column({ default: 'offline' })
-  status: DriverStatus;
+  @Column({ name: 'is_staff', default: false })
+  isStaff: boolean;
+
+  @Column({ name: 'is_driver', default: false })
+  isDriver: boolean;
 
   @Column('decimal', { precision: 3, scale: 1, default: 5.0 })
   rating: number;

@@ -8,6 +8,7 @@ import {
   Query,
   UseGuards,
   Request,
+  ParseIntPipe,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -159,8 +160,8 @@ export class DriverController {
 
   @Get('tasks/:id')
   @ApiOperation({ summary: 'Get task detail by ID for driver' })
-  getTaskDetail(@Request() req: any, @Param('id') id: string) {
-    return this.driverService.getTaskDetail(req.user.id, +id);
+  getTaskDetail(@Request() req: any, @Param('id', ParseIntPipe) id: number) {
+    return this.driverService.getTaskDetail(req.user.id, id);
   }
 
   @Get('tasks/status-counts')
@@ -188,10 +189,10 @@ export class DriverController {
   @ApiOperation({ summary: 'Update task status' })
   updateStatus(
     @Request() req: any,
-    @Param('id') id: string,
+    @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateOrderStatusDto,
   ) {
-    return this.driverService.updateOrderStatus(req.user.id, +id, dto);
+    return this.driverService.updateOrderStatus(req.user.id, id, dto);
   }
 
   @Get('summary')
@@ -226,9 +227,9 @@ export class DriverController {
   @ApiOperation({ summary: 'Confirm pickup with actual quantity' })
   confirmPickup(
     @Request() req: any,
-    @Param('id') id: string,
+    @Param('id', ParseIntPipe) id: number,
     @Body() dto: ConfirmPickupDto,
   ) {
-    return this.driverService.confirmPickup(req.user.id, +id, dto);
+    return this.driverService.confirmPickup(req.user.id, id, dto);
   }
 }

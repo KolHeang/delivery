@@ -122,111 +122,104 @@ export default function StaffPage() {
                 <MdAdd size={14} /> {t('addStaff')}
               </button>
             </div>
-            {loading ? (
-              <div className="loading-wrapper">
-                <div className="spinner" />
-              </div>
-            ) : filtered.length === 0 ? (
-              <div className="empty-state">
-                <div className="empty-state-icon">👥</div>
-                <div className="empty-state-title">{t('noStaffFound')}</div>
-              </div>
-            ) : (
-              <>
-                <div style={{ overflowX: 'auto' }}>
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>{t('colNo')}</th>
-                        <th>{t('name')}</th>
-                        <th>{t('phone')}</th>
-                        <th>{t('email')}</th>
-                        <th>Role</th>
-                        <th>{t('gender')}</th>
-                        <th>{t('dob')}</th>
-                        <th>{t('status')}</th>
-                        <th>{t('joinDate')}</th>
-                        <th>{t('salary')}</th>
-                        <th>{t('actions')}</th>
+            <div style={{ overflowX: 'auto' }}>
+              <table>
+                <thead>
+                  <tr>
+                    <th>{t('colNo')}</th>
+                    <th>{t('name')}</th>
+                    <th>{t('phone')}</th>
+                    <th>{t('email')}</th>
+                    <th>Role</th>
+                    <th>{t('gender')}</th>
+                    <th>{t('dob')}</th>
+                    <th>{t('status')}</th>
+                    <th>{t('joinDate')}</th>
+                    <th>{t('salary')}</th>
+                    <th>{t('actions')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {loading ? (
+                    <tr>
+                      <td colSpan={11} style={{ padding: '40px 0', textAlign: 'center' }}>
+                        <div className="loading-wrapper"><div className="spinner" /></div>
+                      </td>
+                    </tr>
+                  ) : filtered.length === 0 ? (
+                    <tr>
+                      <td colSpan={11} style={{ padding: '36px 20px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
+                        {t('noDataFound') || 'គ្មានទិន្នន័យ'}
+                      </td>
+                    </tr>
+                  ) : (
+                    filtered.map((d: any, idx) => (
+                      <tr key={d.id}>
+                        <td style={{ color: 'var(--text-muted)', fontSize: 12 }}>{(currentPage - 1) * pageSize + idx + 1}</td>
+                        <td>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                            <div className="sidebar-avatar" style={{ width: 32, height: 32, fontSize: 13, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              {d.photo ? (
+                                <img src={d.photo} alt={d.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                              ) : (
+                                (d.name?.[0] || 'U').toUpperCase()
+                              )}
+                            </div>
+                            <div>
+                              <div style={{ fontWeight: 600 }}>{d.name}</div>
+                              {d.nameKh && <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{d.nameKh}</div>}
+                            </div>
+                          </div>
+                        </td>
+                        <td>{d.phone || '—'}</td>
+                        <td>{d.email || '—'}</td>
+                        <td>
+                          <span className="badge badge-assigned" style={{ textTransform: 'capitalize' }}>
+                            {d.role || 'User'}
+                          </span>
+                        </td>
+                        <td>{d.gender || '—'}</td>
+                        <td>{d.dateOfBirth ? new Date(d.dateOfBirth).toLocaleDateString() : '—'}</td>
+                        <td>
+                          <span className={`badge ${d.status === 'inactive' ? 'badge-cancelled' : 'badge-delivered'}`} style={{ textTransform: 'capitalize' }}>
+                            {d.status || 'Active'}
+                          </span>
+                        </td>
+                        <td>{d.joinedDate ? new Date(d.joinedDate).toLocaleDateString() : '—'}</td>
+                        <td style={{ fontWeight: 600 }}>
+                          {d.salary != null && d.salary !== '' && !isNaN(Number(d.salary))
+                            ? `$${Number(d.salary).toFixed(2)}`
+                            : '—'}
+                        </td>
+                        <td>
+                          <div style={{ display: 'flex', gap: 4 }}>
+                            <button className="btn btn-ghost btn-icon btn-sm" onClick={() => openEdit(d)}>
+                              <MdEdit size={15} />
+                            </button>
+                            <button
+                              className="btn btn-ghost btn-icon btn-sm"
+                              style={{ color: 'var(--danger)' }}
+                              onClick={() => del(d.id)}
+                              disabled={d.id === currentUser?.id}
+                            >
+                              <MdDelete size={15} />
+                            </button>
+                          </div>
+                        </td>
                       </tr>
-                    </thead>
-                    <tbody>
-                      {filtered.map((d: any, idx) => (
-                        <tr key={d.id}>
-                          <td style={{ color: 'var(--text-muted)', fontSize: 12 }}>{(currentPage - 1) * pageSize + idx + 1}</td>
-                          <td>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                              <div className="sidebar-avatar" style={{ width: 32, height: 32, fontSize: 13, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                {d.photo ? (
-                                  <img src={d.photo} alt={d.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                ) : (
-                                  (lang === 'km' && d.nameKh ? d.nameKh : d.name ? d.name : 'U').charAt(0).toUpperCase()
-                                )}
-                              </div>
-                              <div>
-                                <div style={{ fontWeight: 700 }}>
-                                  {lang === 'km' ? (d.nameKh || d.name || '—') : (d.name || d.nameKh || '—')}
-                                  {d.id === currentUser?.id && (
-                                    <span style={{ fontSize: 10, color: 'var(--accent)', marginLeft: 6 }}>
-                                      {lang === 'km' ? '(អ្នក)' : '(You)'}
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          </td>
-                          <td style={{ fontSize: 12 }}>{d.phone || '—'}</td>
-                          <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>{d.email || '—'}</td>
-                          <td>
-                            <Badge status={d.role || d.roleRelation?.name || 'staff'} />
-                          </td>
-                          <td style={{ fontSize: 12 }}>
-                            {d.gender ? (d.gender === 'other' ? t('otherGender') : t(d.gender) || d.gender) : '—'}
-                          </td>
-                          <td style={{ fontSize: 12 }}>
-                            {d.dob || '—'}
-                          </td>
-                          <td>
-                            {(d.role || d.roleRelation?.name) === 'driver' ? (
-                              <Badge status={d.status} />
-                            ) : (
-                              <Badge status={d.active ? 'active' : 'inactive'} />
-                            )}
-                          </td>
-                          <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>{d.joinDate || '—'}</td>
-                          <td style={{ fontSize: 12, fontWeight: 600 }}>
-                            {d.salary !== undefined && d.salary !== null
-                              ? `$${parseFloat(d.salary).toFixed(2)}`
-                              : '—'}
-                          </td>
-                          <td>
-                            <div style={{ display: 'flex', gap: 4 }}>
-                              <button className="btn btn-ghost btn-icon btn-sm" onClick={() => openEdit(d)}>
-                                <MdEdit size={15} />
-                              </button>
-                              <button
-                                className="btn btn-ghost btn-icon btn-sm"
-                                style={{ color: 'var(--danger)' }}
-                                onClick={() => del(d.id)}
-                                disabled={d.id === currentUser?.id}
-                              >
-                                <MdDelete size={15} />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                <Pagination
-                  currentPage={currentPage}
-                  totalItems={totalItems}
-                  pageSize={pageSize}
-                  onPageChange={setCurrentPage}
-                  onPageSizeChange={setPageSize}
-                />
-              </>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+            {filtered.length > 0 && (
+              <Pagination
+                currentPage={currentPage}
+                totalItems={totalItems}
+                pageSize={pageSize}
+                onPageChange={setCurrentPage}
+                onPageSizeChange={setPageSize}
+              />
             )}
           </div>
 

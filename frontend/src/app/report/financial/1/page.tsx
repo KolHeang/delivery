@@ -109,7 +109,7 @@ export default function Frpt1Page() {
                 <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)' }}>{t('search')}</span>
                 <input type="text" className="form-control" placeholder={`${t('search')}...`} value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
               </div>
-              <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', marginLeft: 'auto' }}>
                 <button className="btn btn-primary" onClick={load} style={{ display: 'flex', alignItems: 'center', gap: 6 }}><MdSearch size={16} /> {t('filterBtn')}</button>
                 <button className="btn btn-outline" onClick={() => window.print()} style={{ display: 'flex', alignItems: 'center', gap: 6 }}><MdPrint size={16} /> {t('downloadAndPrint')}</button>
               </div>

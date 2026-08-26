@@ -31,6 +31,14 @@ export class IncomesController {
     return this.incomesService.findTypes();
   }
 
+  @Patch('types/:id')
+  updateType(
+    @Param('id') id: string,
+    @Body() body: { name?: string; description?: string },
+  ) {
+    return this.incomesService.updateType(parseInt(id), body);
+  }
+
   @Delete('types/:id')
   deleteType(@Param('id') id: string) {
     return this.incomesService.deleteType(parseInt(id));

@@ -350,65 +350,59 @@ export default function DeliveriesPage() {
                 <button
                   className="btn btn-outline btn-sm"
                   onClick={() => router.push(selectedIds.length > 0 ? `/delivery/print_invoice?id=${selectedIds.join(',')}` : '/delivery/print_invoice')}
-                  style={{ display: 'flex', alignItems: 'center', gap: 4, borderColor: '#2563eb', color: '#2563eb', fontWeight: 600 }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 6, borderColor: '#2563eb', color: '#2563eb', fontWeight: 600 }}
                 >
-                  <MdPrint size={14} /> {lang === 'km' ? 'បោះពុម្ពវិក្កយបត្រ (QR)' : 'Print Invoice (QR)'}{selectedIds.length > 0 ? ` (${selectedIds.length})` : ''}
+                  <MdPrint size={17} /> {lang === 'km' ? 'បោះពុម្ពវិក្កយបត្រ (QR)' : 'Print Invoice (QR)'}{selectedIds.length > 0 ? ` (${selectedIds.length})` : ''}
                 </button>
-                {/* {selectedIds.length > 0 && selectedIds.some(id => orders.find(o => o.id === id)?.status === 'picked-up') && (
-                  <button 
-                    className="btn btn-sm" 
-                    onClick={handleBatchReceive}
-                    style={{ display: 'flex', alignItems: 'center', gap: 4, backgroundColor: '#0f766e', color: '#ffffff', border: 'none' }}
-                  >
-                    📥 {lang === 'km' ? 'ទទួលចូលឃ្លាំង' : 'Manual Receive'} ({selectedIds.filter(id => orders.find(o => o.id === id)?.status === 'picked-up').length})
-                  </button>
-                )} */}
-                <button id="create-order-btn" className="btn btn-primary btn-sm" onClick={openCreate}><MdAdd size={14} /> {t('batchEntryData')}</button>
+                <button id="create-order-btn" className="btn btn-primary btn-sm" onClick={openCreate}><MdAdd size={17} /> {t('batchEntryData')}</button>
               </div>
             </div>
-            {loading ? (
-              <div className="loading-wrapper"><div className="spinner" /></div>
-            ) : filtered.length === 0 ? (
-              <div className="empty-state">
-                <div className="empty-state-icon">📦</div>
-                <div className="empty-state-title">No orders found</div>
-                <div className="empty-state-text">Create your first order to get started</div>
-              </div>
-            ) : (
-              <>
-                <div className="table-responsive" style={{ overflowX: 'auto' }}>
-                  <table style={{ minWidth: 1800 }}>
-                  <thead>
+            <div className="table-responsive" style={{ overflowX: 'auto' }}>
+              <table style={{ minWidth: 1800, width: '100%' }}>
+                <thead>
+                  <tr>
+                    <th style={{ width: 50, textAlign: 'center' }}>{lang === 'km' ? 'ល.រ' : 'No.'}</th>
+                    <th style={{ minWidth: 140 }}>{lang === 'km' ? 'លេខ' : 'Tracking'}</th>
+                    <th style={{ textAlign: 'center', width: 40 }}>
+                      <input
+                        type="checkbox"
+                        checked={filtered.length > 0 && filtered.every(item => selectedIds.includes(item.id))}
+                        onChange={handleSelectAll}
+                        style={{ cursor: 'pointer', width: 16, height: 16 }}
+                      />
+                    </th>
+                    <th style={{ minWidth: 150 }}>{lang === 'km' ? 'កាលបរិច្ឆេទ' : 'Date'}</th>
+                    <th style={{ minWidth: 160 }}>{lang === 'km' ? 'ឈ្មោះហាង' : 'Merchant'}</th>
+                    <th style={{ minWidth: 200 }}>{lang === 'km' ? 'អាសយដ្ឋានអ្នកទទួល' : 'Receiver Address'}</th>
+                    <th style={{ minWidth: 120 }}>{lang === 'km' ? 'លេខទូរស័ព្ទ' : 'Receiver Phone'}</th>
+                    <th style={{ minWidth: 100 }}>{lang === 'km' ? 'ចំនួន$' : 'Amount USD'}</th>
+                    <th style={{ minWidth: 110 }}>{lang === 'km' ? 'ចំនួន៛' : 'Amount KHR'}</th>
+                    <th style={{ minWidth: 130 }}>{lang === 'km' ? 'អ្នកយកកញ្ចប់' : 'Pickup Driver'}</th>
+                    <th style={{ minWidth: 130 }}>{lang === 'km' ? 'អ្នកដឹក' : 'Delivery Driver'}</th>
+                    <th style={{ textAlign: 'center', width: 100 }}>{lang === 'km' ? 'ស្ថានភាពដឹក ✓ ✕' : 'Delivery Status ✓ ✕'}</th>
+                    <th style={{ minWidth: 130 }}>{lang === 'km' ? 'ស្ថានភាព' : 'Status'}</th>
+                    <th style={{ minWidth: 160 }}>{lang === 'km' ? 'សម្គាល់' : 'Remarks/Notes'}</th>
+                    <th style={{ minWidth: 120 }}>{lang === 'km' ? 'ស្ថានភាពទូទាត់' : 'Payment Status'}</th>
+                    <th style={{ minWidth: 120 }}>{lang === 'km' ? 'បញ្ចូលដោយ' : 'Created By'}</th>
+                    <th style={{ minWidth: 120 }}>{lang === 'km' ? 'បញ្ចប់ដោយ' : 'Completed By'}</th>
+                    <th style={{ minWidth: 100, textAlign: 'center' }}>{lang === 'km' ? 'សកម្មភាព' : 'Actions'}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {loading ? (
                     <tr>
-                      <th>{lang === 'km' ? 'ល.រ' : 'No.'}</th>
-                      <th>{lang === 'km' ? 'លេខ' : 'Tracking'}</th>
-                      <th style={{ textAlign: 'center', width: 40 }}>
-                        <input
-                          type="checkbox"
-                          checked={filtered.length > 0 && filtered.every(item => selectedIds.includes(item.id))}
-                          onChange={handleSelectAll}
-                          style={{ cursor: 'pointer', width: 16, height: 16 }}
-                        />
-                      </th>
-                      <th>{lang === 'km' ? 'កាលបរិច្ឆេទ' : 'Date'}</th>
-                      <th>{lang === 'km' ? 'ឈ្មោះហាង' : 'Merchant'}</th>
-                      <th>{lang === 'km' ? 'អាសយដ្ឋានអ្នកទទួល' : 'Receiver Address'}</th>
-                      <th>{lang === 'km' ? 'លេខទូរស័ព្ទ' : 'Receiver Phone'}</th>
-                      <th>{lang === 'km' ? 'ចំនួន$' : 'Amount USD'}</th>
-                      <th>{lang === 'km' ? 'ចំនួន៛' : 'Amount KHR'}</th>
-                      <th style={{ minWidth: 130 }}>{lang === 'km' ? 'អ្នកយកកញ្ចប់' : 'Pickup Driver'}</th>
-                      <th style={{ minWidth: 130 }}>{lang === 'km' ? 'អ្នកដឹក' : 'Delivery Driver'}</th>
-                      <th style={{ textAlign: 'center', width: 80 }}>{lang === 'km' ? 'ស្ថានភាពដឹក ✓ ✕' : 'Delivery Status ✓ ✕'}</th>
-                      <th>{lang === 'km' ? 'ស្ថានភាព' : 'Status'}</th>
-                      <th style={{ minWidth: 160 }}>{lang === 'km' ? 'សម្គាល់' : 'Remarks/Notes'}</th>
-                      <th>{lang === 'km' ? 'ស្ថានភាពទូទាត់' : 'Payment Status'}</th>
-                      <th>{lang === 'km' ? 'បញ្ចូលដោយ' : 'Created By'}</th>
-                      <th>{lang === 'km' ? 'បញ្ចប់ដោយ' : 'Completed By'}</th>
-                      <th>{lang === 'km' ? 'ធ្វើបច្ចុប្បន្នភាព' : 'Updated At'}</th>
+                      <td colSpan={18} style={{ padding: '40px 0', textAlign: 'center' }}>
+                        <div className="loading-wrapper"><div className="spinner" /></div>
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {filtered.map((o: any, idx) => {
+                  ) : filtered.length === 0 ? (
+                    <tr>
+                      <td colSpan={18} style={{ padding: '36px 20px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
+                        {lang === 'km' ? 'គ្មានទិន្នន័យ' : 'No data'}
+                      </td>
+                    </tr>
+                  ) : (
+                    filtered.map((o: any, idx) => {
                       const isSelected = selectedIds.includes(o.id);
                       return (
                         <tr key={o.id} style={{ backgroundColor: isSelected ? '#eff6ff' : 'transparent', transition: 'background-color 0.15s ease' }}>
@@ -605,18 +599,19 @@ export default function DeliveriesPage() {
                           </td>
                         </tr>
                       );
-                    })}
-                  </tbody>
-                </table>
-                </div>
-                <Pagination
-                  currentPage={currentPage}
-                  totalItems={totalItems}
-                  pageSize={pageSize}
-                  onPageChange={setCurrentPage}
-                  onPageSizeChange={setPageSize}
-                />
-              </>
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+            {filtered.length > 0 && (
+              <Pagination
+                currentPage={currentPage}
+                totalItems={totalItems}
+                pageSize={pageSize}
+                onPageChange={setCurrentPage}
+                onPageSizeChange={setPageSize}
+              />
             )}
           </div>
         </div>

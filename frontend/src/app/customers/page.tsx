@@ -88,41 +88,62 @@ export default function CustomersPage() {
               <span className="card-title">👥 {t('customersListTitle')}</span>
               <button className="btn btn-primary btn-sm" onClick={openCreate}><MdAdd size={14} /> {t('addCustomer')}</button>
             </div>
-            {loading ? <div className="loading-wrapper"><div className="spinner" /></div> :
-              filtered.length === 0 ? <div className="empty-state"><div className="empty-state-icon">👥</div><div className="empty-state-title">{t('noCustomersFound')}</div></div> :
-              <>
-                <div style={{ overflowX: 'auto' }}>
-                  <table>
-                    <thead><tr><th>{t('colNo')}</th><th>{t('name')}</th><th>{t('phone')}</th><th>{t('email')}</th><th>{t('address')}</th><th>{t('date')}</th><th>{t('actions')}</th></tr></thead>
-                    <tbody>
-                      {filtered.map((c: any, i) => (
-                        <tr key={c.id}>
-                          <td style={{ color: 'var(--text-muted)', fontSize: 12 }}>{(currentPage - 1) * pageSize + i + 1}</td>
-                          <td style={{ fontWeight: 600 }}>{c.name}</td>
-                          <td style={{ fontSize: 12 }}>{c.phone}</td>
-                          <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>{c.email || '—'}</td>
-                          <td style={{ fontSize: 12, maxWidth: 200 }}>{c.address || '—'}</td>
-                          <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>{new Date(c.createdAt).toLocaleDateString()}</td>
-                          <td>
-                            <div style={{ display: 'flex', gap: 4 }}>
-                              <button className="btn btn-ghost btn-icon btn-sm" onClick={() => openEdit(c)}><MdEdit size={15} /></button>
-                              <button className="btn btn-ghost btn-icon btn-sm" style={{ color: 'var(--danger)' }} onClick={() => del(c.id)}><MdDelete size={15} /></button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                <Pagination
-                  currentPage={currentPage}
-                  totalItems={totalItems}
-                  pageSize={pageSize}
-                  onPageChange={setCurrentPage}
-                  onPageSizeChange={setPageSize}
-                />
-              </>
-            }
+            <div style={{ overflowX: 'auto' }}>
+              <table>
+                <thead>
+                  <tr>
+                    <th style={{ width: 60, textAlign: 'center' }}>{t('colNo')}</th>
+                    <th>{t('name')}</th>
+                    <th>{t('phone')}</th>
+                    <th>{t('email')}</th>
+                    <th>{t('address')}</th>
+                    <th>{t('date')}</th>
+                    <th style={{ width: 100, textAlign: 'center' }}>{t('actions')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {loading ? (
+                    <tr>
+                      <td colSpan={7} style={{ padding: '40px 0', textAlign: 'center' }}>
+                        <div className="loading-wrapper"><div className="spinner" /></div>
+                      </td>
+                    </tr>
+                  ) : filtered.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} style={{ padding: '36px 20px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
+                        {t('noDataFound') || 'គ្មានទិន្នន័យ'}
+                      </td>
+                    </tr>
+                  ) : (
+                    filtered.map((c: any, i) => (
+                      <tr key={c.id}>
+                        <td style={{ color: 'var(--text-muted)', fontSize: 12, textAlign: 'center' }}>{(currentPage - 1) * pageSize + i + 1}</td>
+                        <td style={{ fontWeight: 600 }}>{c.name}</td>
+                        <td style={{ fontSize: 12 }}>{c.phone}</td>
+                        <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>{c.email || '—'}</td>
+                        <td style={{ fontSize: 12, maxWidth: 200 }}>{c.address || '—'}</td>
+                        <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>{new Date(c.createdAt).toLocaleDateString()}</td>
+                        <td>
+                          <div style={{ display: 'flex', gap: 4, justifyContent: 'center' }}>
+                            <button className="btn btn-ghost btn-icon btn-sm" onClick={() => openEdit(c)}><MdEdit size={15} /></button>
+                            <button className="btn btn-ghost btn-icon btn-sm" style={{ color: 'var(--danger)' }} onClick={() => del(c.id)}><MdDelete size={15} /></button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+            {filtered.length > 0 && (
+              <Pagination
+                currentPage={currentPage}
+                totalItems={totalItems}
+                pageSize={pageSize}
+                onPageChange={setCurrentPage}
+                onPageSizeChange={setPageSize}
+              />
+            )}
           </div>
         </div>
       </div>

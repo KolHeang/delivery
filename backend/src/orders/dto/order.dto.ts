@@ -106,8 +106,6 @@ export class UpdateOrderDto {
   @IsOptional() @IsEnum(['pending', 'paid']) paymentStatus?: string;
   @IsOptional() @IsString() status?: string;
   @IsOptional() @IsString() paymentMethod?: string;
-  @IsOptional() @IsNumber() @Type(() => Number) receivedAmountUSD?: number;
-  @IsOptional() @IsNumber() @Type(() => Number) receivedAmountKHR?: number;
   @IsOptional() @IsNumber() @Type(() => Number) driverId?: number;
   @IsOptional() @IsNumber() @Type(() => Number) pickupDriverId?: number;
   @IsOptional() @IsString() createdAt?: string;

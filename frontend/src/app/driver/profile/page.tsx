@@ -24,16 +24,14 @@ import {
   MdKey,
   MdClose,
   MdCameraAlt,
-  MdEdit
+  MdEdit,
+  MdAccountBalanceWallet,
+  MdReceiptLong
 } from 'react-icons/md';
 
 const profileTranslations = {
   en: {
     title: 'My Profile',
-    tabSummary: 'Dashboard Summary',
-    tabInfo: 'Personal Information',
-    dashSummary: 'Dashboard Summary',
-    dashSub: 'Quick overview of wallets and delivery performance',
     personalInfo: 'Personal Information',
     languageSetting: 'App Language',
     changePasswordBtn: 'Change Password',
@@ -47,19 +45,9 @@ const profileTranslations = {
     genderFemale: 'Female',
     joinDateLabel: 'Join Date',
     dobLabel: 'Date of Birth',
-    usdWallet: 'COD Collected (USD)',
-    khrWallet: 'COD Collected (KHR)',
-    totalPackages: 'Total Packages',
-    successfulDeliveries: 'Successful',
-    pendingPickups: 'Pending Pickups',
-    problems: 'Problem / Returns',
   },
   km: {
     title: 'គណនីរបស់ខ្ញុំ',
-    tabSummary: 'ផ្ទាំងសង្ខេបការងារ',
-    tabInfo: 'ព័ត៌មានផ្ទាល់ខ្លួន',
-    dashSummary: 'ផ្ទាំងសង្ខេបការងារ & កាបូបប្រាក់',
-    dashSub: 'សេចក្ដីសង្ខេបប្រាក់ COD និងលទ្ធផលដឹកជញ្ជូន',
     personalInfo: 'ព័ត៌មានផ្ទាល់ខ្លួន',
     languageSetting: 'ភាសាកម្មវិធី / Language',
     changePasswordBtn: 'ផ្លាស់ប្តូរលេខសម្ងាត់',
@@ -73,12 +61,6 @@ const profileTranslations = {
     genderFemale: 'ស្រី (Female)',
     joinDateLabel: 'ថ្ងៃចូលធ្វើការ',
     dobLabel: 'ថ្ងៃខែឆ្នាំកំណើត',
-    usdWallet: 'ប្រមូលបាន COD (ដុល្លារ)',
-    khrWallet: 'ប្រមូលបាន COD (រៀល)',
-    totalPackages: 'កញ្ចប់អីវ៉ាន់សរុប',
-    successfulDeliveries: 'ដឹកជញ្ជូនជោគជ័យ',
-    pendingPickups: 'រង់ចាំទទួល',
-    problems: 'មានបញ្ហា / ត្រឡប់',
   }
 };
 
@@ -86,15 +68,9 @@ export default function DriverProfilePage() {
   const router = useRouter();
   const { lang, setLang } = useLanguage();
   const [profile, setProfile] = useState<any>(null);
-  const [dashData, setDashData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   const t = profileTranslations[lang as 'en' | 'km'] || profileTranslations.en;
-
-  const [activeMainTab, setActiveMainTab] = useState<'summary' | 'info'>('summary');
-  const [period, setPeriod] = useState<'today' | 'week' | 'month' | 'all' | 'custom'>('today');
-  const [startDate, setStartDate] = useState<string>('');
-  const [endDate, setEndDate] = useState<string>('');
 
   // Password Change Modal State
   const [showPasswordModal, setShowPasswordModal] = useState(false);
@@ -216,21 +192,12 @@ export default function DriverProfilePage() {
     reader.readAsDataURL(file);
   };
 
-  const loadProfileData = async (p = period, sDate = startDate, eDate = endDate) => {
+  const loadProfileData = async () => {
     try {
-      let dashUrl = `/mobile/driver/dashboard?period=${p}`;
-      if (p === 'custom') {
-        if (sDate) dashUrl += `&startDate=${sDate}`;
-        if (eDate) dashUrl += `&endDate=${eDate}`;
-      }
-      const [profRes, dashRes] = await Promise.all([
-        api.get('/mobile/driver/profile'),
-        api.get(dashUrl)
-      ]);
-      setProfile(profRes.data);
-      setDashData(dashRes.data);
+      const res = await api.get('/mobile/driver/profile');
+      setProfile(res.data);
     } catch (err) {
-      console.error('Failed to load driver profile or dashboard data', err);
+      console.error('Failed to load driver profile data', err);
     } finally {
       setLoading(false);
     }
@@ -241,27 +208,8 @@ export default function DriverProfilePage() {
       router.push('/driver/login');
       return;
     }
-    loadProfileData(period, startDate, endDate);
+    loadProfileData();
   }, [router]);
-
-  const handlePeriodChange = (newPeriod: 'today' | 'week' | 'month' | 'all' | 'custom') => {
-    setPeriod(newPeriod);
-    loadProfileData(newPeriod, startDate, endDate);
-  };
-
-  const handleStartDateChange = (val: string) => {
-    setStartDate(val);
-    if (period === 'custom') {
-      loadProfileData('custom', val, endDate);
-    }
-  };
-
-  const handleEndDateChange = (val: string) => {
-    setEndDate(val);
-    if (period === 'custom') {
-      loadProfileData('custom', startDate, val);
-    }
-  };
 
   const handleLogout = () => {
     clearAuth();
@@ -325,14 +273,6 @@ export default function DriverProfilePage() {
     ? t.genderFemale
     : t.genderMale;
 
-  // Wallet balances & stats
-  const khrBalance = dashData?.wallets?.find((w: any) => w.currency === 'KHR')?.balance || 0;
-  const usdBalance = dashData?.wallets?.find((w: any) => w.currency === 'USD')?.balance || 0;
-  const stats = dashData?.statistics || {};
-  const deliveryFeeTotal = dashData?.deliveryFeeTotal || 0;
-  const totalSuccessful = stats?.totalSuccessful || 0;
-  const feePerPkg = totalSuccessful > 0 ? (deliveryFeeTotal / totalSuccessful).toFixed(2) : '0.00';
-
   const displayName = lang === 'km' && profile?.nameKh ? profile.nameKh : (profile?.name || 'Sok Dara');
 
   return (
@@ -347,43 +287,53 @@ export default function DriverProfilePage() {
     }}>
       {/* Royal Blue Gradient Hero Section */}
       <div style={{
-        background: 'linear-gradient(165deg, #1e40af 0%, #2563eb 60%, #3b82f6 100%)',
-        padding: '28px 20px 32px',
+        background: 'linear-gradient(145deg, #1e3a8a 0%, #2563eb 55%, #3b82f6 100%)',
+        padding: '24px 20px 38px',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
         position: 'relative',
         borderBottomLeftRadius: '32px',
         borderBottomRightRadius: '32px',
-        boxShadow: '0 12px 28px rgba(37, 99, 235, 0.25)'
+        boxShadow: '0 12px 28px rgba(37, 99, 235, 0.22)'
       }}>
-        {/* Background Decorative Pattern */}
+        {/* Background Decorative Circles */}
         <div style={{
           position: 'absolute',
-          top: '-40px',
-          right: '-40px',
-          width: '160px',
-          height: '160px',
+          top: '-30px',
+          right: '-30px',
+          width: '140px',
+          height: '140px',
           borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0) 70%)',
+          background: 'radial-gradient(circle, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0) 70%)',
+          pointerEvents: 'none'
+        }} />
+        <div style={{
+          position: 'absolute',
+          bottom: '-20px',
+          left: '-20px',
+          width: '120px',
+          height: '120px',
+          borderRadius: '50%',
+          background: 'radial-gradient(circle, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0) 70%)',
           pointerEvents: 'none'
         }} />
 
-        {/* Centered Avatar with Camera Upload Button & Gold Ring */}
-        <div style={{ position: 'relative', marginBottom: '12px', zIndex: 1 }}>
+        {/* Centered Avatar with Camera Upload Button */}
+        <div style={{ position: 'relative', marginBottom: '10px', zIndex: 1 }}>
           <div style={{
-            width: '92px',
-            height: '92px',
+            width: '88px',
+            height: '88px',
             borderRadius: '50%',
             backgroundColor: '#ffffff',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            fontSize: '32px',
+            fontSize: '30px',
             color: '#2563eb',
             fontWeight: '900',
-            border: '3.5px solid #f59e0b',
-            boxShadow: '0 10px 25px rgba(0, 0, 0, 0.18)',
+            border: '3.5px solid #ffffff',
+            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.2)',
             overflow: 'hidden',
             position: 'relative'
           }}>
@@ -403,11 +353,11 @@ export default function DriverProfilePage() {
             position: 'absolute',
             bottom: '0px',
             right: '0px',
-            width: '32px',
-            height: '32px',
+            width: '30px',
+            height: '30px',
             borderRadius: '50%',
             backgroundColor: '#2563eb',
-            border: '2.5px solid #ffffff',
+            border: '2px solid #ffffff',
             color: '#ffffff',
             display: 'flex',
             alignItems: 'center',
@@ -417,7 +367,7 @@ export default function DriverProfilePage() {
             zIndex: 3,
             transition: 'transform 0.2s ease'
           }} title={lang === 'km' ? 'ប្តូររូបថត' : 'Upload Photo'}>
-            <MdCameraAlt size={16} />
+            <MdCameraAlt size={15} />
             <input
               type="file"
               accept="image/*"
@@ -429,677 +379,406 @@ export default function DriverProfilePage() {
 
         {/* Centered User Name */}
         <h2 style={{
-          fontSize: '22px',
+          fontSize: '20px',
           fontWeight: '900',
           color: '#ffffff',
-          margin: 0,
+          margin: '0 0 6px',
           textAlign: 'center',
-          letterSpacing: '-0.4px',
+          letterSpacing: '-0.3px',
           zIndex: 1,
-          textShadow: '0 2px 4px rgba(0,0,0,0.1)'
+          textShadow: '0 2px 6px rgba(0,0,0,0.12)'
         }}>
           {displayName}
         </h2>
+
+        {/* Role & ID Tag Pill */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          zIndex: 1
+        }}>
+          <span style={{
+            backgroundColor: 'rgba(255, 255, 255, 0.18)',
+            color: '#ffffff',
+            fontSize: '11px',
+            fontWeight: '700',
+            padding: '3px 10px',
+            borderRadius: '12px',
+            backdropFilter: 'blur(8px)',
+            border: '1px solid rgba(255, 255, 255, 0.25)'
+          }}>
+            🛵 {lang === 'km' ? 'អ្នកដឹកជញ្ជូន' : 'Driver'}
+          </span>
+          <span style={{
+            backgroundColor: 'rgba(255, 255, 255, 0.18)',
+            color: '#ffffff',
+            fontSize: '11px',
+            fontWeight: '700',
+            padding: '3px 10px',
+            borderRadius: '12px',
+            backdropFilter: 'blur(8px)',
+            border: '1px solid rgba(255, 255, 255, 0.25)'
+          }}>
+            📱 {profile?.phone || '012-345-678'}
+          </span>
+        </div>
       </div>
 
       {/* Main Content Container */}
       <div style={{
         padding: '0 16px',
-        marginTop: '16px',
+        marginTop: '-16px',
         display: 'flex',
         flexDirection: 'column',
-        gap: '16px'
+        gap: '14px',
+        position: 'relative',
+        zIndex: 10
       }}>
-        {/* Profile Main Segmented Tab Switcher */}
+        {/* Personal Information View */}
         <div style={{
           backgroundColor: '#ffffff',
-          borderRadius: '18px',
-          padding: '4px',
+          borderRadius: '22px',
+          padding: '18px 20px',
+          boxShadow: '0 6px 22px rgba(15, 23, 42, 0.05)',
+          border: '1px solid #e8eff7',
           display: 'flex',
-          gap: '4px',
-          boxShadow: '0 4px 16px rgba(15, 23, 42, 0.04)',
-          border: '1px solid #e2e8f0'
+          flexDirection: 'column',
+          gap: '14px'
         }}>
-          <button
-            onClick={() => setActiveMainTab('summary')}
-            style={{
-              flex: 1,
-              padding: '11px 12px',
-              borderRadius: '14px',
-              border: 'none',
-              backgroundColor: activeMainTab === 'summary' ? '#2563eb' : 'transparent',
-              color: activeMainTab === 'summary' ? '#ffffff' : '#64748b',
-              fontWeight: activeMainTab === 'summary' ? '800' : '600',
-              fontSize: '13px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '7px',
-              cursor: 'pointer',
-              transition: 'all 0.25s ease',
-              boxShadow: activeMainTab === 'summary' ? '0 4px 14px rgba(37, 99, 235, 0.3)' : 'none'
-            }}
-          >
-            <MdDashboard size={18} />
-            {t.tabSummary}
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{
+                width: '36px',
+                height: '36px',
+                borderRadius: '11px',
+                backgroundColor: '#eff6ff',
+                color: '#2563eb',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <MdBadge size={20} />
+              </div>
+              <h3 style={{ fontSize: '15px', fontWeight: '900', color: '#0f2460', margin: 0 }}>
+                {t.personalInfo}
+              </h3>
+            </div>
 
-          <button
-            onClick={() => setActiveMainTab('info')}
-            style={{
-              flex: 1,
-              padding: '11px 12px',
-              borderRadius: '14px',
-              border: 'none',
-              backgroundColor: activeMainTab === 'info' ? '#2563eb' : 'transparent',
-              color: activeMainTab === 'info' ? '#ffffff' : '#64748b',
-              fontWeight: activeMainTab === 'info' ? '800' : '600',
-              fontSize: '13px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '7px',
-              cursor: 'pointer',
-              transition: 'all 0.25s ease',
-              boxShadow: activeMainTab === 'info' ? '0 4px 14px rgba(37, 99, 235, 0.3)' : 'none'
-            }}
-          >
-            <MdPerson size={18} />
-            {t.tabInfo}
-          </button>
-        </div>
+            <button
+              onClick={openEditProfileModal}
+              style={{
+                padding: '6px 12px',
+                borderRadius: '10px',
+                border: '1px solid #bfdbfe',
+                backgroundColor: '#eff6ff',
+                color: '#2563eb',
+                fontSize: '11.5px',
+                fontWeight: '800',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              <MdEdit size={15} />
+              <span>{lang === 'km' ? 'កែប្រែព័ត៌មាន' : 'Edit Profile'}</span>
+            </button>
+          </div>
 
-        {/* TAB 1: Dashboard Summary View */}
-        {activeMainTab === 'summary' && (
           <div style={{
-            backgroundColor: '#ffffff',
-            borderRadius: '22px',
-            padding: '18px',
-            boxShadow: '0 6px 20px rgba(15, 23, 42, 0.04)',
-            border: '1px solid #e2e8f0'
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr',
+            gap: '10px'
           }}>
-            {/* Period Filter Selector Pills */}
+            {/* Phone Tile */}
             <div style={{
+              backgroundColor: '#f8fafc',
+              borderRadius: '14px',
+              padding: '11px 12px',
+              border: '1px solid #f1f5f9',
               display: 'flex',
               flexDirection: 'column',
-              gap: '8px',
-              marginBottom: '16px'
+              gap: '3px'
             }}>
-              <div style={{
-                backgroundColor: '#f8fafc',
-                borderRadius: '14px',
-                padding: '3px',
-                display: 'flex',
-                gap: '3px',
-                border: '1px solid #e2e8f0'
-              }}>
-                {[
-                  { id: 'today', labelEn: 'Today', labelKm: 'ថ្ងៃនេះ' },
-                  { id: 'week', labelEn: 'Week', labelKm: 'សប្ដាហ៍' },
-                  { id: 'month', labelEn: 'Month', labelKm: 'ខែ' },
-                  { id: 'all', labelEn: 'All', labelKm: 'ទាំងអស់' },
-                  { id: 'custom', labelEn: 'Custom', labelKm: 'ជ្រើសរើសថ្ងៃ' },
-                ].map(item => {
-                  const isSelected = period === item.id;
-                  const label = lang === 'km' ? item.labelKm : item.labelEn;
-                  return (
-                    <button
-                      key={item.id}
-                      onClick={() => handlePeriodChange(item.id as any)}
-                      style={{
-                        flex: 1,
-                        padding: '7px 2px',
-                        borderRadius: '10px',
-                        border: 'none',
-                        backgroundColor: isSelected ? '#2563eb' : 'transparent',
-                        color: isSelected ? '#ffffff' : '#64748b',
-                        fontWeight: isSelected ? '800' : '600',
-                        fontSize: '11.5px',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease',
-                        boxShadow: isSelected ? '0 4px 12px rgba(37, 99, 235, 0.25)' : 'none',
-                        whiteSpace: 'nowrap',
-                        textAlign: 'center'
-                      }}
-                    >
-                      {label}
-                    </button>
-                  );
-                })}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '5px', color: '#64748b', fontSize: '11px', fontWeight: '700' }}>
+                <MdPhone size={14} color="#2563eb" />
+                <span>{t.phoneLabel}</span>
               </div>
-
-              {/* Custom Start & End Date Inputs */}
-              {period === 'custom' && (
-                <div style={{
-                  backgroundColor: '#f8fafc',
-                  borderRadius: '14px',
-                  padding: '10px 12px',
-                  border: '1px solid rgba(37, 99, 235, 0.2)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px'
-                }}>
-                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                    <label style={{ fontSize: '9.5px', color: '#64748b', fontWeight: '700' }}>
-                      {lang === 'km' ? 'ថ្ងៃចាប់ផ្តើម' : 'Start Date'}
-                    </label>
-                    <input
-                      type="date"
-                      value={startDate}
-                      onChange={(e) => handleStartDateChange(e.target.value)}
-                      style={{
-                        padding: '5px 6px',
-                        borderRadius: '8px',
-                        border: '1px solid #cbd5e1',
-                        fontSize: '11px',
-                        fontWeight: '700',
-                        color: '#0f172a',
-                        outline: 'none',
-                        width: '100%',
-                        backgroundColor: '#ffffff'
-                      }}
-                    />
-                  </div>
-                  <span style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '800', marginTop: '12px' }}>➔</span>
-                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                    <label style={{ fontSize: '9.5px', color: '#64748b', fontWeight: '700' }}>
-                      {lang === 'km' ? 'ថ្ងៃបញ្ចប់' : 'End Date'}
-                    </label>
-                    <input
-                      type="date"
-                      value={endDate}
-                      onChange={(e) => handleEndDateChange(e.target.value)}
-                      style={{
-                        padding: '5px 6px',
-                        borderRadius: '8px',
-                        border: '1px solid #cbd5e1',
-                        fontSize: '11px',
-                        fontWeight: '700',
-                        color: '#0f172a',
-                        outline: 'none',
-                        width: '100%',
-                        backgroundColor: '#ffffff'
-                      }}
-                    />
-                  </div>
-                </div>
-              )}
+              <a href={`tel:${profile?.phone || '012345678'}`} style={{ fontSize: '13px', fontWeight: '800', color: '#0f172a', textDecoration: 'none' }}>
+                {profile?.phone || '012-345-678'}
+              </a>
             </div>
 
-            {/* Wallets Section */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '14px' }}>
-              {/* Delivery Fee Total — Full width */}
-              <div style={{
-                background: 'linear-gradient(135deg, #0f2460 0%, #1e40af 100%)',
-                borderRadius: '16px',
-                padding: '12px 16px',
-                color: '#ffffff',
-                boxShadow: '0 4px 14px rgba(30, 64, 175, 0.30)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <img src="/3d/3d_cash.png" alt="Fee" style={{ width: '30px', height: '30px', objectFit: 'contain' }} />
-                  <div>
-                    <div style={{ fontSize: '10px', fontWeight: '800', opacity: 0.85, lineHeight: 1.3 }}>
-                      {lang === 'km' ? 'ថ្លៃដឹករួម (រយៈពេល)' : 'Total Delivery Fee (Period)'}
-                    </div>
-                    <div style={{ fontSize: '17px', fontWeight: '900', marginTop: '2px' }}>
-                      ${deliveryFeeTotal.toFixed(2)}
-                    </div>
-                  </div>
-                </div>
-                <div style={{
-                  backgroundColor: 'rgba(255,255,255,0.18)',
-                  borderRadius: '12px',
-                  padding: '6px 12px',
-                  textAlign: 'center'
-                }}>
-                  <div style={{ fontSize: '9px', fontWeight: '800', opacity: 0.85 }}>
-                    {lang === 'km' ? '/ 1 កញ្ចប់' : '/ pkg'}
-                  </div>
-                  <div style={{ fontSize: '14px', fontWeight: '900' }}>
-                    ${feePerPkg}
-                  </div>
-                </div>
-              </div>
-
-              {/* COD Pills Row */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                {/* USD COD */}
-                <div style={{
-                  background: 'linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%)',
-                  borderRadius: '16px',
-                  padding: '12px 14px',
-                  color: '#ffffff',
-                  boxShadow: '0 4px 12px rgba(37, 99, 235, 0.25)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '10px'
-                }}>
-                  <img src="/3d/3d_cash.png" alt="USD" style={{ width: '28px', height: '28px', objectFit: 'contain' }} />
-                  <div>
-                    <div style={{ fontSize: '10px', fontWeight: '800', opacity: 0.85, lineHeight: 1.3 }}>
-                      {t.usdWallet}
-                    </div>
-                    <div style={{ fontSize: '18px', fontWeight: '900', marginTop: '2px', letterSpacing: '-0.3px' }}>
-                      ${usdBalance.toFixed(2)}
-                    </div>
-                  </div>
-                </div>
-
-                {/* KHR COD */}
-                <div style={{
-                  background: 'linear-gradient(135deg, #ea580c 0%, #f97316 100%)',
-                  borderRadius: '16px',
-                  padding: '12px 14px',
-                  color: '#ffffff',
-                  boxShadow: '0 4px 12px rgba(249, 115, 22, 0.25)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '10px'
-                }}>
-                  <img src="/3d/3d_khr_coin.png" alt="KHR" style={{ width: '28px', height: '28px', objectFit: 'contain' }} />
-                  <div>
-                    <div style={{ fontSize: '10px', fontWeight: '800', opacity: 0.85, lineHeight: 1.3 }}>
-                      {t.khrWallet}
-                    </div>
-                    <div style={{ fontSize: '18px', fontWeight: '900', marginTop: '2px', letterSpacing: '-0.3px' }}>
-                      {khrBalance.toLocaleString()} <span style={{ fontSize: '13px', fontWeight: '700' }}>៛</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Quick Metrics Grid */}
+            {/* Email Tile */}
             <div style={{
-              display: 'grid',
-              gridTemplateColumns: '1fr 1fr',
-              gap: '8px'
+              backgroundColor: '#f8fafc',
+              borderRadius: '14px',
+              padding: '11px 12px',
+              border: '1px solid #f1f5f9',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '3px'
             }}>
-              {/* Total Packages */}
-              <div style={{
-                backgroundColor: '#f8fafc',
-                borderRadius: '14px',
-                padding: '10px 12px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '10px'
-              }}>
-                <div style={{
-                  width: '34px', height: '34px', borderRadius: '10px', backgroundColor: '#eff6ff',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
-                }}>
-                  <img src="/3d/3d_box.png" alt="Box" style={{ width: '26px', height: '26px', objectFit: 'contain' }} />
-                </div>
-                <div>
-                  <div style={{ fontSize: '10.5px', color: '#64748b', fontWeight: '600', lineHeight: 1.2 }}>{t.totalPackages}</div>
-                  <div style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a', marginTop: '1px' }}>{stats.totalPackage ?? 0}</div>
-                </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '5px', color: '#64748b', fontSize: '11px', fontWeight: '700' }}>
+                <MdEmail size={14} color="#8b5cf6" />
+                <span>{t.emailLabel}</span>
               </div>
-
-              {/* Successful Deliveries */}
-              <div style={{
-                backgroundColor: '#f8fafc',
-                borderRadius: '14px',
-                padding: '10px 12px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '10px'
-              }}>
-                <div style={{
-                  width: '34px', height: '34px', borderRadius: '10px', backgroundColor: '#ecfdf5',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
-                }}>
-                  <img src="/3d/3d_check.png" alt="Check" style={{ width: '26px', height: '26px', objectFit: 'contain' }} />
-                </div>
-                <div>
-                  <div style={{ fontSize: '10.5px', color: '#64748b', fontWeight: '600', lineHeight: 1.2 }}>{t.successfulDeliveries}</div>
-                  <div style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a', marginTop: '1px' }}>{stats.totalSuccessful ?? 0}</div>
-                </div>
+              <div style={{ fontSize: '12px', fontWeight: '800', color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={profile?.email || 'driver@gmail.com'}>
+                {profile?.email || 'driver@gmail.com'}
               </div>
+            </div>
 
-              {/* Pending Pickups */}
-              <div style={{
-                backgroundColor: '#f8fafc',
-                borderRadius: '14px',
-                padding: '10px 12px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '10px'
-              }}>
-                <div style={{
-                  width: '34px', height: '34px', borderRadius: '10px', backgroundColor: '#fff7ed',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
-                }}>
-                  <img src="/3d/3d_shop.png" alt="Shop" style={{ width: '26px', height: '26px', objectFit: 'contain' }} />
-                </div>
-                <div>
-                  <div style={{ fontSize: '10.5px', color: '#64748b', fontWeight: '600', lineHeight: 1.2 }}>{t.pendingPickups}</div>
-                  <div style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a', marginTop: '1px' }}>{stats.pickupRequest ?? 0}</div>
-                </div>
+            {/* Salary Tile */}
+            <div style={{
+              backgroundColor: '#f0fdf4',
+              borderRadius: '14px',
+              padding: '11px 12px',
+              border: '1px solid #dcfce7',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '3px'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '5px', color: '#15803d', fontSize: '11px', fontWeight: '700' }}>
+                <MdAttachMoney size={14} color="#16a34a" />
+                <span>{t.salaryLabel}</span>
               </div>
+              <div style={{ fontSize: '14px', fontWeight: '900', color: '#166534' }}>
+                {formattedSalary}
+              </div>
+            </div>
 
-              {/* Problems */}
-              <div style={{
-                backgroundColor: '#f8fafc',
-                borderRadius: '14px',
-                padding: '10px 12px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '10px'
-              }}>
-                <div style={{
-                  width: '34px', height: '34px', borderRadius: '10px', backgroundColor: '#fff1f2',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
-                }}>
-                  <img src="/3d/3d_cross.png" alt="Problem" style={{ width: '26px', height: '26px', objectFit: 'contain' }} />
-                </div>
-                <div>
-                  <div style={{ fontSize: '10.5px', color: '#64748b', fontWeight: '600', lineHeight: 1.2 }}>{t.problems}</div>
-                  <div style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a', marginTop: '1px' }}>{(stats.totalProblem ?? 0) + (stats.totalReturn ?? 0)}</div>
-                </div>
+            {/* Gender Tile */}
+            <div style={{
+              backgroundColor: '#f8fafc',
+              borderRadius: '14px',
+              padding: '11px 12px',
+              border: '1px solid #f1f5f9',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '3px'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '5px', color: '#64748b', fontSize: '11px', fontWeight: '700' }}>
+                <MdWc size={14} color="#6366f1" />
+                <span>{t.genderLabel}</span>
+              </div>
+              <div style={{ fontSize: '13px', fontWeight: '800', color: '#0f172a' }}>
+                {genderText}
+              </div>
+            </div>
+
+            {/* Join Date Tile */}
+            <div style={{
+              backgroundColor: '#f8fafc',
+              borderRadius: '14px',
+              padding: '11px 12px',
+              border: '1px solid #f1f5f9',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '3px'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '5px', color: '#64748b', fontSize: '11px', fontWeight: '700' }}>
+                <MdCalendarToday size={14} color="#d97706" />
+                <span>{t.joinDateLabel}</span>
+              </div>
+              <div style={{ fontSize: '12.5px', fontWeight: '800', color: '#334155' }}>
+                {profile?.joinDate ? formatDate(profile.joinDate) : (lang === 'km' ? 'មិនទាន់កំណត់' : 'Not set')}
+              </div>
+            </div>
+
+            {/* Date of Birth Tile */}
+            <div style={{
+              backgroundColor: '#f8fafc',
+              borderRadius: '14px',
+              padding: '11px 12px',
+              border: '1px solid #f1f5f9',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '3px'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '5px', color: '#64748b', fontSize: '11px', fontWeight: '700' }}>
+                <MdCalendarToday size={14} color="#0284c7" />
+                <span>{t.dobLabel}</span>
+              </div>
+              <div style={{ fontSize: '12.5px', fontWeight: '800', color: '#334155' }}>
+                {profile?.dob ? formatDate(profile.dob) : (lang === 'km' ? 'មិនទាន់កំណត់' : 'Not set')}
               </div>
             </div>
           </div>
-        )}
+        </div>
 
-        {/* TAB 2: Personal Information View */}
-        {activeMainTab === 'info' && (
+        {/* Settings & Security Group Card */}
+        <div style={{
+          backgroundColor: '#ffffff',
+          borderRadius: '22px',
+          boxShadow: '0 6px 22px rgba(15, 23, 42, 0.05)',
+          border: '1px solid #e8eff7',
+          overflow: 'hidden'
+        }}>
+          {/* Row 1: Language Settings */}
           <div style={{
-            backgroundColor: '#ffffff',
-            borderRadius: '22px',
-            padding: '20px',
-            boxShadow: '0 6px 20px rgba(15, 23, 42, 0.04)',
-            border: '1px solid #e2e8f0'
+            padding: '15px 18px',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            borderBottom: '1px solid #f1f5f9'
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <div style={{
-                  width: '38px',
-                  height: '38px',
-                  borderRadius: '12px',
-                  backgroundColor: '#eff6ff',
-                  color: '#2563eb',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}>
-                  <MdBadge size={22} />
-                </div>
-                <h3 style={{ fontSize: '15px', fontWeight: '800', color: '#1e293b', margin: 0 }}>
-                  {t.personalInfo}
-                </h3>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '11px' }}>
+              <div style={{
+                width: '36px',
+                height: '36px',
+                borderRadius: '11px',
+                backgroundColor: '#f0fdf4',
+                color: '#16a34a',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <MdTranslate size={20} />
               </div>
+              <div>
+                <div style={{ fontSize: '14px', fontWeight: '800', color: '#1e293b' }}>
+                  {t.languageSetting}
+                </div>
+                <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '600' }}>
+                  {lang === 'km' ? 'ជ្រើសរើសភាសាប្រើប្រាស់' : 'Choose application language'}
+                </div>
+              </div>
+            </div>
 
+            <div style={{
+              backgroundColor: '#f1f5f9',
+              border: '1px solid #e2e8f0',
+              borderRadius: '12px',
+              padding: '3px',
+              display: 'flex',
+              gap: '3px'
+            }}>
               <button
-                onClick={openEditProfileModal}
+                onClick={() => setLang('en')}
                 style={{
-                  padding: '7px 12px',
-                  borderRadius: '10px',
-                  border: '1px solid #bfdbfe',
-                  backgroundColor: '#eff6ff',
-                  color: '#2563eb',
+                  background: lang === 'en' ? '#2563eb' : 'transparent',
+                  border: 'none',
+                  color: lang === 'en' ? '#ffffff' : '#64748b',
+                  padding: '6px 14px',
                   fontSize: '12px',
                   fontWeight: '800',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  cursor: 'pointer'
+                  borderRadius: '9px',
+                  cursor: 'pointer',
+                  boxShadow: lang === 'en' ? '0 2px 6px rgba(37, 99, 235, 0.2)' : 'none',
+                  transition: 'all 0.2s ease'
                 }}
               >
-                <MdEdit size={16} />
-                {lang === 'km' ? 'កែប្រែព័ត៌មាន' : 'Edit Profile'}
+                EN
+              </button>
+              <button
+                onClick={() => setLang('km')}
+                style={{
+                  background: lang === 'km' ? '#2563eb' : 'transparent',
+                  border: 'none',
+                  color: lang === 'km' ? '#ffffff' : '#64748b',
+                  padding: '6px 14px',
+                  fontSize: '12px',
+                  fontWeight: '800',
+                  borderRadius: '9px',
+                  cursor: 'pointer',
+                  boxShadow: lang === 'km' ? '0 2px 6px rgba(37, 99, 235, 0.2)' : 'none',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                ខ្មែរ
               </button>
             </div>
+          </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', paddingLeft: '4px' }}>
-              {/* Phone */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <div style={{
-                  width: '32px', height: '32px', borderRadius: '10px', backgroundColor: '#f1f5f9', color: '#2563eb',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center'
-                }}>
-                  <MdPhone size={18} />
-                </div>
-                <div>
-                  <span style={{ fontSize: '12px', color: '#64748b', fontWeight: '600', marginRight: '6px' }}>{t.phoneLabel}:</span>
-                  <span style={{ fontSize: '14px', color: '#0f172a', fontWeight: '800' }}>{profile?.phone || '012-345-678'}</span>
-                </div>
+          {/* Row 2: Change Password Action */}
+          <div
+            onClick={() => setShowPasswordModal(true)}
+            style={{
+              padding: '15px 18px',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              cursor: 'pointer',
+              borderBottom: '1px solid #f1f5f9',
+              transition: 'background 0.15s ease'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '11px' }}>
+              <div style={{
+                width: '36px',
+                height: '36px',
+                borderRadius: '11px',
+                backgroundColor: '#eff6ff',
+                color: '#2563eb',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <MdLock size={20} />
               </div>
-
-              {/* Email */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <div style={{
-                  width: '32px', height: '32px', borderRadius: '10px', backgroundColor: '#f1f5f9', color: '#8b5cf6',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center'
-                }}>
-                  <MdEmail size={18} />
+              <div>
+                <div style={{ fontSize: '14px', fontWeight: '800', color: '#1e293b' }}>
+                  {t.changePasswordBtn}
                 </div>
-                <div>
-                  <span style={{ fontSize: '12px', color: '#64748b', fontWeight: '600', marginRight: '6px' }}>{t.emailLabel}:</span>
-                  <span style={{ fontSize: '14px', color: '#0f172a', fontWeight: '800' }}>{profile?.email || 'driver@gmail.com'}</span>
-                </div>
-              </div>
-
-              {/* Salary */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <div style={{
-                  width: '32px', height: '32px', borderRadius: '10px', backgroundColor: '#ecfdf5', color: '#10b981',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center'
-                }}>
-                  <MdAttachMoney size={18} />
-                </div>
-                <div>
-                  <span style={{ fontSize: '12px', color: '#64748b', fontWeight: '600', marginRight: '6px' }}>{t.salaryLabel}:</span>
-                  <span style={{ fontSize: '14px', color: '#059669', fontWeight: '800' }}>{formattedSalary}</span>
-                </div>
-              </div>
-
-              {/* Gender */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <div style={{
-                  width: '32px', height: '32px', borderRadius: '10px', backgroundColor: '#f5f3ff', color: '#6366f1',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center'
-                }}>
-                  <MdWc size={18} />
-                </div>
-                <div>
-                  <span style={{ fontSize: '12px', color: '#64748b', fontWeight: '600', marginRight: '6px' }}>{t.genderLabel}:</span>
-                  <span style={{ fontSize: '14px', color: '#0f172a', fontWeight: '800' }}>{genderText}</span>
-                </div>
-              </div>
-
-              {/* Join Date */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <div style={{
-                  width: '32px', height: '32px', borderRadius: '10px', backgroundColor: '#fef3c7', color: '#d97706',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center'
-                }}>
-                  <MdCalendarToday size={16} />
-                </div>
-                <div>
-                  <span style={{ fontSize: '12px', color: '#64748b', fontWeight: '600', marginRight: '6px' }}>{t.joinDateLabel}:</span>
-                  <span style={{ fontSize: '14px', color: '#0f172a', fontWeight: '800' }}>
-                    {profile?.joinDate ? formatDate(profile.joinDate) : (lang === 'km' ? 'មិនទាន់កំណត់' : 'Not set')}
-                  </span>
-                </div>
-              </div>
-
-              {/* Date of Birth (DOB) */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <div style={{
-                  width: '32px', height: '32px', borderRadius: '10px', backgroundColor: '#e0f2fe', color: '#0284c7',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center'
-                }}>
-                  <MdCalendarToday size={16} />
-                </div>
-                <div>
-                  <span style={{ fontSize: '12px', color: '#64748b', fontWeight: '600', marginRight: '6px' }}>{t.dobLabel}:</span>
-                  <span style={{ fontSize: '14px', color: '#0f172a', fontWeight: '800' }}>
-                    {profile?.dob ? formatDate(profile.dob) : (lang === 'km' ? 'មិនទាន់កំណត់' : 'Not set')}
-                  </span>
+                <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '600' }}>
+                  {lang === 'km' ? 'សុវត្ថិភាពគណនី & លេខកូដ' : 'Account security & credentials'}
                 </div>
               </div>
             </div>
-          </div>
-        )}
 
-        {/* Card 3: Language Settings */}
-        <div style={{
-          backgroundColor: '#ffffff',
-          borderRadius: '22px',
-          padding: '16px 20px',
-          boxShadow: '0 6px 20px rgba(15, 23, 42, 0.04)',
-          border: '1px solid #e2e8f0',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div style={{
-              width: '38px',
-              height: '38px',
-              borderRadius: '12px',
-              backgroundColor: '#f0fdf4',
-              color: '#16a34a',
+              width: '32px',
+              height: '32px',
+              borderRadius: '9px',
+              backgroundColor: '#f8fafc',
+              border: '1px solid #e2e8f0',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center'
+              justifyContent: 'center',
+              color: '#64748b'
             }}>
-              <MdTranslate size={22} />
+              <MdKey size={16} />
             </div>
-            <span style={{ fontSize: '14.5px', fontWeight: '800', color: '#1e293b' }}>
-              {t.languageSetting}
-            </span>
           </div>
 
-          <div style={{
-            backgroundColor: '#f1f5f9',
-            border: '1px solid #e2e8f0',
-            borderRadius: '12px',
-            padding: '3px',
-            display: 'flex',
-            gap: '3px'
-          }}>
-            <button
-              onClick={() => setLang('en')}
-              style={{
-                background: lang === 'en' ? '#2563eb' : 'transparent',
-                border: 'none',
-                color: lang === 'en' ? '#ffffff' : '#64748b',
-                padding: '6px 14px',
-                fontSize: '12px',
-                fontWeight: '800',
-                borderRadius: '9px',
-                cursor: 'pointer',
-                boxShadow: lang === 'en' ? '0 2px 6px rgba(37, 99, 235, 0.2)' : 'none',
-                transition: 'all 0.2s ease'
-              }}
-            >
-              EN
-            </button>
-            <button
-              onClick={() => setLang('km')}
-              style={{
-                background: lang === 'km' ? '#2563eb' : 'transparent',
-                border: 'none',
-                color: lang === 'km' ? '#ffffff' : '#64748b',
-                padding: '6px 14px',
-                fontSize: '12px',
-                fontWeight: '800',
-                borderRadius: '9px',
-                cursor: 'pointer',
-                boxShadow: lang === 'km' ? '0 2px 6px rgba(37, 99, 235, 0.2)' : 'none',
-                transition: 'all 0.2s ease'
-              }}
-            >
-              ខ្មែរ
-            </button>
-          </div>
-        </div>
-
-        {/* Change Password Action Card */}
-        <div style={{
-          backgroundColor: '#ffffff',
-          borderRadius: '22px',
-          padding: '16px 20px',
-          boxShadow: '0 6px 20px rgba(15, 23, 42, 0.04)',
-          border: '1px solid #e2e8f0',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          cursor: 'pointer'
-        }} onClick={() => setShowPasswordModal(true)}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{
-              width: '38px',
-              height: '38px',
-              borderRadius: '12px',
-              backgroundColor: '#eff6ff',
-              color: '#2563eb',
+          {/* Row 3: Log Out Action */}
+          <div
+            onClick={handleLogout}
+            style={{
+              padding: '15px 18px',
               display: 'flex',
+              justifyContent: 'space-between',
               alignItems: 'center',
-              justifyContent: 'center'
-            }}>
-              <MdLock size={22} />
+              cursor: 'pointer',
+              backgroundColor: '#fff',
+              transition: 'background 0.15s ease'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '11px' }}>
+              <div style={{
+                width: '36px',
+                height: '36px',
+                borderRadius: '11px',
+                backgroundColor: '#fef2f2',
+                color: '#ef4444',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <MdLogout size={19} />
+              </div>
+              <span style={{ fontSize: '14px', fontWeight: '800', color: '#ef4444' }}>
+                {t.logout}
+              </span>
             </div>
-            <span style={{ fontSize: '14.5px', fontWeight: '800', color: '#1e293b' }}>
-              {t.changePasswordBtn}
+
+            <span style={{ fontSize: '13px', fontWeight: '700', color: '#f87171' }}>
+              ➔
             </span>
           </div>
-
-          <div style={{
-            width: '32px',
-            height: '32px',
-            borderRadius: '10px',
-            backgroundColor: '#f8fafc',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: '#64748b'
-          }}>
-            <MdKey size={18} />
-          </div>
         </div>
-
-        {/* Centered Floating White Logout Button */}
-        <button
-          onClick={handleLogout}
-          style={{
-            background: '#ffffff',
-            color: '#ef4444',
-            border: 'none',
-            padding: '16px 24px',
-            borderRadius: '18px',
-            fontSize: '15px',
-            fontWeight: '700',
-            cursor: 'pointer',
-            width: '100%',
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            gap: '10px',
-            boxShadow: '0 8px 24px rgba(15, 23, 42, 0.04), 0 1px 3px rgba(15, 23, 42, 0.02)',
-            transition: 'all 0.2s ease'
-          }}
-        >
-          <div style={{
-            width: '28px',
-            height: '28px',
-            borderRadius: '50%',
-            backgroundColor: '#fef2f2',
-            color: '#ef4444',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}>
-            <MdLogout size={16} />
-          </div>
-          <span style={{ color: '#ef4444', fontWeight: '800' }}>{t.logout}</span>
-        </button>
       </div>
 
       {/* Change Password Modal */}

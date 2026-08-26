@@ -8,6 +8,7 @@ import {
   Query,
   UseGuards,
   Request,
+  ParseIntPipe,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -157,12 +158,6 @@ export class DriverController {
     );
   }
 
-  @Get('tasks/:id')
-  @ApiOperation({ summary: 'Get task detail by ID for driver' })
-  getTaskDetail(@Request() req: any, @Param('id') id: string) {
-    return this.driverService.getTaskDetail(req.user.id, +id);
-  }
-
   @Get('tasks/status-counts')
   @ApiOperation({
     summary: 'Get task counts grouped by status for driver mobile app',
@@ -184,14 +179,23 @@ export class DriverController {
     );
   }
 
+  @Get('tasks/:id')
+  @ApiOperation({ summary: 'Get task detail by ID for driver' })
+  getTaskDetail(
+    @Request() req: any,
+    @Param('id', ParseIntPipe) id: number,
+  ) {
+    return this.driverService.getTaskDetail(req.user.id, id);
+  }
+
   @Patch('tasks/:id/status')
   @ApiOperation({ summary: 'Update task status' })
   updateStatus(
     @Request() req: any,
-    @Param('id') id: string,
+    @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateOrderStatusDto,
   ) {
-    return this.driverService.updateOrderStatus(req.user.id, +id, dto);
+    return this.driverService.updateOrderStatus(req.user.id, id, dto);
   }
 
   @Get('summary')
@@ -216,6 +220,50 @@ export class DriverController {
     );
   }
 
+  @Get('report')
+  @ApiOperation({
+    summary: 'Get detailed driver report with performance, COD, earnings and task history',
+  })
+  @ApiQuery({ name: 'period', required: false, enum: ['today', 'yesterday', 'week', 'month', 'custom', 'all'] })
+  @ApiQuery({ name: 'startDate', required: false, type: String })
+  @ApiQuery({ name: 'endDate', required: false, type: String })
+  @ApiQuery({ name: 'status', required: false, type: String })
+  getReport(
+    @Request() req: any,
+    @Query('period') period?: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+    @Query('status') status?: string,
+  ) {
+    return this.driverService.getReport(
+      req.user.id,
+      period,
+      startDate,
+      endDate,
+      status,
+    );
+  }
+
+  @Get('reports')
+  @ApiOperation({
+    summary: 'Alias for driver report endpoint',
+  })
+  getReports(
+    @Request() req: any,
+    @Query('period') period?: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+    @Query('status') status?: string,
+  ) {
+    return this.driverService.getReport(
+      req.user.id,
+      period,
+      startDate,
+      endDate,
+      status,
+    );
+  }
+
   @Get('pickup-requests')
   @ApiOperation({ summary: 'Get assigned pickup requests' })
   getPickupRequests(@Request() req: any) {
@@ -230,5 +278,36 @@ export class DriverController {
     @Body() dto: ConfirmPickupDto,
   ) {
     return this.driverService.confirmPickup(req.user.id, +id, dto);
+  }
+
+  @Get('payments')
+  @ApiOperation({ summary: 'Get driver payments and payouts history' })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiQuery({ name: 'month', required: false, type: String })
+  getPayments(
+    @Request() req: any,
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
+    @Query('month') month?: string,
+  ) {
+    return this.driverService.getPayments(req.user.id, page, limit, month);
+  }
+
+  @Get('payments/summary')
+  @ApiOperation({
+    summary: 'Get driver financial and settlement overview summary',
+  })
+  getPaymentSummary(@Request() req: any) {
+    return this.driverService.getPaymentSummary(req.user.id);
+  }
+
+  @Get('payments/:id')
+  @ApiOperation({ summary: 'Get details of a specific payment record' })
+  getPaymentDetail(
+    @Request() req: any,
+    @Param('id', ParseIntPipe) id: number,
+  ) {
+    return this.driverService.getPaymentDetail(req.user.id, id);
   }
 }

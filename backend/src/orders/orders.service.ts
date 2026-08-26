@@ -267,8 +267,6 @@ export class OrdersService {
     if (finalStatus && ['pending', 'in-warehouse', 'assigned', 'picked-up', 'in-transit'].includes(finalStatus)) {
       updates.driverPaymentStatus = 'unpaid';
       updates.merchantPaymentStatus = 'unpaid';
-      updates.receivedAmountUSD = 0;
-      updates.receivedAmountKHR = 0;
       updates.paymentMethod = null as any;
     }
 
@@ -304,8 +302,6 @@ export class OrdersService {
     if (['pending', 'in-warehouse', 'assigned', 'picked-up', 'in-transit'].includes(dto.status)) {
       updates.driverPaymentStatus = 'unpaid';
       updates.merchantPaymentStatus = 'unpaid';
-      updates.receivedAmountUSD = 0;
-      updates.receivedAmountKHR = 0;
       updates.paymentMethod = null as any;
     }
 

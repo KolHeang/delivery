@@ -27,7 +27,7 @@ import { ConfirmPickupDto } from '../../orders/dto/pickup-request.dto';
 @UseGuards(JwtAuthGuard)
 @Controller('mobile/driver')
 export class DriverController {
-  constructor(private readonly driverService: DriverService) {}
+  constructor(private readonly driverService: DriverService) { }
 
   @Get('profile')
   @ApiOperation({ summary: 'Get driver profile' })
@@ -274,10 +274,10 @@ export class DriverController {
   @ApiOperation({ summary: 'Confirm pickup with actual quantity' })
   confirmPickup(
     @Request() req: any,
-    @Param('id') id: string,
+    @Param('id', ParseIntPipe) id: number,
     @Body() dto: ConfirmPickupDto,
   ) {
-    return this.driverService.confirmPickup(req.user.id, +id, dto);
+    return this.driverService.confirmPickup(req.user.id, id, dto);
   }
 
   @Get('payments')

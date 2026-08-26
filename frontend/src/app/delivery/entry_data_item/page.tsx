@@ -6,16 +6,9 @@ import { isAuthenticated } from '@/lib/auth';
 import Sidebar from '@/components/layout/Sidebar';
 import Topbar from '@/components/layout/Topbar';
 import api from '@/lib/api';
-import { MdDelete } from 'react-icons/md';
+import { MdDelete, MdAdd, MdSave } from 'react-icons/md';
 import { useLanguage } from '@/lib/LanguageContext';
 import DateInput, { getLocalDateString } from '@/components/ui/DateInput';
-
-const getLocalFirstDayOfMonthString = () => {
-  const d = new Date();
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  return `${year}-${month}-01`;
-};
 
 export default function BatchEntryPage() {
   const router = useRouter();
@@ -24,7 +17,7 @@ export default function BatchEntryPage() {
   const [drivers, setDrivers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const [selectedMerchantId, setSelectedMerchantId] = useState('');
   const [parcelDate, setParcelDate] = useState(() => getLocalDateString());
   const [deliveryFee, setDeliveryFee] = useState('1.25');
@@ -90,16 +83,16 @@ export default function BatchEntryPage() {
   };
 
   const handleSaveBatch = async () => {
-    if (!selectedMerchantId) return alert('Please select a Shop/Merchant');
+    if (!selectedMerchantId) return alert(lang === 'km' ? 'សូមជ្រើសរើសហាង/អតិថិជន' : 'Please select a Shop/Merchant');
     
     // Validation
     for (let i = 0; i < rows.length; i++) {
       const r = rows[i];
       if (!r.receiverAddress) {
-        return alert(`Please fill Location/Zone in Row #${i + 1}`);
+        return alert(lang === 'km' ? `សូមបំពេញអាសយដ្ឋាននៅជួរទី #${i + 1}` : `Please fill Location/Zone in Row #${i + 1}`);
       }
       if (!r.receiverPhone) {
-        return alert(`Please fill Receiver Phone in Row #${i + 1}`);
+        return alert(lang === 'km' ? `សូមបំពេញលេខទូរស័ព្ទនៅជួរទី #${i + 1}` : `Please fill Receiver Phone in Row #${i + 1}`);
       }
     }
 
@@ -174,6 +167,9 @@ export default function BatchEntryPage() {
     setSaving(false);
   };
 
+  const totalCodUSD = rows.reduce((acc, r) => acc + (parseFloat(r.codUSD) || 0), 0);
+  const totalCodKHR = rows.reduce((acc, r) => acc + (parseFloat(r.codKHR) || 0), 0);
+
   if (loading) return (
     <div className="app-layout">
       <Sidebar />
@@ -191,13 +187,14 @@ export default function BatchEntryPage() {
         <div className="page-content" style={{ maxWidth: '100%' }}>
           {/* Top Panel Controls */}
           <div className="card" style={{ marginBottom: 20, padding: 20 }}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, alignItems: 'end' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 16, alignItems: 'end' }}>
               <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label">{t('shopCustomerLabel')} <span>*</span></label>
+                <label className="form-label" style={{ fontWeight: 600 }}>{t('shopCustomerLabel')} <span style={{ color: 'var(--danger)' }}>*</span></label>
                 <select
                   className="form-control"
                   value={selectedMerchantId}
                   onChange={e => setSelectedMerchantId(e.target.value)}
+                  style={{ height: 42, fontSize: 13.5 }}
                 >
                   {merchants.map(m => (
                     <option key={m.id} value={m.id}>
@@ -213,71 +210,51 @@ export default function BatchEntryPage() {
                 value={parcelDate}
                 onChange={setParcelDate}
               />
-
-              <div className="form-group" style={{ marginBottom: 0, display: 'none' }}>
-                <label className="form-label">{t('deliveryFee')} <span>*</span></label>
-                <input
-                  type="number"
-                  step="0.01"
-                  className="form-control"
-                  value={deliveryFee}
-                  onChange={e => setDeliveryFee(e.target.value)}
-                  style={{ background: '#f1f5f9' }}
-                />
-              </div>
             </div>
           </div>
 
           {/* Grid list */}
-          <div className="card">
-            <div style={{ overflowX: 'auto', padding: '16px' }}>
-               <table style={{ minWidth: 1030, width: '100%' }}>
+          <div className="card" style={{ overflow: 'hidden' }}>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ minWidth: 1050, width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
-                  <tr>
-                    <th style={{ width: 40, padding: '8px 6px' }}>ល.រ</th>
-                    <th style={{ width: 160, display: 'none' }}>{t('receiverNameCol')}</th>
-                    <th style={{ width: 180, padding: '8px 6px' }}>{t('receiverAddressCol')}</th>
-                    <th style={{ width: 120, padding: '8px 6px' }}>{t('receiverPhoneColRequired')}</th>
-                    <th style={{ width: 70, padding: '8px 6px' }}>{t('deliveryFee')}</th>
-                    <th style={{ width: 80, padding: '8px 6px' }}>{t('amountUSD')}</th>
-                    <th style={{ width: 90, padding: '8px 6px' }}>{t('amountKHR')}</th>
-                    <th style={{ width: 140, padding: '8px 6px' }}>{t('pickupPerson')}</th>
-                    <th style={{ width: 140, padding: '8px 6px' }}>{t('deliveryPerson')}</th>
-                    <th style={{ width: 120, padding: '8px 6px' }}>{t('note')}</th>
-                    <th style={{ width: 60, padding: '8px 6px', textAlign: 'center' }}>{t('actions')}</th>
+                  <tr style={{ background: '#2f55a5' }}>
+                    <th style={{ width: 45, padding: '12px 8px', textAlign: 'center', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'ល.រ' : 'No.'}</th>
+                    <th style={{ width: 180, padding: '12px 8px', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('receiverAddressCol')} *</th>
+                    <th style={{ width: 130, padding: '12px 8px', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('receiverPhoneColRequired')}</th>
+                    <th style={{ width: 85, padding: '12px 8px', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('deliveryFee')}</th>
+                    <th style={{ width: 95, padding: '12px 8px', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('amountUSD')}</th>
+                    <th style={{ width: 105, padding: '12px 8px', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('amountKHR')}</th>
+                    <th style={{ width: 145, padding: '12px 8px', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('pickupPerson')}</th>
+                    <th style={{ width: 145, padding: '12px 8px', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('deliveryPerson')}</th>
+                    <th style={{ width: 120, padding: '12px 8px', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('note')}</th>
+                    <th style={{ width: 60, padding: '12px 8px', textAlign: 'center', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('actions')}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {rows.map((row, idx) => (
-                    <tr key={idx}>
-                      <td style={{ padding: '8px 6px', fontSize: 13, fontWeight: 'bold', color: 'var(--text-muted)' }}>{idx + 1}</td>
-                      <td style={{ display: 'none' }}>
-                        <input
-                          type="text"
-                          className="form-control"
-                          placeholder="Receiver Name"
-                          value={row.receiverName || '-'}
-                          onChange={e => handleRowChange(idx, 'receiverName', e.target.value)}
-                        />
-                      </td>
+                    <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                      <td style={{ padding: '8px 6px', textAlign: 'center', fontSize: 13, fontWeight: 700, color: 'var(--text-muted)' }}>{idx + 1}</td>
                       <td style={{ padding: '8px 6px' }}>
                         <input
                           type="text"
                           className="form-control"
-                          placeholder="Address location"
+                          placeholder={lang === 'km' ? 'ទីតាំង / អាសយដ្ឋាន' : 'Address location'}
                           value={row.receiverAddress}
                           onChange={e => handleRowChange(idx, 'receiverAddress', e.target.value)}
                           required
+                          style={{ height: 38, fontSize: 13 }}
                         />
                       </td>
                       <td style={{ padding: '8px 6px' }}>
                         <input
                           type="text"
                           className="form-control"
-                          placeholder="e.g. 012345678"
+                          placeholder={lang === 'km' ? 'ឧ. 012345678' : 'e.g. 012345678'}
                           value={row.receiverPhone}
                           onChange={e => handleRowChange(idx, 'receiverPhone', e.target.value)}
                           required
+                          style={{ height: 38, fontSize: 13 }}
                         />
                       </td>
                       <td style={{ padding: '8px 6px' }}>
@@ -289,6 +266,7 @@ export default function BatchEntryPage() {
                           value={row.deliveryFee}
                           onChange={e => handleRowChange(idx, 'deliveryFee', e.target.value)}
                           required
+                          style={{ height: 38, fontSize: 13, textAlign: 'right' }}
                         />
                       </td>
                       <td style={{ padding: '8px 6px' }}>
@@ -300,6 +278,7 @@ export default function BatchEntryPage() {
                           value={row.codUSD}
                           onChange={e => handleRowChange(idx, 'codUSD', e.target.value)}
                           required
+                          style={{ height: 38, fontSize: 13, textAlign: 'right' }}
                         />
                       </td>
                       <td style={{ padding: '8px 6px' }}>
@@ -311,6 +290,7 @@ export default function BatchEntryPage() {
                           value={row.codKHR}
                           onChange={e => handleRowChange(idx, 'codKHR', e.target.value)}
                           required
+                          style={{ height: 38, fontSize: 13, textAlign: 'right' }}
                         />
                       </td>
                       <td style={{ padding: '8px 6px' }}>
@@ -318,11 +298,12 @@ export default function BatchEntryPage() {
                           className="form-control"
                           value={row.pickupId}
                           onChange={e => handleRowChange(idx, 'pickupId', e.target.value)}
+                          style={{ height: 38, fontSize: 12.5 }}
                         >
-                          <option value="">— Select Driver —</option>
+                          <option value="">{lang === 'km' ? '— ជ្រើសរើសអ្នកដឹក —' : '— Select Driver —'}</option>
                           {drivers.map(d => (
                             <option key={d.id} value={d.id}>
-                              {d.name} {d.nameKh ? `(${d.nameKh})` : ''}
+                              {lang === 'km' ? (d.nameKh || d.name) : (d.name || d.nameKh)}
                             </option>
                           ))}
                         </select>
@@ -332,11 +313,12 @@ export default function BatchEntryPage() {
                           className="form-control"
                           value={row.driverId}
                           onChange={e => handleRowChange(idx, 'driverId', e.target.value)}
+                          style={{ height: 38, fontSize: 12.5 }}
                         >
-                          <option value="">— Select Driver —</option>
+                          <option value="">{lang === 'km' ? '— ជ្រើសរើសអ្នកដឹក —' : '— Select Driver —'}</option>
                           {drivers.map(d => (
                             <option key={d.id} value={d.id}>
-                              {d.name} {d.nameKh ? `(${d.nameKh})` : ''}
+                              {lang === 'km' ? (d.nameKh || d.name) : (d.name || d.nameKh)}
                             </option>
                           ))}
                         </select>
@@ -345,33 +327,34 @@ export default function BatchEntryPage() {
                         <input
                           type="text"
                           className="form-control"
-                          placeholder="Note..."
+                          placeholder={lang === 'km' ? 'ចំណាំ...' : 'Note...'}
                           value={row.note}
                           onChange={e => handleRowChange(idx, 'note', e.target.value)}
+                          style={{ height: 38, fontSize: 13 }}
                         />
                       </td>
-                      <td style={{ padding: '8px 6px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'center' }}>
-                          <button
-                            type="button"
-                            onClick={() => removeRow(idx)}
-                            disabled={rows.length === 1}
-                            style={{
-                              background: '#dc2626',
-                              color: '#fff',
-                              border: 'none',
-                              borderRadius: 4,
-                              padding: '8px 12px',
-                              cursor: rows.length === 1 ? 'not-allowed' : 'pointer',
-                              opacity: rows.length === 1 ? 0.5 : 1,
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center'
-                            }}
-                          >
-                            <MdDelete size={16} />
-                          </button>
-                        </div>
+                      <td style={{ padding: '8px 6px', textAlign: 'center' }}>
+                        <button
+                          type="button"
+                          onClick={() => removeRow(idx)}
+                          disabled={rows.length === 1}
+                          title={lang === 'km' ? 'លុបជួរនេះ' : 'Delete Row'}
+                          style={{
+                            background: '#fee2e2',
+                            color: '#dc2626',
+                            border: '1px solid #fecaca',
+                            borderRadius: 8,
+                            padding: '8px 10px',
+                            cursor: rows.length === 1 ? 'not-allowed' : 'pointer',
+                            opacity: rows.length === 1 ? 0.4 : 1,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            transition: 'all 0.15s'
+                          }}
+                        >
+                          <MdDelete size={16} />
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -379,46 +362,67 @@ export default function BatchEntryPage() {
               </table>
             </div>
 
-            {/* Footer Buttons */}
-            <div style={{ padding: '20px 16px', display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', borderTop: '1px solid var(--border)' }}>
-              <div />
-              <button
-                type="button"
-                onClick={addRow}
-                style={{
-                  background: 'var(--accent)',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: 6,
-                  padding: '12px 24px',
-                  fontWeight: 'bold',
-                  cursor: 'pointer',
-                  fontSize: 14,
-                  boxShadow: '0 4px 6px rgba(47, 85, 165, 0.1)',
-                  transition: 'opacity 0.2s'
-                }}
-              >
-                {t('addNewBtn')}
-              </button>
-              <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+            {/* Footer summary & actions */}
+            <div style={{
+              padding: '16px 20px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: 12,
+              borderTop: '1px solid var(--border)',
+              background: 'var(--bg-card)'
+            }}>
+              {/* Left metrics */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)' }}>
+                  📦 {rows.length} {lang === 'km' ? 'កញ្ចប់' : 'parcels'}
+                </span>
+                {(totalCodUSD > 0 || totalCodKHR > 0) && (
+                  <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--accent)', background: 'var(--accent-light)', padding: '3px 10px', borderRadius: 8 }}>
+                    💰 COD: {totalCodUSD > 0 ? `$${totalCodUSD.toFixed(2)}` : ''} {totalCodUSD > 0 && totalCodKHR > 0 ? ' | ' : ''} {totalCodKHR > 0 ? `${totalCodKHR.toLocaleString()} ៛` : ''}
+                  </span>
+                )}
+              </div>
+
+              {/* Center & Right buttons */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                 <button
                   type="button"
+                  className="btn btn-outline"
+                  onClick={addRow}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    padding: '8px 18px',
+                    fontSize: 13.5,
+                    fontWeight: 600,
+                    borderRadius: 8,
+                  }}
+                >
+                  <MdAdd size={18} /> {lang === 'km' ? 'បន្ថែមជួរថ្មី' : t('addNewBtn')}
+                </button>
+
+                <button
+                  type="button"
+                  className="btn btn-primary"
                   onClick={handleSaveBatch}
                   disabled={saving}
                   style={{
-                    background: 'var(--accent)',
-                    color: '#fff',
-                    border: 'none',
-                    borderRadius: 6,
-                    padding: '12px 28px',
-                    fontWeight: 'bold',
-                    cursor: 'pointer',
-                    fontSize: 14,
-                    boxShadow: '0 4px 6px rgba(47, 85, 165, 0.2)',
-                    transition: 'opacity 0.2s'
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    padding: '8px 24px',
+                    fontSize: 13.5,
+                    fontWeight: 700,
+                    borderRadius: 8,
+                    minHeight: 38,
+                    boxShadow: '0 4px 12px rgba(47, 85, 165, 0.25)',
                   }}
                 >
-                  {saving ? t('savingBatch') : t('save')}
+                  <MdSave size={18} />
+                  {saving ? (lang === 'km' ? 'កំពុងរក្សាទុក...' : t('savingBatch')) : (lang === 'km' ? 'រក្សាទុកទាំងអស់' : t('save'))}
                 </button>
               </div>
             </div>

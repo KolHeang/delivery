@@ -107,7 +107,7 @@ export default function Rpt1Page() {
                   {merchants.map((m: any) => <option key={m.id} value={m.id}>{m.name}</option>)}
                 </select>
               </div>
-              <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', marginLeft: 'auto' }}>
                 <button className="btn btn-primary" onClick={load} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                   <MdSearch size={16} /> {t('filterBtn')}
                 </button>

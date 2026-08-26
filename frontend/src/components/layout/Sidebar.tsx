@@ -170,7 +170,9 @@ export default function Sidebar() {
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
           <span style={{ fontSize: 18, fontWeight: 800, color: '#fff', letterSpacing: '0.5px', lineHeight: 1.1 }}>EBS<span style={{ color: '#93c5fd' }}>Express</span></span>
-          <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', fontWeight: 500, marginTop: 2, letterSpacing: '0.2px' }}>Delivery System</span>
+          <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.65)', fontWeight: 500, marginTop: 2, letterSpacing: '0.2px' }}>
+            {lang === 'km' ? 'ប្រព័ន្ធដឹកជញ្ជូន' : 'Delivery System'}
+          </span>
         </div>
       </div>
 

@@ -509,78 +509,45 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Bottom Grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 20 }}>
-            {/* Recent Orders */}
-            <div className="card">
-              <div className="card-header">
-                <span className="card-title">🕐 {t('recentOrders')}</span>
-                <a href="/orders" className="btn btn-outline btn-sm">{t('viewAll')}</a>
-              </div>
-              <div style={{ overflowX: 'auto' }}>
-                <table>
-                  <thead>
-                    <tr>
-                      <th>{t('trackingCode')}</th>
-                      <th>{t('receiver')}</th>
-                      <th>{t('merchant')}</th>
-                      <th>{t('address')}</th>
-                      <th>{t('fee')}</th>
-                      <th>{t('status')}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {recentOrders.length === 0 ? (
-                      <tr><td colSpan={6} className="text-center text-muted" style={{ padding: 32 }}>{t('noDataFound')}</td></tr>
-                    ) : recentOrders.map((o: any) => (
-                      <tr key={o.id}>
-                        <td><code style={{ fontSize: 12 }}>{o.trackingCode}</code></td>
-                        <td>
-                          <div style={{ fontWeight: 600, fontSize: 13 }}>{o.receiverPhone}</div>
-                        </td>
-                        <td style={{ fontSize: 12 }}>{o.merchant?.name || '—'}</td>
-                        <td style={{ fontSize: 12 }}>{o.receiverAddress || '—'}</td>
-                        <td style={{ fontWeight: 600 }}>${o.deliveryFee}</td>
-                        <td><Badge status={o.status} /></td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+          {/* Top Drivers Card */}
+          <div className="card" style={{ marginTop: 20 }}>
+            <div className="card-header">
+              <span className="card-title">🏆 {t('topDriversTitle')}</span>
             </div>
-
-            {/* Top Drivers */}
-            <div className="card">
-              <div className="card-header">
-                <span className="card-title">🏆 {t('topDriversTitle')}</span>
-              </div>
-              <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
-                {topDrivers.length === 0 ? (
-                  <div className="empty-state"><div className="empty-state-text">No driver data</div></div>
-                ) : topDrivers.map((d: any, i: number) => (
-                  <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <div style={{
-                      width: 32, height: 32, borderRadius: '50%',
-                      background: i === 0 ? '#f59e0b' : i === 1 ? '#94a3b8' : i === 2 ? '#cd7f32' : 'var(--accent-light)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      color: i < 3 ? '#fff' : 'var(--accent)',
-                      fontWeight: 700, fontSize: 13, flexShrink: 0,
-                    }}>
-                      {i + 1}
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontWeight: 600, fontSize: 13 }}>{d.name}</div>
-                      {d.zone?.name && (
-                        <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{d.zone.name}</div>
-                      )}
-                    </div>
-                    <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontWeight: 700, fontSize: 14 }}>{d.totalDeliveries}</div>
-                      <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{t('deliveriesLabel')}</div>
-                    </div>
+            <div style={{ padding: 16, display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 12 }}>
+              {topDrivers.length === 0 ? (
+                <div className="empty-state" style={{ gridColumn: '1 / -1' }}><div className="empty-state-text">No driver data</div></div>
+              ) : topDrivers.map((d: any, i: number) => (
+                <div key={d.id} style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 12,
+                  backgroundColor: '#f8fafc',
+                  padding: '12px 14px',
+                  borderRadius: 12,
+                  border: '1px solid #f1f5f9'
+                }}>
+                  <div style={{
+                    width: 34, height: 34, borderRadius: '50%',
+                    background: i === 0 ? '#f59e0b' : i === 1 ? '#94a3b8' : i === 2 ? '#cd7f32' : 'var(--accent-light)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    color: i < 3 ? '#fff' : 'var(--accent)',
+                    fontWeight: 700, fontSize: 13, flexShrink: 0,
+                  }}>
+                    {i + 1}
                   </div>
-                ))}
-              </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 700, fontSize: 13.5, color: '#1e293b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.name}</div>
+                    {d.zone?.name && (
+                      <div style={{ fontSize: 11.5, color: 'var(--text-muted)' }}>📍 {d.zone.name}</div>
+                    )}
+                  </div>
+                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                    <div style={{ fontWeight: 800, fontSize: 15, color: '#2563eb' }}>{d.totalDeliveries}</div>
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{t('deliveriesLabel')}</div>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </div>

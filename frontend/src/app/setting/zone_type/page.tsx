@@ -111,28 +111,32 @@ export default function ZonesPage() {
                 <MdAdd size={14} /> {lang === 'km' ? 'បន្ថែមតំបន់' : 'Add Zone'}
               </button>
             </div>
-            {loading ? (
-              <div className="loading-wrapper"><div className="spinner" /></div>
-            ) : items.length === 0 ? (
-              <div className="empty-state">
-                <div className="empty-state-icon">🗺️</div>
-                <div className="empty-state-title">{lang === 'km' ? 'មិនទាន់មានតំបន់ត្រូវបានកំណត់' : 'No zones configured'}</div>
-              </div>
-            ) : (
-              <>
-                <div style={{ overflowX: 'auto' }}>
-                  <table>
-                    <thead>
-                      <tr>
-                        <th style={{ width: '60px' }}>{lang === 'km' ? 'ល.រ' : 'No.'}</th>
-                        <th>{lang === 'km' ? 'ឈ្មោះតំបន់' : 'Zone Name'}</th>
-                        <th>{lang === 'km' ? 'ឈ្មោះភ្នាក់ងារ' : 'Agent Name'}</th>
-                        <th>{lang === 'km' ? 'ប្រភេទតំបន់រង' : 'Subzone Types'}</th>
-                        <th style={{ width: '100px', textAlign: 'center' }}>{lang === 'km' ? 'សកម្មភាព' : 'Actions'}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {items.map((z: any, i) => (
+            <div style={{ overflowX: 'auto' }}>
+              <table>
+                <thead>
+                  <tr>
+                    <th style={{ width: '60px' }}>{lang === 'km' ? 'ល.រ' : 'No.'}</th>
+                    <th>{lang === 'km' ? 'ឈ្មោះតំបន់' : 'Zone Name'}</th>
+                    <th>{lang === 'km' ? 'ឈ្មោះភ្នាក់ងារ' : 'Agent Name'}</th>
+                    <th>{lang === 'km' ? 'ប្រភេទតំបន់រង' : 'Subzone Types'}</th>
+                    <th style={{ width: '100px', textAlign: 'center' }}>{lang === 'km' ? 'សកម្មភាព' : 'Actions'}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {loading ? (
+                    <tr>
+                      <td colSpan={5} style={{ padding: '40px 0', textAlign: 'center' }}>
+                        <div className="loading-wrapper"><div className="spinner" /></div>
+                      </td>
+                    </tr>
+                  ) : items.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} style={{ padding: '36px 20px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
+                        {t('noDataFound') || 'គ្មានទិន្នន័យ'}
+                      </td>
+                    </tr>
+                  ) : (
+                    items.map((z: any, i) => (
                         <tr key={z.id}>
                           <td style={{ verticalAlign: 'top', paddingTop: '16px', color: '#1e293b', fontSize: 14 }}>{(currentPage - 1) * pageSize + i + 1}</td>
                           <td style={{ verticalAlign: 'top', paddingTop: '16px', fontWeight: 700 }}>{z.name}</td>
@@ -258,18 +262,19 @@ export default function ZonesPage() {
                             </div>
                           </td>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                <Pagination
-                  currentPage={currentPage}
-                  totalItems={totalItems}
-                  pageSize={pageSize}
-                  onPageChange={setCurrentPage}
-                  onPageSizeChange={setPageSize}
-                />
-              </>
+                      ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+            {items.length > 0 && (
+              <Pagination
+                currentPage={currentPage}
+                totalItems={totalItems}
+                pageSize={pageSize}
+                onPageChange={setCurrentPage}
+                onPageSizeChange={setPageSize}
+              />
             )}
           </div>
         </div>

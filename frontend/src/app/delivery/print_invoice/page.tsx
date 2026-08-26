@@ -337,153 +337,158 @@ export default function PrintInvoicePage() {
 
         <div className="page-content" style={isDirectMode ? { padding: 0 } : {}}>
           
-          {/* Filters & Selection (only shown when in normal table view) */}
-          <div className="card filter-section" style={{ marginBottom: 20, padding: '16px 20px', background: '#ffffff', borderRadius: 10, border: '1px solid #e2e8f0' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12, marginBottom: 12 }}>
-
-              {/* Driver Filter */}
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label" style={{ fontWeight: 'bold', fontSize: 13, marginBottom: 6, display: 'block', color: '#1e293b' }}>{lang === 'km' ? 'អ្នកដឹក' : 'Driver'}</label>
-                <select className="form-control" value={driverFilter} onChange={e => setDriverFilter(e.target.value)} style={{ background: '#fff', border: '1px solid #cbd5e1' }}>
-                  <option value="">{lang === 'km' ? '-- ទាំងអស់ --' : '-- All --'}</option>
-                  {drivers.map(d => (
-                    <option key={d.id} value={d.id}>
-                      {d.nameKh || d.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Shop Filter */}
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label" style={{ fontWeight: 'bold', fontSize: 13, marginBottom: 6, display: 'block', color: '#1e293b' }}>{lang === 'km' ? 'ហាង' : 'Shop'}</label>
-                <select className="form-control" value={merchantFilter} onChange={e => setMerchantFilter(e.target.value)} style={{ background: '#fff', border: '1px solid #cbd5e1' }}>
-                  <option value="">{lang === 'km' ? '-- ទាំងអស់ --' : '-- All --'}</option>
-                  {merchants.map(m => (
-                    <option key={m.id} value={m.id}>
-                      {m.nameKh ? `${m.nameKh} (${m.name})` : m.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Start Date */}
-              <DateInput
-                labelEn="Start Date"
-                labelKh="ចាប់ផ្តើម"
-                value={startDate}
-                onChange={setStartDate}
-              />
-
-              {/* End Date */}
-              <DateInput
-                labelEn="End Date"
-                labelKh="បញ្ចប់"
-                value={endDate}
-                onChange={setEndDate}
-              />
-
-            </div>
-
-            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', flexWrap: 'wrap', alignItems: 'center' }}>
+          {/* Filter Card */}
+          <div className="card filter-section" style={{ marginBottom: 20 }}>
+            <div className="card-header">
+              <span className="card-title">🔍 {lang === 'km' ? 'ត្រងទិន្នន័យ' : 'Filter Options'}</span>
               <button 
                 onClick={handlePrint}
                 disabled={selectedOrders.length === 0}
-                className="btn" 
+                className="btn btn-primary"
                 style={{ 
-                  background: 'var(--accent)', 
-                  color: '#fff', 
-                  height: 38, 
-                  padding: '0 20px', 
-                  borderRadius: 6, 
-                  fontWeight: 'bold',
-                  display: 'flex',
+                  padding: '8px 18px', 
+                  fontSize: '13.5px',
+                  fontWeight: 600,
+                  display: 'inline-flex',
                   alignItems: 'center',
                   gap: 6,
+                  borderRadius: 8,
                   cursor: selectedOrders.length === 0 ? 'not-allowed' : 'pointer',
-                  border: 'none'
+                  opacity: selectedOrders.length === 0 ? 0.6 : 1
                 }}
               >
                 <MdPrint size={18} /> {lang === 'km' ? `បោះពុម្ពដែលបានជ្រើសរើស (${selectedOrders.length})` : `Print Selected (${selectedOrders.length})`}
               </button>
             </div>
+            <div className="card-body" style={{ padding: '16px 20px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 14 }}>
+                {/* Driver Filter */}
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label">{lang === 'km' ? 'អ្នកដឹក' : 'Driver'}</label>
+                  <select className="form-control" value={driverFilter} onChange={e => setDriverFilter(e.target.value)}>
+                    <option value="">{lang === 'km' ? '-- ទាំងអស់ --' : '-- All --'}</option>
+                    {drivers.map(d => (
+                      <option key={d.id} value={d.id}>
+                        {d.nameKh || d.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Shop Filter */}
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label">{lang === 'km' ? 'ហាង' : 'Shop'}</label>
+                  <select className="form-control" value={merchantFilter} onChange={e => setMerchantFilter(e.target.value)}>
+                    <option value="">{lang === 'km' ? '-- ទាំងអស់ --' : '-- All --'}</option>
+                    {merchants.map(m => (
+                      <option key={m.id} value={m.id}>
+                        {m.nameKh ? `${m.nameKh} (${m.name})` : m.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Start Date */}
+                <DateInput
+                  labelEn="Start Date"
+                  labelKh="ចាប់ផ្តើម"
+                  value={startDate}
+                  onChange={setStartDate}
+                />
+
+                {/* End Date */}
+                <DateInput
+                  labelEn="End Date"
+                  labelKh="បញ្ចប់"
+                  value={endDate}
+                  onChange={setEndDate}
+                />
+              </div>
+            </div>
           </div>
 
-          {/* Select All Checkbox Bar */}
-          <div className="select-all-bar" style={{ 
-            background: '#ffffff', 
-            padding: '12px 20px', 
-            borderRadius: 8, 
-            border: '1px solid #e2e8f0',
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: 10,
-            marginBottom: 20
-          }}>
-            <input
-              type="checkbox"
-              checked={allFilteredSelected}
-              onChange={toggleAll}
-              style={{ width: 18, height: 18, accentColor: 'var(--accent)', cursor: 'pointer' }}
-            />
-            <span style={{ fontWeight: 'bold', fontSize: 13, color: '#334155' }}>{lang === 'km' ? 'ទាំងអស់' : 'All'}</span>
-          </div>
-
-          {/* Orders Table */}
-          <div className="card table-container" style={{ padding: '0px', overflowX: 'auto', border: '1px solid #e2e8f0', borderRadius: 8, marginBottom: 30 }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 1000 }}>
-              <thead>
-                <tr style={{ background: '#2f55a5' }}>
-                  <th style={{ padding: '12px 10px', textAlign: 'center', fontWeight: 'bold', width: 50, background: '#2f55a5', color: '#ffffff', border: 'none' }}>{lang === 'km' ? 'ល.រ' : 'No.'}</th>
-                  <th style={{ padding: '12px 10px', textAlign: 'center', fontWeight: 'bold', width: 80, background: '#2f55a5', color: '#ffffff', border: 'none' }}>{lang === 'km' ? 'ជ្រើសរើស' : 'Select'}</th>
-                  <th style={{ padding: '12px 10px', textAlign: 'left', fontWeight: 'bold', background: '#2f55a5', color: '#ffffff', border: 'none' }}>{lang === 'km' ? 'លេខបញ្ជូន' : 'Delivery Number'}</th>
-                  <th style={{ padding: '12px 10px', textAlign: 'left', fontWeight: 'bold', background: '#2f55a5', color: '#ffffff', border: 'none' }}>{lang === 'km' ? 'កាលបរិច្ឆេទ' : 'Date'}</th>
-                  <th style={{ padding: '12px 10px', textAlign: 'left', fontWeight: 'bold', background: '#2f55a5', color: '#ffffff', border: 'none' }}>{lang === 'km' ? 'ឈ្មោះហាង' : 'Shop Name'}</th>
-                  <th style={{ padding: '12px 10px', textAlign: 'left', fontWeight: 'bold', background: '#2f55a5', color: '#ffffff', border: 'none' }}>{lang === 'km' ? 'អាសយដ្ឋាន' : 'Address'}</th>
-                  <th style={{ padding: '12px 10px', textAlign: 'left', fontWeight: 'bold', background: '#2f55a5', color: '#ffffff', border: 'none' }}>{lang === 'km' ? 'លេខអ្នកទទួល' : 'Receiver Phone'}</th>
-                  <th style={{ padding: '12px 10px', textAlign: 'right', fontWeight: 'bold', background: '#2f55a5', color: '#ffffff', border: 'none' }}>{lang === 'km' ? 'ចំនួនប្រាក់' : 'Amount'}</th>
-                  <th style={{ padding: '12px 10px', textAlign: 'left', fontWeight: 'bold', background: '#2f55a5', color: '#ffffff', border: 'none' }}>{lang === 'km' ? 'ដឹកដោយ' : 'Driver'}</th>
-                  <th style={{ padding: '12px 10px', textAlign: 'center', fontWeight: 'bold', background: '#2f55a5', color: '#ffffff', border: 'none' }}>{lang === 'km' ? 'ស្ថានភាព' : 'Status'}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredOrders.length === 0 ? (
+          {/* Orders Table Card */}
+          <div className="card table-container" style={{ marginBottom: 30 }}>
+            <div className="card-header">
+              <span className="card-title">📦 {lang === 'km' ? 'បញ្ជីកញ្ចប់សម្រាប់បោះពុម្ព' : 'Parcel List for Printing'}</span>
+              <span style={{ 
+                background: '#e0e7ff', 
+                color: '#3730a3', 
+                fontSize: 12, 
+                fontWeight: 700, 
+                padding: '4px 12px', 
+                borderRadius: 20 
+              }}>
+                {selectedOrders.length} / {filteredOrders.length} {lang === 'km' ? 'កញ្ចប់បានជ្រើសរើស' : 'Selected'}
+              </span>
+            </div>
+            <div className="table-wrapper" style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 1050 }}>
+                <thead>
                   <tr>
-                    <td colSpan={10} style={{ textAlign: 'center', padding: '30px 0', color: '#64748b' }}>{lang === 'km' ? 'គ្មានទិន្នន័យ' : 'No Data'}</td>
-                  </tr>
-                ) : (
-                  filteredOrders.map((o, idx) => (
-                    <tr key={o.id} style={{ borderBottom: '1px solid #f1f5f9', background: selectedIds.includes(o.id) ? '#f0f7ff' : '#ffffff', transition: 'background-color 0.15s' }}>
-                      <td style={{ padding: '12px 10px', textAlign: 'center', color: '#64748b', fontWeight: 'bold', border: 'none' }}>{idx + 1}</td>
-                      <td style={{ padding: '12px 10px', textAlign: 'center', border: 'none' }}>
+                    <th style={{ width: 50, textAlign: 'center' }}>{lang === 'km' ? 'ល.រ' : 'No.'}</th>
+                    <th style={{ width: 95, textAlign: 'center' }}>
+                      <label style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, cursor: 'pointer', margin: 0, fontWeight: 700 }}>
                         <input
                           type="checkbox"
-                          checked={selectedIds.includes(o.id)}
-                          onChange={() => toggleSelect(o.id)}
-                          style={{ width: 16, height: 16, accentColor: '#2f55a5', cursor: 'pointer' }}
+                          checked={allFilteredSelected}
+                          onChange={toggleAll}
+                          style={{ width: 16, height: 16, accentColor: 'var(--accent)', cursor: 'pointer' }}
                         />
-                      </td>
-                      <td style={{ padding: '12px 10px', fontWeight: '600', color: '#0f172a', border: 'none' }}>{o.trackingCode}</td>
-                      <td style={{ padding: '12px 10px', color: '#64748b', border: 'none' }}>
-                        {o.createdAt ? formatDateToDDMMYYYY(o.createdAt) : ''}
-                      </td>
-                      <td style={{ padding: '12px 10px', fontWeight: '600', color: '#0f172a', border: 'none' }}>{o.merchant?.nameKh || o.merchant?.name || ''}</td>
-                      <td style={{ padding: '12px 10px', color: '#475569', border: 'none' }}>{o.receiverAddress || ''}</td>
-                      <td style={{ padding: '12px 10px', color: '#475569', border: 'none' }}>{o.receiverPhone || ''}</td>
-                      <td style={{ padding: '12px 10px', textAlign: 'right', fontWeight: 'bold', color: '#dc2626', border: 'none' }}>
-                        {parseFloat(o.cod || 0).toFixed(2)} ({o.codCurrency || 'USD'})
-                      </td>
-                      <td style={{ padding: '12px 10px', fontWeight: '600', color: '#0f172a', border: 'none' }}>
-                        {getDriverLabel(o.driver, lang)}
-                      </td>
-                      <td style={{ padding: '12px 10px', textAlign: 'center', border: 'none' }}>
-                        {getStatusLabel(o.status, lang)}
+                        <span>{lang === 'km' ? 'ទាំងអស់' : 'All'}</span>
+                      </label>
+                    </th>
+                    <th style={{ width: 140 }}>{lang === 'km' ? 'លេខបញ្ជូន' : 'Delivery Number'}</th>
+                    <th style={{ width: 110 }}>{lang === 'km' ? 'កាលបរិច្ឆេទ' : 'Date'}</th>
+                    <th style={{ width: 160 }}>{lang === 'km' ? 'ឈ្មោះហាង' : 'Shop Name'}</th>
+                    <th>{lang === 'km' ? 'អាសយដ្ឋាន' : 'Address'}</th>
+                    <th style={{ width: 130 }}>{lang === 'km' ? 'លេខអ្នកទទួល' : 'Receiver Phone'}</th>
+                    <th style={{ width: 120, textAlign: 'right' }}>{lang === 'km' ? 'ចំនួនប្រាក់' : 'Amount'}</th>
+                    <th style={{ width: 140 }}>{lang === 'km' ? 'ដឹកដោយ' : 'Driver'}</th>
+                    <th style={{ width: 110, textAlign: 'center' }}>{lang === 'km' ? 'ស្ថានភាព' : 'Status'}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredOrders.length === 0 ? (
+                    <tr>
+                      <td colSpan={10} style={{ textAlign: 'center', padding: '36px 20px', color: 'var(--text-muted)', fontSize: 13 }}>
+                        {lang === 'km' ? 'គ្មានទិន្នន័យ' : 'No Data'}
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                  ) : (
+                    filteredOrders.map((o, idx) => (
+                      <tr key={o.id} style={{ background: selectedIds.includes(o.id) ? '#f0f7ff' : undefined }}>
+                        <td style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: 12 }}>{idx + 1}</td>
+                        <td style={{ textAlign: 'center' }}>
+                          <input
+                            type="checkbox"
+                            checked={selectedIds.includes(o.id)}
+                            onChange={() => toggleSelect(o.id)}
+                            style={{ width: 16, height: 16, accentColor: 'var(--accent)', cursor: 'pointer' }}
+                          />
+                        </td>
+                        <td style={{ fontWeight: 700 }}>{o.trackingCode}</td>
+                        <td style={{ color: 'var(--text-secondary)', fontSize: 12 }}>
+                          {o.createdAt ? formatDateToDDMMYYYY(o.createdAt) : ''}
+                        </td>
+                        <td style={{ fontWeight: 600 }}>{o.merchant?.nameKh || o.merchant?.name || '—'}</td>
+                        <td style={{ fontSize: 12.5, color: 'var(--text-secondary)' }}>{o.receiverAddress || '—'}</td>
+                        <td style={{ fontSize: 12.5 }}>{o.receiverPhone || '—'}</td>
+                        <td style={{ textAlign: 'right', fontWeight: 700, color: 'var(--danger)' }}>
+                          {parseFloat(o.cod || 0).toFixed(2)} ({o.codCurrency || 'USD'})
+                        </td>
+                        <td>
+                          {getDriverLabel(o.driver, lang)}
+                        </td>
+                        <td style={{ textAlign: 'center' }}>
+                          {getStatusLabel(o.status, lang)}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
 
           {/* Printable Sticker Cards Preview */}

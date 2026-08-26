@@ -207,12 +207,8 @@ export default function DeliverySummaryPage() {
                     <tr><td colSpan={8} style={{ textAlign: 'center', padding: '40px 0', border: 'none' }}><div className="spinner" style={{ margin: '0 auto' }} /></td></tr>
                   ) : currentPageItems.length === 0 ? (
                     <tr>
-                      <td colSpan={8} style={{ padding: '60px 0', border: 'none' }}>
-                        <div className="empty-state" style={{ background: 'transparent', border: 'none', padding: 0 }}>
-                          <div className="empty-state-icon" style={{ fontSize: 48, marginBottom: 16 }}>🚚</div>
-                          <div className="empty-state-title">{lang === 'km' ? 'គ្មានទិន្នន័យទេ' : 'No data available'}</div>
-                          <div className="empty-state-text">{lang === 'km' ? 'សាកល្បងកែតម្រូវតម្រង ឬចន្លោះកាលបរិច្ឆេទ' : 'Try adjusting the filters or date range'}</div>
-                        </div>
+                      <td colSpan={8} style={{ padding: '36px 20px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13, border: 'none' }}>
+                        {lang === 'km' ? 'គ្មានទិន្នន័យ' : 'No data'}
                       </td>
                     </tr>
                   ) : (

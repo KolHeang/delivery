@@ -22,6 +22,13 @@ export class ExpensesService {
     return this.typeRepo.find({ order: { name: 'ASC' } });
   }
 
+  async updateType(id: number, attrs: Partial<ExpenseType>) {
+    const type = await this.typeRepo.findOne({ where: { id } });
+    if (!type) throw new NotFoundException('Expense type not found');
+    Object.assign(type, attrs);
+    return this.typeRepo.save(type);
+  }
+
   async deleteType(id: number) {
     const type = await this.typeRepo.findOne({ where: { id } });
     if (!type) throw new NotFoundException('Expense type not found');

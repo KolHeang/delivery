@@ -171,33 +171,37 @@ export default function PickupRequestsPage() {
             </div>
 
             {/* ── Table ── */}
-            {loading ? (
-              <div className="loading-wrapper"><div className="spinner" /></div>
-            ) : filtered.length === 0 ? (
-              <div className="empty-state" style={{ padding: '60px 0' }}>
-                <div className="empty-state-icon">📦</div>
-                <div className="empty-state-title">{t('noPickupRequests')}</div>
-                <div className="empty-state-text">No pickup requests match your current filters.</div>
-              </div>
-            ) : (
-              <div style={{ overflowX: 'auto', flex: 1 }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-                  <thead style={{ position: 'sticky', top: 0, zIndex: 10, background: '#2f55a5' }}>
-                    <tr style={{ background: '#2f55a5' }}>
-                      <th style={{ padding: '12px 10px', paddingLeft: 24, background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'ល.រ' : 'No.'}</th>
-                      <th style={{ padding: '12px 10px', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('merchant')}</th>
-                      <th style={{ padding: '12px 10px', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('location')}</th>
-                      <th style={{ padding: '12px 10px', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('pickupDriver')}</th>
-                      <th style={{ padding: '12px 10px', textAlign: 'center', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('declaredQty')}</th>
-                      <th style={{ padding: '12px 10px', textAlign: 'center', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('actualQty')}</th>
-                      <th style={{ padding: '12px 10px', textAlign: 'center', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('completedQty')}</th>
-                      <th style={{ padding: '12px 10px', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('scheduledAt')}</th>
-                      <th style={{ padding: '12px 10px', textAlign: 'center', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('status')}</th>
-                      <th style={{ padding: '12px 10px', textAlign: 'center', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('actions')}</th>
+            <div style={{ overflowX: 'auto', flex: 1 }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                <thead style={{ position: 'sticky', top: 0, zIndex: 10, background: '#2f55a5' }}>
+                  <tr style={{ background: '#2f55a5' }}>
+                    <th style={{ padding: '12px 10px', paddingLeft: 24, background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'ល.រ' : 'No.'}</th>
+                    <th style={{ padding: '12px 10px', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('merchant')}</th>
+                    <th style={{ padding: '12px 10px', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('location')}</th>
+                    <th style={{ padding: '12px 10px', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('pickupDriver')}</th>
+                    <th style={{ padding: '12px 10px', textAlign: 'center', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('declaredQty')}</th>
+                    <th style={{ padding: '12px 10px', textAlign: 'center', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('actualQty')}</th>
+                    <th style={{ padding: '12px 10px', textAlign: 'center', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('completedQty')}</th>
+                    <th style={{ padding: '12px 10px', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('scheduledAt')}</th>
+                    <th style={{ padding: '12px 10px', textAlign: 'center', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('status')}</th>
+                    <th style={{ padding: '12px 10px', textAlign: 'center', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('actions')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {loading ? (
+                    <tr>
+                      <td colSpan={10} style={{ padding: '40px 0', textAlign: 'center' }}>
+                        <div className="loading-wrapper"><div className="spinner" /></div>
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {paginated.map((r: any) => {
+                  ) : filtered.length === 0 ? (
+                    <tr>
+                      <td colSpan={10} style={{ padding: '36px 20px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
+                        {t('noDataFound') || 'គ្មានទិន្នន័យ'}
+                      </td>
+                    </tr>
+                  ) : (
+                    paginated.map((r: any) => {
                       const completedCount = r.orders?.length ?? 0;
                       const progress = r.declaredQuantity > 0 ? Math.round((completedCount / r.declaredQuantity) * 100) : 0;
                       return (
@@ -222,7 +226,7 @@ export default function PickupRequestsPage() {
                                 <div style={{ fontWeight: 600, fontSize: 13, color: '#0f172a' }}>{r.pickupDriver.nameKh || r.pickupDriver.name}</div>
                               </div>
                             ) : (
-                              <span style={{ fontSize: 12, color: 'var(--text-muted)' }}></span>
+                              <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>—</span>
                             )}
                           </td>
                           <td style={{ padding: '12px 10px', textAlign: 'center', fontWeight: 700, border: 'none' }}>{r.declaredQuantity ?? ''}</td>
@@ -253,17 +257,17 @@ export default function PickupRequestsPage() {
                           </td>
                         </tr>
                       );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
 
             {/* ── Pagination ── */}
             {!loading && filtered.length > 0 && (
               <div style={{ padding: '10px 24px', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-card)', gap: 12, flexWrap: 'wrap' }}>
                 <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                  Showing {(safePage - 1) * pageSize + 1}–{Math.min(safePage * pageSize, filtered.length)} of {filtered.length}
+                  {lang === 'km' ? `បង្ហាញ ${(safePage - 1) * pageSize + 1}–${Math.min(safePage * pageSize, filtered.length)} នៃ ${filtered.length}` : `Showing ${(safePage - 1) * pageSize + 1}–${Math.min(safePage * pageSize, filtered.length)} of ${filtered.length}`}
                 </span>
                 <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                   <button onClick={() => setCurrentPage(1)} disabled={safePage === 1} style={paginationBtnStyle(safePage === 1)}>«</button>

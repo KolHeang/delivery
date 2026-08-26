@@ -22,6 +22,13 @@ export class IncomesService {
     return this.typeRepo.find({ order: { name: 'ASC' } });
   }
 
+  async updateType(id: number, attrs: Partial<IncomeType>) {
+    const type = await this.typeRepo.findOne({ where: { id } });
+    if (!type) throw new NotFoundException('Income type not found');
+    Object.assign(type, attrs);
+    return this.typeRepo.save(type);
+  }
+
   async deleteType(id: number) {
     const type = await this.typeRepo.findOne({ where: { id } });
     if (!type) throw new NotFoundException('Income type not found');

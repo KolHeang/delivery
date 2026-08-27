@@ -107,14 +107,14 @@ export default function PickupRequestDetailPage() {
     setLoading(true);
     try {
       const [reqRes, drvRes, zoneRes] = await Promise.all([
-        api.get(`/orders/pickup-requests/${id}`),
+        api.get(`/parcels/pickup-requests/${id}`),
         api.get('/drivers/available'),
         api.get('/zones'),
       ]);
       const reqData = reqRes.data;
       const zonesData: any[] = zoneRes.data?.data ?? zoneRes.data ?? [];
       setRequest(reqData);
-      setParcels(reqData.orders ?? []);
+      setParcels(reqData.parcels ?? reqData.orders ?? []);
       setDrivers(drvRes.data);
       setZones(zonesData);
 
@@ -148,7 +148,7 @@ export default function PickupRequestDetailPage() {
     if (!assignDriverId) return;
     setAssigning(true);
     try {
-      await api.patch(`/orders/pickup-requests/${id}/assign-driver`, { pickupDriverId: assignDriverId });
+      await api.patch(`/parcels/pickup-requests/${id}/assign-driver`, { pickupDriverId: assignDriverId });
       setShowAssign(false);
       setAssignDriver(null);
       setSuccessMsg(t('assignSuccess'));
@@ -175,7 +175,7 @@ export default function PickupRequestDetailPage() {
     setFormError('');
     setSubmitting(true);
     try {
-      await api.post(`/orders/pickup-requests/${id}/parcels`, {
+      await api.post(`/parcels/pickup-requests/${id}/parcels`, {
         receiverName:    form.receiverName.trim() || '-',
         receiverPhone:   form.receiverPhone.trim(),
         receiverAddress: form.receiverAddress.trim(),
@@ -251,7 +251,7 @@ export default function PickupRequestDetailPage() {
       const row = batchRows[i];
       const zoneId = row.zoneId ? Number(row.zoneId) : defaultZoneId;
       try {
-        await api.post(`/orders/pickup-requests/${id}/parcels`, {
+        await api.post(`/parcels/pickup-requests/${id}/parcels`, {
           receiverName:    '-',
           receiverPhone:   row.receiverPhone.trim(),
           receiverAddress: row.receiverAddress.trim(),
@@ -284,7 +284,7 @@ export default function PickupRequestDetailPage() {
   const handleDeleteParcel = async (parcelId: number) => {
     if (!confirm(t('deleteParcelConfirm'))) return;
     try {
-      await api.delete(`/orders/pickup-requests/${id}/parcels/${parcelId}`);
+      await api.delete(`/parcels/pickup-requests/${id}/parcels/${parcelId}`);
       await load();
     } catch (err: any) {
       alert(err.response?.data?.message || 'Failed to delete parcel');

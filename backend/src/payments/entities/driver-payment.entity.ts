@@ -9,8 +9,8 @@ import {
 } from 'typeorm';
 import { User } from '../../users/entities/users.entity';
 
-@Entity('staff_payments')
-export class StaffPayment {
+@Entity('driver_payments')
+export class DriverPayment {
   @PrimaryGeneratedColumn()
   id: number;
 
@@ -33,8 +33,8 @@ export class StaffPayment {
   @Column({ nullable: true, type: 'text' })
   note: string;
 
-  @Column({ name: 'order_ids', type: 'json', nullable: true })
-  orderIds: number[];
+  @Column({ name: 'parcel_ids', type: 'json', nullable: true })
+  parcelIds: number[];
 
   @ManyToOne(() => User, { nullable: true, eager: true })
   @JoinColumn({ name: 'created_by_id' })

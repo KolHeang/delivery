@@ -9,7 +9,7 @@ import {
 import { ApiProperty } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
 
-export class CreateOrderDto {
+export class CreateParcelDto {
   @ApiProperty() @IsNotEmpty() @IsString() receiverName: string;
   @ApiProperty() @IsNotEmpty() @IsString() receiverPhone: string;
   @ApiProperty() @IsNotEmpty() @IsString() receiverAddress: string;
@@ -90,7 +90,7 @@ export class CreateOrderDto {
   createdById?: number;
 }
 
-export class UpdateOrderDto {
+export class UpdateParcelDto {
   @IsOptional() @IsString() receiverName?: string;
   @IsOptional() @IsString() receiverPhone?: string;
   @IsOptional() @IsString() receiverAddress?: string;
@@ -114,7 +114,7 @@ export class UpdateOrderDto {
   @IsOptional() @IsNumber() @Type(() => Number) updatedById?: number;
 }
 
-export class UpdateOrderStatusDto {
+export class UpdateParcelStatusDto {
   @ApiProperty({
     enum: [
       'pending',

@@ -57,7 +57,7 @@ export default function AssignDeliveryPage() {
     setLoading(true);
     try {
       const [orders, drvs] = await Promise.all([
-        api.get('/orders/in-warehouse'),
+        api.get('/parcels/in-warehouse'),
         api.get('/drivers/available'),
       ]);
       setUnassigned(orders.data);
@@ -146,7 +146,7 @@ export default function AssignDeliveryPage() {
     if (!selectedDriver || selected.length === 0) return;
     setAssigning(true);
     try {
-      await Promise.all(selected.map(id => api.post(`/orders/${id}/assign-delivery`, { driverId: selectedDriver })));
+      await Promise.all(selected.map(id => api.post(`/parcels/${id}/assign-delivery`, { driverId: selectedDriver })));
       const count = selected.length;
       setSelected([]);
       setSelectedDriver(null);

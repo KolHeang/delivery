@@ -89,8 +89,11 @@ export default function ReportPaymentCustomerPage() {
     );
   }
 
-  const { payment, orders, orgInfo } = data;
-  const merchant = payment.merchant;
+  const parcels = data.parcels || data.orders || [];
+  const orders = parcels;
+  const payment = data.payment;
+  const orgInfo = data.orgInfo;
+  const merchant = payment?.merchant;
 
   const deliveredOrders = orders.filter((o: any) => o.status === 'delivered');
   const inTransitOrders = orders.filter((o: any) => o.status === 'in-transit' || o.status === 'picked-up' || o.status === 'pending' || o.status === 'failed');

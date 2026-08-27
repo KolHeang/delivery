@@ -36,7 +36,7 @@ export default function EditOrderPage() {
           api.get('/merchants'),
           api.get('/customers'),
           api.get('/zones'),
-          api.get(`/orders/${params.id}`)
+          api.get(`/parcels/${params.id}`)
         ]);
 
         setMerchants(m.data || []);
@@ -75,7 +75,7 @@ export default function EditOrderPage() {
         zoneId: form.zoneId ? parseInt(form.zoneId as string) : undefined,
         codCurrency: form.codCurrency || 'USD'
       };
-      await api.patch(`/orders/${params.id}`, payload);
+      await api.patch(`/parcels/${params.id}`, payload);
       router.push('/delivery');
     } catch (err: any) {
       alert(err.response?.data?.message || 'Error saving delivery');

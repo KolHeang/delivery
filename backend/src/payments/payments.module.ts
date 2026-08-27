@@ -1,10 +1,10 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { StaffPayment } from './entities/staff-payment.entity';
-import { ShopPayment } from './entities/shop-payment.entity';
+import { DriverPayment } from './entities/driver-payment.entity';
+import { MerchantPayment } from './entities/merchant-payment.entity';
 import { User } from '../users/entities/users.entity';
 import { Merchant } from '../merchants/entities/merchant.entity';
-import { Order } from '../orders/entities/order.entity';
+import { Parcel } from '../parcels/entities/parcel.entity';
 import { Organisation } from '../settings/entities/organisation.entity';
 import { PaymentsService } from './payments.service';
 import { PaymentsController } from './payments.controller';
@@ -12,11 +12,11 @@ import { PaymentsController } from './payments.controller';
 @Module({
   imports: [
     TypeOrmModule.forFeature([
-      StaffPayment,
-      ShopPayment,
+      DriverPayment,
+      MerchantPayment,
       User,
       Merchant,
-      Order,
+      Parcel,
       Organisation,
     ]),
   ],

@@ -13,10 +13,10 @@ import { Merchant } from '../../merchants/entities/merchant.entity';
 import { Customer } from '../../customers/entities/customer.entity';
 import { User } from '../../users/entities/users.entity';
 import { Zone } from '../../zones/entities/zone.entity';
-import { OrderHistory } from './order-history.entity';
+import { ParcelEvent } from './parcel-event.entity';
 import { PickupRequest } from './pickup-request.entity';
 
-export type OrderStatus =
+export type ParcelStatus =
   | 'pending'
   | 'in-warehouse'
   | 'assigned'
@@ -25,11 +25,11 @@ export type OrderStatus =
   | 'delivered'
   | 'failed'
   | 'returned';
-export type OrderSize = 'small' | 'medium' | 'large';
+export type ParcelSize = 'small' | 'medium' | 'large';
 export type PaymentStatus = 'pending' | 'paid';
 
-@Entity('orders')
-export class Order {
+@Entity('parcels')
+export class Parcel {
   @PrimaryGeneratedColumn()
   id: number;
 
@@ -37,7 +37,7 @@ export class Order {
   trackingCode: string;
 
   @Column({ default: 'pending' })
-  status: OrderStatus;
+  status: ParcelStatus;
 
   @Column({ name: 'receiver_name' })
   receiverName: string;
@@ -52,7 +52,7 @@ export class Order {
   weight: number;
 
   @Column({ default: 'small' })
-  size: OrderSize;
+  size: ParcelSize;
 
   @Column({ nullable: true, type: 'text' })
   note: string;
@@ -144,15 +144,15 @@ export class Order {
   @Column({ name: 'updated_by_id', nullable: true })
   updatedById: number;
 
-  @ManyToOne(() => PickupRequest, (pr) => pr.orders, { nullable: true, onDelete: 'SET NULL' })
+  @ManyToOne(() => PickupRequest, (pr) => pr.parcels, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'pickup_request_id' })
   pickupRequest: PickupRequest;
 
   @Column({ name: 'pickup_request_id', nullable: true })
   pickupRequestId: number;
 
-  @OneToMany(() => OrderHistory, (history) => history.order)
-  histories: OrderHistory[];
+  @OneToMany(() => ParcelEvent, (event) => event.parcel)
+  events: ParcelEvent[];
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;

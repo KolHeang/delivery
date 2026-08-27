@@ -12,15 +12,15 @@ import {
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { MerchantService } from './merchant.service';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
-import { CreateOrderDto } from '../../orders/dto/order.dto';
-import { CreatePickupRequestDto } from '../../orders/dto/pickup-request.dto';
+import { CreateParcelDto } from '../../parcels/dto/parcel.dto';
+import { CreatePickupRequestDto } from '../../parcels/dto/pickup-request.dto';
 
 @ApiTags('Mobile Merchant')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
 @Controller('mobile/merchant')
 export class MerchantController {
-  constructor(private readonly merchantService: MerchantService) {}
+  constructor(private readonly merchantService: MerchantService) { }
 
   @Get('profile')
   @ApiOperation({ summary: 'Get merchant profile' })
@@ -47,16 +47,16 @@ export class MerchantController {
     return this.merchantService.changePassword(req.user.id, oldPass, newPass);
   }
 
-  @Get('orders')
-  @ApiOperation({ summary: 'Get merchant orders' })
-  getOrders(@Request() req: any, @Query('status') status?: string) {
-    return this.merchantService.getOrders(req.user.id, status);
+  @Get('parcels')
+  @ApiOperation({ summary: 'Get merchant parcels' })
+  getParcels(@Request() req: any, @Query('status') status?: string) {
+    return this.merchantService.getParcels(req.user.id, status);
   }
 
-  @Post('orders')
-  @ApiOperation({ summary: 'Create a new order' })
-  createOrder(@Request() req: any, @Body() dto: CreateOrderDto) {
-    return this.merchantService.createOrder(req.user.id, dto);
+  @Post('parcels')
+  @ApiOperation({ summary: 'Create a new parcel' })
+  createParcel(@Request() req: any, @Body() dto: CreateParcelDto) {
+    return this.merchantService.createParcel(req.user.id, dto);
   }
 
   @Get('summary')

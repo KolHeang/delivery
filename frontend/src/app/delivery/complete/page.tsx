@@ -50,7 +50,7 @@ export default function CompletePackagePage() {
 
   const loadActiveOrders = async () => {
     try {
-      const res = await api.get('/orders');
+      const res = await api.get('/parcels');
       // Show all active & unfinalized orders (pending, in-warehouse, assigned, picked-up, in-transit, failed)
       const activeOrders = (res.data || []).filter((o: any) =>
         ['pending', 'in-warehouse', 'assigned', 'picked-up', 'in-transit', 'failed'].includes(o.status)
@@ -212,7 +212,7 @@ export default function CompletePackagePage() {
           const usd = parseFloat(rowCashUSD[id] || '0') || 0;
           const completedDate = rowCompletedDate[id] || appliedFilters.date || getLocalDateString();
 
-          await api.patch(`/orders/${id}`, {
+          await api.patch(`/parcels/${id}`, {
             status,
             paymentMethod: method,
             deliveredAt: completedDate ? new Date(completedDate).toISOString() : undefined,

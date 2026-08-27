@@ -171,8 +171,8 @@ export default function PaymentWithStaffPage() {
   const handleFilter = async () => {
     try {
       const url = driverId 
-        ? `/orders?driverId=${driverId}`
-        : `/orders`;
+        ? `/parcels?driverId=${driverId}`
+        : `/parcels`;
       const res = await api.get(url);
       setOrders(res.data || []);
       setSelectedIds([]);
@@ -265,8 +265,8 @@ export default function PaymentWithStaffPage() {
         amount: totalDeliveryFee,
         date: new Date().toISOString(),
         reference: `SETTLE-STAFF-${Date.now().toString().slice(-6)}`,
-        note: `Bulk settlement for ${selectedIds.length} orders`,
-        orderIds: allOrderIdsToSettle,
+        note: `Bulk settlement for ${selectedIds.length} parcels`,
+        parcelIds: allOrderIdsToSettle,
       });
       alert(lang === 'km' ? 'រក្សាទុកការទូទាត់បានជោគជ័យ!' : 'Payment settled successfully!');
       handleFilter(); 
@@ -522,7 +522,7 @@ export default function PaymentWithStaffPage() {
                                   }}
                                   onBlur={e => {
                                     const val = parseFloat(e.target.value) || 0;
-                                    api.patch(`/orders/${o.id}`, { cod: val }).catch(console.error);
+                                    api.patch(`/parcels/${o.id}`, { cod: val }).catch(console.error);
                                   }}
                                   style={{ width: o.codCurrency === 'KHR' ? '110px' : '80px', padding: '4px 8px', fontSize: '13px', border: '1px solid #cbd5e1', borderRadius: '6px', textAlign: 'right', fontWeight: 700 }}
                                 />
@@ -545,7 +545,7 @@ export default function PaymentWithStaffPage() {
                                   }}
                                   onBlur={e => {
                                     const val = parseFloat(e.target.value) || 0;
-                                    api.patch(`/orders/${o.id}`, { deliveryFee: val }).catch(console.error);
+                                    api.patch(`/parcels/${o.id}`, { deliveryFee: val }).catch(console.error);
                                   }}
                                   style={{ width: '70px', padding: '4px 8px', fontSize: '13px', border: '1px solid #cbd5e1', borderRadius: '6px', textAlign: 'right', fontWeight: 700 }}
                                 />

@@ -129,28 +129,28 @@ export default function BatchEntryPage() {
 
         if (codUSDNum > 0 && codKHRNum > 0) {
           // Add USD order (with delivery fee)
-          await api.post('/orders', {
+          await api.post('/parcels', {
             ...basePayload,
             cod: codUSDNum,
             codCurrency: 'USD',
             deliveryFee: parseFloat(r.deliveryFee) || 0,
           });
           // Add KHR order (with 0 delivery fee to avoid double charging)
-          await api.post('/orders', {
+          await api.post('/parcels', {
             ...basePayload,
             cod: codKHRNum,
             codCurrency: 'KHR',
             deliveryFee: 0,
           });
         } else if (codKHRNum > 0) {
-          await api.post('/orders', {
+          await api.post('/parcels', {
             ...basePayload,
             cod: codKHRNum,
             codCurrency: 'KHR',
             deliveryFee: parseFloat(r.deliveryFee) || 0,
           });
         } else {
-          await api.post('/orders', {
+          await api.post('/parcels', {
             ...basePayload,
             cod: codUSDNum || 0,
             codCurrency: 'USD',

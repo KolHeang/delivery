@@ -12,31 +12,30 @@ import {
   Request,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
-import { OrdersService } from './orders.service';
+import { ParcelsService } from './parcels.service';
 import {
-  CreateOrderDto,
-  UpdateOrderDto,
-  UpdateOrderStatusDto,
+  CreateParcelDto,
+  UpdateParcelDto,
+  UpdateParcelStatusDto,
   AssignDriverDto,
   AssignPickupDto,
   AssignDeliveryDto,
-} from './dto/order.dto';
+} from './dto/parcel.dto';
 import { AssignRiderDto } from './dto/pickup-request.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-
 import { PermissionsGuard } from '../auth/permissions.guard';
 import { RequirePermissions } from '../auth/permissions.decorator';
 import { LogActivity } from '../activity-logs/activity.decorator';
 
-@ApiTags('Orders')
+@ApiTags('Parcels')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, PermissionsGuard)
-@Controller('orders')
-export class OrdersController {
-  constructor(private readonly ordersService: OrdersService) {}
+@Controller(['parcels'])
+export class ParcelsController {
+  constructor(private readonly parcelsService: ParcelsService) { }
 
   @Get()
-  @RequirePermissions('orders.read')
+  @RequirePermissions('parcels.read')
   @ApiQuery({ name: 'page', required: false })
   @ApiQuery({ name: 'limit', required: false })
   @ApiQuery({ name: 'search', required: false })
@@ -59,7 +58,7 @@ export class OrdersController {
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
   ) {
-    return this.ordersService.findAll({
+    return this.parcelsService.findAll({
       page: page ? +page : undefined,
       limit: limit ? +limit : undefined,
       search,
@@ -73,181 +72,169 @@ export class OrdersController {
     });
   }
 
-  /** Pending orders with no driver — for direct delivery (Flow 1 assign page) */
+  /** Pending parcels with no driver — for direct delivery */
   @Get('unassigned')
-  @RequirePermissions('orders.read')
+  @RequirePermissions('parcels.read')
   findUnassigned() {
-    return this.ordersService.findUnassigned();
+    return this.parcelsService.findUnassigned();
   }
 
-  /** Pending orders with no pickup driver — for pickup assignment (Flow 2 Step 1) */
-  // @Get('pending-pickup')
-  // @RequirePermissions('orders.read')
-  // findPendingForPickup() {
-  //   return this.ordersService.findPendingForPickup();
-  // }
+  /** Pending parcels waiting for pickup driver */
+  @Get('pending-pickup')
+  @RequirePermissions('parcels.read')
+  findPendingForPickup() {
+    return this.parcelsService.findPendingForPickup();
+  }
 
-  /** Orders at warehouse waiting for delivery assignment (Flow 2 Step 2) */
+  /** Parcels at warehouse waiting for delivery assignment */
   @Get('in-warehouse')
-  @RequirePermissions('orders.read')
+  @RequirePermissions('parcels.read')
   findInWarehouse() {
-    return this.ordersService.findInWarehouse();
+    return this.parcelsService.findInWarehouse();
   }
 
   @Get('stats')
-  @RequirePermissions('orders.read')
+  @RequirePermissions('parcels.read')
   getStats() {
-    return this.ordersService.getStats();
+    return this.parcelsService.getStats();
   }
 
   @Get('tracking/:code')
-  @RequirePermissions('orders.read')
+  @RequirePermissions('parcels.read')
   findByTracking(@Param('code') code: string) {
-    console.log("Tracking requested for code:", code);
-    return this.ordersService.findByTracking(code);
+    console.log('Tracking requested for code:', code);
+    return this.parcelsService.findByTracking(code);
   }
 
   @Get('phone/:phone')
-  @RequirePermissions('orders.read')
+  @RequirePermissions('parcels.read')
   findByPhone(@Param('phone') phone: string) {
-    return this.ordersService.findByPhone(phone);
+    return this.parcelsService.findByPhone(phone);
   }
 
   @Get('pickup-requests')
-  @RequirePermissions('orders.read')
+  @RequirePermissions('parcels.read')
   findAllPickupRequests(
     @Query('status') status?: string,
     @Query('merchantId') merchantId?: string,
   ) {
-    return this.ordersService.findAllPickupRequests({
+    return this.parcelsService.findAllPickupRequests({
       status,
       merchantId: merchantId ? +merchantId : undefined,
     });
   }
 
   @Get('pickup-requests/:id')
-  @RequirePermissions('orders.read')
+  @RequirePermissions('parcels.read')
   findOnePickupRequest(@Param('id', ParseIntPipe) id: number) {
-    return this.ordersService.findPickupRequestById(id);
+    return this.parcelsService.findPickupRequestById(id);
   }
 
   @Patch('pickup-requests/:id/assign-driver')
-  @RequirePermissions('orders.update')
+  @RequirePermissions('parcels.update')
   assignPickupDriver(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: AssignRiderDto,
   ) {
-    return this.ordersService.assignPickupDriverToRequest(id, dto.pickupDriverId);
+    return this.parcelsService.assignPickupDriverToRequest(id, dto.pickupDriverId);
   }
 
   @Post('pickup-requests/:id/parcels')
-  @RequirePermissions('orders.create')
+  @RequirePermissions('parcels.create')
   createParcelForRequest(
     @Param('id', ParseIntPipe) id: number,
-    @Body() dto: CreateOrderDto,
+    @Body() dto: CreateParcelDto,
   ) {
-    return this.ordersService.createParcelForRequest(id, dto);
+    return this.parcelsService.createParcelForRequest(id, dto);
   }
 
   @Delete('pickup-requests/:id/parcels/:parcelId')
-  @RequirePermissions('orders.delete')
+  @RequirePermissions('parcels.delete')
   deleteParcelFromRequest(
     @Param('id', ParseIntPipe) id: number,
     @Param('parcelId', ParseIntPipe) parcelId: number,
   ) {
-    return this.ordersService.deleteParcelFromRequest(id, parcelId);
+    return this.parcelsService.deleteParcelFromRequest(id, parcelId);
   }
 
   @Get(':id')
-  @RequirePermissions('orders.read')
+  @RequirePermissions('parcels.read')
   findOne(@Param('id', ParseIntPipe) id: number) {
-    return this.ordersService.findOne(id);
+    return this.parcelsService.findOne(id);
   }
 
   @Post()
-  @RequirePermissions('orders.create')
-  @LogActivity({ action: 'CREATE_ORDER', entityName: 'Order', description: 'Created new order' })
-  create(@Body() dto: CreateOrderDto, @Request() req: any) {
+  @RequirePermissions('parcels.create')
+  @LogActivity({ action: 'CREATE_PARCEL', entityName: 'Parcel', description: 'Created new parcel' })
+  create(@Body() dto: CreateParcelDto, @Request() req: any) {
     if (!dto.createdById && req?.user?.id) {
       dto.createdById = req.user.id;
     }
-    return this.ordersService.create(dto);
+    return this.parcelsService.create(dto);
   }
 
   @Patch(':id')
-  @RequirePermissions('orders.update')
-  @LogActivity({ action: 'UPDATE_ORDER', entityName: 'Order', description: 'Updated order details' })
+  @RequirePermissions('parcels.update')
+  @LogActivity({ action: 'UPDATE_PARCEL', entityName: 'Parcel', description: 'Updated parcel details' })
   update(
     @Param('id', ParseIntPipe) id: number,
-    @Body() dto: UpdateOrderDto,
+    @Body() dto: UpdateParcelDto,
     @Request() req: any,
   ) {
     if (!dto.updatedById && req?.user?.id) {
       dto.updatedById = req.user.id;
     }
-    return this.ordersService.update(id, dto);
+    return this.parcelsService.update(id, dto);
   }
 
   @Patch(':id/status')
-  @RequirePermissions('orders.update')
-  @LogActivity({ action: 'UPDATE_ORDER_STATUS', entityName: 'Order', description: 'Updated order status' })
+  @RequirePermissions('parcels.update')
+  @LogActivity({ action: 'UPDATE_PARCEL_STATUS', entityName: 'Parcel', description: 'Updated parcel status' })
   updateStatus(
     @Param('id', ParseIntPipe) id: number,
-    @Body() dto: UpdateOrderStatusDto,
+    @Body() dto: UpdateParcelStatusDto,
     @Request() req: any,
   ) {
     if (!dto.updatedById && req?.user?.id) {
       dto.updatedById = req.user.id;
     }
-    return this.ordersService.updateStatus(id, dto);
+    return this.parcelsService.updateStatus(id, dto);
   }
 
-  /**
-   * Flow 1 — Direct delivery:
-   * pending → assign driver → picked-up (driver goes merchant→customer directly)
-   */
   @Post(':id/assign')
-  @RequirePermissions('orders.update')
-  @LogActivity({ action: 'ASSIGN_DRIVER', entityName: 'Order', description: 'Assigned driver to order' })
+  @RequirePermissions('parcels.update')
+  @LogActivity({ action: 'ASSIGN_DRIVER', entityName: 'Parcel', description: 'Assigned driver to parcel' })
   assignDriver(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: AssignDriverDto,
   ) {
-    return this.ordersService.assignDriver(id, dto);
+    return this.parcelsService.assignDriver(id, dto);
   }
 
-  /**
-   * Flow 2 Step 1 — Via warehouse:
-   * pending → assign pickup driver → in-warehouse
-   */
-  // @Post(':id/assign-pickup')
-  // @RequirePermissions('orders.update')
-  // assignPickup(
-  //   @Param('id', ParseIntPipe) id: number,
-  //   @Body() dto: AssignPickupDto,
-  // ) {
-  //   return this.ordersService.assignPickup(id, dto);
-  // }
+  @Post(':id/assign-pickup')
+  @RequirePermissions('parcels.update')
+  @LogActivity({ action: 'ASSIGN_PICKUP', entityName: 'Parcel', description: 'Assigned pickup driver to parcel' })
+  assignPickup(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: AssignPickupDto,
+  ) {
+    return this.parcelsService.assignPickup(id, dto);
+  }
 
-  /**
-   * Flow 2 Step 2 — Via warehouse OR direct from office:
-   * in-warehouse | pending → assign delivery driver → assigned
-   */
   @Post(':id/assign-delivery')
-  @RequirePermissions('orders.update')
-  @LogActivity({ action: 'ASSIGN_DELIVERY', entityName: 'Order', description: 'Assigned delivery driver to order' })
+  @RequirePermissions('parcels.update')
+  @LogActivity({ action: 'ASSIGN_DELIVERY', entityName: 'Parcel', description: 'Assigned delivery driver to parcel' })
   assignDelivery(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: AssignDeliveryDto,
   ) {
-    return this.ordersService.assignDelivery(id, dto);
+    return this.parcelsService.assignDelivery(id, dto);
   }
 
   @Delete(':id')
-  @RequirePermissions('orders.delete')
-  @LogActivity({ action: 'DELETE_ORDER', entityName: 'Order', description: 'Deleted order' })
+  @RequirePermissions('parcels.delete')
+  @LogActivity({ action: 'DELETE_PARCEL', entityName: 'Parcel', description: 'Deleted parcel' })
   remove(@Param('id', ParseIntPipe) id: number) {
-    return this.ordersService.remove(id);
+    return this.parcelsService.remove(id);
   }
-
 }

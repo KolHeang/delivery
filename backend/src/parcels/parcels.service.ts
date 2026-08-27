@@ -5,27 +5,25 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Like, ILike, Between, MoreThanOrEqual, LessThanOrEqual, In } from 'typeorm';
-import { Order } from './entities/order.entity';
-import { OrderHistory } from './entities/order-history.entity';
+import { Parcel } from './entities/parcel.entity';
+import { ParcelEvent } from './entities/parcel-event.entity';
 import { PickupRequest } from './entities/pickup-request.entity';
 import { Zone } from '../zones/entities/zone.entity';
-import { Merchant } from '../merchants/entities/merchant.entity';
 import {
-  CreateOrderDto,
-  UpdateOrderDto,
-  UpdateOrderStatusDto,
+  CreateParcelDto,
+  UpdateParcelDto,
+  UpdateParcelStatusDto,
   AssignDriverDto,
   AssignPickupDto,
   AssignDeliveryDto,
-} from './dto/order.dto';
+} from './dto/parcel.dto';
 import { paginateRepo } from '../config/pagination';
 
-
 @Injectable()
-export class OrdersService {
+export class ParcelsService {
   constructor(
-    @InjectRepository(Order) private readonly repo: Repository<Order>,
-    @InjectRepository(OrderHistory) private readonly historyRepo: Repository<OrderHistory>,
+    @InjectRepository(Parcel) private readonly repo: Repository<Parcel>,
+    @InjectRepository(ParcelEvent) private readonly eventRepo: Repository<ParcelEvent>,
     @InjectRepository(PickupRequest) private readonly pickupRequestRepo: Repository<PickupRequest>,
   ) { }
 
@@ -38,16 +36,16 @@ export class OrdersService {
       creator: true,
       updater: true,
       zone: true,
-      histories: true,
+      events: true,
     };
   }
 
-  async addHistory(orderId: number, status: string, note?: string): Promise<void> {
+  async addEvent(parcelId: number, status: string, note?: string): Promise<void> {
     try {
-      const history = this.historyRepo.create({ orderId, status, note });
-      await this.historyRepo.save(history);
+      const event = this.eventRepo.create({ parcelId, status, note });
+      await this.eventRepo.save(event);
     } catch (err) {
-      console.error(`Failed to add history for order #${orderId} and status ${status}`, err);
+      console.error(`Failed to add event for parcel #${parcelId} and status ${status}`, err);
     }
   }
 
@@ -108,16 +106,16 @@ export class OrdersService {
     });
   }
 
-  async findOne(id: number): Promise<Order> {
+  async findOne(id: number): Promise<Parcel> {
     const item = await this.repo.findOne({
       where: { id },
       relations: this.relations,
     });
-    if (!item) throw new NotFoundException(`Order #${id} not found`);
+    if (!item) throw new NotFoundException(`Parcel #${id} not found`);
     return item;
   }
 
-  async findByTracking(codeOrPhone: string): Promise<Order> {
+  async findByTracking(codeOrPhone: string): Promise<Parcel> {
     const term = codeOrPhone.trim();
     const item = await this.repo.findOne({
       where: [
@@ -130,12 +128,12 @@ export class OrdersService {
     });
     if (!item)
       throw new NotFoundException(
-        `Order with tracking or phone ${codeOrPhone} not found`,
+        `Parcel with tracking or phone ${codeOrPhone} not found`,
       );
     return item;
   }
 
-  async findByPhone(phone: string): Promise<Order[]> {
+  async findByPhone(phone: string): Promise<Parcel[]> {
     return this.repo.find({
       where: { receiverPhone: phone },
       relations: this.relations,
@@ -143,34 +141,34 @@ export class OrdersService {
     });
   }
 
-  /** Pending orders with no driver assigned (used by Assign Delivery page for direct flow) */
-  async findUnassigned(): Promise<Order[]> {
+  /** Pending parcels with no driver assigned (used by Assign Delivery page for direct flow) */
+  async findUnassigned(): Promise<Parcel[]> {
     return this.repo
-      .createQueryBuilder('order')
-      .leftJoinAndSelect('order.merchant', 'merchant')
-      .leftJoinAndSelect('order.customer', 'customer')
-      .leftJoinAndSelect('order.zone', 'zone')
-      .where('order.driverId IS NULL')
-      .andWhere("order.status = 'pending'")
-      .orderBy('order.createdAt', 'DESC')
+      .createQueryBuilder('parcel')
+      .leftJoinAndSelect('parcel.merchant', 'merchant')
+      .leftJoinAndSelect('parcel.customer', 'customer')
+      .leftJoinAndSelect('parcel.zone', 'zone')
+      .where('parcel.driverId IS NULL')
+      .andWhere("parcel.status = 'pending'")
+      .orderBy('parcel.createdAt', 'DESC')
       .getMany();
   }
 
-  /** Pending orders waiting for a pickup driver (via-warehouse flow) */
-  async findPendingForPickup(): Promise<Order[]> {
+  /** Pending parcels waiting for a pickup driver (via-warehouse flow) */
+  async findPendingForPickup(): Promise<Parcel[]> {
     return this.repo
-      .createQueryBuilder('order')
-      .leftJoinAndSelect('order.merchant', 'merchant')
-      .leftJoinAndSelect('order.customer', 'customer')
-      .leftJoinAndSelect('order.zone', 'zone')
-      .where('order.pickupDriverId IS NULL')
-      .andWhere("order.status = 'pending'")
-      .orderBy('order.createdAt', 'DESC')
+      .createQueryBuilder('parcel')
+      .leftJoinAndSelect('parcel.merchant', 'merchant')
+      .leftJoinAndSelect('parcel.customer', 'customer')
+      .leftJoinAndSelect('parcel.zone', 'zone')
+      .where('parcel.pickupDriverId IS NULL')
+      .andWhere("parcel.status = 'pending'")
+      .orderBy('parcel.createdAt', 'DESC')
       .getMany();
   }
 
-  /** Orders that have arrived at the warehouse, waiting for delivery assignment (includes already-assigned for reassignment) */
-  async findInWarehouse(): Promise<Order[]> {
+  /** Parcels that have arrived at the warehouse, waiting for delivery assignment (includes already-assigned for reassignment) */
+  async findInWarehouse(): Promise<Parcel[]> {
     return this.repo.find({
       where: { status: In(['in-warehouse', 'pending', 'assigned', 'failed']) },
       relations: this.relations,
@@ -185,7 +183,7 @@ export class OrdersService {
       return `CO${String(nextval).padStart(8, '0')}`;
     } catch (err) {
       await this.repo.query("CREATE SEQUENCE IF NOT EXISTS tracking_code_seq START WITH 30220626");
-      const lastOrders = await this.repo.find({
+      const lastParcels = await this.repo.find({
         where: [
           { trackingCode: Like('CO%') },
           { trackingCode: Like('T%') },
@@ -195,9 +193,9 @@ export class OrdersService {
       });
 
       let maxNumber = 30220625;
-      for (const order of lastOrders) {
-        if (order.trackingCode) {
-          const match = order.trackingCode.match(/^CO(\d+)$/);
+      for (const parcel of lastParcels) {
+        if (parcel.trackingCode) {
+          const match = parcel.trackingCode.match(/^CO(\d+)$/);
           if (match) {
             const num = parseInt(match[1], 10);
             if (num > maxNumber) {
@@ -217,45 +215,42 @@ export class OrdersService {
     }
   }
 
-
-  async create(dto: CreateOrderDto): Promise<Order> {
+  async create(dto: CreateParcelDto): Promise<Parcel> {
     if (!dto.trackingCode) {
       dto.trackingCode = await this.generateNextTrackingCode();
     }
-    // Apply defaults for optional numeric/enum fields
     if (dto.weight === undefined || dto.weight === null) dto.weight = 0;
     if (!dto.size) dto.size = 'small';
     if (dto.cod === undefined || dto.cod === null) dto.cod = 0;
     if (dto.deliveryFee === undefined || dto.deliveryFee === null) dto.deliveryFee = 0;
-    const order = this.repo.create(dto as any) as any as Order;
-    if (order.status === 'picked-up' && !order.pickedUpAt) {
-      order.pickedUpAt = new Date();
+    const parcel = this.repo.create(dto as any) as any as Parcel;
+    if (parcel.status === 'picked-up' && !parcel.pickedUpAt) {
+      parcel.pickedUpAt = new Date();
     }
     if (dto.createdAt) {
-      order.createdAt = new Date(dto.createdAt);
+      parcel.createdAt = new Date(dto.createdAt);
     }
-    const savedOrder = await this.repo.save(order) as any as Order;
-    await this.addHistory(savedOrder.id, savedOrder.status, savedOrder.note);
-    return this.findOne(savedOrder.id);
+    const savedParcel = await this.repo.save(parcel) as any as Parcel;
+    await this.addEvent(savedParcel.id, savedParcel.status, savedParcel.note);
+    return this.findOne(savedParcel.id);
   }
 
-  async update(id: number, dto: UpdateOrderDto): Promise<Order> {
-    const order = await this.findOne(id);
+  async update(id: number, dto: UpdateParcelDto): Promise<Parcel> {
+    const parcel = await this.findOne(id);
     const updates: any = { ...dto };
 
-    // Auto-update status when delivery driver (driverId) is updated
     if (dto.driverId !== undefined) {
       if (dto.driverId) {
         if (updates.status === undefined || updates.status === 'pending' || updates.status === 'in-warehouse' || updates.status === 'failed') {
-          if (order.status === 'pending' || order.status === 'in-warehouse' || order.status === 'failed') {
+          if (parcel.status === 'pending' || parcel.status === 'in-warehouse' || parcel.status === 'failed') {
             updates.status = 'assigned';
             updates.assignedAt = new Date();
           }
         }
       } else {
         if (updates.status === undefined || updates.status === 'assigned') {
-          if (order.status === 'assigned') {
-            updates.status = order.warehouseAt ? 'in-warehouse' : 'pending';
+          if (parcel.status === 'assigned') {
+            updates.status = parcel.warehouseAt ? 'in-warehouse' : 'pending';
             updates.assignedAt = null;
           }
         }
@@ -270,30 +265,30 @@ export class OrdersService {
       updates.paymentMethod = null as any;
     }
 
-    if (finalStatus === 'picked-up' && !order.pickedUpAt) {
+    if (finalStatus === 'picked-up' && !parcel.pickedUpAt) {
       updates.pickedUpAt = new Date();
     }
-    if (finalStatus === 'in-warehouse' && !order.warehouseAt) {
+    if (finalStatus === 'in-warehouse' && !parcel.warehouseAt) {
       updates.warehouseAt = new Date();
     }
-    if (finalStatus === 'delivered' && !updates.deliveredAt && !order.deliveredAt) {
+    if (finalStatus === 'delivered' && !updates.deliveredAt && !parcel.deliveredAt) {
       updates.deliveredAt = new Date();
     }
     if (dto.createdAt) {
       updates.createdAt = new Date(dto.createdAt);
     }
     await this.repo.update(id, updates);
-    if (finalStatus && finalStatus !== order.status) {
+    if (finalStatus && finalStatus !== parcel.status) {
       const historyNote = dto.note || (updates.status === 'assigned' ? 'Driver assigned' : undefined);
-      await this.addHistory(id, finalStatus, historyNote);
+      await this.addEvent(id, finalStatus, historyNote);
     }
     return this.findOne(id);
   }
 
-  async updateStatus(id: number, dto: UpdateOrderStatusDto): Promise<Order> {
-    const order = await this.findOne(id);
+  async updateStatus(id: number, dto: UpdateParcelStatusDto): Promise<Parcel> {
+    const parcel = await this.findOne(id);
     const finalNote = dto.remark !== undefined ? dto.remark : dto.note;
-    const updates: Partial<Order> = { status: dto.status as any };
+    const updates: Partial<Parcel> = { status: dto.status as any };
     if (dto.status === 'picked-up') updates.pickedUpAt = new Date();
     if (dto.status === 'in-warehouse') updates.warehouseAt = new Date();
     if (dto.status === 'delivered') updates.deliveredAt = new Date();
@@ -306,8 +301,8 @@ export class OrdersService {
     }
 
     await this.repo.update(id, updates);
-    if (dto.status !== order.status || finalNote) {
-      await this.addHistory(id, dto.status, finalNote);
+    if (dto.status !== parcel.status || finalNote) {
+      await this.addEvent(id, dto.status, finalNote);
     }
     return this.findOne(id);
   }
@@ -315,13 +310,12 @@ export class OrdersService {
   /**
    * Flow 1 — Direct Delivery:
    * pending → assign driver → picked-up
-   * Driver goes directly from merchant to customer.
    */
-  async assignDriver(id: number, dto: AssignDriverDto): Promise<Order> {
-    const order = await this.findOne(id);
-    if (order.status !== 'pending') {
+  async assignDriver(id: number, dto: AssignDriverDto): Promise<Parcel> {
+    const parcel = await this.findOne(id);
+    if (parcel.status !== 'pending') {
       throw new BadRequestException(
-        'Direct delivery can only be assigned to pending orders',
+        'Direct delivery can only be assigned to pending parcels',
       );
     }
     await this.repo.update(id, {
@@ -329,62 +323,58 @@ export class OrdersService {
       status: 'picked-up',
       pickedUpAt: new Date(),
     });
-    await this.addHistory(id, 'picked-up');
+    await this.addEvent(id, 'picked-up');
     return this.findOne(id);
   }
 
   /**
    * Flow 2 — Step 1 (Via Warehouse):
    * pending → assign pickup driver → in-warehouse
-   * Pickup driver collects from merchant and brings to warehouse.
    */
-  async assignPickup(id: number, dto: AssignPickupDto): Promise<Order> {
-    const order = await this.findOne(id);
-    if (order.status !== 'pending') {
+  async assignPickup(id: number, dto: AssignPickupDto): Promise<Parcel> {
+    const parcel = await this.findOne(id);
+    if (parcel.status !== 'pending') {
       throw new BadRequestException(
-        'Pickup can only be assigned to pending orders',
+        'Pickup can only be assigned to pending parcels',
       );
     }
     await this.repo.update(id, {
       pickupDriverId: dto.driverId,
     });
-    await this.addHistory(id, 'pending', 'Pickup driver assigned');
+    await this.addEvent(id, 'pending', 'Pickup driver assigned');
     return this.findOne(id);
   }
 
   /**
    * Flow 2 — Step 2 (Via Warehouse) OR direct from office:
    * in-warehouse | pending → assign delivery driver → assigned
-   * Works for:
-   *   - Orders that arrived at warehouse (in-warehouse)
-   *   - Orders already at office (pending, company created)
    */
-  async assignDelivery(id: number, dto: AssignDeliveryDto): Promise<Order> {
-    const order = await this.findOne(id);
+  async assignDelivery(id: number, dto: AssignDeliveryDto): Promise<Parcel> {
+    const parcel = await this.findOne(id);
     if (
-      order.status !== 'in-warehouse' &&
-      order.status !== 'pending' &&
-      order.status !== 'assigned' &&
-      order.status !== 'failed'
+      parcel.status !== 'in-warehouse' &&
+      parcel.status !== 'pending' &&
+      parcel.status !== 'assigned' &&
+      parcel.status !== 'failed'
     ) {
       throw new BadRequestException(
-        'Delivery can only be assigned to pending, in-warehouse, already-assigned, or failed orders',
+        'Delivery can only be assigned to pending, in-warehouse, already-assigned, or failed parcels',
       );
     }
-    const isReassign = (order.status === 'assigned' || order.status === 'failed') && order.driverId !== dto.driverId;
+    const isReassign = (parcel.status === 'assigned' || parcel.status === 'failed') && parcel.driverId !== dto.driverId;
     await this.repo.update(id, {
       driverId: dto.driverId,
       status: 'assigned',
       assignedAt: new Date(),
     });
-    await this.addHistory(id, 'assigned', isReassign ? `Reassigned to driver #${dto.driverId}` : undefined);
+    await this.addEvent(id, 'assigned', isReassign ? `Reassigned to driver #${dto.driverId}` : undefined);
     return this.findOne(id);
   }
 
   async remove(id: number): Promise<{ message: string }> {
     await this.findOne(id);
     await this.repo.delete(id);
-    return { message: 'Order deleted successfully' };
+    return { message: 'Parcel deleted successfully' };
   }
 
   async getStats() {
@@ -401,9 +391,9 @@ export class OrdersService {
     const returned = await this.repo.count({ where: { status: 'returned' } });
 
     const revenue = await this.repo
-      .createQueryBuilder('order')
-      .select('SUM(order.deliveryFee)', 'total')
-      .where("order.status = 'delivered'")
+      .createQueryBuilder('parcel')
+      .select('SUM(parcel.deliveryFee)', 'total')
+      .where("parcel.status = 'delivered'")
       .getRawOne();
 
     return {
@@ -426,7 +416,7 @@ export class OrdersService {
     if (query?.merchantId) where.merchantId = query.merchantId;
     return this.pickupRequestRepo.find({
       where,
-      relations: { merchant: true, pickupDriver: true, orders: true },
+      relations: { merchant: true, pickupDriver: true, parcels: true },
       order: { createdAt: 'DESC' },
     });
   }
@@ -434,7 +424,7 @@ export class OrdersService {
   async findPickupRequestById(id: number) {
     const request = await this.pickupRequestRepo.findOne({
       where: { id },
-      relations: { merchant: true, pickupDriver: true, orders: true },
+      relations: { merchant: true, pickupDriver: true, parcels: true },
     });
     if (!request) throw new NotFoundException(`Pickup request #${id} not found`);
     return request;
@@ -446,10 +436,9 @@ export class OrdersService {
     return this.pickupRequestRepo.save(request);
   }
 
-  async createParcelForRequest(id: number, dto: CreateOrderDto) {
+  async createParcelForRequest(id: number, dto: CreateParcelDto) {
     const request = await this.findPickupRequestById(id);
 
-    // Prevent adding more parcels than the declared quantity
     const existingCount = await this.repo.count({ where: { pickupRequestId: id } });
     if (existingCount >= request.declaredQuantity) {
       throw new BadRequestException(
@@ -457,7 +446,6 @@ export class OrdersService {
       );
     }
 
-    // Resolve delivery fee automatically
     let resolvedDeliveryFee = dto.deliveryFee;
     if (resolvedDeliveryFee === undefined || resolvedDeliveryFee === null || Number(resolvedDeliveryFee) === 0) {
       if (request.merchant?.deliveryFee && Number(request.merchant.deliveryFee) > 0) {
@@ -472,7 +460,7 @@ export class OrdersService {
 
     const trackingCode = await this.generateNextTrackingCode();
 
-    const order = this.repo.create({
+    const parcel = this.repo.create({
       ...dto,
       merchantId: request.merchantId,
       pickupRequestId: id,
@@ -483,10 +471,9 @@ export class OrdersService {
       trackingCode,
     } as any);
 
-    const savedOrder = await this.repo.save(order as unknown as Order);
-    await this.addHistory(savedOrder.id, 'in-warehouse', 'Inbound from pickup request');
+    const savedParcel = await this.repo.save(parcel as unknown as Parcel);
+    await this.addEvent(savedParcel.id, 'in-warehouse', 'Inbound from pickup request');
 
-    // Check if we reached the count to mark the request as completed
     const count = await this.repo.count({ where: { pickupRequestId: id } });
     const targetQty = request.actualQuantity !== null && request.actualQuantity !== undefined
       ? request.actualQuantity
@@ -497,15 +484,15 @@ export class OrdersService {
       await this.pickupRequestRepo.save(request);
     }
 
-    return this.findOne(savedOrder.id);
+    return this.findOne(savedParcel.id);
   }
 
   async deleteParcelFromRequest(id: number, parcelId: number) {
-    const order = await this.findOne(parcelId);
-    if (order.pickupRequestId !== id) {
-      throw new BadRequestException(`Order #${parcelId} is not linked to pickup request #${id}`);
+    const parcel = await this.findOne(parcelId);
+    if (parcel.pickupRequestId !== id) {
+      throw new BadRequestException(`Parcel #${parcelId} is not linked to pickup request #${id}`);
     }
-    await this.repo.remove(order);
+    await this.repo.remove(parcel);
 
     const request = await this.findPickupRequestById(id);
     const count = await this.repo.count({ where: { pickupRequestId: id } });

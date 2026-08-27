@@ -8,7 +8,7 @@ import { IncomeType } from '../incomes/entities/income-type.entity';
 import { Role } from '../roles/entities/role.entity';
 import { Permission } from '../roles/entities/permission.entity';
 
-import { Order } from '../orders/entities/order.entity';
+import { Parcel } from '../parcels/entities/parcel.entity';
 import { Merchant } from '../merchants/entities/merchant.entity';
 import { Zone } from '../zones/entities/zone.entity';
 
@@ -35,11 +35,11 @@ export class SeedService implements OnApplicationBootstrap {
 
   private async seedRolesAndPermissions() {
     const perms = [
-      // Orders
-      { name: 'orders.create', description: 'Create dynamic orders' },
-      { name: 'orders.read', description: 'View orders' },
-      { name: 'orders.update', description: 'Update orders' },
-      { name: 'orders.delete', description: 'Delete orders' },
+      // Parcels
+      { name: 'parcels.create', description: 'Create dynamic parcels' },
+      { name: 'parcels.read', description: 'View parcels' },
+      { name: 'parcels.update', description: 'Update parcels' },
+      { name: 'parcels.delete', description: 'Delete parcels' },
 
       // Users
       { name: 'users.create', description: 'Create users' },

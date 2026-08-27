@@ -10,7 +10,7 @@ import {
 } from 'typeorm';
 import { Merchant } from '../../merchants/entities/merchant.entity';
 import { User } from '../../users/entities/users.entity';
-import { Order } from './order.entity';
+import { Parcel } from './parcel.entity';
 
 export type PickupRequestStatus = 'pending' | 'picked-up' | 'in-warehouse' | 'completed';
 
@@ -48,8 +48,8 @@ export class PickupRequest {
   @Column({ name: 'pickup_driver_id', nullable: true })
   pickupDriverId: number;
 
-  @OneToMany(() => Order, (order) => order.pickupRequest)
-  orders: Order[];
+  @OneToMany(() => Parcel, (parcel) => parcel.pickupRequest)
+  parcels: Parcel[];
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;

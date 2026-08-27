@@ -10,8 +10,8 @@ import {
 import { Merchant } from '../../merchants/entities/merchant.entity';
 import { User } from '../../users/entities/users.entity';
 
-@Entity('shop_payments')
-export class ShopPayment {
+@Entity('merchant_payments')
+export class MerchantPayment {
   @PrimaryGeneratedColumn()
   id: number;
 
@@ -37,8 +37,8 @@ export class ShopPayment {
   @Column({ nullable: true, type: 'text' })
   note: string;
 
-  @Column({ name: 'order_ids', type: 'json', nullable: true })
-  orderIds: number[];
+  @Column({ name: 'parcel_ids', type: 'json', nullable: true })
+  parcelIds: number[];
 
   @ManyToOne(() => User, { nullable: true, eager: true })
   @JoinColumn({ name: 'created_by_id' })
@@ -60,4 +60,3 @@ export class ShopPayment {
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
 }
-

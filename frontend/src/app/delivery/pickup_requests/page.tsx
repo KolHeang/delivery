@@ -61,7 +61,7 @@ export default function PickupRequestsPage() {
     try {
       const params: Record<string, string> = {};
       if (statusFilter) params.status = statusFilter;
-      const res = await api.get('/orders/pickup-requests', { params });
+      const res = await api.get('/parcels/pickup-requests', { params });
       setRequests(res.data);
     } catch { /* silent */ }
     setLoading(false);

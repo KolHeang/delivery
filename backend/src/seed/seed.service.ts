@@ -1,267 +1,265 @@
-import { Injectable, OnApplicationBootstrap, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In } from 'typeorm';
+import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
-import { User } from '../users/entities/users.entity';
-import { ExpenseType } from '../expenses/entities/expense-type.entity';
-import { IncomeType } from '../incomes/entities/income-type.entity';
+
+import { SaasAdmin } from '../saas/admins/saas-admin.entity';
+import { Plan } from '../saas/plans/plan.entity';
+import { Coupon } from '../saas/coupons/coupon.entity';
+import { Partner } from '../saas/partners/partner.entity';
 import { Role } from '../roles/entities/role.entity';
 import { Permission } from '../roles/entities/permission.entity';
-
-import { Parcel } from '../parcels/entities/parcel.entity';
-import { Merchant } from '../merchants/entities/merchant.entity';
-import { Zone } from '../zones/entities/zone.entity';
 
 @Injectable()
 export class SeedService implements OnApplicationBootstrap {
   private readonly logger = new Logger(SeedService.name);
 
   constructor(
-    @InjectRepository(User) private userRepo: Repository<User>,
-    @InjectRepository(ExpenseType)
-    private expenseTypeRepo: Repository<ExpenseType>,
-    @InjectRepository(IncomeType)
-    private incomeTypeRepo: Repository<IncomeType>,
-    @InjectRepository(Role) private roleRepo: Repository<Role>,
-    @InjectRepository(Permission) private permissionRepo: Repository<Permission>,
-  ) { }
+    @InjectRepository(SaasAdmin) private readonly saasAdminRepo: Repository<SaasAdmin>,
+    @InjectRepository(Plan) private readonly planRepo: Repository<Plan>,
+    @InjectRepository(Coupon) private readonly couponRepo: Repository<Coupon>,
+    @InjectRepository(Partner) private readonly partnerRepo: Repository<Partner>,
+    @InjectRepository(Role) private readonly roleRepo: Repository<Role>,
+    @InjectRepository(Permission) private readonly permissionRepo: Repository<Permission>,
+  ) {}
 
   async onApplicationBootstrap() {
-    await this.seedRolesAndPermissions();
-    await this.seedUsers();
-    await this.seedExpenseTypes();
-    await this.seedIncomeTypes();
+    this.logger.log('🚀 Initializing Super Admin & Platform Seed Data...');
+    await this.seedSuperAdminData();
   }
 
-  private async seedRolesAndPermissions() {
+  /**
+   * Master Super Admin Seed Function
+   */
+  async seedSuperAdminData() {
+    const admins = await this.seedSaasSuperAdmins();
+    const plans = await this.seedSaasPlans();
+    const partners = await this.seedPartnersAndCoupons();
+    const roles = await this.seedSystemRolesAndPermissions();
+
+    this.logger.log('✅ Super Admin & SaaS Platform Seed Completed!');
+    return {
+      success: true,
+      message: 'Super Admin data seeded successfully.',
+      superAdmins: admins,
+      plansCount: plans.length,
+      partnersCount: partners.length,
+      rolesCount: roles.length,
+    };
+  }
+
+  // Alias for seedAll
+  async seedAll() {
+    return this.seedSuperAdminData();
+  }
+
+  // ── 1. SaaS Super Admin Accounts ──
+  async seedSaasSuperAdmins() {
+    const hashedPw = await bcrypt.hash('admin123', 10);
+    const adminsData = [
+      {
+        name: 'Master Super Admin',
+        email: 'superadmin@ebsexpress.com',
+        password: hashedPw,
+        phone: '011 609 414',
+        role: 'superadmin' as const,
+        isActive: true,
+      },
+      {
+        name: 'Platform Support Admin',
+        email: 'support@ebsexpress.com',
+        password: hashedPw,
+        phone: '012 999 111',
+        role: 'admin' as const,
+        isActive: true,
+      },
+    ];
+
+    const results = [];
+    for (const a of adminsData) {
+      let admin = await this.saasAdminRepo.findOne({ where: { email: a.email } });
+      if (admin) {
+        Object.assign(admin, a);
+        admin = await this.saasAdminRepo.save(admin);
+      } else {
+        admin = await this.saasAdminRepo.save(this.saasAdminRepo.create(a));
+      }
+      results.push({ email: admin.email, name: admin.name, role: admin.role });
+    }
+    this.logger.log(`👑 Seeded ${results.length} Super Admin accounts`);
+    return results;
+  }
+
+  // ── 2. SaaS Plans (Pricing Tiers) ──
+  async seedSaasPlans() {
+    const plansData = [
+      {
+        name: 'Basic Starter',
+        slug: 'starter',
+        description: 'ស័ក្តិសមបំផុតសម្រាប់អាជីវកម្មដឹកជញ្ជូនខ្នាតតូច ឬទើបចាប់ផ្តើម',
+        priceMonthly: 19.0,
+        priceYearly: 190.0,
+        maxUsers: 3,
+        maxDrivers: 5,
+        maxVehicles: 5,
+        maxOrdersPerMonth: 500,
+        isPopular: false,
+        isActive: true,
+        features: {
+          apiAccess: false,
+          customReports: false,
+          customBranding: false,
+          prioritySupport: false,
+          unlimitedHistory: false,
+          telegramNotifications: true,
+        },
+      },
+      {
+        name: 'Professional',
+        slug: 'pro',
+        description: 'កញ្ចប់ពេញនិយមបំផុត សម្រាប់ក្រុមហ៊ុនដឹកជញ្ជូនដែលកំពុងរីកចម្រើន',
+        priceMonthly: 49.0,
+        priceYearly: 490.0,
+        maxUsers: 10,
+        maxDrivers: 25,
+        maxVehicles: 25,
+        maxOrdersPerMonth: 3000,
+        isPopular: true,
+        isActive: true,
+        features: {
+          apiAccess: true,
+          customReports: true,
+          customBranding: false,
+          prioritySupport: true,
+          unlimitedHistory: true,
+          telegramNotifications: true,
+        },
+      },
+      {
+        name: 'Enterprise Ultra',
+        slug: 'enterprise',
+        description: 'ដំណោះស្រាយពេញលេញគ្មានដែនកំណត់ សម្រាប់ក្រុមហ៊ុនធំៗ',
+        priceMonthly: 99.0,
+        priceYearly: 990.0,
+        maxUsers: 100,
+        maxDrivers: 100,
+        maxVehicles: 100,
+        maxOrdersPerMonth: 50000,
+        isPopular: false,
+        isActive: true,
+        features: {
+          apiAccess: true,
+          customReports: true,
+          customBranding: true,
+          prioritySupport: true,
+          unlimitedHistory: true,
+          telegramNotifications: true,
+        },
+      },
+    ];
+
+    const results: Plan[] = [];
+    for (const p of plansData) {
+      let plan = await this.planRepo.findOne({ where: { slug: p.slug } });
+      if (plan) {
+        Object.assign(plan, p);
+        plan = await this.planRepo.save(plan);
+      } else {
+        plan = await this.planRepo.save(this.planRepo.create(p));
+      }
+      results.push(plan);
+    }
+    this.logger.log(`📦 Seeded ${results.length} SaaS Plans`);
+    return results;
+  }
+
+  // ── 3. Partners & Promo Coupons ──
+  async seedPartnersAndCoupons() {
+    let partner = await this.partnerRepo.findOne({ where: { email: 'partner@fintechkh.com' } });
+    if (!partner) {
+      partner = await this.partnerRepo.save(
+        this.partnerRepo.create({
+          name: 'Cambodia Fintech Solutions',
+          email: 'partner@fintechkh.com',
+          phone: '012 777 999',
+          referralCode: 'FINTECH2026',
+          commissionRate: 10.0,
+          isActive: true,
+        }),
+      );
+    }
+
+    const coupons = [
+      { code: 'PROMO2026', discountType: 'percentage' as const, discountValue: 20.0, usageLimit: 100, usedCount: 12, isActive: true },
+      { code: 'WELCOME50', discountType: 'fixed_amount' as const, discountValue: 50.0, usageLimit: 50, usedCount: 8, isActive: true },
+      { code: 'EBSLAUNCH', discountType: 'percentage' as const, discountValue: 15.0, usageLimit: 200, usedCount: 35, isActive: true },
+    ];
+
+    for (const c of coupons) {
+      let cp = await this.couponRepo.findOne({ where: { code: c.code } });
+      if (cp) {
+        Object.assign(cp, c);
+        await this.couponRepo.save(cp);
+      } else {
+        await this.couponRepo.save(this.couponRepo.create(c));
+      }
+    }
+    this.logger.log('🏷️ Seeded Partners & Promo Coupons');
+    return [partner];
+  }
+
+  // ── 4. System Roles & Permissions ──
+  async seedSystemRolesAndPermissions() {
     const perms = [
-      // Parcels
-      { name: 'parcels.create', description: 'Create dynamic parcels' },
+      { name: 'parcels.create', description: 'Create parcels' },
       { name: 'parcels.read', description: 'View parcels' },
       { name: 'parcels.update', description: 'Update parcels' },
       { name: 'parcels.delete', description: 'Delete parcels' },
-
-      // Users
       { name: 'users.create', description: 'Create users' },
       { name: 'users.read', description: 'View users' },
       { name: 'users.update', description: 'Update users' },
       { name: 'users.delete', description: 'Delete users' },
-      { name: 'users.manage', description: 'Manage users and roles' },
-
-      // Drivers
       { name: 'drivers.create', description: 'Create drivers' },
       { name: 'drivers.read', description: 'View drivers' },
       { name: 'drivers.update', description: 'Update drivers' },
-      { name: 'drivers.delete', description: 'Delete drivers' },
-
-      // Merchants
       { name: 'merchants.create', description: 'Create merchants' },
       { name: 'merchants.read', description: 'View merchants' },
-      { name: 'merchants.update', description: 'Update merchants' },
-      { name: 'merchants.delete', description: 'Delete merchants' },
-
-      // Zones
       { name: 'zones.create', description: 'Create zones' },
       { name: 'zones.read', description: 'View zones' },
-      { name: 'zones.update', description: 'Update zones' },
-      { name: 'zones.delete', description: 'Delete zones' },
-
-      // Vehicles
       { name: 'vehicles.create', description: 'Create vehicles' },
       { name: 'vehicles.read', description: 'View vehicles' },
-      { name: 'vehicles.update', description: 'Update vehicles' },
-      { name: 'vehicles.delete', description: 'Delete vehicles' },
-
-      // Expenses
-      { name: 'expenses.create', description: 'Create expenses' },
-      { name: 'expenses.read', description: 'View expenses' },
-      { name: 'expenses.update', description: 'Update expenses' },
-      { name: 'expenses.delete', description: 'Delete expenses' },
-
-      // Incomes
-      { name: 'incomes.create', description: 'Create incomes' },
-      { name: 'incomes.read', description: 'View incomes' },
-      { name: 'incomes.update', description: 'Update incomes' },
-      { name: 'incomes.delete', description: 'Delete incomes' },
-
-      // Payments
-      { name: 'payments.create', description: 'Create payments' },
-      { name: 'payments.read', description: 'View payments' },
-      { name: 'payments.update', description: 'Update payments' },
-      { name: 'payments.delete', description: 'Delete payments' },
-
-      // Reports
-      { name: 'reports.view', description: 'View statistics and reports' },
-
-      // Settings
-      { name: 'settings.manage', description: 'Manage system settings' },
+      { name: 'reports.view', description: 'View reports' },
+      { name: 'settings.manage', description: 'Manage settings' },
     ];
 
-    const existingPerms = await this.permissionRepo.find();
-    const existingNames = new Set(existingPerms.map(p => p.name));
-    const toInsert = perms.filter(p => !existingNames.has(p.name));
-    if (toInsert.length > 0) {
-      await this.permissionRepo.save(this.permissionRepo.create(toInsert));
-      this.logger.log(`✅ ${toInsert.length} new permissions seeded`);
+    for (const p of perms) {
+      const exists = await this.permissionRepo.findOne({ where: { name: p.name } });
+      if (!exists) {
+        await this.permissionRepo.save(this.permissionRepo.create(p));
+      }
     }
 
     const allPerms = await this.permissionRepo.find();
-    const readPerms = allPerms.filter(p => p.name.includes('.read') || p.name.includes('.view'));
-
-    // Admin Role
-    let adminRole = await this.roleRepo.findOne({ where: { name: 'admin' }, relations: { permissions: true } });
-    if (adminRole) {
-      adminRole.permissions = allPerms;
-      await this.roleRepo.save(adminRole);
-    } else {
-      adminRole = this.roleRepo.create({
-        name: 'admin',
-        description: 'Administrator role with full access',
-        permissions: allPerms,
-      });
-      await this.roleRepo.save(adminRole);
-    }
-
-    // Staff Role
-    let staffRole = await this.roleRepo.findOne({ where: { name: 'staff' }, relations: { permissions: true } });
-    const staffPerms = allPerms.filter(p => !p.name.startsWith('users.') && !p.name.startsWith('settings.'));
-    if (staffRole) {
-      staffRole.permissions = staffPerms;
-      await this.roleRepo.save(staffRole);
-    } else {
-      staffRole = this.roleRepo.create({
-        name: 'staff',
-        description: 'User role for managing daily operations',
-        permissions: staffPerms,
-      });
-      await this.roleRepo.save(staffRole);
-    }
-
-    // Driver Role
-    let driverRole = await this.roleRepo.findOne({ where: { name: 'driver' }, relations: { permissions: true } });
-    if (driverRole) {
-      driverRole.permissions = readPerms;
-      await this.roleRepo.save(driverRole);
-    } else {
-      driverRole = this.roleRepo.create({
-        name: 'driver',
-        description: 'Driver role for pickup and deliveries',
-        permissions: readPerms,
-      });
-      await this.roleRepo.save(driverRole);
-    }
-
-    // Merchant Role
-    let merchantRole = await this.roleRepo.findOne({ where: { name: 'merchant' }, relations: { permissions: true } });
-    if (merchantRole) {
-      merchantRole.permissions = readPerms;
-      await this.roleRepo.save(merchantRole);
-    } else {
-      merchantRole = this.roleRepo.create({
-        name: 'merchant',
-        description: 'Merchant role for shops and owners',
-        permissions: readPerms,
-      });
-      await this.roleRepo.save(merchantRole);
-    }
-
-    this.logger.log('✅ Roles and permissions successfully synchronized');
-  }
-
-  private async seedUsers() {
-    const adminRole = await this.roleRepo.findOne({ where: { name: 'admin' } });
-    const staffRole = await this.roleRepo.findOne({ where: { name: 'staff' } });
-    const driverRole = await this.roleRepo.findOne({ where: { name: 'driver' } });
-
-    const usersToSeed = [
-      {
-        name: 'Admin',
-        email: 'admin@gmail.com',
-        password: await bcrypt.hash('123456', 10),
-        roleId: adminRole?.id,
-        phone: '012-000-001',
-        isActive: true,
-        isStaff: true,
-        isDriver: false,
-      },
-      {
-        name: 'UserMember',
-        email: 'staff@gmail.com',
-        password: await bcrypt.hash('123456', 10),
-        roleId: staffRole?.id,
-        phone: '012-000-002',
-        isActive: true,
-        isStaff: true,
-        isDriver: false,
-      },
-      {
-        name: 'Sok Dara',
-        nameKh: 'សុខ តារា',
-        email: 'sokdara@gmail.com',
-        password: await bcrypt.hash('123456', 10),
-        roleId: driverRole?.id,
-        phone: '012-345-678',
-        isActive: true,
-        isStaff: false,
-        isDriver: true,
-      },
-      {
-        name: 'Driver Test',
-        nameKh: 'អ្នកបើកបរ សាកល្បង',
-        email: 'driver@gmail.com',
-        password: await bcrypt.hash('123456', 10),
-        roleId: driverRole?.id,
-        phone: '012-000-003',
-        isActive: true,
-        isStaff: false,
-        isDriver: true,
-      },
+    const rolesData = [
+      { id: 1, name: 'admin', description: 'Full Administrator Rights', permissions: allPerms, tenantId: null },
+      { id: 2, name: 'staff', description: 'Operations Staff Access', permissions: allPerms, tenantId: null },
+      { id: 3, name: 'driver', description: 'Driver Courier Access', permissions: allPerms.filter((p) => p.name.includes('.read')), tenantId: null },
+      { id: 4, name: 'merchant', description: 'Merchant Portal Access', permissions: allPerms.filter((p) => p.name.includes('.read')), tenantId: null },
     ];
 
-    for (const u of usersToSeed) {
-      const existing = await this.userRepo.findOne({ where: { email: u.email } });
-      if (!existing) {
-        await this.userRepo.save(this.userRepo.create(u as any));
-        this.logger.log(`✅ Seeded user: ${u.email}`);
-      } else if (existing.roleId !== u.roleId || !existing.isActive) {
-        if (u.roleId !== undefined) existing.roleId = u.roleId;
-        existing.isActive = true;
-        existing.isStaff = u.isStaff;
-        existing.isDriver = u.isDriver;
-        existing.password = u.password;
-        await this.userRepo.save(existing);
+    const results: Role[] = [];
+    for (const r of rolesData) {
+      let role = await this.roleRepo.findOne({ where: { name: r.name } });
+      if (role) {
+        role.description = r.description;
+        role.permissions = r.permissions;
+        role = await this.roleRepo.save(role);
+      } else {
+        role = await this.roleRepo.save(this.roleRepo.create(r));
       }
+      results.push(role);
     }
-  }
-
-
-  private async seedExpenseTypes() {
-    const count = await this.expenseTypeRepo.count();
-    if (count > 0) return;
-    const types = [
-      { name: 'Office Rent', description: 'Monthly rent for headquarters' },
-      { name: 'Fuel', description: 'Driver fuel reimbursement' },
-      { name: 'Marketing', description: 'Facebook ads and promotions' },
-      { name: 'Salaries', description: 'Userand driver base salaries' },
-      { name: 'Maintenance', description: 'Vehicle repair and maintenance' },
-    ];
-    await this.expenseTypeRepo.save(this.expenseTypeRepo.create(types));
-    this.logger.log('✅ Expense Types seeded');
-  }
-
-  private async seedIncomeTypes() {
-    const count = await this.incomeTypeRepo.count();
-    if (count > 0) return;
-    const types = [
-      { name: 'Delivery Fees', description: 'Earnings from shipping parcels' },
-      {
-        name: 'Merchant Commission',
-        description: 'Platform fee percentage from sales',
-      },
-      { name: 'Sponsorship', description: 'Branding partner sponsorships' },
-      { name: 'Storage Fees', description: 'Warehousing charges for shops' },
-    ];
-    await this.incomeTypeRepo.save(this.incomeTypeRepo.create(types));
-    this.logger.log('✅ Income Types seeded');
+    this.logger.log(`👥 Seeded ${results.length} System Roles & Permissions`);
+    return results;
   }
 }

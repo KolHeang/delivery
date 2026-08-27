@@ -9,7 +9,7 @@ import {
 } from 'typeorm';
 import { Tenant } from './tenant.entity';
 
-@Entity('tenant_domains')
+@Entity('saas_domains')
 export class TenantDomain {
   @PrimaryGeneratedColumn()
   id: number;

@@ -4,16 +4,21 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { saasApi } from '@/lib/saas-api';
 import { setAuth } from '@/lib/auth';
+import { useLanguage } from '@/lib/LanguageContext';
 import {
   MdEmail,
   MdLock,
   MdVisibility,
   MdVisibilityOff,
   MdLogin,
+  MdLanguage,
 } from 'react-icons/md';
 
 export default function SaasAdminLoginPage() {
   const router = useRouter();
+  const { lang, setLang } = useLanguage();
+  const tr = (km: string, en: string) => (lang === 'km' ? km : en);
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -42,10 +47,10 @@ export default function SaasAdminLoginPage() {
         // Navigate to SaaS Master Dashboard
         router.push('/admin/saas');
       } else {
-        setError('បរាជ័យក្នុងការ Login សូមពិនិត្យមើល Email និង Password');
+        setError(tr('បរាជ័យក្នុងការ Login សូមពិនិត្យមើល Email និង Password', 'Login failed, please check your Email and Password'));
       }
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Email ឬ Password មិនត្រឹមត្រូវ');
+      setError(err.response?.data?.message || tr('Email ឬ Password មិនត្រឹមត្រូវ', 'Invalid Email or Password'));
     } finally {
       setLoading(false);
     }
@@ -61,8 +66,33 @@ export default function SaasAdminLoginPage() {
         justifyContent: 'center',
         padding: '24px',
         fontFamily: "'Kantumruy Pro', 'Inter', sans-serif",
+        position: 'relative',
       }}
     >
+      {/* Top Right Language Switcher */}
+      <div style={{ position: 'absolute', top: 24, right: 24 }}>
+        <button
+          onClick={() => setLang(lang === 'en' ? 'km' : 'en')}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+            padding: '8px 14px',
+            borderRadius: 10,
+            border: '1px solid rgba(255, 255, 255, 0.25)',
+            background: 'rgba(255, 255, 255, 0.12)',
+            color: '#ffffff',
+            fontSize: 13,
+            fontWeight: 800,
+            cursor: 'pointer',
+            backdropFilter: 'blur(8px)',
+          }}
+        >
+          <MdLanguage size={18} />
+          <span>{lang === 'en' ? '🇰🇭 ភាសាខ្មែរ' : '🇬🇧 English'}</span>
+        </button>
+      </div>
+
       <div
         style={{
           width: '100%',
@@ -97,18 +127,17 @@ export default function SaasAdminLoginPage() {
             EBS Master SaaS
           </h1>
           <p style={{ fontSize: 13, color: '#64748b', margin: 0, fontWeight: 600 }}>
-            ផ្ទាំង Login សម្រាប់ SaaS Platform Master Admin
+            {tr('ផ្ទាំង Login សម្រាប់ SaaS Platform Master Admin', 'Login portal for SaaS Platform Master Admin')}
           </p>
         </div>
 
-        {/* Error Alert */}
         {error && (
           <div
             style={{
               background: '#fef2f2',
               border: '1.5px solid #fecaca',
               color: '#dc2626',
-              padding: '12px 16px',
+              padding: '12px 14px',
               borderRadius: 12,
               fontSize: 13,
               fontWeight: 700,
@@ -116,63 +145,62 @@ export default function SaasAdminLoginPage() {
               textAlign: 'center',
             }}
           >
-            ⚠️ {error}
+            {error}
           </div>
         )}
 
-        {/* Login Form */}
         <form onSubmit={handleLogin}>
-          {/* Email Input */}
+          {/* Email */}
           <div style={{ marginBottom: 18 }}>
             <label style={{ display: 'block', fontSize: 13, fontWeight: 800, color: '#334155', marginBottom: 6 }}>
-              Email គណនី Master Admin
+              {tr('អ៊ីមែល Master Admin (Email)', 'Master Admin Email')}
             </label>
             <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
               <MdEmail size={20} color="#94a3b8" style={{ position: 'absolute', left: 14 }} />
               <input
                 type="email"
                 required
-                placeholder="superadmin@ebsexpress.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                placeholder="superadmin@ebsexpress.com"
                 style={{
                   width: '100%',
                   padding: '12px 14px 12px 42px',
                   borderRadius: 12,
-                  border: '1.5px solid #cbd5e1',
+                  border: '1.5px solid #e2e8f0',
                   fontSize: 14,
-                  outline: 'none',
-                  color: '#0f172a',
                   fontWeight: 600,
-                  transition: 'border-color 0.15s',
+                  color: '#0f172a',
+                  outline: 'none',
+                  transition: 'border-color 0.2s',
                 }}
               />
             </div>
           </div>
 
-          {/* Password Input */}
+          {/* Password */}
           <div style={{ marginBottom: 24 }}>
             <label style={{ display: 'block', fontSize: 13, fontWeight: 800, color: '#334155', marginBottom: 6 }}>
-              ពាក្យសម្ងាត់ (Password)
+              {tr('ពាក្យសម្ងាត់ (Password)', 'Password')}
             </label>
             <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
               <MdLock size={20} color="#94a3b8" style={{ position: 'absolute', left: 14 }} />
               <input
                 type={showPassword ? 'text' : 'password'}
                 required
-                placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
                 style={{
                   width: '100%',
                   padding: '12px 42px 12px 42px',
                   borderRadius: 12,
-                  border: '1.5px solid #cbd5e1',
+                  border: '1.5px solid #e2e8f0',
                   fontSize: 14,
-                  outline: 'none',
-                  color: '#0f172a',
                   fontWeight: 600,
-                  transition: 'border-color 0.15s',
+                  color: '#0f172a',
+                  outline: 'none',
+                  transition: 'border-color 0.2s',
                 }}
               />
               <button
@@ -183,8 +211,8 @@ export default function SaasAdminLoginPage() {
                   right: 12,
                   background: 'none',
                   border: 'none',
-                  color: '#94a3b8',
                   cursor: 'pointer',
+                  color: '#94a3b8',
                   padding: 4,
                   display: 'flex',
                   alignItems: 'center',
@@ -195,7 +223,7 @@ export default function SaasAdminLoginPage() {
             </div>
           </div>
 
-          {/* Submit Button */}
+          {/* Submit */}
           <button
             type="submit"
             disabled={loading}
@@ -204,21 +232,22 @@ export default function SaasAdminLoginPage() {
               padding: '14px',
               borderRadius: 12,
               border: 'none',
-              background: 'linear-gradient(135deg, #1e3b75 0%, #2563eb 100%)',
+              background: 'linear-gradient(135deg, #1e3b75, #2563eb)',
               color: '#ffffff',
-              fontSize: 14.5,
+              fontSize: 15,
               fontWeight: 800,
               cursor: loading ? 'not-allowed' : 'pointer',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               gap: 8,
-              boxShadow: '0 6px 18px rgba(37,99,235,0.35)',
+              boxShadow: '0 8px 20px rgba(37,99,235,0.3)',
               transition: 'all 0.15s',
+              opacity: loading ? 0.8 : 1,
             }}
           >
             <MdLogin size={20} />
-            <span>{loading ? 'កំពុងផ្ទៀងផ្ទាត់...' : 'ចូលប្រព័ន្ធ SaaS Master'}</span>
+            <span>{loading ? tr('កំពុងផ្ទៀងផ្ទាត់...', 'Authenticating...') : tr('ចូលគ្រប់គ្រង SaaS Portal', 'Login to SaaS Portal')}</span>
           </button>
         </form>
       </div>

@@ -83,6 +83,21 @@ export const saasApi = {
     return res.data;
   },
 
+  createPlan: async (data: Partial<Plan>): Promise<Plan> => {
+    const res = await api.post('/saas/plans', data);
+    return res.data;
+  },
+
+  updatePlan: async (id: number, data: Partial<Plan>): Promise<Plan> => {
+    const res = await api.put(`/saas/plans/${id}`, data);
+    return res.data;
+  },
+
+  deletePlan: async (id: number) => {
+    const res = await api.delete(`/saas/plans/${id}`);
+    return res.data;
+  },
+
   // Subscriptions
   getMySubscription: async (): Promise<SubscriptionInfo> => {
     const res = await api.get('/saas/subscriptions/me');
@@ -239,6 +254,16 @@ export const saasApi = {
 
   deleteSaasAdmin: async (id: number) => {
     const res = await api.delete(`/saas/admins/${id}`);
+    return res.data;
+  },
+
+  deleteTenant: async (id: number) => {
+    const res = await api.delete(`/saas/tenants/${id}`);
+    return res.data;
+  },
+
+  deleteCoupon: async (id: number) => {
+    const res = await api.delete(`/saas/coupons/${id}`);
     return res.data;
   },
 

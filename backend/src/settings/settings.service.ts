@@ -40,10 +40,10 @@ export class SettingsService {
     // Default seed if empty
     if (settings.length === 0) {
       const defaults = [
-        { key: 'currency', value: 'USD' },
-        { key: 'taxRate', value: '0.10' },
-        { key: 'timezone', value: 'Asia/Phnom_Penh' },
-        { key: 'khrRate', value: '4100' },
+        { key: 'currency', value: 'USD', tenantId: null },
+        { key: 'taxRate', value: '0.10', tenantId: null },
+        { key: 'timezone', value: 'Asia/Phnom_Penh', tenantId: null },
+        { key: 'khrRate', value: '4100', tenantId: null },
       ];
       await this.settingRepo.save(this.settingRepo.create(defaults));
       return this.settingRepo.find();

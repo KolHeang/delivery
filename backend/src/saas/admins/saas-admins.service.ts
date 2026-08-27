@@ -6,16 +6,13 @@ import { SaasAdmin } from './saas-admin.entity';
 import * as bcrypt from 'bcrypt';
 
 @Injectable()
-export class SaasAdminsService implements OnModuleInit {
+export class SaasAdminsService {
   constructor(
     @InjectRepository(SaasAdmin)
     private readonly saasAdminRepo: Repository<SaasAdmin>,
     private readonly jwtService: JwtService,
-  ) {}
+  ) { }
 
-  async onModuleInit() {
-    await this.seedInitialAdmin();
-  }
 
   async login(email: string, password: string): Promise<{ access_token: string; admin: Partial<SaasAdmin> }> {
     const normalizedEmail = email.trim().toLowerCase();
@@ -52,22 +49,6 @@ export class SaasAdminsService implements OnModuleInit {
     };
   }
 
-  private async seedInitialAdmin() {
-    const count = await this.saasAdminRepo.count();
-    if (count === 0) {
-      const hashedPassword = await bcrypt.hash('admin123', 10);
-      const defaultAdmin = this.saasAdminRepo.create({
-        name: 'Master Super Admin',
-        email: 'superadmin@ebsexpress.com',
-        password: hashedPassword,
-        phone: '012 345 678',
-        role: 'super_admin',
-        isActive: true,
-      });
-      await this.saasAdminRepo.save(defaultAdmin);
-      console.log('✅ [SaaS Admin] Seeded initial master admin: superadmin@ebsexpress.com');
-    }
-  }
 
   async findAll(): Promise<SaasAdmin[]> {
     return this.saasAdminRepo.find({

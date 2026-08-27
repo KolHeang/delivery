@@ -60,7 +60,7 @@ export class SaasController {
   @Post('tenants/register')
   @ApiOperation({ summary: 'Public registration for new delivery company tenant' })
   registerTenant(@Body() body: any) {
-    return this.saasService.createTenant(body);
+    return this.saasService.registerTenant(body);
   }
 
   @UseGuards(JwtAuthGuard)

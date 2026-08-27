@@ -8,12 +8,12 @@ import {
   OneToMany,
   JoinColumn,
 } from 'typeorm';
-import { Plan } from './plan.entity';
-import { Subscription } from './subscription.entity';
+import { Plan } from '../plans/plan.entity';
+import { Subscription } from '../subscriptions/subscription.entity';
 import { TenantDomain } from './tenant-domain.entity';
-import { TenantInvoice } from './tenant-invoice.entity';
+import { SaasInvoice } from '../invoices/saas-invoice.entity';
 
-@Entity('tenants')
+@Entity('saas_tenants')
 export class Tenant {
   @PrimaryGeneratedColumn()
   id: number;
@@ -60,9 +60,6 @@ export class Tenant {
 
   @OneToMany(() => TenantDomain, (domain) => domain.tenant)
   domains: TenantDomain[];
-
-  @OneToMany(() => TenantInvoice, (inv) => inv.tenant)
-  invoices: TenantInvoice[];
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;

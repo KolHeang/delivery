@@ -47,8 +47,18 @@ export class PlansService {
     return this.planRepo.save(plan);
   }
 
-  async remove(id: number): Promise<void> {
+  async remove(id: number): Promise<{ success: boolean; message: string }> {
     const plan = await this.findById(id);
-    await this.planRepo.remove(plan);
+    try {
+      await this.planRepo.remove(plan);
+      return { success: true, message: 'Plan deleted successfully' };
+    } catch (err) {
+      plan.isActive = false;
+      await this.planRepo.save(plan);
+      return {
+        success: true,
+        message: 'Plan has associated subscriptions. It has been deactivated instead.',
+      };
+    }
   }
 }

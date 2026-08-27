@@ -18,8 +18,8 @@ export class Organisation {
   @JoinColumn({ name: 'tenant_id' })
   tenant: Tenant;
 
-  @Column({ name: 'tenant_id', default: 1 })
-  tenantId: number;
+  @Column({ name: 'tenant_id', nullable: true })
+  tenantId: number | null;
 
   @Column({ default: 'EBS Digital Solutions' })
   name: string;

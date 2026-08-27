@@ -11,7 +11,7 @@ import {
 import { User } from '../../users/entities/users.entity';
 import { Plan } from '../plans/plan.entity';
 import { SaasInvoice } from '../invoices/saas-invoice.entity';
-import { Tenant } from '../tenants/tenant.entity';
+import { Tenant } from '../entities/tenant.entity';
 
 export type SubscriptionStatus =
   | 'trialing'
@@ -27,8 +27,8 @@ export class Subscription {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ name: 'tenant_id', type: 'uuid', nullable: true })
-  tenantId: string;
+  @Column({ name: 'tenant_id', type: 'integer', nullable: true })
+  tenantId: number;
 
   @ManyToOne(() => Tenant, (tenant) => tenant.subscriptions, {
     nullable: true,

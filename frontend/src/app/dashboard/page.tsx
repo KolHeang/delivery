@@ -93,9 +93,11 @@ export default function DashboardPage() {
       ]);
       setStats(s.data);
       setChartData(c.data);
-      setRecentOrders(r.data);
-      setTopDrivers(d.data);
-    } catch { }
+      setRecentOrders(Array.isArray(r.data) ? r.data : (r.data?.result || []));
+      setTopDrivers(Array.isArray(d.data) ? d.data : (d.data?.result || []));
+    } catch (err) {
+      console.error('Failed to load dashboard:', err);
+    }
     setLoading(false);
   }, []);
 

@@ -33,6 +33,7 @@ export default function EditShopPage() {
     qrLinkUsd: '',
   });
 
+  const [zones, setZones] = useState<any[]>([]);
   const [qrKhrFile, setQrKhrFile] = useState<File | null>(null);
   const [qrUsdFile, setQrUsdFile] = useState<File | null>(null);
   const [qrKhrPreview, setQrKhrPreview] = useState<string>('');

@@ -248,34 +248,10 @@ export class DashboardService {
   async getRecentParcels(startDate?: string, endDate?: string) {
     const qb = this.parcelRepo
       .createQueryBuilder('parcel')
-      .leftJoin('parcel.merchant', 'merchant')
-      .leftJoin('parcel.customer', 'customer')
-      .leftJoin('parcel.driver', 'driver')
-      .leftJoin('parcel.zone', 'zone')
-      .addSelect([
-        'parcel.id',
-        'parcel.trackingCode',
-        'parcel.receiverName',
-        'parcel.receiverPhone',
-        'parcel.receiverAddress',
-        'parcel.cod',
-        'parcel.codCurrency',
-        'parcel.deliveryFee',
-        'parcel.status',
-        'parcel.createdAt',
-        'merchant.id',
-        'merchant.name',
-        'merchant.nameKh',
-        'customer.id',
-        'customer.name',
-        'customer.phone',
-        'driver.id',
-        'driver.name',
-        'driver.nameKh',
-        'driver.phone',
-        'zone.id',
-        'zone.name',
-      ])
+      .leftJoinAndSelect('parcel.merchant', 'merchant')
+      .leftJoinAndSelect('parcel.customer', 'customer')
+      .leftJoinAndSelect('parcel.driver', 'driver')
+      .leftJoinAndSelect('parcel.zone', 'zone')
       .where('1=1')
       .orderBy('parcel.createdAt', 'DESC')
       .take(10);
@@ -292,11 +268,11 @@ export class DashboardService {
     if (startDate || endDate) {
       const qb = this.parcelRepo
         .createQueryBuilder('parcel')
-        .select('parcel.driver_id', 'driverId')
+        .select('parcel.driverId', 'driverId')
         .addSelect('COUNT(*)', 'totalDeliveries')
         .where("parcel.status = 'delivered'")
-        .andWhere('parcel.driver_id IS NOT NULL')
-        .groupBy('parcel.driver_id')
+        .andWhere('parcel.driverId IS NOT NULL')
+        .groupBy('parcel.driverId')
         .orderBy('COUNT(*)', 'DESC')
         .limit(5);
 

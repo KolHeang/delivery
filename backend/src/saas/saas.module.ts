@@ -12,6 +12,9 @@ import { SaasPayment } from './payments/saas-payment.entity';
 import { Partner } from './partners/partner.entity';
 import { Commission } from './commissions/commission.entity';
 import { SaasAdmin } from './admins/saas-admin.entity';
+import { Tenant } from './tenants/tenant.entity';
+import { Company } from './tenants/company.entity';
+import { Domain } from './tenants/domain.entity';
 import { User } from '../users/users.entity';
 
 // Services
@@ -23,6 +26,7 @@ import { SaasPaymentsService } from './payments/saas-payments.service';
 import { PartnersService } from './partners/partners.service';
 import { CommissionsService } from './commissions/commissions.service';
 import { SaasAdminsService } from './admins/saas-admins.service';
+import { TenantsService } from './tenants/tenants.service';
 import { SaasSeedService } from './saas-seed.service';
 
 // Controllers
@@ -34,10 +38,14 @@ import { SaasPaymentsController } from './payments/saas-payments.controller';
 import { PartnersController } from './partners/partners.controller';
 import { CommissionsController } from './commissions/commissions.controller';
 import { SaasAdminsController } from './admins/saas-admins.controller';
+import { TenantsController } from './tenants/tenants.controller';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([
+      Tenant,
+      Company,
+      Domain,
       Plan,
       Subscription,
       Coupon,
@@ -71,6 +79,7 @@ import { SaasAdminsController } from './admins/saas-admins.controller';
     PartnersService,
     CommissionsService,
     SaasAdminsService,
+    TenantsService,
     SaasSeedService,
   ],
   controllers: [
@@ -82,6 +91,7 @@ import { SaasAdminsController } from './admins/saas-admins.controller';
     PartnersController,
     CommissionsController,
     SaasAdminsController,
+    TenantsController,
   ],
   exports: [
     PlansService,
@@ -92,6 +102,7 @@ import { SaasAdminsController } from './admins/saas-admins.controller';
     PartnersService,
     CommissionsService,
     SaasAdminsService,
+    TenantsService,
   ],
 })
 export class SaasModule {}

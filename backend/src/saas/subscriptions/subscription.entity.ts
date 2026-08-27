@@ -11,6 +11,7 @@ import {
 import { User } from '../../users/users.entity';
 import { Plan } from '../plans/plan.entity';
 import { SaasInvoice } from '../invoices/saas-invoice.entity';
+import { Tenant } from '../tenants/tenant.entity';
 
 export type SubscriptionStatus =
   | 'trialing'
@@ -26,10 +27,20 @@ export class Subscription {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ name: 'user_id' })
+  @Column({ name: 'tenant_id', type: 'uuid', nullable: true })
+  tenantId: string;
+
+  @ManyToOne(() => Tenant, (tenant) => tenant.subscriptions, {
+    nullable: true,
+    onDelete: 'CASCADE',
+  })
+  @JoinColumn({ name: 'tenant_id' })
+  tenant: Tenant;
+
+  @Column({ name: 'user_id', nullable: true })
   userId: number;
 
-  @ManyToOne(() => User, { onDelete: 'CASCADE' })
+  @ManyToOne(() => User, { onDelete: 'CASCADE', nullable: true })
   @JoinColumn({ name: 'user_id' })
   user: User;
 

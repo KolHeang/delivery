@@ -20,6 +20,9 @@ export class Plan {
   slug: string; // basic, pro, enterprise
 
   @Column({ nullable: true })
+  code: string; // starter, pro, enterprise
+
+  @Column({ nullable: true })
   description: string;
 
   @Column('decimal', { precision: 10, scale: 2, default: 0.0 })

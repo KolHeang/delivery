@@ -33,15 +33,15 @@ export default function EditOrderPage() {
     const init = async () => {
       try {
         const [m, c, z, orderRes] = await Promise.all([
-          api.get('/merchants'),
-          api.get('/customers'),
-          api.get('/zones'),
+          api.get('/select/merchants'),
+          api.get('/select/customers'),
+          api.get('/select/zones'),
           api.get(`/parcels/${params.id}`)
         ]);
 
-        setMerchants(m.data || []);
-        setCustomers(c.data || []);
-        setZones(z.data || []);
+        setMerchants(Array.isArray(m.data) ? m.data : (m.data?.result || []));
+        setCustomers(Array.isArray(c.data) ? c.data : (c.data?.result || []));
+        setZones(Array.isArray(z.data) ? z.data : (z.data?.result || []));
 
         const o = orderRes.data;
         setForm({

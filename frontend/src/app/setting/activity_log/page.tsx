@@ -78,12 +78,12 @@ export default function ActivityLogsPage() {
         },
       });
 
-      if (res.data && res.data.data !== undefined) {
-        setLogs(res.data.data);
+      if (res.data && res.data.result !== undefined) {
+        setLogs(res.data.result);
         setTotalItems(res.data.total);
       } else {
-        setLogs(res.data);
-        setTotalItems(res.data.length || 0);
+        setLogs(Array.isArray(res.data) ? res.data : []);
+        setTotalItems(Array.isArray(res.data) ? res.data.length : 0);
       }
     } catch (err) {
       console.error('Failed to load activity logs:', err);

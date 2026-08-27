@@ -65,14 +65,14 @@ export default function PrintInvoicePage() {
     if (!isAuthenticated()) { router.push('/'); return; }
     Promise.all([
       api.get('/parcels'),
-      api.get('/merchants'),
-      api.get('/drivers')
+      api.get('/select/merchants'),
+      api.get('/select/drivers')
     ])
       .then(([oRes, mRes, dRes]) => {
-        const orderData = oRes.data || [];
+        const orderData = Array.isArray(oRes.data) ? oRes.data : (oRes.data?.result || []);
         setOrders(orderData);
-        setMerchants(mRes.data || []);
-        setDrivers(dRes.data || []);
+        setMerchants(Array.isArray(mRes.data) ? mRes.data : (mRes.data?.result || []));
+        setDrivers(Array.isArray(dRes.data) ? dRes.data : (dRes.data?.result || []));
         
         const params = new URLSearchParams(window.location.search);
         const singleId = params.get('id');

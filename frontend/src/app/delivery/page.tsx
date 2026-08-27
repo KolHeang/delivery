@@ -199,12 +199,12 @@ export default function DeliveriesPage() {
           endDate: endDate || undefined,
         }
       });
-      if (res.data && res.data.data !== undefined) {
-        setOrders(res.data.data);
+      if (res.data && res.data.result !== undefined) {
+        setOrders(res.data.result);
         setTotalItems(res.data.total);
       } else {
-        setOrders(res.data);
-        setTotalItems(res.data.length);
+        setOrders(Array.isArray(res.data) ? res.data : []);
+        setTotalItems(Array.isArray(res.data) ? res.data.length : 0);
       }
     } catch {}
     setLoading(false);
@@ -214,16 +214,18 @@ export default function DeliveriesPage() {
     if (!isAuthenticated()) { router.push('/'); return; }
     load();
     Promise.all([
-      api.get('/merchants'), api.get('/customers'),
-      api.get('/drivers'), api.get('/zones'),
+      api.get('/select/merchants'), api.get('/select/customers'),
+      api.get('/select/drivers'), api.get('/select/zones'),
     ]).then(([m, c, d, z]) => {
-      setMerchants(m.data); setCustomers(c.data);
-      setDrivers(d.data); setZones(z.data);
+      setMerchants(Array.isArray(m.data) ? m.data : (m.data?.result || []));
+      setCustomers(Array.isArray(c.data) ? c.data : (c.data?.result || []));
+      setDrivers(Array.isArray(d.data) ? d.data : (d.data?.result || []));
+      setZones(Array.isArray(z.data) ? z.data : (z.data?.result || []));
     }).catch(() => {});
   }, [router, load]);
 
   useEffect(() => {
-    setFiltered(orders);
+    setFiltered(Array.isArray(orders) ? orders : []);
   }, [orders]);
 
   const openCreate = () => { router.push('/delivery/entry_data_item'); };
@@ -425,7 +427,7 @@ export default function DeliveriesPage() {
                           </td>
                           <td style={{ fontSize: 11, whiteSpace: 'nowrap' }}>{formatDateTime(o.createdAt)}</td>
                           <td>
-                            <span style={{ color: '#2563eb', cursor: 'pointer', textDecoration: 'underline' }} onClick={() => router.push(`/client?search=${o.merchant?.name || ''}`)}>
+                            <span style={{ color: '#2563eb', cursor: 'pointer', textDecoration: 'underline' }} onClick={() => router.push(`/merchants?search=${o.merchant?.name || ''}`)}>
                               {o.merchant?.nameKh || o.merchant?.name || '—'}
                             </span>
                           </td>

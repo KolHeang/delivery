@@ -45,7 +45,13 @@ export class AuthService {
       access_token,
       refresh_token,
       user: {
-        ...userWithoutPassword,
+        id: user.id,
+        name: user.name,
+        nameKh: user.nameKh,
+        email: user.email,
+        phone: user.phone,
+        role: user.role,
+        isActive: user.isActive,
         permissions,
       },
     };

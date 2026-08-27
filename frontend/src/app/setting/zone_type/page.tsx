@@ -32,12 +32,12 @@ export default function ZonesPage() {
       const r = await api.get('/zones', {
         params: { page: currentPage, limit: pageSize }
       });
-      if (r.data && r.data.data !== undefined) {
-        setItems(r.data.data || []);
+      if (r.data && r.data.result !== undefined) {
+        setItems(r.data.result || []);
         setTotalItems(r.data.total || 0);
       } else {
-        setItems(r.data || []);
-        setTotalItems(r.data?.length || 0);
+        setItems(Array.isArray(r.data) ? r.data : []);
+        setTotalItems(Array.isArray(r.data) ? r.data.length : 0);
       }
     } catch {}
     setLoading(false);

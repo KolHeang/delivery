@@ -33,8 +33,26 @@ export class DriverService {
       relations: { zone: true, vehicle: true },
     });
     if (!driver) throw new NotFoundException('Driver not found');
-    const { password, ...safeDriver } = driver as any;
-    return safeDriver;
+    return {
+      id: driver.id,
+      name: driver.name,
+      nameKh: driver.nameKh,
+      phone: driver.phone,
+      email: driver.email,
+      role: driver.role,
+      isActive: driver.isActive,
+      totalDeliveries: driver.totalDeliveries,
+      rating: driver.rating,
+      photo: driver.photo,
+      zone: driver.zone ? { id: driver.zone.id, name: driver.zone.name } : null,
+      vehicle: driver.vehicle
+        ? {
+            id: driver.vehicle.id,
+            type: driver.vehicle.type,
+            plate: driver.vehicle.plate,
+          }
+        : null,
+    };
   }
 
   async updateProfile(
@@ -106,7 +124,30 @@ export class DriverService {
   ) {
     const query = this.parcelRepo
       .createQueryBuilder('parcel')
-      .leftJoinAndSelect('parcel.merchant', 'merchant')
+      .leftJoin('parcel.merchant', 'merchant')
+      .addSelect([
+        'parcel.id',
+        'parcel.trackingCode',
+        'parcel.receiverName',
+        'parcel.receiverPhone',
+        'parcel.receiverAddress',
+        'parcel.cod',
+        'parcel.codCurrency',
+        'parcel.deliveryFee',
+        'parcel.status',
+        'parcel.driverId',
+        'parcel.pickupDriverId',
+        'parcel.itemType',
+        'parcel.note',
+        'parcel.createdAt',
+        'parcel.deliveredAt',
+        'parcel.assignedAt',
+        'merchant.id',
+        'merchant.name',
+        'merchant.nameKh',
+        'merchant.phone',
+        'merchant.address',
+      ])
       .orderBy('parcel.createdAt', 'DESC');
 
     // 1. Apply Status & Driver Logic

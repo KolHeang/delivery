@@ -47,51 +47,32 @@ export class DashboardService {
         this.merchantRepo.count(),
       ]);
 
-    const parcelsQuery = (status?: string | string[]) => {
-      const qb = this.parcelRepo.createQueryBuilder('parcel');
-      if (status) {
-        if (Array.isArray(status)) {
-          qb.where('parcel.status IN (:...statuses)', { statuses: status });
-        } else {
-          qb.where('parcel.status = :status', { status });
-        }
-      } else {
-        qb.where('1=1');
-      }
-      this.applyDateFilter(qb, 'parcel', startDate, endDate);
-      return qb.getCount();
-    };
+    const statusCountsQb = this.parcelRepo
+      .createQueryBuilder('parcel')
+      .select('parcel.status', 'status')
+      .addSelect('COUNT(*)', 'count')
+      .groupBy('parcel.status');
+    this.applyDateFilter(statusCountsQb, 'parcel', startDate, endDate);
+    const rawStatusCounts = await statusCountsQb.getRawMany();
 
-    const [
-      totalOrders,
-      pending,
-      inWarehouse,
-      assigned,
-      pickedUp,
-      inTransit,
-      delivered,
-      failed,
-      returned,
-      broughtToWarehouse,
-    ] = await Promise.all([
-      parcelsQuery(),
-      parcelsQuery('pending'),
-      parcelsQuery('in-warehouse'),
-      parcelsQuery('assigned'),
-      parcelsQuery('picked-up'),
-      parcelsQuery('in-transit'),
-      parcelsQuery('delivered'),
-      parcelsQuery('failed'),
-      parcelsQuery('returned'),
-      parcelsQuery([
-        'in-warehouse',
-        'assigned',
-        'in-transit',
-        'delivered',
-        'failed',
-        'returned',
-      ]),
-    ]);
+    const statusMap: Record<string, number> = {};
+    let totalOrders = 0;
+    rawStatusCounts.forEach((r) => {
+      const c = parseInt(r.count, 10) || 0;
+      statusMap[r.status] = c;
+      totalOrders += c;
+    });
+
+    const pending = statusMap['pending'] || 0;
+    const inWarehouse = statusMap['in-warehouse'] || 0;
+    const assigned = statusMap['assigned'] || 0;
+    const pickedUp = statusMap['picked-up'] || 0;
+    const inTransit = statusMap['in-transit'] || 0;
+    const delivered = statusMap['delivered'] || 0;
+    const failed = statusMap['failed'] || 0;
+    const returned = statusMap['returned'] || 0;
+    const broughtToWarehouse =
+      inWarehouse + assigned + inTransit + delivered + failed + returned;
 
     const revenueQuery = this.parcelRepo
       .createQueryBuilder('parcel')
@@ -267,10 +248,34 @@ export class DashboardService {
   async getRecentParcels(startDate?: string, endDate?: string) {
     const qb = this.parcelRepo
       .createQueryBuilder('parcel')
-      .leftJoinAndSelect('parcel.merchant', 'merchant')
-      .leftJoinAndSelect('parcel.customer', 'customer')
-      .leftJoinAndSelect('parcel.driver', 'driver')
-      .leftJoinAndSelect('parcel.zone', 'zone')
+      .leftJoin('parcel.merchant', 'merchant')
+      .leftJoin('parcel.customer', 'customer')
+      .leftJoin('parcel.driver', 'driver')
+      .leftJoin('parcel.zone', 'zone')
+      .addSelect([
+        'parcel.id',
+        'parcel.trackingCode',
+        'parcel.receiverName',
+        'parcel.receiverPhone',
+        'parcel.receiverAddress',
+        'parcel.cod',
+        'parcel.codCurrency',
+        'parcel.deliveryFee',
+        'parcel.status',
+        'parcel.createdAt',
+        'merchant.id',
+        'merchant.name',
+        'merchant.nameKh',
+        'customer.id',
+        'customer.name',
+        'customer.phone',
+        'driver.id',
+        'driver.name',
+        'driver.nameKh',
+        'driver.phone',
+        'zone.id',
+        'zone.name',
+      ])
       .where('1=1')
       .orderBy('parcel.createdAt', 'DESC')
       .take(10);

@@ -39,12 +39,12 @@ export default function RolesListPage() {
       const res = await api.get('/roles', {
         params: { page: currentPage, limit: pageSize }
       });
-      if (res.data && res.data.data !== undefined) {
-        setRoles(res.data.data || []);
+      if (res.data && res.data.result !== undefined) {
+        setRoles(res.data.result || []);
         setTotalItems(res.data.total || 0);
       } else {
-        setRoles(res.data || []);
-        setTotalItems(res.data?.length || 0);
+        setRoles(Array.isArray(res.data) ? res.data : []);
+        setTotalItems(Array.isArray(res.data) ? res.data.length : 0);
       }
     } catch (err) {
       console.error('Failed to load roles', err);

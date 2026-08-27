@@ -28,13 +28,16 @@ export default function BatchEntryPage() {
 
   useEffect(() => {
     if (!isAuthenticated()) { router.push('/'); return; }
-    Promise.all([api.get('/merchants'), api.get('/zones'), api.get('/drivers')])
+    Promise.all([api.get('/select/merchants'), api.get('/select/zones'), api.get('/select/drivers')])
       .then(([m, z, d]) => {
-        setMerchants(m.data || []);
-        setZones(z.data || []);
-        setDrivers(d.data || []);
-        if (m.data.length > 0) {
-          setSelectedMerchantId(m.data[0].id.toString());
+        const mList = Array.isArray(m.data) ? m.data : (m.data?.result || []);
+        const zList = Array.isArray(z.data) ? z.data : (z.data?.result || []);
+        const dList = Array.isArray(d.data) ? d.data : (d.data?.result || []);
+        setMerchants(mList);
+        setZones(zList);
+        setDrivers(dList);
+        if (mList.length > 0) {
+          setSelectedMerchantId(mList[0].id.toString());
         }
       })
       .catch(() => {})

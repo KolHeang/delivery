@@ -61,7 +61,7 @@ export default function ShopSummaryPage() {
 
   useEffect(() => {
     if (!isAuthenticated()) { router.push('/'); return; }
-    api.get('/merchants').then(m => setMerchants(m.data)).catch(() => {});
+    api.get('/select/merchants').then(m => setMerchants(Array.isArray(m.data) ? m.data : (m.data?.result || []))).catch(() => {});
     fetchData();
   }, [router, fetchData]);
 

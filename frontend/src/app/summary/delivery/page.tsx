@@ -63,7 +63,7 @@ export default function DeliverySummaryPage() {
 
   useEffect(() => {
     if (!isAuthenticated()) { router.push('/'); return; }
-    api.get('/drivers').then(d => setDrivers(d.data)).catch(() => {});
+    api.get('/select/drivers').then(d => setDrivers(Array.isArray(d.data) ? d.data : (d.data?.result || []))).catch(() => {});
     fetchData();
   }, [router, fetchData]);
 

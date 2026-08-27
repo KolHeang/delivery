@@ -16,9 +16,20 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Redirect to login on 401
+// Redirect to login on 401 & unwrap ApiResponse
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    if (
+      response.data &&
+      typeof response.data === 'object' &&
+      'status' in response.data &&
+      'data' in response.data &&
+      typeof response.data.status === 'boolean'
+    ) {
+      response.data = response.data.data;
+    }
+    return response;
+  },
   (error) => {
     if (error.response?.status === 401 && typeof window !== 'undefined') {
       const pathname = window.location.pathname;

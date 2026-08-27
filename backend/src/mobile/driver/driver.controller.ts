@@ -27,7 +27,7 @@ import { ConfirmPickupDto } from '../../parcels/dto/pickup-request.dto';
 @UseGuards(JwtAuthGuard)
 @Controller('mobile/driver')
 export class DriverController {
-  constructor(private readonly driverService: DriverService) { }
+  constructor(private readonly driverService: DriverService) {}
 
   @Get('profile')
   @ApiOperation({ summary: 'Get driver profile' })
@@ -181,10 +181,7 @@ export class DriverController {
 
   @Get('tasks/:id')
   @ApiOperation({ summary: 'Get task detail by ID for driver' })
-  getTaskDetail(
-    @Request() req: any,
-    @Param('id', ParseIntPipe) id: number,
-  ) {
+  getTaskDetail(@Request() req: any, @Param('id', ParseIntPipe) id: number) {
     return this.driverService.getTaskDetail(req.user.id, id);
   }
 
@@ -222,9 +219,14 @@ export class DriverController {
 
   @Get('report')
   @ApiOperation({
-    summary: 'Get detailed driver report with performance, COD, earnings and task history',
+    summary:
+      'Get detailed driver report with performance, COD, earnings and task history',
   })
-  @ApiQuery({ name: 'period', required: false, enum: ['today', 'yesterday', 'week', 'month', 'custom', 'all'] })
+  @ApiQuery({
+    name: 'period',
+    required: false,
+    enum: ['today', 'yesterday', 'week', 'month', 'custom', 'all'],
+  })
   @ApiQuery({ name: 'startDate', required: false, type: String })
   @ApiQuery({ name: 'endDate', required: false, type: String })
   @ApiQuery({ name: 'status', required: false, type: String })
@@ -304,10 +306,7 @@ export class DriverController {
 
   @Get('payments/:id')
   @ApiOperation({ summary: 'Get details of a specific payment record' })
-  getPaymentDetail(
-    @Request() req: any,
-    @Param('id', ParseIntPipe) id: number,
-  ) {
+  getPaymentDetail(@Request() req: any, @Param('id', ParseIntPipe) id: number) {
     return this.driverService.getPaymentDetail(req.user.id, id);
   }
 }

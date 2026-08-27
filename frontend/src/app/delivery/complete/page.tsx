@@ -87,8 +87,8 @@ export default function CompletePackagePage() {
 
   const loadDrivers = async () => {
     try {
-      const res = await api.get('/drivers');
-      setDrivers(res.data || []);
+      const res = await api.get('/select/drivers');
+      setDrivers(Array.isArray(res.data) ? res.data : (res.data?.result || []));
     } catch (err) {
       console.error('Error fetching drivers:', err);
     }

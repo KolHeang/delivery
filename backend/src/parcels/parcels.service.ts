@@ -27,7 +27,17 @@ export class ParcelsService {
     @InjectRepository(PickupRequest) private readonly pickupRequestRepo: Repository<PickupRequest>,
   ) { }
 
-  private get relations(): any {
+  private get listRelations(): any {
+    return {
+      merchant: true,
+      customer: true,
+      driver: true,
+      pickupDriver: true,
+      zone: true,
+    };
+  }
+
+  private get detailRelations(): any {
     return {
       merchant: true,
       customer: true,
@@ -38,6 +48,10 @@ export class ParcelsService {
       zone: true,
       events: true,
     };
+  }
+
+  private get relations(): any {
+    return this.detailRelations;
   }
 
   async addEvent(parcelId: number, status: string, note?: string): Promise<void> {
@@ -101,7 +115,7 @@ export class ParcelsService {
 
     return paginateRepo(this.repo, query || {}, {
       where,
-      relations: this.relations,
+      relations: this.listRelations,
       order: { createdAt: 'DESC' },
     });
   }

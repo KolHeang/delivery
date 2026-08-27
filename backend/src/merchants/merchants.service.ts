@@ -50,6 +50,30 @@ export class MerchantsService {
     const item = await this.repo.findOne({
       where: { id },
       relations: { zone: true },
+      select: {
+        id: true,
+        name: true,
+        nameKh: true,
+        contact: true,
+        phone: true,
+        email: true,
+        address: true,
+        pricingTier: true,
+        balance: true,
+        active: true,
+        zoneId: true,
+        deliveryFee: true,
+        exchangeRate: true,
+        note: true,
+        telegram: true,
+        photo: true,
+        qrLinkKhr: true,
+        qrLinkUsd: true,
+        qrImageKhr: true,
+        qrImageUsd: true,
+        createdAt: true,
+        updatedAt: true,
+      },
     });
     if (!item) throw new NotFoundException(`Merchant #${id} not found`);
     return item;

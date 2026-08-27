@@ -25,12 +25,12 @@ export default function IncomeListPage() {
       const res = await api.get('/incomes', {
         params: { page: currentPage, limit: pageSize }
       });
-      if (res.data && res.data.data !== undefined) {
-        setIncomes(res.data.data || []);
+      if (res.data && res.data.result !== undefined) {
+        setIncomes(res.data.result || []);
         setTotalItems(res.data.total || 0);
       } else {
-        setIncomes(res.data || []);
-        setTotalItems(res.data?.length || 0);
+        setIncomes(Array.isArray(res.data) ? res.data : []);
+        setTotalItems(Array.isArray(res.data) ? res.data.length : 0);
       }
     } catch {}
     setLoading(false);

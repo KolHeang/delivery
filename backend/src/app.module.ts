@@ -22,7 +22,7 @@ import { InvoicesModule } from './invoices/invoices.module';
 import { RolesModule } from './roles/roles.module';
 import { ActivityLogsModule } from './activity-logs/activity-logs.module';
 import { ActivityLogInterceptor } from './activity-logs/activity-log.interceptor';
-import { SaasModule } from './saas/saas.module';
+import { SelectModule } from './select/select.module';
 
 @Module({
   imports: [
@@ -50,7 +50,7 @@ import { SaasModule } from './saas/saas.module';
     InvoicesModule,
     RolesModule,
     ActivityLogsModule,
-    SaasModule,
+    SelectModule,
   ],
   providers: [
     {

@@ -7,7 +7,7 @@ export interface PaginationQueryDto {
 }
 
 export interface PaginatedResult<T> {
-  data: T[];
+  result: T[];
   total: number;
   page: number;
   limit: number;
@@ -26,14 +26,14 @@ export async function paginateRepo<T extends ObjectLiteral>(
     return repo.find(findOptions);
   }
 
-  const [data, total] = await repo.findAndCount({
+  const [result, total] = await repo.findAndCount({
     ...findOptions,
     skip: (page - 1) * limit,
     take: limit,
   });
 
   return {
-    data,
+    result,
     total,
     page,
     limit,
@@ -52,13 +52,13 @@ export async function paginateQuery<T extends ObjectLiteral>(
     return queryBuilder.getMany();
   }
 
-  const [data, total] = await queryBuilder
+  const [result, total] = await queryBuilder
     .skip((page - 1) * limit)
     .take(limit)
     .getManyAndCount();
 
   return {
-    data,
+    result,
     total,
     page,
     limit,

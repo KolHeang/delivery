@@ -48,18 +48,18 @@ export default function StaffPage() {
             search: debouncedSearch || undefined,
           },
         }),
-        api.get('/zones'),
-        api.get('/vehicles')
+        api.get('/select/zones'),
+        api.get('/select/vehicles')
       ]);
-      if (r.data && r.data.data !== undefined) {
-        setItems(r.data.data);
+      if (r.data && r.data.result !== undefined) {
+        setItems(r.data.result);
         setTotalItems(r.data.total);
       } else {
-        setItems(r.data);
-        setTotalItems(r.data.length);
+        setItems(Array.isArray(r.data) ? r.data : []);
+        setTotalItems(Array.isArray(r.data) ? r.data.length : 0);
       }
-      setZones(z.data);
-      setVehicles(v.data);
+      setZones(Array.isArray(z.data) ? z.data : (z.data?.result || []));
+      setVehicles(Array.isArray(v.data) ? v.data : (v.data?.result || []));
     } catch (err) {
       console.error(err);
     }
@@ -75,7 +75,7 @@ export default function StaffPage() {
   }, [router, load]);
 
   useEffect(() => {
-    setFiltered(items);
+    setFiltered(Array.isArray(items) ? items : []);
   }, [items]);
 
   const openCreate = () => { router.push('/user/create'); };

@@ -2,29 +2,38 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
+import { HttpExceptionFilter } from './filters/http-exception.filter';
+import { ResponseInterceptor } from './interceptors/response.interceptor';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  // Enable CORS
   app.enableCors({
-    origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
-      if (!origin) return callback(null, true);
-      if (
-        origin.includes('localhost') ||
-        origin.includes('127.0.0.1') ||
-        origin.endsWith('.ebsexpress.com') ||
-        origin.includes('ebsexpress.com')
-      ) {
-        return callback(null, true);
-      }
-      return callback(null, true);
-    },
+    origin: true, // This allows ANY origin to connect
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
   });
 
-  app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
+  // Global exception filter
+  app.useGlobalFilters(new HttpExceptionFilter());
 
-  app.setGlobalPrefix('api');
+  // Global validation pipe
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+      transformOptions: { enableImplicitConversion: true },
+    }),
+  );
+
+  // Global response wrapper → { status: true, message: 'Successfully', data }
+  app.useGlobalInterceptors(new ResponseInterceptor());
+
+  app.setGlobalPrefix('api', {
+    exclude: ['health'],
+  });
 
   const config = new DocumentBuilder()
     .setTitle('Delivery Management API')

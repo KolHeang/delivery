@@ -46,13 +46,13 @@ export default function CreateStaffPage() {
     const load = async () => {
       try {
         const [z, v, r] = await Promise.all([
-          api.get('/zones'),
-          api.get('/vehicles'),
-          api.get('/roles')
+          api.get('/select/zones'),
+          api.get('/select/vehicles'),
+          api.get('/select/roles')
         ]);
-        setZones(Array.isArray(z.data) ? z.data : (z.data?.data || []));
-        setVehicles(Array.isArray(v.data) ? v.data : (v.data?.data || []));
-        setRoles(Array.isArray(r.data) ? r.data : (r.data?.data || []));
+        setZones(Array.isArray(z.data) ? z.data : (z.data?.result || []));
+        setVehicles(Array.isArray(v.data) ? v.data : (v.data?.result || []));
+        setRoles(Array.isArray(r.data) ? r.data : (r.data?.result || []));
       } catch (err) {
         console.error(err);
       }

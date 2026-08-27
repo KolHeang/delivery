@@ -44,12 +44,12 @@ export default function CustomersPage() {
           search: debouncedSearch || undefined,
         },
       });
-      if (r.data && r.data.data !== undefined) {
-        setItems(r.data.data);
+      if (r.data && r.data.result !== undefined) {
+        setItems(r.data.result);
         setTotalItems(r.data.total);
       } else {
-        setItems(r.data);
-        setTotalItems(r.data.length);
+        setItems(Array.isArray(r.data) ? r.data : []);
+        setTotalItems(Array.isArray(r.data) ? r.data.length : 0);
       }
     } catch {}
     setLoading(false);

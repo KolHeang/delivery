@@ -25,7 +25,7 @@ export class DriverService {
     private readonly pickupRequestRepo: Repository<PickupRequest>,
     @InjectRepository(DriverPayment)
     private readonly driverPaymentRepo: Repository<DriverPayment>,
-  ) { }
+  ) {}
 
   async getProfile(driverId: number) {
     const driver = await this.userRepo.findOne({
@@ -33,8 +33,26 @@ export class DriverService {
       relations: { zone: true, vehicle: true },
     });
     if (!driver) throw new NotFoundException('Driver not found');
-    const { password, ...safeDriver } = driver as any;
-    return safeDriver;
+    return {
+      id: driver.id,
+      name: driver.name,
+      nameKh: driver.nameKh,
+      phone: driver.phone,
+      email: driver.email,
+      role: driver.role,
+      isActive: driver.isActive,
+      totalDeliveries: driver.totalDeliveries,
+      rating: driver.rating,
+      photo: driver.photo,
+      zone: driver.zone ? { id: driver.zone.id, name: driver.zone.name } : null,
+      vehicle: driver.vehicle
+        ? {
+            id: driver.vehicle.id,
+            type: driver.vehicle.type,
+            plate: driver.vehicle.plate,
+          }
+        : null,
+    };
   }
 
   async updateProfile(
@@ -89,7 +107,9 @@ export class DriverService {
   }
 
   async updateDriverStatus(driverId: number, status: string) {
-    await this.userRepo.update(driverId, { isActive: status === 'available' || status === 'true' });
+    await this.userRepo.update(driverId, {
+      isActive: status === 'available' || status === 'true',
+    });
     return this.getProfile(driverId);
   }
 
@@ -104,7 +124,30 @@ export class DriverService {
   ) {
     const query = this.parcelRepo
       .createQueryBuilder('parcel')
-      .leftJoinAndSelect('parcel.merchant', 'merchant')
+      .leftJoin('parcel.merchant', 'merchant')
+      .addSelect([
+        'parcel.id',
+        'parcel.trackingCode',
+        'parcel.receiverName',
+        'parcel.receiverPhone',
+        'parcel.receiverAddress',
+        'parcel.cod',
+        'parcel.codCurrency',
+        'parcel.deliveryFee',
+        'parcel.status',
+        'parcel.driverId',
+        'parcel.pickupDriverId',
+        'parcel.itemType',
+        'parcel.note',
+        'parcel.createdAt',
+        'parcel.deliveredAt',
+        'parcel.assignedAt',
+        'merchant.id',
+        'merchant.name',
+        'merchant.nameKh',
+        'merchant.phone',
+        'merchant.address',
+      ])
       .orderBy('parcel.createdAt', 'DESC');
 
     // 1. Apply Status & Driver Logic
@@ -135,13 +178,13 @@ export class DriverService {
       query.andWhere(
         new Brackets((qb) => {
           const searchTerm = `%${search}%`;
-          qb.where('parcel.tracking_code::text ILIKE :searchTerm', {
+          qb.where('parcel.trackingCode::text ILIKE :searchTerm', {
             searchTerm,
           })
-            .orWhere('parcel.receiver_phone::text ILIKE :searchTerm', {
+            .orWhere('parcel.receiverPhone::text ILIKE :searchTerm', {
               searchTerm,
             })
-            .orWhere('parcel.receiver_address::text ILIKE :searchTerm', {
+            .orWhere('parcel.receiverAddress::text ILIKE :searchTerm', {
               searchTerm,
             });
         }),
@@ -161,13 +204,13 @@ export class DriverService {
     const limitNum = limit ? Math.max(1, parseInt(limit as any, 10)) : 20;
     const skip = (pageNum - 1) * limitNum;
 
-    const [data, total] = await query
+    const [result, total] = await query
       .skip(skip)
       .take(limitNum)
       .getManyAndCount();
 
     return {
-      data,
+      result,
       total,
       page: pageNum,
       limit: limitNum,
@@ -502,7 +545,9 @@ export class DriverService {
         { start, end },
       );
     }
-    const statusCounts = await statusQuery.groupBy('parcel.status').getRawMany();
+    const statusCounts = await statusQuery
+      .groupBy('parcel.status')
+      .getRawMany();
 
     const stats = statusCounts.reduce(
       (acc, curr) => ({ ...acc, [curr.status]: parseInt(curr.count) }),
@@ -853,7 +898,9 @@ export class DriverService {
         active: driver.isActive,
         status: driver.isActive ? 'available' : 'offline',
         zone: driver.zone?.name,
-        vehicle: driver.vehicle ? `${driver.vehicle.brand || ''} ${driver.vehicle.model || ''} (${driver.vehicle.plate || ''})`.trim() : null,
+        vehicle: driver.vehicle
+          ? `${driver.vehicle.brand || ''} ${driver.vehicle.model || ''} (${driver.vehicle.plate || ''})`.trim()
+          : null,
       },
       filter: {
         period,
@@ -1065,7 +1112,12 @@ export class DriverService {
     return this.updateParcelStatus(driverId, parcel.id, dto);
   }
 
-  async getPayments(driverId: number, page?: number, limit?: number, month?: string) {
+  async getPayments(
+    driverId: number,
+    page?: number,
+    limit?: number,
+    month?: string,
+  ) {
     const driver = await this.userRepo.findOne({ where: { id: driverId } });
     const pageNum = page ? Math.max(1, parseInt(page as any, 10)) : 1;
     const limitNum = limit ? Math.max(1, parseInt(limit as any, 10)) : 20;
@@ -1083,7 +1135,10 @@ export class DriverService {
       query.andWhere("TO_CHAR(payment.date, 'YYYY-MM') = :month", { month });
     }
 
-    const [data, total] = await query.skip(skip).take(limitNum).getManyAndCount();
+    const [data, total] = await query
+      .skip(skip)
+      .take(limitNum)
+      .getManyAndCount();
 
     // Fetch all parcels for these payments to compute accurate USD/KHR breakdown
     const allParcelIds: number[] = [];
@@ -1126,7 +1181,7 @@ export class DriverService {
         usd = parseFloat(p.amount as any) || 0;
       }
 
-      const totalUSD = Math.round((usd + (khr / exchangeRate)) * 100) / 100;
+      const totalUSD = Math.round((usd + khr / exchangeRate) * 100) / 100;
 
       return {
         id: p.id,
@@ -1146,7 +1201,7 @@ export class DriverService {
     });
 
     return {
-      data: formattedData,
+      result: formattedData,
       total,
       page: pageNum,
       limit: limitNum,
@@ -1295,7 +1350,12 @@ export class DriverService {
         status: o.status,
         zoneName: o.zone?.name || 'ទូទៅ',
         merchantName: o.merchant?.name || o.merchant?.nameKh || 'Shop',
-        driverName: o.driver?.nameKh || o.driver?.name || driver?.nameKh || driver?.name || 'Driver',
+        driverName:
+          o.driver?.nameKh ||
+          o.driver?.name ||
+          driver?.nameKh ||
+          driver?.name ||
+          'Driver',
         receiverName: o.receiverName,
         receiverPhone: o.receiverPhone,
         receiverAddress: o.receiverAddress,

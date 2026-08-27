@@ -26,12 +26,12 @@ export default function ExpenseListPage() {
       const res = await api.get('/expenses', {
         params: { page: currentPage, limit: pageSize }
       });
-      if (res.data && res.data.data !== undefined) {
-        setExpenses(res.data.data || []);
+      if (res.data && res.data.result !== undefined) {
+        setExpenses(res.data.result || []);
         setTotalItems(res.data.total || 0);
       } else {
-        setExpenses(res.data || []);
-        setTotalItems(res.data?.length || 0);
+        setExpenses(Array.isArray(res.data) ? res.data : []);
+        setTotalItems(Array.isArray(res.data) ? res.data.length : 0);
       }
     } catch {}
     setLoading(false);

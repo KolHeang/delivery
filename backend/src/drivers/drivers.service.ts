@@ -16,7 +16,15 @@ export class DriversService {
   findAll(): Promise<User[]> {
     return this.repo.find({
       where: { isDriver: true },
-      relations: { zone: true, vehicle: true, roleRelation: true },
+      select: {
+        id: true,
+        name: true,
+        nameKh: true,
+        phone: true,
+        isActive: true,
+        zoneId: true,
+        vehicleId: true,
+      },
       order: { name: 'ASC' },
     });
   }

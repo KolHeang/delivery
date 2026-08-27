@@ -47,14 +47,14 @@ export default function EditStaffPage() {
     const load = async () => {
       try {
         const [z, v, userRes, r] = await Promise.all([
-          api.get('/zones'),
-          api.get('/vehicles'),
+          api.get('/select/zones'),
+          api.get('/select/vehicles'),
           api.get(`/users/${params.id}`),
-          api.get('/roles')
+          api.get('/select/roles')
         ]);
-        setZones(Array.isArray(z.data) ? z.data : (z.data?.data || []));
-        setVehicles(Array.isArray(v.data) ? v.data : (v.data?.data || []));
-        setRoles(Array.isArray(r.data) ? r.data : (r.data?.data || []));
+        setZones(Array.isArray(z.data) ? z.data : (z.data?.result || []));
+        setVehicles(Array.isArray(v.data) ? v.data : (v.data?.result || []));
+        setRoles(Array.isArray(r.data) ? r.data : (r.data?.result || []));
 
         const i = userRes.data;
         if (i) {

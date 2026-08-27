@@ -62,7 +62,17 @@ export class AuthService {
     return {
       access_token,
       refresh_token,
-      user: userWithoutPassword,
+      user: {
+        id: user.id,
+        name: user.name,
+        nameKh: user.nameKh,
+        phone: user.phone,
+        email: user.email,
+        role: 'driver',
+        isActive: user.isActive,
+        zoneId: user.zoneId,
+        vehicleId: user.vehicleId,
+      },
     };
   }
 
@@ -88,7 +98,6 @@ export class AuthService {
     if (!isValid) throw new UnauthorizedException('Invalid credentials');
     if (!user.active) throw new UnauthorizedException('Account is disabled');
 
-    const { password: _, ...userWithoutPassword } = user;
     const payload = {
       sub: user.id,
       email: user.email,
@@ -112,9 +121,16 @@ export class AuthService {
       access_token,
       refresh_token,
       user: {
-        ...userWithoutPassword,
+        id: user.id,
+        name: user.name,
+        nameKh: user.nameKh,
+        phone: user.phone,
+        email: user.email,
+        address: user.address,
         role: 'merchant',
-      } as any,
+        active: user.active,
+        balance: user.balance,
+      },
     };
   }
 

@@ -52,8 +52,8 @@ export default function Sidebar() {
       icon: MdStorefront,
       permission: 'merchants.read',
       items: [
-        { href: '/client', label: t('shopList') },
-        { href: '/client/create', label: t('createShop'), permission: 'merchants.create' },
+        { href: '/merchants', label: t('shopList') },
+        { href: '/merchants/create', label: t('createShop'), permission: 'merchants.create' },
       ],
     },
     {
@@ -72,8 +72,8 @@ export default function Sidebar() {
       icon: MdAccountBalanceWallet,
       permission: 'payments.read',
       items: [
-        { href: '/payment/staff', label: t('paymentWithDelivery') || 'Payment with Delivery' },
-        { href: '/payment/shop', label: t('paymentWithShop') },
+        { href: '/payment/driver', label: t('paymentWithDelivery') || 'Payment with Delivery' },
+        { href: '/payment/merchant', label: t('paymentWithShop') },
       ],
     },
     {

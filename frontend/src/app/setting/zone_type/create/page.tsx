@@ -17,8 +17,8 @@ export default function CreateZonePage() {
 
   useEffect(() => {
     if (!isAuthenticated()) { router.push('/'); return; }
-    api.get('/drivers')
-      .then(res => setDrivers(res.data || []))
+    api.get('/select/drivers')
+      .then(res => setDrivers(Array.isArray(res.data) ? res.data : (res.data?.result || [])))
       .catch(() => {});
   }, [router]);
 

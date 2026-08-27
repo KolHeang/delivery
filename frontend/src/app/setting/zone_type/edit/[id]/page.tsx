@@ -24,9 +24,9 @@ export default function EditZonePage() {
       try {
         const [zoneRes, driverRes] = await Promise.all([
           api.get('/zones'),
-          api.get('/drivers')
+          api.get('/select/drivers')
         ]);
-        setDrivers(driverRes.data || []);
+        setDrivers(Array.isArray(driverRes.data) ? driverRes.data : (driverRes.data?.result || []));
         
         const zone = zoneRes.data.find((z: any) => z.id === parseInt(params.id as string));
         if (zone) {

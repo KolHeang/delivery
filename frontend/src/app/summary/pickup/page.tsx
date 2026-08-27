@@ -64,9 +64,9 @@ export default function PickUpSummaryPage() {
   useEffect(() => {
     if (!isAuthenticated()) { router.push('/'); return; }
     // Load filter options
-    Promise.all([api.get('/drivers'), api.get('/merchants')]).then(([d, m]) => {
-      setDrivers(d.data);
-      setMerchants(m.data);
+    Promise.all([api.get('/select/drivers'), api.get('/select/merchants')]).then(([d, m]) => {
+      setDrivers(Array.isArray(d.data) ? d.data : (d.data?.result || []));
+      setMerchants(Array.isArray(m.data) ? m.data : (m.data?.result || []));
     }).catch(() => {});
     fetchData();
   }, [router, fetchData]);

@@ -74,10 +74,10 @@ export class Merchant {
   @Column({ name: 'qr_link_usd', nullable: true })
   qrLinkUsd: string;
 
-  @Column({ name: 'qr_image_khr', type: 'text', nullable: true })
+  @Column({ name: 'qr_image_khr', type: 'text', nullable: true, select: false })
   qrImageKhr: string;
 
-  @Column({ name: 'qr_image_usd', type: 'text', nullable: true })
+  @Column({ name: 'qr_image_usd', type: 'text', nullable: true, select: false })
   qrImageUsd: string;
 
   @CreateDateColumn({ name: 'created_at' })

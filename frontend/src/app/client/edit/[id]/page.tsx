@@ -7,11 +7,13 @@ import Sidebar from '@/components/layout/Sidebar';
 import Topbar from '@/components/layout/Topbar';
 import api from '@/lib/api';
 import { useLanguage } from '@/lib/LanguageContext';
+import { useSettings } from '@/lib/SettingsContext';
 
 export default function EditShopPage() {
   const router = useRouter();
   const params = useParams();
   const { t } = useLanguage();
+  const { khrRate } = useSettings();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
@@ -24,7 +26,7 @@ export default function EditShopPage() {
     pricingTier: 'standard',
     zoneId: '',
     deliveryFee: '0',
-    exchangeRate: '4100',
+    exchangeRate: khrRate ? khrRate.toString() : '4100',
     note: '',
     telegram: '',
     qrLinkKhr: '',
@@ -60,7 +62,7 @@ export default function EditShopPage() {
             pricingTier: shop.pricingTier || 'standard',
             zoneId: shop.zoneId ? shop.zoneId.toString() : '',
             deliveryFee: shop.deliveryFee ? shop.deliveryFee.toString() : '0',
-            exchangeRate: shop.exchangeRate ? shop.exchangeRate.toString() : '4100',
+            exchangeRate: shop.exchangeRate ? shop.exchangeRate.toString() : (khrRate ? khrRate.toString() : '4100'),
             note: shop.note || '',
             telegram: shop.telegram || '',
             qrLinkKhr: shop.qrLinkKhr || '',

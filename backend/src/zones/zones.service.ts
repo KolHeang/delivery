@@ -1,8 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Zone } from './zone.entity';
-import { SubZone } from './subzone.entity';
+import { Zone } from './entities/zone.entity';
+import { SubZone } from './entities/subzone.entity';
 import { CreateZoneDto, UpdateZoneDto } from './dto/zone.dto';
 
 import { paginateRepo } from '../config/pagination';

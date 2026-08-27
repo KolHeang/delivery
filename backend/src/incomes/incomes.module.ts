@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { Income } from './income.entity';
-import { IncomeType } from './income-type.entity';
+import { Income } from './entities/income.entity';
+import { IncomeType } from './entities/income-type.entity';
 import { IncomesService } from './incomes.service';
 import { IncomesController } from './incomes.controller';
 

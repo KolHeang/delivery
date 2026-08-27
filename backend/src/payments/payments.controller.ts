@@ -9,6 +9,7 @@ import {
   Query,
   Delete,
   Patch,
+  Request,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { PaymentsService } from './payments.service';
@@ -21,11 +22,11 @@ import { LogActivity } from '../activity-logs/activity.decorator';
 export class PaymentsController {
   constructor(private readonly paymentsService: PaymentsService) { }
 
-  // UserPayments
+  // Driver Payments
   @UseGuards(JwtAuthGuard)
-  @Post('staff')
-  @LogActivity({ action: 'PROCESS_STAFF_PAYMENT', entityName: 'StaffPayment', description: 'Processed driver/staff payment' })
-  createStaff(
+  @Post(['driver', 'staff'])
+  @LogActivity({ action: 'PROCESS_DRIVER_PAYMENT', entityName: 'DriverPayment', description: 'Processed driver payment' })
+  createDriver(
     @Body()
     body: {
       driverId: number;
@@ -33,53 +34,56 @@ export class PaymentsController {
       date: Date;
       reference?: string;
       note?: string;
-      orderIds?: number[];
+      parcelIds?: number[];
     },
+    @Request() req: any,
   ) {
-    return this.paymentsService.createStaffPayment(
+    return this.paymentsService.createDriverPayment(
       body.driverId,
       body.amount,
       body.date,
       body.reference,
       body.note,
-      body.orderIds,
+      body.parcelIds,
+      req.user?.id,
     );
   }
 
   @UseGuards(JwtAuthGuard)
-  @Get('staff')
-  findAllStaff() {
-    return this.paymentsService.findAllStaffPayments();
+  @Get(['driver', 'staff'])
+  findAllDriver() {
+    return this.paymentsService.findAllDriverPayments();
   }
 
   @UseGuards(JwtAuthGuard)
-  @Get('staff/driver-stats/:driverId')
+  @Get(['driver/driver-stats/:driverId', 'staff/driver-stats/:driverId'])
   getDriverStats(@Param('driverId', ParseIntPipe) driverId: number) {
     return this.paymentsService.getDriverPaymentStats(driverId);
   }
 
   @UseGuards(JwtAuthGuard)
-  @Delete('staff/:id')
-  @LogActivity({ action: 'DELETE_STAFF_PAYMENT', entityName: 'StaffPayment', description: 'Deleted driver/staff payment' })
-  deleteStaff(@Param('id', ParseIntPipe) id: number) {
-    return this.paymentsService.deleteStaffPayment(id);
+  @Delete(['driver/:id', 'staff/:id'])
+  @LogActivity({ action: 'DELETE_DRIVER_PAYMENT', entityName: 'DriverPayment', description: 'Deleted driver payment' })
+  deleteDriver(@Param('id', ParseIntPipe) id: number) {
+    return this.paymentsService.deleteDriverPayment(id);
   }
 
   @UseGuards(JwtAuthGuard)
-  @Patch('staff/:id')
-  @LogActivity({ action: 'UPDATE_STAFF_PAYMENT', entityName: 'StaffPayment', description: 'Updated driver/staff payment details' })
-  updateStaff(
+  @Patch(['driver/:id', 'staff/:id'])
+  @LogActivity({ action: 'UPDATE_DRIVER_PAYMENT', entityName: 'DriverPayment', description: 'Updated driver payment details' })
+  updateDriver(
     @Param('id', ParseIntPipe) id: number,
     @Body() body: { amount?: number; note?: string; date?: Date; reference?: string },
+    @Request() req: any,
   ) {
-    return this.paymentsService.updateStaffPayment(id, body);
+    return this.paymentsService.updateDriverPayment(id, body, req.user?.id);
   }
 
-  // Shop Payments
+  // Merchant Payments
   @UseGuards(JwtAuthGuard)
-  @Post('shop')
-  @LogActivity({ action: 'PROCESS_SHOP_PAYMENT', entityName: 'ShopPayment', description: 'Processed merchant/shop payment' })
-  createShop(
+  @Post(['merchant', 'shop'])
+  @LogActivity({ action: 'PROCESS_MERCHANT_PAYMENT', entityName: 'MerchantPayment', description: 'Processed merchant payment' })
+  createMerchant(
     @Body()
     body: {
       merchantId: number;
@@ -88,49 +92,52 @@ export class PaymentsController {
       date: Date;
       reference?: string;
       note?: string;
-      orderIds?: number[];
+      parcelIds?: number[];
       telegramReport?: any;
     },
+    @Request() req: any,
   ) {
-    return this.paymentsService.createShopPayment(
+    return this.paymentsService.createMerchantPayment(
       body.merchantId,
       body.amount,
       body.amountKHR || 0,
       body.date,
       body.reference,
       body.note,
-      body.orderIds,
+      body.parcelIds,
       body.telegramReport,
+      req.user?.id,
     );
   }
 
   @UseGuards(JwtAuthGuard)
-  @Get('shop')
-  findAllShop() {
-    return this.paymentsService.findAllShopPayments();
+  @Get(['merchant', 'shop'])
+  findAllMerchant() {
+    return this.paymentsService.findAllMerchantPayments();
   }
 
   @UseGuards(JwtAuthGuard)
-  @Get('shop/merchant-stats/:merchantId')
+  @Get(['merchant/merchant-stats/:merchantId', 'shop/merchant-stats/:merchantId'])
   getMerchantStats(@Param('merchantId', ParseIntPipe) merchantId: number) {
     return this.paymentsService.getMerchantPaymentStats(merchantId);
   }
 
   @UseGuards(JwtAuthGuard)
-  @Delete('shop/:id')
-  @LogActivity({ action: 'DELETE_SHOP_PAYMENT', entityName: 'ShopPayment', description: 'Deleted merchant/shop payment' })
-  deleteShop(@Param('id', ParseIntPipe) id: number) {
-    return this.paymentsService.deleteShopPayment(id);
+  @Delete(['merchant/:id', 'shop/:id'])
+  @LogActivity({ action: 'DELETE_MERCHANT_PAYMENT', entityName: 'MerchantPayment', description: 'Deleted merchant payment' })
+  deleteMerchant(@Param('id', ParseIntPipe) id: number) {
+    return this.paymentsService.deleteMerchantPayment(id);
   }
 
   @UseGuards(JwtAuthGuard)
-  @Patch('shop/:id')
-  @LogActivity({ action: 'UPDATE_SHOP_PAYMENT', entityName: 'ShopPayment', description: 'Updated merchant/shop payment details' })
-  updateShop(
+  @Patch(['merchant/:id', 'shop/:id'])
+  @LogActivity({ action: 'UPDATE_MERCHANT_PAYMENT', entityName: 'MerchantPayment', description: 'Updated merchant payment details' })
+  updateMerchant(
     @Param('id', ParseIntPipe) id: number,
     @Body() body: { amount?: number; note?: string; date?: Date; reference?: string },
+    @Request() req: any,
   ) {
-    return this.paymentsService.updateShopPayment(id, body);
+    return this.paymentsService.updateMerchantPayment(id, body, req.user?.id);
   }
 
   // Public Invoice Report (Unauthenticated)

@@ -3,10 +3,10 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
-import { User } from '../../users/users.entity';
-import { Merchant } from '../../merchants/merchant.entity';
-import { RefreshToken } from '../../auth/refresh-token.entity';
-import { DeviceToken } from '../../auth/device-token.entity';
+import { User } from '../../users/entities/users.entity';
+import { Merchant } from '../../merchants/entities/merchant.entity';
+import { RefreshToken } from '../../auth/entities/refresh-token.entity';
+import { DeviceToken } from '../../auth/entities/device-token.entity';
 import { SaveDeviceTokenDto } from './dto/save-device-token.dto';
 
 @Injectable()
@@ -25,9 +25,10 @@ export class AuthService {
   async driverLogin(phoneOrEmail: string, password: string) {
     const user = await this.userRepo
       .createQueryBuilder('user')
+      .leftJoinAndSelect('user.roleRelation', 'roleRelation')
       .addSelect('user.password')
       .where('(user.email = :id OR user.phone = :id)', { id: phoneOrEmail })
-      .andWhere('user.role = :role', { role: 'driver' })
+      .andWhere('user.isDriver = true')
       .getOne();
 
     if (!user) throw new UnauthorizedException('Invalid driver credentials');
@@ -41,7 +42,7 @@ export class AuthService {
     }
 
     if (!isValid) throw new UnauthorizedException('Invalid credentials');
-    if (!user.active) throw new UnauthorizedException('Account is disabled');
+    if (!user.isActive) throw new UnauthorizedException('Account is disabled');
 
     const { password: _, ...userWithoutPassword } = user;
     const payload = { sub: user.id, email: user.email, role: 'driver' };

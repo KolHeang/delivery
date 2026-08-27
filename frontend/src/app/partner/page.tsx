@@ -449,7 +449,7 @@ export default function PartnerDashboardPage() {
                 </tr>
               </thead>
               <tbody>
-                {recentCommissions.map((c) => (
+                {recentCommissions.map((c: any) => (
                   <tr
                     key={c.id}
                     style={{

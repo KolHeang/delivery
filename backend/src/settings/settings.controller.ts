@@ -9,8 +9,6 @@ import { LogActivity } from '../activity-logs/activity.decorator';
 
 @ApiTags('Settings')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard, PermissionsGuard)
-@RequirePermissions('settings.manage')
 @Controller('settings')
 export class SettingsController {
   constructor(private readonly settingsService: SettingsService) {}
@@ -20,6 +18,8 @@ export class SettingsController {
     return this.settingsService.getOrganisation();
   }
 
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @RequirePermissions('settings.manage')
   @Post('organisation')
   @LogActivity({ action: 'UPDATE_ORGANISATION_SETTINGS', entityName: 'OrganisationSetting', description: 'Updated company/organisation settings' })
   updateOrganisation(@Body() body: any) {
@@ -31,6 +31,8 @@ export class SettingsController {
     return this.settingsService.getGeneralSettings();
   }
 
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @RequirePermissions('settings.manage')
   @Post('general')
   @LogActivity({ action: 'UPDATE_GENERAL_SETTING', entityName: 'GeneralSetting', description: 'Updated general application settings' })
   updateGeneral(@Body() body: { key: string; value: string }) {

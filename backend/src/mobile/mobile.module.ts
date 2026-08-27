@@ -3,13 +3,14 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 
-import { User } from '../users/users.entity';
-import { Merchant } from '../merchants/merchant.entity';
-import { Order } from '../orders/order.entity';
-import { OrderHistory } from '../orders/order-history.entity';
-import { PickupRequest } from '../orders/pickup-request.entity';
-import { RefreshToken } from '../auth/refresh-token.entity';
-import { DeviceToken } from '../auth/device-token.entity';
+import { User } from '../users/entities/users.entity';
+import { Merchant } from '../merchants/entities/merchant.entity';
+import { Parcel } from '../parcels/entities/parcel.entity';
+import { ParcelEvent } from '../parcels/entities/parcel-event.entity';
+import { PickupRequest } from '../parcels/entities/pickup-request.entity';
+import { DriverPayment } from '../payments/entities/driver-payment.entity';
+import { RefreshToken } from '../auth/entities/refresh-token.entity';
+import { DeviceToken } from '../auth/entities/device-token.entity';
 
 import { AuthController } from './auth/auth.controller';
 import { AuthService } from './auth/auth.service';
@@ -20,7 +21,16 @@ import { MerchantService } from './merchant/merchant.service';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User, Merchant, Order, OrderHistory, PickupRequest, RefreshToken, DeviceToken]),
+    TypeOrmModule.forFeature([
+      User,
+      Merchant,
+      Parcel,
+      ParcelEvent,
+      PickupRequest,
+      DriverPayment,
+      RefreshToken,
+      DeviceToken,
+    ]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: (config: ConfigService) => ({

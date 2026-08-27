@@ -2,8 +2,8 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { DataSource } from 'typeorm';
-import { User } from '../users/users.entity';
-import { Merchant } from '../merchants/merchant.entity';
+import { User } from '../users/entities/users.entity';
+import { Merchant } from '../merchants/entities/merchant.entity';
 
 interface JwtPayload {
   sub: number;
@@ -47,7 +47,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       },
     });
 
-    if (!user || !user.active) {
+    if (!user || !user.isActive) {
       throw new UnauthorizedException('User not found or inactive');
     }
     const permissions = user.roleRelation?.permissions?.map((p) => p.name) || [];

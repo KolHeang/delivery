@@ -1,9 +1,9 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
-import { Role } from './role.entity';
-import { Permission } from './permission.entity';
-import { User } from '../users/users.entity';
+import { Role } from './entities/role.entity';
+import { Permission } from './entities/permission.entity';
+import { User } from '../users/entities/users.entity';
 import { paginateRepo } from '../config/pagination';
 
 @Injectable()
@@ -138,10 +138,6 @@ export class RolesService {
     }
 
     user.roleId = role.id;
-    
-    // Crucial: Keep the string role column in sync with the role name for compatibility with existing queries.
-    user.role = role.name as any;
-
     return this.staffRepo.save(user);
   }
 }

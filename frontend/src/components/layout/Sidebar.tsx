@@ -40,7 +40,7 @@ export default function Sidebar() {
       items: [
         { href: '/delivery/entry_data_item', label: t('batchEntryData'), permission: 'orders.create' },
         { href: '/delivery', label: t('listOfDelivery') },
-        { href: '/delivery/list_print_qrcode', label: t('printInvoiceDelivery') },
+        { href: '/delivery/print_invoice', label: t('printInvoiceDelivery') },
         { href: '/delivery/pickup_requests', label: t('pickupRequests'), permission: 'orders.read' },
         // { href: '/delivery/assignpickup', label: t('processForPickup'), permission: 'orders.update' },
         { href: '/delivery/assigndeliveryby', label: t('processForAssign'), permission: 'orders.update' },
@@ -207,7 +207,7 @@ export default function Sidebar() {
           </span>
           <span style={{
             fontSize: 11,
-            color: activeSubdomain ? '#93c5fd' : 'rgba(255,255,255,0.5)',
+            color: activeSubdomain ? '#93c5fd' : 'rgba(255,255,255,0.65)',
             fontWeight: 600,
             marginTop: 2,
             letterSpacing: '0.2px',
@@ -215,7 +215,7 @@ export default function Sidebar() {
             textOverflow: 'ellipsis',
             overflow: 'hidden'
           }}>
-            {activeSubdomain ? `${activeSubdomain}.ebsexpress.com` : 'Delivery System'}
+            {activeSubdomain ? `${activeSubdomain}.ebsexpress.com` : (lang === 'km' ? 'ប្រព័ន្ធដឹកជញ្ជូន' : 'Delivery System')}
           </span>
         </div>
       </div>

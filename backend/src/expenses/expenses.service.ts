@@ -1,8 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Expense } from './expense.entity';
-import { ExpenseType } from './expense-type.entity';
+import { Expense } from './entities/expense.entity';
+import { ExpenseType } from './entities/expense-type.entity';
 import { paginateRepo } from '../config/pagination';
 
 @Injectable()
@@ -20,6 +20,13 @@ export class ExpensesService {
 
   async findTypes() {
     return this.typeRepo.find({ order: { name: 'ASC' } });
+  }
+
+  async updateType(id: number, attrs: Partial<ExpenseType>) {
+    const type = await this.typeRepo.findOne({ where: { id } });
+    if (!type) throw new NotFoundException('Expense type not found');
+    Object.assign(type, attrs);
+    return this.typeRepo.save(type);
   }
 
   async deleteType(id: number) {

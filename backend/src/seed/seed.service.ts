@@ -2,11 +2,15 @@ import { Injectable, OnApplicationBootstrap, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
 import * as bcrypt from 'bcrypt';
-import { User } from '../users/users.entity';
-import { ExpenseType } from '../expenses/expense-type.entity';
-import { IncomeType } from '../incomes/income-type.entity';
-import { Role } from '../roles/role.entity';
-import { Permission } from '../roles/permission.entity';
+import { User } from '../users/entities/users.entity';
+import { ExpenseType } from '../expenses/entities/expense-type.entity';
+import { IncomeType } from '../incomes/entities/income-type.entity';
+import { Role } from '../roles/entities/role.entity';
+import { Permission } from '../roles/entities/permission.entity';
+
+import { Parcel } from '../parcels/entities/parcel.entity';
+import { Merchant } from '../merchants/entities/merchant.entity';
+import { Zone } from '../zones/entities/zone.entity';
 
 @Injectable()
 export class SeedService implements OnApplicationBootstrap {
@@ -31,11 +35,11 @@ export class SeedService implements OnApplicationBootstrap {
 
   private async seedRolesAndPermissions() {
     const perms = [
-      // Orders
-      { name: 'orders.create', description: 'Create dynamic orders' },
-      { name: 'orders.read', description: 'View orders' },
-      { name: 'orders.update', description: 'Update orders' },
-      { name: 'orders.delete', description: 'Delete orders' },
+      // Parcels
+      { name: 'parcels.create', description: 'Create dynamic parcels' },
+      { name: 'parcels.read', description: 'View parcels' },
+      { name: 'parcels.update', description: 'Update parcels' },
+      { name: 'parcels.delete', description: 'Delete parcels' },
 
       // Users
       { name: 'users.create', description: 'Create users' },
@@ -165,34 +169,69 @@ export class SeedService implements OnApplicationBootstrap {
   }
 
   private async seedUsers() {
-    const count = await this.userRepo.count({
-      where: { role: In(['admin', 'staff']) },
-    });
-    if (count > 0) return;
-
     const adminRole = await this.roleRepo.findOne({ where: { name: 'admin' } });
     const staffRole = await this.roleRepo.findOne({ where: { name: 'staff' } });
+    const driverRole = await this.roleRepo.findOne({ where: { name: 'driver' } });
 
-    const users = [
+    const usersToSeed = [
       {
-        name: 'Admin User',
+        name: 'Admin',
         email: 'admin@gmail.com',
         password: await bcrypt.hash('123456', 10),
-        role: 'admin' as const,
         roleId: adminRole?.id,
         phone: '012-000-001',
+        isActive: true,
+        isStaff: true,
+        isDriver: false,
       },
       {
         name: 'UserMember',
         email: 'staff@gmail.com',
         password: await bcrypt.hash('123456', 10),
-        role: 'staff' as const,
         roleId: staffRole?.id,
         phone: '012-000-002',
+        isActive: true,
+        isStaff: true,
+        isDriver: false,
+      },
+      {
+        name: 'Sok Dara',
+        nameKh: 'សុខ តារា',
+        email: 'sokdara@gmail.com',
+        password: await bcrypt.hash('123456', 10),
+        roleId: driverRole?.id,
+        phone: '012-345-678',
+        isActive: true,
+        isStaff: false,
+        isDriver: true,
+      },
+      {
+        name: 'Driver Test',
+        nameKh: 'អ្នកបើកបរ សាកល្បង',
+        email: 'driver@gmail.com',
+        password: await bcrypt.hash('123456', 10),
+        roleId: driverRole?.id,
+        phone: '012-000-003',
+        isActive: true,
+        isStaff: false,
+        isDriver: true,
       },
     ];
-    await this.userRepo.save(this.userRepo.create(users));
-    this.logger.log('✅ Users seeded');
+
+    for (const u of usersToSeed) {
+      const existing = await this.userRepo.findOne({ where: { email: u.email } });
+      if (!existing) {
+        await this.userRepo.save(this.userRepo.create(u as any));
+        this.logger.log(`✅ Seeded user: ${u.email}`);
+      } else if (existing.roleId !== u.roleId || !existing.isActive) {
+        if (u.roleId !== undefined) existing.roleId = u.roleId;
+        existing.isActive = true;
+        existing.isStaff = u.isStaff;
+        existing.isDriver = u.isDriver;
+        existing.password = u.password;
+        await this.userRepo.save(existing);
+      }
+    }
   }
 
 

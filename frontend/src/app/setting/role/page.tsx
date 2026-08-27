@@ -115,80 +115,86 @@ export default function RolesListPage() {
                 <MdAdd size={14} /> {t('addRole')}
               </button>
             </div>
-
-            {roles.length === 0 ? (
-              <div className="empty-state">
-                <div className="empty-state-icon">🛡️</div>
-                <div className="empty-state-title">{t('noRolesFound')}</div>
-              </div>
-            ) : (
-              <>
-                <div style={{ overflowX: 'auto' }}>
-                  <table>
-                    <thead>
-                      <tr>
-                        <th style={{ width: '50px' }}>#</th>
-                        <th style={{ width: '150px' }}>{t('roleName')}</th>
-                        <th>{t('roleDescription')}</th>
-                        <th style={{ width: '180px' }}>{t('permissionsCount')}</th>
-                        <th style={{ width: '120px' }}>{t('actions')}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {roles.map((d: Role, idx) => {
-                        const isSystemRole = ['admin', 'staff', 'driver'].includes(d.name);
-                        return (
-                          <tr key={d.id}>
-                            <td style={{ color: 'var(--text-muted)', fontSize: 12 }}>{(currentPage - 1) * pageSize + idx + 1}</td>
-                            <td>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                <MdSecurity size={16} style={{ color: 'var(--accent)' }} />
-                                <span style={{ fontWeight: 700, textTransform: 'uppercase', fontSize: 13.5 }}>
-                                  {d.name}
+            <div style={{ overflowX: 'auto' }}>
+              <table>
+                <thead>
+                  <tr>
+                    <th style={{ width: '50px' }}>{t('colNo')}</th>
+                    <th style={{ width: '150px' }}>{t('roleName')}</th>
+                    <th>{t('roleDescription')}</th>
+                    <th style={{ width: '180px' }}>{t('permissionsCount')}</th>
+                    <th style={{ width: '120px' }}>{t('actions')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {loading ? (
+                    <tr>
+                      <td colSpan={5} style={{ padding: '40px 0', textAlign: 'center' }}>
+                        <div className="loading-wrapper"><div className="spinner" /></div>
+                      </td>
+                    </tr>
+                  ) : roles.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} style={{ padding: '36px 20px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
+                        {t('noDataFound') || 'គ្មានទិន្នន័យ'}
+                      </td>
+                    </tr>
+                  ) : (
+                    roles.map((d: Role, idx) => {
+                      const isSystemRole = ['admin', 'staff', 'driver'].includes(d.name);
+                      return (
+                        <tr key={d.id}>
+                          <td style={{ color: 'var(--text-muted)', fontSize: 12 }}>{(currentPage - 1) * pageSize + idx + 1}</td>
+                          <td>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                              <MdSecurity size={16} style={{ color: 'var(--accent)' }} />
+                              <span style={{ fontWeight: 700, textTransform: 'uppercase', fontSize: 13.5 }}>
+                                {d.name}
+                              </span>
+                              {isSystemRole && (
+                                <span style={{ fontSize: '9px', background: 'rgba(59,130,246,0.12)', color: 'var(--accent)', padding: '1px 5px', borderRadius: 4, fontWeight: 600 }}>
+                                  System
                                 </span>
-                                {isSystemRole && (
-                                  <span style={{ fontSize: '9px', background: 'rgba(59,130,246,0.12)', color: 'var(--accent)', padding: '1px 5px', borderRadius: 4, fontWeight: 600 }}>
-                                    System
-                                  </span>
-                                )}
-                              </div>
-                            </td>
-                            <td style={{ fontSize: 12.5, color: 'var(--text-muted)' }}>
-                              {d.description || '—'}
-                            </td>
-                            <td style={{ fontSize: 13, fontWeight: 600, color: d.permissions.length > 0 ? 'var(--accent)' : 'var(--text-muted)' }}>
-                              {d.permissions.length} {t('permissionsLabel').toLowerCase()}
-                            </td>
-                            <td>
-                              <div style={{ display: 'flex', gap: 4 }}>
-                                <button className="btn btn-ghost btn-icon btn-sm" onClick={() => openEdit(d.id)}>
-                                  <MdEdit size={15} />
+                              )}
+                            </div>
+                          </td>
+                          <td style={{ fontSize: 12.5, color: 'var(--text-muted)' }}>
+                            {d.description || '—'}
+                          </td>
+                          <td style={{ fontSize: 13, fontWeight: 600, color: d.permissions.length > 0 ? 'var(--accent)' : 'var(--text-muted)' }}>
+                            {d.permissions.length} {t('permissionsLabel').toLowerCase()}
+                          </td>
+                          <td>
+                            <div style={{ display: 'flex', gap: 6 }}>
+                              <button className="btn btn-ghost btn-icon btn-sm" onClick={() => openEdit(d.id)}>
+                                <MdEdit size={15} />
+                              </button>
+                              {!isSystemRole && (
+                                <button
+                                  className="btn btn-ghost btn-icon btn-sm"
+                                  style={{ color: 'var(--danger)' }}
+                                  onClick={() => handleDelete(d)}
+                                >
+                                  <MdDelete size={15} />
                                 </button>
-                                {!isSystemRole && (
-                                  <button
-                                    className="btn btn-ghost btn-icon btn-sm"
-                                    style={{ color: 'var(--danger)' }}
-                                    onClick={() => handleDelete(d)}
-                                  >
-                                    <MdDelete size={15} />
-                                  </button>
-                                )}
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-                <Pagination
-                  currentPage={currentPage}
-                  totalItems={totalItems}
-                  pageSize={pageSize}
-                  onPageChange={setCurrentPage}
-                  onPageSizeChange={setPageSize}
-                />
-              </>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+            {roles.length > 0 && (
+              <Pagination
+                currentPage={currentPage}
+                totalItems={totalItems}
+                pageSize={pageSize}
+                onPageChange={setCurrentPage}
+                onPageSizeChange={setPageSize}
+              />
             )}
           </div>
         </div>

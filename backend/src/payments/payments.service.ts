@@ -1,54 +1,56 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { StaffPayment } from './staff-payment.entity';
-import { ShopPayment } from './shop-payment.entity';
-import { User } from '../users/users.entity';
-import { Merchant } from '../merchants/merchant.entity';
-import { Order } from '../orders/order.entity';
-import { Organisation } from '../settings/organisation.entity';
+import { DriverPayment } from './entities/driver-payment.entity';
+import { MerchantPayment } from './entities/merchant-payment.entity';
+import { User } from '../users/entities/users.entity';
+import { Merchant } from '../merchants/entities/merchant.entity';
+import { Parcel } from '../parcels/entities/parcel.entity';
+import { Organisation } from '../settings/entities/organisation.entity';
 
 @Injectable()
 export class PaymentsService {
   constructor(
-    @InjectRepository(StaffPayment) private staffRepo: Repository<StaffPayment>,
-    @InjectRepository(ShopPayment) private shopRepo: Repository<ShopPayment>,
-    @InjectRepository(User) private driverRepo: Repository<User>,
+    @InjectRepository(DriverPayment) private driverPaymentRepo: Repository<DriverPayment>,
+    @InjectRepository(MerchantPayment) private merchantPaymentRepo: Repository<MerchantPayment>,
+    @InjectRepository(User) private userRepo: Repository<User>,
     @InjectRepository(Merchant) private merchantRepo: Repository<Merchant>,
-    @InjectRepository(Order) private orderRepo: Repository<Order>,
+    @InjectRepository(Parcel) private parcelRepo: Repository<Parcel>,
     @InjectRepository(Organisation) private orgRepo: Repository<Organisation>,
   ) { }
 
-  // UserPayments
-  async createStaffPayment(
+  // Driver Payments
+  async createDriverPayment(
     driverId: number,
     amount: number,
     date: Date,
     reference?: string,
     note?: string,
-    orderIds?: number[],
+    parcelIds?: number[],
+    userId?: number,
   ) {
-    const driver = await this.driverRepo.findOne({
-      where: { id: driverId, role: 'driver' },
+    const driver = await this.userRepo.findOne({
+      where: { id: driverId },
     });
     if (!driver) throw new NotFoundException('Driver not found');
 
-    const payment = this.staffRepo.create({
+    const payment = this.driverPaymentRepo.create({
       driverId,
       amount,
       date,
       reference,
       note,
-      orderIds,
+      parcelIds,
+      createdById: userId,
     });
-    const saved = await this.staffRepo.save(payment);
+    const saved = await this.driverPaymentRepo.save(payment);
 
-    if (orderIds && orderIds.length > 0) {
-      await this.orderRepo
+    if (parcelIds && parcelIds.length > 0) {
+      await this.parcelRepo
         .createQueryBuilder()
-        .update(Order)
+        .update(Parcel)
         .set({ driverPaymentStatus: 'paid' })
-        .whereInIds(orderIds)
+        .whereInIds(parcelIds)
         .andWhere('driverId = :driverId', { driverId })
         .execute();
     }
@@ -56,22 +58,38 @@ export class PaymentsService {
     return saved;
   }
 
-  async findAllStaffPayments() {
-    return this.staffRepo.find({
-      relations: { driver: true },
+  async createStaffPayment(
+    driverId: number,
+    amount: number,
+    date: Date,
+    reference?: string,
+    note?: string,
+    parcelIds?: number[],
+    userId?: number,
+  ) {
+    return this.createDriverPayment(driverId, amount, date, reference, note, parcelIds, userId);
+  }
+
+  async findAllDriverPayments() {
+    return this.driverPaymentRepo.find({
+      relations: { driver: true, creator: true, updater: true },
       order: { date: 'DESC', createdAt: 'DESC' },
     });
   }
 
-  // Shop Payments
-  async createShopPayment(
+  async findAllStaffPayments() {
+    return this.findAllDriverPayments();
+  }
+
+  // Merchant Payments
+  async createMerchantPayment(
     merchantId: number,
     amount: number,
     amountKHR: number,
     date: Date,
     reference?: string,
     note?: string,
-    orderIds?: number[],
+    parcelIds?: number[],
     telegramReport?: {
       totalCount: number;
       newCount: number;
@@ -88,33 +106,35 @@ export class PaymentsService {
       payableKHR: number;
       detailUrl?: string;
     },
+    userId?: number,
   ) {
     const merchant = await this.merchantRepo.findOne({
       where: { id: merchantId },
     });
     if (!merchant) throw new NotFoundException('Merchant not found');
 
-    const payment = this.shopRepo.create({
+    const payment = this.merchantPaymentRepo.create({
       merchantId,
       amount,
       amountKHR,
       date,
       reference,
       note,
-      orderIds,
+      parcelIds,
+      createdById: userId,
     });
-    const saved = await this.shopRepo.save(payment);
+    const saved = await this.merchantPaymentRepo.save(payment);
 
     // Update merchant balance (deduct payout amount)
     merchant.balance = parseFloat(merchant.balance as any) - amount;
     await this.merchantRepo.save(merchant);
 
-    if (orderIds && orderIds.length > 0) {
-      await this.orderRepo
+    if (parcelIds && parcelIds.length > 0) {
+      await this.parcelRepo
         .createQueryBuilder()
-        .update(Order)
+        .update(Parcel)
         .set({ merchantPaymentStatus: 'paid' })
-        .whereInIds(orderIds)
+        .whereInIds(parcelIds)
         .andWhere('merchantId = :merchantId', { merchantId })
         .execute();
     }
@@ -151,47 +171,75 @@ export class PaymentsService {
     return saved;
   }
 
-  async findAllShopPayments() {
-    return this.shopRepo.find({
-      relations: { merchant: true },
+  async createShopPayment(
+    merchantId: number,
+    amount: number,
+    amountKHR: number,
+    date: Date,
+    reference?: string,
+    note?: string,
+    parcelIds?: number[],
+    telegramReport?: any,
+    userId?: number,
+  ) {
+    return this.createMerchantPayment(
+      merchantId,
+      amount,
+      amountKHR,
+      date,
+      reference,
+      note,
+      parcelIds,
+      telegramReport,
+      userId,
+    );
+  }
+
+  async findAllMerchantPayments() {
+    return this.merchantPaymentRepo.find({
+      relations: { merchant: true, creator: true, updater: true },
       order: { date: 'DESC', createdAt: 'DESC' },
     });
   }
 
+  async findAllShopPayments() {
+    return this.findAllMerchantPayments();
+  }
+
   async getDriverPaymentStats(driverId: number) {
-    const driver = await this.driverRepo.findOne({
-      where: { id: driverId, role: 'driver' },
+    const driver = await this.userRepo.findOne({
+      where: { id: driverId },
     });
     if (!driver) throw new NotFoundException('Driver not found');
 
     // Total COD USD collected from delivered orders
-    const codUsdResult = await this.orderRepo
-      .createQueryBuilder('order')
-      .select('SUM(order.cod)', 'total')
-      .where('order.driverId = :driverId', { driverId })
-      .andWhere("order.status = 'delivered'")
-      .andWhere("order.codCurrency = 'USD'")
+    const codUsdResult = await this.parcelRepo
+      .createQueryBuilder('parcel')
+      .select('SUM(parcel.cod)', 'total')
+      .where('parcel.driverId = :driverId', { driverId })
+      .andWhere("parcel.status = 'delivered'")
+      .andWhere("parcel.codCurrency = 'USD'")
       .getRawOne();
 
     // Total COD KHR collected from delivered orders
-    const codKhrResult = await this.orderRepo
-      .createQueryBuilder('order')
-      .select('SUM(order.cod)', 'total')
-      .where('order.driverId = :driverId', { driverId })
-      .andWhere("order.status = 'delivered'")
-      .andWhere("order.codCurrency = 'KHR'")
+    const codKhrResult = await this.parcelRepo
+      .createQueryBuilder('parcel')
+      .select('SUM(parcel.cod)', 'total')
+      .where('parcel.driverId = :driverId', { driverId })
+      .andWhere("parcel.status = 'delivered'")
+      .andWhere("parcel.codCurrency = 'KHR'")
       .getRawOne();
 
     // Total completed delivery fees
-    const deliveryFeeResult = await this.orderRepo
-      .createQueryBuilder('order')
-      .select('SUM(order.deliveryFee)', 'total')
-      .where('order.driverId = :driverId', { driverId })
-      .andWhere("order.status = 'delivered'")
+    const deliveryFeeResult = await this.parcelRepo
+      .createQueryBuilder('parcel')
+      .select('SUM(parcel.deliveryFee)', 'total')
+      .where('parcel.driverId = :driverId', { driverId })
+      .andWhere("parcel.status = 'delivered'")
       .getRawOne();
 
-    // Total payments settled to staff
-    const settledResult = await this.staffRepo
+    // Total payments settled to driver
+    const settledResult = await this.driverPaymentRepo
       .createQueryBuilder('payment')
       .select('SUM(payment.amount)', 'total')
       .where('payment.driverId = :driverId', { driverId })
@@ -214,33 +262,33 @@ export class PaymentsService {
     if (!merchant) throw new NotFoundException('Merchant not found');
 
     // Total COD USD collected for them from delivered orders
-    const codUsdResult = await this.orderRepo
-      .createQueryBuilder('order')
-      .select('SUM(order.cod)', 'total')
-      .where('order.merchantId = :merchantId', { merchantId })
-      .andWhere("order.status = 'delivered'")
-      .andWhere("order.codCurrency = 'USD'")
+    const codUsdResult = await this.parcelRepo
+      .createQueryBuilder('parcel')
+      .select('SUM(parcel.cod)', 'total')
+      .where('parcel.merchantId = :merchantId', { merchantId })
+      .andWhere("parcel.status = 'delivered'")
+      .andWhere("parcel.codCurrency = 'USD'")
       .getRawOne();
 
     // Total COD KHR collected for them from delivered orders
-    const codKhrResult = await this.orderRepo
-      .createQueryBuilder('order')
-      .select('SUM(order.cod)', 'total')
-      .where('order.merchantId = :merchantId', { merchantId })
-      .andWhere("order.status = 'delivered'")
-      .andWhere("order.codCurrency = 'KHR'")
+    const codKhrResult = await this.parcelRepo
+      .createQueryBuilder('parcel')
+      .select('SUM(parcel.cod)', 'total')
+      .where('parcel.merchantId = :merchantId', { merchantId })
+      .andWhere("parcel.status = 'delivered'")
+      .andWhere("parcel.codCurrency = 'KHR'")
       .getRawOne();
 
     // Total completed delivery fees
-    const deliveryFeeResult = await this.orderRepo
-      .createQueryBuilder('order')
-      .select('SUM(order.deliveryFee)', 'total')
-      .where('order.merchantId = :merchantId', { merchantId })
-      .andWhere("order.status = 'delivered'")
+    const deliveryFeeResult = await this.parcelRepo
+      .createQueryBuilder('parcel')
+      .select('SUM(parcel.deliveryFee)', 'total')
+      .where('parcel.merchantId = :merchantId', { merchantId })
+      .andWhere("parcel.status = 'delivered'")
       .getRawOne();
 
     // Total payouts/settlements recorded
-    const settledResult = await this.shopRepo
+    const settledResult = await this.merchantPaymentRepo
       .createQueryBuilder('payment')
       .select('SUM(payment.amount)', 'total')
       .where('payment.merchantId = :merchantId', { merchantId })
@@ -294,41 +342,56 @@ export class PaymentsService {
     }
   }
 
-  async deleteStaffPayment(id: number) {
-    const payment = await this.staffRepo.findOne({ where: { id } });
+  async deleteDriverPayment(id: number) {
+    const payment = await this.driverPaymentRepo.findOne({ where: { id } });
     if (!payment) throw new NotFoundException('Payment record not found');
 
-    if (payment.orderIds && payment.orderIds.length > 0) {
-      await this.orderRepo
+    const ids = payment.parcelIds;
+    if (ids && ids.length > 0) {
+      await this.parcelRepo
         .createQueryBuilder()
-        .update(Order)
+        .update(Parcel)
         .set({ driverPaymentStatus: 'unpaid' })
-        .whereInIds(payment.orderIds)
+        .whereInIds(ids)
         .andWhere('driverId = :driverId', { driverId: payment.driverId })
         .execute();
     }
 
-    await this.staffRepo.remove(payment);
+    await this.driverPaymentRepo.remove(payment);
     return { success: true };
   }
 
-  async updateStaffPayment(
+  async deleteStaffPayment(id: number) {
+    return this.deleteDriverPayment(id);
+  }
+
+  async updateDriverPayment(
     id: number,
     body: { amount?: number; note?: string; date?: Date; reference?: string },
+    userId?: number,
   ) {
-    const payment = await this.staffRepo.findOne({ where: { id } });
+    const payment = await this.driverPaymentRepo.findOne({ where: { id } });
     if (!payment) throw new NotFoundException('Payment record not found');
 
     if (body.amount !== undefined) payment.amount = parseFloat(body.amount as any);
     if (body.note !== undefined) payment.note = body.note;
     if (body.date !== undefined) payment.date = body.date;
     if (body.reference !== undefined) payment.reference = body.reference;
+    if (userId) payment.updatedById = userId;
 
-    return this.staffRepo.save(payment);
+    return this.driverPaymentRepo.save(payment);
   }
 
-  async deleteShopPayment(id: number) {
-    const payment = await this.shopRepo.findOne({ where: { id } });
+  async updateStaffPayment(
+    id: number,
+    body: { amount?: number; note?: string; date?: Date; reference?: string },
+    userId?: number,
+  ) {
+    return this.updateDriverPayment(id, body, userId);
+  }
+
+  async deleteMerchantPayment(id: number) {
+    const payment = await this.merchantPaymentRepo.findOne({ where: { id } });
     if (!payment) throw new NotFoundException('Payment record not found');
 
     const merchant = await this.merchantRepo.findOne({ where: { id: payment.merchantId } });
@@ -337,25 +400,31 @@ export class PaymentsService {
       await this.merchantRepo.save(merchant);
     }
 
-    if (payment.orderIds && payment.orderIds.length > 0) {
-      await this.orderRepo
+    const ids = payment.parcelIds;
+    if (ids && ids.length > 0) {
+      await this.parcelRepo
         .createQueryBuilder()
-        .update(Order)
+        .update(Parcel)
         .set({ merchantPaymentStatus: 'unpaid' })
-        .whereInIds(payment.orderIds)
+        .whereInIds(ids)
         .andWhere('merchantId = :merchantId', { merchantId: payment.merchantId })
         .execute();
     }
 
-    await this.shopRepo.remove(payment);
+    await this.merchantPaymentRepo.remove(payment);
     return { success: true };
   }
 
-  async updateShopPayment(
+  async deleteShopPayment(id: number) {
+    return this.deleteMerchantPayment(id);
+  }
+
+  async updateMerchantPayment(
     id: number,
     body: { amount?: number; note?: string; date?: Date; reference?: string },
+    userId?: number,
   ) {
-    const payment = await this.shopRepo.findOne({ where: { id } });
+    const payment = await this.merchantPaymentRepo.findOne({ where: { id } });
     if (!payment) throw new NotFoundException('Payment record not found');
 
     if (body.amount !== undefined) {
@@ -374,24 +443,34 @@ export class PaymentsService {
     if (body.note !== undefined) payment.note = body.note;
     if (body.date !== undefined) payment.date = body.date;
     if (body.reference !== undefined) payment.reference = body.reference;
+    if (userId) payment.updatedById = userId;
 
-    return this.shopRepo.save(payment);
+    return this.merchantPaymentRepo.save(payment);
+  }
+
+  async updateShopPayment(
+    id: number,
+    body: { amount?: number; note?: string; date?: Date; reference?: string },
+    userId?: number,
+  ) {
+    return this.updateMerchantPayment(id, body, userId);
   }
 
   async getPublicInvoice(merchantId: number, reference: string) {
-    const payment = await this.shopRepo.findOne({
+    const payment = await this.merchantPaymentRepo.findOne({
       where: { merchantId, reference },
       relations: { merchant: true },
     });
     if (!payment) throw new NotFoundException('Payment settlement not found');
 
-    let orders: any[] = [];
-    if (payment.orderIds && payment.orderIds.length > 0) {
-      orders = await this.orderRepo.createQueryBuilder('order')
-        .whereInIds(payment.orderIds)
-        .leftJoinAndSelect('order.merchant', 'merchant')
-        .leftJoinAndSelect('order.driver', 'driver')
-        .leftJoinAndSelect('order.histories', 'histories')
+    let parcels: any[] = [];
+    const ids = payment.parcelIds;
+    if (ids && ids.length > 0) {
+      parcels = await this.parcelRepo.createQueryBuilder('parcel')
+        .whereInIds(ids)
+        .leftJoinAndSelect('parcel.merchant', 'merchant')
+        .leftJoinAndSelect('parcel.driver', 'driver')
+        .leftJoinAndSelect('parcel.events', 'events')
         .getMany();
     }
 
@@ -406,7 +485,7 @@ export class PaymentsService {
 
     return {
       payment,
-      orders,
+      parcels,
       orgInfo,
     };
   }

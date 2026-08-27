@@ -1,6 +1,7 @@
 import {
   IsEmail,
   IsEnum,
+  IsIn,
   IsNotEmpty,
   IsOptional,
   IsString,
@@ -30,10 +31,16 @@ export class CreateUserDto {
   @MinLength(6)
   password?: string;
 
-  @ApiProperty({ enum: ['admin', 'staff', 'driver'], default: 'staff' })
-  @IsEnum(['admin', 'staff', 'driver'])
+  @ApiProperty({ required: false })
   @IsOptional()
-  role?: 'admin' | 'staff' | 'driver';
+  @IsNumber()
+  @Type(() => Number)
+  roleId?: number;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  role?: string;
 
   @ApiProperty({ required: false })
   @IsOptional()
@@ -50,7 +57,8 @@ export class CreateUserDto {
     required: false,
   })
   @IsOptional()
-  @IsEnum(['available', 'on-delivery', 'offline'])
+  @Transform(({ value }) => value || undefined)
+  @IsIn(['available', 'on-delivery', 'offline'])
   status?: string;
 
   @ApiProperty({ required: false })
@@ -98,6 +106,38 @@ export class CreateUserDto {
     return value;
   })
   @IsBoolean()
+  isActive?: boolean;
+
+  @ApiProperty({ required: false, default: true })
+  @IsOptional()
+  @Transform(({ value }) => {
+    if (value === 'true') return true;
+    if (value === 'false') return false;
+    return value;
+  })
+  @IsBoolean()
+  active?: boolean;
+
+  @ApiProperty({ required: false, default: false })
+  @IsOptional()
+  @Transform(({ value }) => {
+    if (value === 'true') return true;
+    if (value === 'false') return false;
+    return value;
+  })
+  @IsBoolean()
+  isStaff?: boolean;
+
+  @ApiProperty({ required: false, default: false })
+  @IsOptional()
+  @Transform(({ value }) => {
+    if (value === 'true') return true;
+    if (value === 'false') return false;
+    return value;
+  })
+  @IsBoolean()
+  isDriver?: boolean;
+
   @ApiProperty({ required: false })
   @IsOptional()
   @IsNumber()
@@ -114,10 +154,17 @@ export class UpdateUserDto {
   @IsOptional() @IsString() name?: string;
   @IsOptional() @IsEmail() email?: string;
   @IsOptional() @MinLength(6) password?: string;
-  @IsOptional() @IsEnum(['admin', 'staff', 'driver']) role?:
-    | 'admin'
-    | 'staff'
-    | 'driver';
+  @IsOptional() @IsNumber() @Type(() => Number) roleId?: number;
+  @IsOptional() @IsString() role?: string;
+  @IsOptional()
+  @Transform(({ value }) => {
+    if (value === 'true') return true;
+    if (value === 'false') return false;
+    return value;
+  })
+  @IsBoolean()
+  isActive?: boolean;
+
   @IsOptional()
   @Transform(({ value }) => {
     if (value === 'true') return true;
@@ -126,11 +173,27 @@ export class UpdateUserDto {
   })
   @IsBoolean()
   active?: boolean;
+
+  @IsOptional()
+  @Transform(({ value }) => {
+    if (value === 'true') return true;
+    if (value === 'false') return false;
+    return value;
+  })
+  @IsBoolean()
+  isStaff?: boolean;
+
+  @IsOptional()
+  @Transform(({ value }) => {
+    if (value === 'true') return true;
+    if (value === 'false') return false;
+    return value;
+  })
+  @IsBoolean()
+  isDriver?: boolean;
+
   @IsOptional() @IsString() nameKh?: string;
   @IsOptional() @IsString() phone?: string;
-  @IsOptional()
-  @IsEnum(['available', 'on-delivery', 'offline'])
-  status?: string;
   @IsOptional() @IsNumber() @Min(0) @Max(5) @Type(() => Number) rating?: number;
   @IsOptional() @IsNumber() @Type(() => Number) zoneId?: number;
   @IsOptional() @IsNumber() @Type(() => Number) vehicleId?: number;

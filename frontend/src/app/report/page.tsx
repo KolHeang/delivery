@@ -81,193 +81,238 @@ export default function ReportPage() {
         <Topbar title={t('report')} subtitle={lang === 'km' ? 'ជ្រើសរើសរបាយការណ៍' : 'Select a report to view'} />
         <div className="page-content">
 
+          <style>{`
+            .reports-grid-4 {
+              display: grid;
+              grid-template-columns: repeat(4, 1fr);
+              gap: 16px;
+            }
+            .reports-grid-3 {
+              display: grid;
+              grid-template-columns: repeat(3, 1fr);
+              gap: 16px;
+            }
+            @media (max-width: 1300px) {
+              .reports-grid-4 {
+                grid-template-columns: repeat(2, 1fr);
+              }
+              .reports-grid-3 {
+                grid-template-columns: repeat(2, 1fr);
+              }
+            }
+            @media (max-width: 768px) {
+              .reports-grid-4, .reports-grid-3 {
+                grid-template-columns: 1fr;
+              }
+            }
+            .report-card {
+              background: var(--bg-card, #ffffff);
+              border: 1.5px solid #e2e8f0;
+              border-radius: 16px;
+              padding: 20px;
+              cursor: pointer;
+              text-align: left;
+              transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+              display: flex;
+              align-items: flex-start;
+              gap: 16px;
+              box-shadow: 0 2px 4px rgba(0,0,0,0.03);
+              position: relative;
+              overflow: hidden;
+            }
+            .report-card:hover {
+              transform: translateY(-3px);
+              box-shadow: 0 12px 28px -6px rgba(0,0,0,0.08);
+            }
+            .report-card:hover .report-card-icon {
+              transform: scale(1.08);
+            }
+            .report-card:hover .report-card-arrow {
+              transform: translateX(3px);
+            }
+          `}</style>
+
           {/* ── Operation Reports ── */}
           <div style={{ marginBottom: 36 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18 }}>
-              <div style={{
-                width: 36, height: 36, borderRadius: 10,
-                background: 'linear-gradient(135deg,#3b82f6,#6366f1)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                flexShrink: 0, overflow: 'hidden',
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18, flexWrap: 'wrap', gap: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{
+                  width: 40, height: 40, borderRadius: 12,
+                  background: 'linear-gradient(135deg, #3b82f6, #6366f1)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  flexShrink: 0, overflow: 'hidden',
+                  boxShadow: '0 4px 12px rgba(59, 130, 246, 0.25)',
+                }}>
+                  <img src="/3d/3d_barchart.png" alt="" style={{ width: '70%', height: '70%', objectFit: 'contain' }} />
+                </div>
+                <div>
+                  <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: 'var(--text-primary)' }}>
+                    {t('operationReportTitle')}
+                  </h2>
+                  <p style={{ margin: 0, fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
+                    {t('operationReportSubtitle')}
+                  </p>
+                </div>
+              </div>
+              <span style={{
+                fontSize: 12, fontWeight: 600, color: '#3b82f6',
+                background: '#eff6ff', border: '1px solid #bfdbfe',
+                padding: '4px 12px', borderRadius: 20,
               }}>
-                <img src="/3d/3d_barchart.png" alt="" style={{ width: '70%', height: '70%', objectFit: 'contain' }} />
-              </div>
-              <div>
-                <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: 'var(--text-primary)' }}>
-                  {t('operationReportTitle')}
-                </h2>
-                <p style={{ margin: 0, fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
-                  {t('operationReportSubtitle')}
-                </p>
-              </div>
+                {OPERATION_REPORTS.length} {lang === 'km' ? 'របាយការណ៍' : 'Reports'}
+              </span>
             </div>
 
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
-              gap: 16,
-            }}>
+            <div className="reports-grid-4">
               {OPERATION_REPORTS.map((r) => (
                 <button
                   key={r.key}
                   onClick={() => router.push(`/report/operation/${r.key}`)}
-                  style={{
-                    background: 'var(--bg-card)',
-                    border: '1px solid var(--border)',
-                    borderRadius: 14,
-                    padding: '20px 20px',
-                    cursor: 'pointer',
-                    textAlign: 'left',
-                    transition: 'all 0.18s ease',
-                    display: 'flex',
-                    alignItems: 'flex-start',
-                    gap: 14,
-                    boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
-                  }}
+                  className="report-card"
                   onMouseEnter={e => {
-                    (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(-2px)';
-                    (e.currentTarget as HTMLButtonElement).style.boxShadow = `0 8px 24px ${r.color}22`;
                     (e.currentTarget as HTMLButtonElement).style.borderColor = r.color;
                   }}
                   onMouseLeave={e => {
-                    (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(0)';
-                    (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 1px 3px rgba(0,0,0,0.06)';
-                    (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border)';
+                    (e.currentTarget as HTMLButtonElement).style.borderColor = '#e2e8f0';
                   }}
                 >
                   {/* Icon */}
                   <div style={{
-                    width: 46, height: 46, borderRadius: 12,
+                    width: 48, height: 48, borderRadius: 12,
                     background: r.bg,
+                    border: `1px solid ${r.color}25`,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     flexShrink: 0, overflow: 'hidden',
-                  }}>
-                    <img src={r.icon} alt="" style={{ width: '75%', height: '75%', objectFit: 'contain' }} />
+                    transition: 'transform 0.2s ease',
+                  }} className="report-card-icon">
+                    <img src={r.icon} alt="" style={{ width: '72%', height: '72%', objectFit: 'contain' }} />
                   </div>
 
                   {/* Text */}
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{
-                      fontSize: 10, fontWeight: 700, color: r.color,
-                      textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 4,
-                    }}>
-                      Report {r.key}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                      <span style={{
+                        fontSize: 10.5, fontWeight: 700, color: r.color,
+                        background: r.bg, border: `1px solid ${r.color}35`,
+                        padding: '1px 7px', borderRadius: 6,
+                        textTransform: 'uppercase', letterSpacing: '0.5px',
+                      }}>
+                        Report {r.key}
+                      </span>
                     </div>
                     <div style={{
-                      fontSize: 13.5, fontWeight: 700,
-                      color: 'var(--text-primary)', lineHeight: 1.35,
-                      marginBottom: 5,
+                      fontSize: 14, fontWeight: 700,
+                      color: 'var(--text-primary)', lineHeight: 1.45,
+                      marginBottom: 4,
                     }}>
                       {t(r.titleKey as any).replace(`${r.key}-`, '').replace(`${r.key}-`, '')}
                     </div>
-                    <div style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.4 }}>
+                    <div style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.45 }}>
                       {lang === 'km' ? r.desc.km : r.desc.en}
                     </div>
                   </div>
 
                   {/* Arrow */}
                   <div style={{
-                    width: 28, height: 28, borderRadius: 8,
+                    width: 26, height: 26, borderRadius: 8,
                     background: r.bg, color: r.color,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 16, flexShrink: 0, marginTop: 2,
-                  }}>›</div>
+                    fontSize: 15, fontWeight: 700, flexShrink: 0, marginTop: 2,
+                    transition: 'transform 0.2s ease',
+                  }} className="report-card-arrow">›</div>
                 </button>
               ))}
             </div>
           </div>
 
           {/* Divider */}
-          <div style={{ height: 1, background: 'var(--border)', marginBottom: 32 }} />
+          <div style={{ height: 1, background: '#f1f5f9', marginBottom: 32 }} />
 
           {/* ── Financial Reports ── */}
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18 }}>
-              <div style={{
-                width: 36, height: 36, borderRadius: 10,
-                background: 'linear-gradient(135deg,#10b981,#2563eb)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                flexShrink: 0, overflow: 'hidden',
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18, flexWrap: 'wrap', gap: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{
+                  width: 40, height: 40, borderRadius: 12,
+                  background: 'linear-gradient(135deg, #10b981, #2563eb)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  flexShrink: 0, overflow: 'hidden',
+                  boxShadow: '0 4px 12px rgba(16, 185, 129, 0.25)',
+                }}>
+                  <img src="/3d/3d_cash.png" alt="" style={{ width: '70%', height: '70%', objectFit: 'contain' }} />
+                </div>
+                <div>
+                  <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: 'var(--text-primary)' }}>
+                    {t('financialReportTitle')}
+                  </h2>
+                  <p style={{ margin: 0, fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
+                    {t('financialReportSubtitle')}
+                  </p>
+                </div>
+              </div>
+              <span style={{
+                fontSize: 12, fontWeight: 600, color: '#10b981',
+                background: '#f0fdf4', border: '1px solid #bbf7d0',
+                padding: '4px 12px', borderRadius: 20,
               }}>
-                <img src="/3d/3d_cash.png" alt="" style={{ width: '70%', height: '70%', objectFit: 'contain' }} />
-              </div>
-              <div>
-                <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: 'var(--text-primary)' }}>
-                  {t('financialReportTitle')}
-                </h2>
-                <p style={{ margin: 0, fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
-                  {t('financialReportSubtitle')}
-                </p>
-              </div>
+                {FINANCIAL_REPORTS.length} {lang === 'km' ? 'របាយការណ៍' : 'Reports'}
+              </span>
             </div>
 
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
-              gap: 16,
-            }}>
+            <div className="reports-grid-3">
               {FINANCIAL_REPORTS.map((r) => (
                 <button
                   key={r.key}
                   onClick={() => router.push(`/report/financial/${r.key}`)}
-                  style={{
-                    background: 'var(--bg-card)',
-                    border: '1px solid var(--border)',
-                    borderRadius: 14,
-                    padding: '20px 20px',
-                    cursor: 'pointer',
-                    textAlign: 'left',
-                    transition: 'all 0.18s ease',
-                    display: 'flex',
-                    alignItems: 'flex-start',
-                    gap: 14,
-                    boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
-                  }}
+                  className="report-card"
                   onMouseEnter={e => {
-                    (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(-2px)';
-                    (e.currentTarget as HTMLButtonElement).style.boxShadow = `0 8px 24px ${r.color}22`;
                     (e.currentTarget as HTMLButtonElement).style.borderColor = r.color;
                   }}
                   onMouseLeave={e => {
-                    (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(0)';
-                    (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 1px 3px rgba(0,0,0,0.06)';
-                    (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border)';
+                    (e.currentTarget as HTMLButtonElement).style.borderColor = '#e2e8f0';
                   }}
                 >
                   <div style={{
-                    width: 46, height: 46, borderRadius: 12,
+                    width: 48, height: 48, borderRadius: 12,
                     background: r.bg,
+                    border: `1px solid ${r.color}25`,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     flexShrink: 0, overflow: 'hidden',
-                  }}>
-                    <img src={r.icon} alt="" style={{ width: '75%', height: '75%', objectFit: 'contain' }} />
+                    transition: 'transform 0.2s ease',
+                  }} className="report-card-icon">
+                    <img src={r.icon} alt="" style={{ width: '72%', height: '72%', objectFit: 'contain' }} />
                   </div>
 
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{
-                      fontSize: 10, fontWeight: 700, color: r.color,
-                      textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 4,
-                    }}>
-                      Financial {r.key}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                      <span style={{
+                        fontSize: 10.5, fontWeight: 700, color: r.color,
+                        background: r.bg, border: `1px solid ${r.color}35`,
+                        padding: '1px 7px', borderRadius: 6,
+                        textTransform: 'uppercase', letterSpacing: '0.5px',
+                      }}>
+                        Financial {r.key}
+                      </span>
                     </div>
                     <div style={{
-                      fontSize: 13.5, fontWeight: 700,
-                      color: 'var(--text-primary)', lineHeight: 1.35,
-                      marginBottom: 5,
+                      fontSize: 14, fontWeight: 700,
+                      color: 'var(--text-primary)', lineHeight: 1.45,
+                      marginBottom: 4,
                     }}>
                       {t(r.titleKey as any).replace(`${r.key}-`, '')}
                     </div>
-                    <div style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.4 }}>
+                    <div style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.45 }}>
                       {lang === 'km' ? r.desc.km : r.desc.en}
                     </div>
                   </div>
 
                   <div style={{
-                    width: 28, height: 28, borderRadius: 8,
+                    width: 26, height: 26, borderRadius: 8,
                     background: r.bg, color: r.color,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 16, flexShrink: 0, marginTop: 2,
-                  }}>›</div>
+                    fontSize: 15, fontWeight: 700, flexShrink: 0, marginTop: 2,
+                    transition: 'transform 0.2s ease',
+                  }} className="report-card-arrow">›</div>
                 </button>
               ))}
             </div>

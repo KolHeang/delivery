@@ -22,6 +22,11 @@ export interface SubscriptionInfo {
   status: 'trialing' | 'active' | 'past_due' | 'cancelled' | 'expired' | 'none';
   billingCycle?: 'monthly' | 'yearly';
   plan?: Plan;
+  companyName?: string;
+  subdomain?: string;
+  customDomain?: string;
+  domainStatus?: string;
+  dnsInstructions?: any;
   currentPeriodStart?: string;
   currentPeriodEnd?: string;
   daysRemaining?: number;

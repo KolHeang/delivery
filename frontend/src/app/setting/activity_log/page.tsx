@@ -247,7 +247,7 @@ export default function ActivityLogsPage() {
                   <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <thead>
                       <tr>
-                        <th style={{ width: 60 }}>#</th>
+                        <th style={{ width: 60 }}>{isKh ? 'ល.រ' : 'No.'}</th>
                         <th>{isKh ? 'កាលបរិច្ឆេទ' : 'Timestamp'}</th>
                         <th>{isKh ? 'អ្នកធ្វើសកម្មភាព' : 'Actor'}</th>
                         <th>{isKh ? 'សកម្មភាព' : 'Action Type'}</th>

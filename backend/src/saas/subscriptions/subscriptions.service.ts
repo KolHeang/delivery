@@ -11,7 +11,7 @@ import { Subscription, BillingCycle, SubscriptionStatus } from './subscription.e
 import { Plan } from '../plans/plan.entity';
 import { CouponsService } from '../coupons/coupons.service';
 import { SaasInvoicesService } from '../invoices/saas-invoices.service';
-import { User } from '../../users/users.entity';
+import { User } from '../../users/entities/users.entity';
 
 @Injectable()
 export class SubscriptionsService {
@@ -158,15 +158,18 @@ export class SubscriptionsService {
     if (!user) {
       const rawPassword = dto.password || '123456';
       const hashedPassword = await bcrypt.hash(rawPassword, 10);
-      user = this.userRepo.create({
+      const newUser = this.userRepo.create({
         name: dto.adminName || dto.companyName,
         email: dto.email.toLowerCase().trim(),
         phone: dto.phone || '',
         password: hashedPassword,
-        role: 'admin',
-        active: true,
+        isActive: true,
       });
-      user = await this.userRepo.save(user);
+      user = await this.userRepo.save(newUser);
+    }
+
+    if (!user) {
+      throw new BadRequestException('Failed to initialize user account');
     }
 
     // 2. Perform Subscription & Invoice Creation
@@ -194,12 +197,10 @@ export class SubscriptionsService {
     };
     const access_token = this.jwtService.sign(payload);
 
-    const { password: _, ...userWithoutPassword } = user;
-
     return {
       ...checkoutResult,
       access_token,
-      user: userWithoutPassword,
+      user,
       workspace: {
         companyName: dto.companyName,
         subdomain: cleanSubdomain,

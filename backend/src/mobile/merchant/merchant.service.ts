@@ -2,18 +2,18 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Like } from 'typeorm';
 import * as bcrypt from 'bcrypt';
-import { Merchant } from '../../merchants/merchant.entity';
-import { Order } from '../../orders/order.entity';
-import { CreateOrderDto } from '../../orders/dto/order.dto';
-import { PickupRequest } from '../../orders/pickup-request.entity';
-import { CreatePickupRequestDto } from '../../orders/dto/pickup-request.dto';
+import { Merchant } from '../../merchants/entities/merchant.entity';
+import { Parcel } from '../../parcels/entities/parcel.entity';
+import { CreateParcelDto } from '../../parcels/dto/parcel.dto';
+import { PickupRequest } from '../../parcels/entities/pickup-request.entity';
+import { CreatePickupRequestDto } from '../../parcels/dto/pickup-request.dto';
 
 @Injectable()
 export class MerchantService {
   constructor(
     @InjectRepository(Merchant)
     private readonly merchantRepo: Repository<Merchant>,
-    @InjectRepository(Order) private readonly orderRepo: Repository<Order>,
+    @InjectRepository(Parcel) private readonly parcelRepo: Repository<Parcel>,
     @InjectRepository(PickupRequest)
     private readonly pickupRequestRepo: Repository<PickupRequest>,
   ) {}
@@ -63,12 +63,12 @@ export class MerchantService {
     return { success: true, message: 'ពាក្យសម្ងាត់ត្រូវបានផ្លាស់ប្តូរដោយជោគជ័យ' };
   }
 
-  async getOrders(merchantId: number, status?: string) {
+  async getParcels(merchantId: number, status?: string) {
     const where: any = { merchantId };
     if (status) {
       where.status = status;
     }
-    return this.orderRepo.find({
+    return this.parcelRepo.find({
       where,
       relations: { customer: true, driver: true, zone: true },
       order: { createdAt: 'DESC' },
@@ -77,23 +77,24 @@ export class MerchantService {
 
   async generateNextTrackingCode(): Promise<string> {
     try {
-      const result = await this.orderRepo.query("SELECT nextval('tracking_code_seq') as nextval");
+      const result = await this.parcelRepo.query("SELECT nextval('tracking_code_seq') as nextval");
       const nextval = parseInt(result[0].nextval, 10);
-      return `T${String(nextval).padStart(6, '0')}`;
+      return `CO${String(nextval).padStart(8, '0')}`;
     } catch (err) {
-      await this.orderRepo.query("CREATE SEQUENCE IF NOT EXISTS tracking_code_seq START WITH 1");
-      const lastOrders = await this.orderRepo.find({
-        where: {
-          trackingCode: Like('T%'),
-        },
+      await this.parcelRepo.query("CREATE SEQUENCE IF NOT EXISTS tracking_code_seq START WITH 30220626");
+      const lastParcels = await this.parcelRepo.find({
+        where: [
+          { trackingCode: Like('CO%') },
+          { trackingCode: Like('T%') },
+        ],
         order: { id: 'DESC' },
         take: 100,
       });
 
-      let maxNumber = 0;
-      for (const order of lastOrders) {
-        if (order.trackingCode) {
-          const match = order.trackingCode.match(/^T(\d{6})$/);
+      let maxNumber = 30220625;
+      for (const parcel of lastParcels) {
+        if (parcel.trackingCode) {
+          const match = parcel.trackingCode.match(/^CO(\d+)$/);
           if (match) {
             const num = parseInt(match[1], 10);
             if (num > maxNumber) {
@@ -104,17 +105,16 @@ export class MerchantService {
       }
 
       if (maxNumber > 0) {
-        await this.orderRepo.query(`SELECT setval('tracking_code_seq', ${maxNumber})`);
+        await this.parcelRepo.query(`SELECT setval('tracking_code_seq', ${maxNumber})`);
       }
 
-      const result = await this.orderRepo.query("SELECT nextval('tracking_code_seq') as nextval");
+      const result = await this.parcelRepo.query("SELECT nextval('tracking_code_seq') as nextval");
       const nextval = parseInt(result[0].nextval, 10);
-      return `T${String(nextval).padStart(6, '0')}`;
+      return `CO${String(nextval).padStart(8, '0')}`;
     }
   }
 
-
-  async createOrder(merchantId: number, dto: CreateOrderDto) {
+  async createParcel(merchantId: number, dto: CreateParcelDto) {
     if (!dto.trackingCode) {
       dto.trackingCode = await this.generateNextTrackingCode();
     }
@@ -123,33 +123,33 @@ export class MerchantService {
     if (!dto.size) dto.size = 'small';
     if (dto.cod === undefined || dto.cod === null) dto.cod = 0;
     if (dto.deliveryFee === undefined || dto.deliveryFee === null) dto.deliveryFee = 0;
-    const order = this.orderRepo.create({
+    const parcel = this.parcelRepo.create({
       ...dto,
-      merchantId, // Force the merchant ID to the logged-in merchant
-      status: 'pending', // Always start as pending
+      merchantId,
+      status: 'pending',
     } as any);
-    return this.orderRepo.save(order);
+    return this.parcelRepo.save(parcel);
   }
 
   async getSummary(merchantId: number) {
-    const totalOrders = await this.orderRepo.count({ where: { merchantId } });
+    const totalParcels = await this.parcelRepo.count({ where: { merchantId } });
 
-    const statusCounts = await this.orderRepo
-      .createQueryBuilder('order')
-      .select('order.status', 'status')
+    const statusCounts = await this.parcelRepo
+      .createQueryBuilder('parcel')
+      .select('parcel.status', 'status')
       .addSelect('COUNT(*)', 'count')
-      .where('order.merchantId = :merchantId', { merchantId })
-      .groupBy('order.status')
+      .where('parcel.merchantId = :merchantId', { merchantId })
+      .groupBy('parcel.status')
       .getRawMany();
 
-    const pendingCOD = await this.orderRepo
-      .createQueryBuilder('order')
-      .select('SUM(order.cod)', 'total')
-      .addSelect('order.codCurrency', 'currency')
-      .where('order.merchantId = :merchantId', { merchantId })
-      .andWhere('order.status = :status', { status: 'delivered' })
-      .andWhere('order.merchantPaymentStatus = :payment', { payment: 'unpaid' })
-      .groupBy('order.codCurrency')
+    const pendingCOD = await this.parcelRepo
+      .createQueryBuilder('parcel')
+      .select('SUM(parcel.cod)', 'total')
+      .addSelect('parcel.codCurrency', 'currency')
+      .where('parcel.merchantId = :merchantId', { merchantId })
+      .andWhere('parcel.status = :status', { status: 'delivered' })
+      .andWhere('parcel.merchantPaymentStatus = :payment', { payment: 'unpaid' })
+      .groupBy('parcel.codCurrency')
       .getRawMany();
 
     const codPendingUSD =
@@ -157,16 +157,17 @@ export class MerchantService {
     const codPendingKHR =
       pendingCOD.find((c) => c.currency === 'KHR')?.total || 0;
 
-    const feesPending = await this.orderRepo
-      .createQueryBuilder('order')
-      .select('SUM(order.deliveryFee)', 'total')
-      .where('order.merchantId = :merchantId', { merchantId })
-      .andWhere('order.status = :status', { status: 'delivered' })
-      .andWhere('order.merchantPaymentStatus = :payment', { payment: 'unpaid' })
+    const feesPending = await this.parcelRepo
+      .createQueryBuilder('parcel')
+      .select('SUM(parcel.deliveryFee)', 'total')
+      .where('parcel.merchantId = :merchantId', { merchantId })
+      .andWhere('parcel.status = :status', { status: 'delivered' })
+      .andWhere('parcel.merchantPaymentStatus = :payment', { payment: 'unpaid' })
       .getRawOne();
 
     return {
-      totalOrders,
+      totalParcels,
+      totalOrders: totalParcels,
       statusCounts: statusCounts.reduce(
         (acc, curr) => ({ ...acc, [curr.status]: parseInt(curr.count) }),
         {},
@@ -183,14 +184,14 @@ export class MerchantService {
     });
     if (!merchant) throw new NotFoundException('Merchant not found');
 
-    const totalParcel = await this.orderRepo.count({ where: { merchantId } });
+    const totalParcel = await this.parcelRepo.count({ where: { merchantId } });
 
-    const statusCounts = await this.orderRepo
-      .createQueryBuilder('order')
-      .select('order.status', 'status')
+    const statusCounts = await this.parcelRepo
+      .createQueryBuilder('parcel')
+      .select('parcel.status', 'status')
       .addSelect('COUNT(*)', 'count')
-      .where('order.merchantId = :merchantId', { merchantId })
-      .groupBy('order.status')
+      .where('parcel.merchantId = :merchantId', { merchantId })
+      .groupBy('parcel.status')
       .getRawMany();
 
     const [pickupPendingCount, pickupPickedUpCount] = await Promise.all([
@@ -250,7 +251,7 @@ export class MerchantService {
   async getPickupRequest(merchantId: number, id: number) {
     const request = await this.pickupRequestRepo.findOne({
       where: { id, merchantId },
-      relations: { pickupDriver: true, orders: true },
+      relations: { pickupDriver: true, parcels: true },
     });
     if (!request) throw new NotFoundException(`Pickup request #${id} not found`);
     return request;

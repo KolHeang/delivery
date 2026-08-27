@@ -143,8 +143,6 @@ export default function MerchantCreateOrderPage() {
   const [error, setError] = useState('');
 
   const [form, setForm] = useState({
-    senderName: '',
-    senderPhone: '',
     receiverName: '',
     receiverPhone: '',
     receiverAddress: '',
@@ -161,11 +159,6 @@ export default function MerchantCreateOrderPage() {
     if (!isAuthenticated()) { router.push('/merchant/login'); return; }
     const user = getUser();
     if (user?.role !== 'merchant') { router.push('/merchant/login'); return; }
-    setForm(prev => ({
-      ...prev,
-      senderName: user.name || '',
-      senderPhone: user.phone || '',
-    }));
 
     // Fetch merchant profile to get default delivery fee and zone
     api.get('/mobile/merchant/profile').then(res => {
@@ -211,8 +204,6 @@ export default function MerchantCreateOrderPage() {
       const resolvedZoneId = Number(form.zoneId) || (zones.length > 0 ? zones[0].id : null);
 
       const payload: any = {
-        senderName: form.senderName || '-',
-        senderPhone: form.senderPhone || '-',
         receiverName: form.receiverName || '-',
         receiverPhone: form.receiverPhone,
         receiverAddress: form.receiverAddress,
@@ -228,7 +219,7 @@ export default function MerchantCreateOrderPage() {
         payload.zoneId = resolvedZoneId;
       }
 
-      await api.post('/mobile/merchant/orders', payload);
+      await api.post('/mobile/merchant/parcels', payload);
       setSuccess(true);
       setForm(prev => ({
         ...prev,

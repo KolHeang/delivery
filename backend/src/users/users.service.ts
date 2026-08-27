@@ -7,7 +7,8 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, ILike } from 'typeorm';
 import * as bcrypt from 'bcrypt';
-import { User } from './users.entity';
+import { User } from './entities/users.entity';
+import { Role } from '../roles/entities/role.entity';
 import { CreateUserDto, UpdateUserDto } from './dto/user.dto';
 import { paginateRepo } from '../config/pagination';
 
@@ -15,6 +16,7 @@ import { paginateRepo } from '../config/pagination';
 export class UsersService implements OnModuleInit {
   constructor(
     @InjectRepository(User) private readonly repo: Repository<User>,
+    @InjectRepository(Role) private readonly roleRepo: Repository<Role>,
   ) { }
 
   async onModuleInit() {
@@ -52,7 +54,6 @@ export class UsersService implements OnModuleInit {
         { ...tenantFilter, nameKh: ILike(term) },
         { ...tenantFilter, phone: ILike(term) },
         { ...tenantFilter, email: ILike(term) },
-        { ...tenantFilter, role: ILike(term) },
       ];
     } else if (Object.keys(tenantFilter).length > 0) {
       where = tenantFilter;
@@ -60,7 +61,7 @@ export class UsersService implements OnModuleInit {
 
     return paginateRepo(this.repo, query || {}, {
       where,
-      relations: { zone: true, vehicle: true },
+      relations: { zone: true, vehicle: true, roleRelation: true },
       order: { createdAt: 'DESC' },
     });
   }
@@ -68,7 +69,7 @@ export class UsersService implements OnModuleInit {
   async findOne(id: number): Promise<User> {
     const user = await this.repo.findOne({
       where: { id },
-      relations: { zone: true, vehicle: true },
+      relations: { zone: true, vehicle: true, roleRelation: true },
     });
     if (!user) throw new NotFoundException('User not found');
     return user;
@@ -77,9 +78,10 @@ export class UsersService implements OnModuleInit {
   async findByEmail(email: string): Promise<User | null> {
     return this.repo
       .createQueryBuilder('staff')
+      .leftJoinAndSelect('staff.roleRelation', 'roleRelation')
       .addSelect('staff.password')
       .where('staff.email = :email', { email })
-      .andWhere('staff.role IN (:...roles)', { roles: ['admin', 'staff'] })
+      .andWhere('staff.isStaff = true')
       .getOne();
   }
 
@@ -105,19 +107,48 @@ export class UsersService implements OnModuleInit {
     const rawPassword = dto.password || '123456';
     const hashed = await bcrypt.hash(rawPassword, 10);
 
+    let roleId = dto.roleId;
+    if (!roleId && dto.role) {
+      const r = await this.roleRepo.findOne({ where: { name: dto.role } });
+      if (r) roleId = r.id;
+    }
+    if (!roleId) {
+      const defaultRole = await this.roleRepo.findOne({ where: { name: 'staff' } });
+      if (defaultRole) roleId = defaultRole.id;
+    }
+    const targetRole = roleId ? await this.roleRepo.findOne({ where: { id: roleId } }) : null;
+    const roleName = targetRole?.name || dto.role || 'staff';
+
+    let isStaff = dto.isStaff;
+    if (isStaff === undefined) {
+      isStaff = roleName === 'admin' || roleName === 'staff';
+    }
+
+    let isDriver = dto.isDriver;
+    if (isDriver === undefined) {
+      isDriver = roleName === 'driver';
+    }
+
+    const isActive = dto.isActive !== undefined ? dto.isActive : (dto.active !== undefined ? dto.active : true);
+
     const payload: any = {
       ...dto,
       password: hashed,
-      salary: dto.salary ? parseFloat(dto.salary as any) : 0.0,
-      zoneId: dto.zoneId || null,
-      vehicleId: dto.vehicleId || null,
-      status: dto.status || 'offline',
-      tenantId: dto.tenantId || tenantContext?.tenantId || null,
+      roleId,
+      isActive,
+      isStaff,
+      isDriver,
+      zoneId: dto.zoneId ? Number(dto.zoneId) : null,
+      vehicleId: dto.vehicleId ? Number(dto.vehicleId) : null,
+      tenantId: dto.tenantId || tenantContext?.tenantId || 1,
       tenantSubdomain: dto.tenantSubdomain || tenantContext?.tenantSubdomain || null,
     };
+    delete payload.role;
+    delete payload.active;
 
     const user = this.repo.create(payload as User);
-    return this.repo.save(user);
+    const saved = await this.repo.save(user);
+    return this.findOne(saved.id);
   }
 
   async update(id: number, dto: UpdateUserDto): Promise<User> {
@@ -142,11 +173,36 @@ export class UsersService implements OnModuleInit {
       payload.vehicleId = dto.vehicleId ? Number(dto.vehicleId) : null;
     }
 
-    if (payload.role && payload.role !== 'driver') {
-      payload.zoneId = null;
-      payload.vehicleId = null;
-      payload.status = 'offline';
+    if (dto.isActive !== undefined) {
+      payload.isActive = dto.isActive;
+    } else if (dto.active !== undefined) {
+      payload.isActive = dto.active;
     }
+    delete payload.active;
+
+    let roleId = dto.roleId;
+    if (!roleId && dto.role) {
+      const r = await this.roleRepo.findOne({ where: { name: dto.role } });
+      if (r) roleId = r.id;
+    }
+    if (roleId !== undefined) {
+      payload.roleId = roleId;
+    }
+
+    const targetRole = roleId ? await this.roleRepo.findOne({ where: { id: roleId } }) : null;
+    if (targetRole) {
+      if (dto.isStaff === undefined) {
+        payload.isStaff = targetRole.name === 'admin' || targetRole.name === 'staff';
+      }
+      if (dto.isDriver === undefined) {
+        payload.isDriver = targetRole.name === 'driver';
+      }
+      if (targetRole.name !== 'driver') {
+        payload.zoneId = null;
+        payload.vehicleId = null;
+      }
+    }
+    delete payload.role;
 
     await this.repo.update(id, payload);
     return this.findOne(id);

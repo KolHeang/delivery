@@ -22,7 +22,6 @@ export default function EditOrderPage() {
   const [zones, setZones] = useState<any[]>([]);
 
   const [form, setForm] = useState({
-    senderName: '', senderPhone: '',
     receiverName: '', receiverPhone: '', receiverAddress: '',
     weight: 0.5, size: 'small', cod: 0, codCurrency: 'USD', deliveryFee: 0,
     note: '', merchantId: '', customerId: '', driverId: '', zoneId: ''
@@ -37,7 +36,7 @@ export default function EditOrderPage() {
           api.get('/merchants'),
           api.get('/customers'),
           api.get('/zones'),
-          api.get(`/orders/${params.id}`)
+          api.get(`/parcels/${params.id}`)
         ]);
 
         setMerchants(m.data || []);
@@ -46,7 +45,6 @@ export default function EditOrderPage() {
 
         const o = orderRes.data;
         setForm({
-          senderName: o.senderName || '', senderPhone: o.senderPhone || '',
           receiverName: o.receiverName || '', receiverPhone: o.receiverPhone || '',
           receiverAddress: o.receiverAddress || '', weight: o.weight || 0.5, size: o.size || 'small',
           cod: o.cod || 0, codCurrency: o.codCurrency || 'USD', deliveryFee: o.deliveryFee || 0, note: o.note || '',
@@ -77,7 +75,7 @@ export default function EditOrderPage() {
         zoneId: form.zoneId ? parseInt(form.zoneId as string) : undefined,
         codCurrency: form.codCurrency || 'USD'
       };
-      await api.patch(`/orders/${params.id}`, payload);
+      await api.patch(`/parcels/${params.id}`, payload);
       router.push('/delivery');
     } catch (err: any) {
       alert(err.response?.data?.message || 'Error saving delivery');
@@ -111,17 +109,6 @@ export default function EditOrderPage() {
             </div>
             <div className="card-body">
               <form onSubmit={handleSave}>
-                <div className="form-row" style={{ display: 'none' }}>
-                  <div className="form-group">
-                    <label className="form-label">Sender Name <span>*</span></label>
-                    <input className="form-control" value={form.senderName} onChange={f('senderName')} required />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Sender Phone <span>*</span></label>
-                    <input className="form-control" value={form.senderPhone} onChange={f('senderPhone')} required />
-                  </div>
-                </div>
-                
                 <div className="form-row">
                   <div className="form-group" style={{ display: 'none' }}>
                     <label className="form-label">Receiver Name <span>*</span></label>

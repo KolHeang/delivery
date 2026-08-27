@@ -1,8 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Income } from './income.entity';
-import { IncomeType } from './income-type.entity';
+import { Income } from './entities/income.entity';
+import { IncomeType } from './entities/income-type.entity';
 import { paginateRepo } from '../config/pagination';
 
 @Injectable()
@@ -20,6 +20,13 @@ export class IncomesService {
 
   async findTypes() {
     return this.typeRepo.find({ order: { name: 'ASC' } });
+  }
+
+  async updateType(id: number, attrs: Partial<IncomeType>) {
+    const type = await this.typeRepo.findOne({ where: { id } });
+    if (!type) throw new NotFoundException('Income type not found');
+    Object.assign(type, attrs);
+    return this.typeRepo.save(type);
   }
 
   async deleteType(id: number) {

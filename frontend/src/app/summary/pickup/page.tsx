@@ -200,7 +200,7 @@ export default function PickUpSummaryPage() {
               <table>
                 <thead>
                   <tr>
-                    <th style={{ width: 50, textAlign: 'center' }}>#</th>
+                    <th style={{ width: 50, textAlign: 'center' }}>{lang === 'km' ? 'ល.រ' : 'No.'}</th>
                     <th>{lang === 'km' ? 'អ្នកប្រមូលកញ្ចប់' : 'Pickup Driver'}</th>
                     <th style={{ textAlign: 'center' }}>{lang === 'km' ? 'ចំនួនហាង' : 'Shop Count'}</th>
                     <th style={{ textAlign: 'center' }}>{lang === 'km' ? 'ចំនួនកញ្ចប់' : 'Parcel Count'}</th>
@@ -212,12 +212,8 @@ export default function PickUpSummaryPage() {
                     <tr><td colSpan={5} style={{ textAlign: 'center', padding: '40px 0' }}><div className="spinner" style={{ margin: '0 auto' }} /></td></tr>
                   ) : currentPageItems.length === 0 ? (
                     <tr>
-                      <td colSpan={5} style={{ padding: '60px 0', borderBottom: 'none' }}>
-                        <div className="empty-state" style={{ background: 'transparent', border: 'none', padding: 0 }}>
-                          <div className="empty-state-icon" style={{ fontSize: 48, marginBottom: 16 }}>🚗</div>
-                          <div className="empty-state-title">{lang === 'km' ? 'រកមិនឃើញទិន្នន័យប្រមូលទេ' : 'No pickup data found'}</div>
-                          <div className="empty-state-text">{lang === 'km' ? 'សាកល្បងកែតម្រូវតម្រង ឬចន្លោះកាលបរិច្ឆេទ' : 'Try adjusting the filters or date range'}</div>
-                        </div>
+                      <td colSpan={5} style={{ padding: '36px 20px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13, borderBottom: 'none' }}>
+                        {lang === 'km' ? 'គ្មានទិន្នន័យ' : 'No data'}
                       </td>
                     </tr>
                   ) : (

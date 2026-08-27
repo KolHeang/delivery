@@ -1,15 +1,15 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Order } from '../orders/order.entity';
-import { User } from '../users/users.entity';
-import { Expense } from '../expenses/expense.entity';
-import { Income } from '../incomes/income.entity';
+import { Parcel } from '../parcels/entities/parcel.entity';
+import { User } from '../users/entities/users.entity';
+import { Expense } from '../expenses/entities/expense.entity';
+import { Income } from '../incomes/entities/income.entity';
 
 @Injectable()
 export class ReportsService {
   constructor(
-    @InjectRepository(Order) private orderRepo: Repository<Order>,
+    @InjectRepository(Parcel) private parcelRepo: Repository<Parcel>,
     @InjectRepository(User) private driverRepo: Repository<User>,
     @InjectRepository(Expense) private expenseRepo: Repository<Expense>,
     @InjectRepository(Income) private incomeRepo: Repository<Income>,
@@ -18,28 +18,28 @@ export class ReportsService {
   async getRevenueReport(period: 'daily' | 'monthly' = 'monthly') {
     const groupFormat =
       period === 'daily'
-        ? 'DATE(order.createdAt)'
-        : "TO_CHAR(order.createdAt, 'YYYY-MM')";
+        ? 'DATE(parcel.createdAt)'
+        : "TO_CHAR(parcel.createdAt, 'YYYY-MM')";
     const labelFormat =
       period === 'daily'
-        ? 'DATE(order.createdAt)'
-        : "TO_CHAR(order.createdAt, 'Mon YYYY')";
+        ? 'DATE(parcel.createdAt)'
+        : "TO_CHAR(parcel.createdAt, 'Mon YYYY')";
 
-    return this.orderRepo
-      .createQueryBuilder('order')
+    return this.parcelRepo
+      .createQueryBuilder('parcel')
       .select(labelFormat, 'label')
-      .addSelect('COUNT(*)', 'totalOrders')
+      .addSelect('COUNT(*)', 'totalParcels')
       .addSelect(
-        "SUM(CASE WHEN order.status = 'delivered' THEN 1 ELSE 0 END)",
+        "SUM(CASE WHEN parcel.status = 'delivered' THEN 1 ELSE 0 END)",
         'delivered',
       )
       .addSelect(
-        "SUM(CASE WHEN order.status = 'failed' THEN 1 ELSE 0 END)",
+        "SUM(CASE WHEN parcel.status = 'failed' THEN 1 ELSE 0 END)",
         'failed',
       )
-      .addSelect('SUM(order.deliveryFee)', 'revenue')
-      .addSelect('SUM(order.cod)', 'totalCod')
-      .where("order.createdAt >= NOW() - INTERVAL '6 months'")
+      .addSelect('SUM(parcel.deliveryFee)', 'revenue')
+      .addSelect('SUM(parcel.cod)', 'totalCod')
+      .where("parcel.createdAt >= NOW() - INTERVAL '6 months'")
       .groupBy(`${groupFormat}, ${labelFormat}`)
       .orderBy(groupFormat, 'ASC')
       .getRawMany();
@@ -50,54 +50,54 @@ export class ReportsService {
       .createQueryBuilder('driver')
       .leftJoinAndSelect('driver.zone', 'zone')
       .leftJoinAndSelect('driver.vehicle', 'vehicle')
-      .where('driver.role = :role', { role: 'driver' })
+      .where('driver.isDriver = true')
       .orderBy('driver.totalDeliveries', 'DESC')
       .getMany();
   }
 
-  async getOrderSummary() {
-    const statusCounts = await this.orderRepo
-      .createQueryBuilder('order')
-      .select('order.status', 'status')
+  async getParcelSummary() {
+    const statusCounts = await this.parcelRepo
+      .createQueryBuilder('parcel')
+      .select('parcel.status', 'status')
       .addSelect('COUNT(*)', 'count')
-      .addSelect('SUM(order.deliveryFee)', 'revenue')
-      .groupBy('order.status')
+      .addSelect('SUM(parcel.deliveryFee)', 'revenue')
+      .groupBy('parcel.status')
       .getRawMany();
 
-    const zoneRevenue = await this.orderRepo
-      .createQueryBuilder('order')
-      .leftJoin('order.zone', 'zone')
+    const zoneRevenue = await this.parcelRepo
+      .createQueryBuilder('parcel')
+      .leftJoin('parcel.zone', 'zone')
       .select('zone.name', 'zone')
       .addSelect('COUNT(*)', 'count')
       .addSelect(
-        "SUM(CASE WHEN order.status = 'delivered' THEN 1 ELSE 0 END)",
+        "SUM(CASE WHEN parcel.status = 'delivered' THEN 1 ELSE 0 END)",
         'delivered',
       )
-      .addSelect('SUM(order.deliveryFee)', 'revenue')
+      .addSelect('SUM(parcel.deliveryFee)', 'revenue')
       .where('zone.id IS NOT NULL')
       .groupBy('zone.name')
-      .orderBy('SUM(order.deliveryFee)', 'DESC')
+      .orderBy('SUM(parcel.deliveryFee)', 'DESC')
       .getRawMany();
 
     return { statusCounts, zoneRevenue };
   }
 
   async getShopSummary(startDate?: string, endDate?: string, merchantId?: string) {
-    let q = this.orderRepo
-      .createQueryBuilder('order')
-      .leftJoin('order.merchant', 'merchant')
+    let q = this.parcelRepo
+      .createQueryBuilder('parcel')
+      .leftJoin('parcel.merchant', 'merchant')
       .select('merchant.id', 'id')
       .addSelect("COALESCE(merchant.name, 'Unknown Shop')", 'name')
       .addSelect(
-        "SUM(CASE WHEN order.status = 'delivered' THEN 1 ELSE 0 END)",
+        "SUM(CASE WHEN parcel.status = 'delivered' THEN 1 ELSE 0 END)",
         'delivered',
       )
       .addSelect(
-        "SUM(CASE WHEN order.status = 'failed' THEN 1 ELSE 0 END)",
+        "SUM(CASE WHEN parcel.status = 'failed' THEN 1 ELSE 0 END)",
         'failed',
       )
       .addSelect(
-        "SUM(CASE WHEN order.status = 'returned' THEN 1 ELSE 0 END)",
+        "SUM(CASE WHEN parcel.status = 'returned' THEN 1 ELSE 0 END)",
         'returned',
       )
       .addSelect('0', 'qrShopUSD')
@@ -105,19 +105,19 @@ export class ReportsService {
       .addSelect('0', 'qrDriverUSD')
       .addSelect('0', 'qrDriverKHR')
       .addSelect(
-        "SUM(CASE WHEN order.codCurrency = 'USD' THEN order.cod ELSE 0 END)",
+        "SUM(CASE WHEN parcel.codCurrency = 'USD' THEN parcel.cod ELSE 0 END)",
         'codUSD',
       )
       .addSelect(
-        "SUM(CASE WHEN order.codCurrency = 'KHR' THEN order.cod ELSE 0 END)",
+        "SUM(CASE WHEN parcel.codCurrency = 'KHR' THEN parcel.cod ELSE 0 END)",
         'codKHR',
       )
-      .addSelect('SUM(order.deliveryFee)', 'fee')
+      .addSelect('SUM(parcel.deliveryFee)', 'fee')
       .groupBy('merchant.id')
       .addGroupBy('merchant.name');
 
-    if (startDate) q = q.andWhere('order.createdAt >= :startDate', { startDate });
-    if (endDate) q = q.andWhere('order.createdAt <= :endDate', { endDate: `${endDate} 23:59:59` });
+    if (startDate) q = q.andWhere('parcel.createdAt >= :startDate', { startDate });
+    if (endDate) q = q.andWhere('parcel.createdAt <= :endDate', { endDate: `${endDate} 23:59:59` });
     if (merchantId) q = q.andWhere('merchant.id = :merchantId', { merchantId });
 
     const result = await q.getRawMany();
@@ -140,19 +140,19 @@ export class ReportsService {
 
   async getPickupSummary(startDate?: string, endDate?: string, driverId?: string, merchantId?: string) {
     // pickup driver = pickupDriverId (warehouse flow) OR driverId (direct flow with picked-up status)
-    let q = this.orderRepo
-      .createQueryBuilder('order')
-      .leftJoin('order.pickupDriver', 'pickupDriver')
-      .leftJoin('order.merchant', 'merchant')
+    let q = this.parcelRepo
+      .createQueryBuilder('parcel')
+      .leftJoin('parcel.pickupDriver', 'pickupDriver')
+      .leftJoin('parcel.merchant', 'merchant')
       .select('pickupDriver.id', 'id')
       .addSelect("COALESCE(pickupDriver.name, 'Unknown Driver')", 'name')
       .addSelect('COUNT(*)', 'package')
       .addSelect('COUNT(DISTINCT merchant.id)', 'shopCount')
-      .addSelect('SUM(order.deliveryFee)', 'fee')
-      .where('order.pickupDriverId IS NOT NULL');
+      .addSelect('SUM(parcel.deliveryFee)', 'fee')
+      .where('parcel.pickupDriverId IS NOT NULL');
 
-    if (startDate) q = q.andWhere('order.warehouseAt >= :startDate', { startDate });
-    if (endDate) q = q.andWhere('order.warehouseAt <= :endDate', { endDate: `${endDate} 23:59:59` });
+    if (startDate) q = q.andWhere('parcel.warehouseAt >= :startDate', { startDate });
+    if (endDate) q = q.andWhere('parcel.warehouseAt <= :endDate', { endDate: `${endDate} 23:59:59` });
     if (driverId) q = q.andWhere('pickupDriver.id = :driverId', { driverId });
     if (merchantId) q = q.andWhere('merchant.id = :merchantId', { merchantId });
 
@@ -169,36 +169,36 @@ export class ReportsService {
   }
 
   async getDeliverySummary(startDate?: string, endDate?: string, driverId?: string) {
-    let q = this.orderRepo
-      .createQueryBuilder('order')
-      .leftJoin('order.driver', 'driver')
+    let q = this.parcelRepo
+      .createQueryBuilder('parcel')
+      .leftJoin('parcel.driver', 'driver')
       .select('driver.id', 'id')
       .addSelect("COALESCE(driver.name, 'Unknown Driver')", 'name')
       .addSelect(
-        "SUM(CASE WHEN order.status = 'delivered' THEN 1 ELSE 0 END)",
+        "SUM(CASE WHEN parcel.status = 'delivered' THEN 1 ELSE 0 END)",
         'delivered',
       )
       .addSelect(
-        "SUM(CASE WHEN order.status = 'failed' THEN 1 ELSE 0 END)",
+        "SUM(CASE WHEN parcel.status = 'failed' THEN 1 ELSE 0 END)",
         'failed',
       )
       .addSelect(
-        "SUM(CASE WHEN order.status = 'returned' THEN 1 ELSE 0 END)",
+        "SUM(CASE WHEN parcel.status = 'returned' THEN 1 ELSE 0 END)",
         'returned',
       )
       .addSelect(
-        "SUM(CASE WHEN order.codCurrency = 'USD' THEN order.cod ELSE 0 END)",
+        "SUM(CASE WHEN parcel.codCurrency = 'USD' THEN parcel.cod ELSE 0 END)",
         'codUSD',
       )
       .addSelect(
-        "SUM(CASE WHEN order.codCurrency = 'KHR' THEN order.cod ELSE 0 END)",
+        "SUM(CASE WHEN parcel.codCurrency = 'KHR' THEN parcel.cod ELSE 0 END)",
         'codKHR',
       )
-      .addSelect('SUM(order.deliveryFee)', 'fee')
-      .where('order.driverId IS NOT NULL');
+      .addSelect('SUM(parcel.deliveryFee)', 'fee')
+      .where('parcel.driverId IS NOT NULL');
 
-    if (startDate) q = q.andWhere('order.createdAt >= :startDate', { startDate });
-    if (endDate) q = q.andWhere('order.createdAt <= :endDate', { endDate: `${endDate} 23:59:59` });
+    if (startDate) q = q.andWhere('parcel.createdAt >= :startDate', { startDate });
+    if (endDate) q = q.andWhere('parcel.createdAt <= :endDate', { endDate: `${endDate} 23:59:59` });
     if (driverId) q = q.andWhere('driver.id = :driverId', { driverId });
 
     q = q.groupBy('driver.id').addGroupBy('driver.name');
@@ -222,15 +222,15 @@ export class ReportsService {
     driverId?: string,
     merchantId?: string,
   ) {
-    let q = this.orderRepo
-      .createQueryBuilder('order')
-      .leftJoinAndSelect('order.driver', 'driver')
-      .leftJoinAndSelect('order.merchant', 'merchant')
-      .leftJoinAndSelect('order.zone', 'zone')
-      .orderBy('order.createdAt', 'DESC');
+    let q = this.parcelRepo
+      .createQueryBuilder('parcel')
+      .leftJoinAndSelect('parcel.driver', 'driver')
+      .leftJoinAndSelect('parcel.merchant', 'merchant')
+      .leftJoinAndSelect('parcel.zone', 'zone')
+      .orderBy('parcel.createdAt', 'DESC');
 
-    if (startDate) q = q.andWhere('order.createdAt >= :startDate', { startDate });
-    if (endDate) q = q.andWhere('order.createdAt <= :endDate', { endDate: `${endDate} 23:59:59` });
+    if (startDate) q = q.andWhere('parcel.createdAt >= :startDate', { startDate });
+    if (endDate) q = q.andWhere('parcel.createdAt <= :endDate', { endDate: `${endDate} 23:59:59` });
     if (driverId) q = q.andWhere('driver.id = :driverId', { driverId });
     if (merchantId) q = q.andWhere('merchant.id = :merchantId', { merchantId });
 

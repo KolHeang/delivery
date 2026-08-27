@@ -15,7 +15,6 @@ const emptyForm = {
   email: '',
   role: 'staff',
   active: true,
-  status: 'offline',
   zoneId: '',
   vehicleId: '',
   joinDate: '',
@@ -53,9 +52,9 @@ export default function EditStaffPage() {
           api.get(`/users/${params.id}`),
           api.get('/roles')
         ]);
-        setZones(z.data);
-        setVehicles(v.data);
-        setRoles(r.data);
+        setZones(Array.isArray(z.data) ? z.data : (z.data?.data || []));
+        setVehicles(Array.isArray(v.data) ? v.data : (v.data?.data || []));
+        setRoles(Array.isArray(r.data) ? r.data : (r.data?.data || []));
 
         const i = userRes.data;
         if (i) {
@@ -64,9 +63,8 @@ export default function EditStaffPage() {
             nameKh: i.nameKh || '',
             phone: i.phone || '',
             email: i.email || '',
-            role: i.role,
+            role: i.role || i.roleRelation?.name || 'staff',
             active: i.active ?? true,
-            status: i.status || 'offline',
             zoneId: i.zoneId || '',
             vehicleId: i.vehicleId || '',
             joinDate: i.joinDate || '',
@@ -127,7 +125,6 @@ export default function EditStaffPage() {
       formData.append('role', form.role);
       if (selectedRole?.id) formData.append('roleId', selectedRole.id.toString());
       formData.append('active', form.active.toString());
-      formData.append('status', form.role === 'driver' ? form.status : 'offline');
       if (form.role === 'driver' && form.zoneId) formData.append('zoneId', form.zoneId);
       if (form.role === 'driver' && form.vehicleId) formData.append('vehicleId', form.vehicleId);
       if (form.joinDate) formData.append('joinDate', form.joinDate);
@@ -318,35 +315,20 @@ export default function EditStaffPage() {
                 </div>
               </div>
 
-              {form.role === 'driver' ? (
-                <>
-                  <div className="form-row">
-                    <div className="form-group" style={{ maxWidth: '50%' }}>
-                      <label className="form-label">{t('status')}</label>
-                      <select className="form-control" value={form.status} onChange={f('status')}>
-                        <option value="available">Available</option>
-                        <option value="on-delivery">On Delivery</option>
-                        <option value="offline">Offline</option>
-                      </select>
-                    </div>
-                  </div>
-                </>
-              ) : (
-                <div className="form-row">
-                  <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12 }}>
-                    <input
-                      type="checkbox"
-                      id="active-checkbox"
-                      checked={form.active}
-                      onChange={f('active')}
-                      style={{ width: 18, height: 18, cursor: 'pointer' }}
-                    />
-                    <label htmlFor="active-checkbox" style={{ fontWeight: 600, cursor: 'pointer', userSelect: 'none' }}>
-                      {t('active')}
-                    </label>
-                  </div>
+              <div className="form-row">
+                <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12 }}>
+                  <input
+                    type="checkbox"
+                    id="active-checkbox"
+                    checked={form.active}
+                    onChange={f('active')}
+                    style={{ width: 18, height: 18, cursor: 'pointer' }}
+                  />
+                  <label htmlFor="active-checkbox" style={{ fontWeight: 600, cursor: 'pointer', userSelect: 'none' }}>
+                    {t('active')}
+                  </label>
                 </div>
-              )}
+              </div>
 
               <div style={{ marginTop: 24, display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
                 <button className="btn btn-outline" onClick={() => router.push('/user')}>

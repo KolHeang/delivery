@@ -41,15 +41,6 @@ export default function IncomeListPage() {
     load();
   }, [router, load]);
 
-  if (loading) return (
-    <div className="app-layout">
-      <Sidebar />
-      <div className="main-content">
-        <div className="loading-wrapper"><div className="spinner" /></div>
-      </div>
-    </div>
-  );
-
   return (
     <div className="app-layout">
       <Sidebar />
@@ -62,51 +53,73 @@ export default function IncomeListPage() {
           <div className="card">
             <div className="card-header">
               <span className="card-title">💵 {t('revenuesTitle') || 'Revenues & Collections'}</span>
-              <button className="btn btn-primary btn-sm" onClick={() => router.push('/income/create')}><MdAdd size={14} /> {t('addIncome') || 'Add Income'}</button>
+              <button
+                className="btn btn-primary"
+                style={{
+                  padding: '8px 18px',
+                  fontSize: '13.5px',
+                  fontWeight: 600,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  borderRadius: 8,
+                  cursor: 'pointer',
+                }}
+                onClick={() => router.push('/income/create')}
+              >
+                <MdAdd size={18} /> {t('addIncome') || 'Add Income'}
+              </button>
             </div>
-            {incomes.length === 0 ? (
-              <div className="empty-state">
-                <div className="empty-state-icon">💸</div>
-                <div className="empty-state-title">{t('noIncomesRecorded') || 'No incomes recorded yet'}</div>
-              </div>
-            ) : (
-              <>
-                <div style={{ overflowX: 'auto' }}>
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>#</th>
-                        <th>{t('description') || 'Description'}</th>
-                        <th>{t('incomeType') || 'Income Type'}</th>
-                        <th>{t('amountUSD') || 'Amount ($)'}</th>
-                        <th>{t('incomeDate') || 'Income Date'}</th>
+            <div style={{ overflowX: 'auto' }}>
+              <table>
+                <thead>
+                  <tr>
+                    <th style={{ width: 60, textAlign: 'center' }}>{t('colNo') || 'No.'}</th>
+                    <th>{t('description') || 'Description'}</th>
+                    <th style={{ width: 160 }}>{t('incomeType') || 'Income Type'}</th>
+                    <th style={{ width: 140, textAlign: 'right' }}>{t('amountUSD') || 'Amount ($)'}</th>
+                    <th style={{ width: 140 }}>{t('incomeDate') || 'Income Date'}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {loading ? (
+                    <tr>
+                      <td colSpan={5} style={{ padding: '40px 0', textAlign: 'center' }}>
+                        <div className="loading-wrapper"><div className="spinner" /></div>
+                      </td>
+                    </tr>
+                  ) : incomes.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} style={{ padding: '36px 20px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
+                        {t('noDataFound') || 'គ្មានទិន្នន័យ'}
+                      </td>
+                    </tr>
+                  ) : (
+                    incomes.map((inc, idx) => (
+                      <tr key={inc.id}>
+                        <td style={{ color: 'var(--text-muted)', fontSize: 12, textAlign: 'center' }}>{(currentPage - 1) * pageSize + idx + 1}</td>
+                        <td style={{ fontWeight: 700 }}>{inc.description}</td>
+                        <td>
+                          <span className="badge badge-delivered" style={{ textTransform: 'capitalize' }}>
+                            {inc.type?.name || 'General'}
+                          </span>
+                        </td>
+                        <td style={{ fontWeight: 600, color: 'var(--success)', textAlign: 'right' }}>+${parseFloat(inc.amount).toFixed(2)}</td>
+                        <td style={{ fontSize: 12 }}>{new Date(inc.date).toLocaleDateString()}</td>
                       </tr>
-                    </thead>
-                    <tbody>
-                      {incomes.map((inc, idx) => (
-                        <tr key={inc.id}>
-                          <td style={{ color: 'var(--text-muted)', fontSize: 12 }}>{(currentPage - 1) * pageSize + idx + 1}</td>
-                          <td style={{ fontWeight: 700 }}>{inc.description}</td>
-                          <td>
-                            <span className="badge badge-delivered" style={{ textTransform: 'capitalize' }}>
-                              {inc.type?.name || 'General'}
-                            </span>
-                          </td>
-                          <td style={{ fontWeight: 600, color: 'var(--success)' }}>+${parseFloat(inc.amount).toFixed(2)}</td>
-                          <td style={{ fontSize: 12 }}>{new Date(inc.date).toLocaleDateString()}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                <Pagination
-                  currentPage={currentPage}
-                  totalItems={totalItems}
-                  pageSize={pageSize}
-                  onPageChange={setCurrentPage}
-                  onPageSizeChange={setPageSize}
-                />
-              </>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+            {incomes.length > 0 && (
+              <Pagination
+                currentPage={currentPage}
+                totalItems={totalItems}
+                pageSize={pageSize}
+                onPageChange={setCurrentPage}
+                onPageSizeChange={setPageSize}
+              />
             )}
           </div>
         </div>

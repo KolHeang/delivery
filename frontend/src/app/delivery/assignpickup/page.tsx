@@ -21,7 +21,7 @@ export default function AssignPickupPage() {
   const router = useRouter();
   const [pendingOrders, setPendingOrders] = useState<any[]>([]);
   const [drivers, setDrivers] = useState<any[]>([]);
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const [selected, setSelected] = useState<number[]>([]);
   const [selectedDriver, setSelectedDriver] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
@@ -39,7 +39,7 @@ export default function AssignPickupPage() {
     setLoading(true);
     try {
       const [orders, drvs] = await Promise.all([
-        api.get('/orders/pending-pickup'),
+        api.get('/parcels/pending-pickup'),
         api.get('/drivers/available'),
       ]);
       setPendingOrders(orders.data);
@@ -106,7 +106,7 @@ export default function AssignPickupPage() {
     if (!selectedDriver || selected.length === 0) return;
     setAssigning(true);
     try {
-      await Promise.all(selected.map(id => api.post(`/orders/${id}/assign-pickup`, { driverId: selectedDriver })));
+      await Promise.all(selected.map(id => api.post(`/parcels/${id}/assign-pickup`, { driverId: selectedDriver })));
       const count = selected.length;
       setSelected([]);
       setSelectedDriver(null);
@@ -140,10 +140,10 @@ export default function AssignPickupPage() {
                     <div>
                       <span className="card-title" style={{ fontSize: 16 }}>{t('pendingForPickup')}</span>
                       <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2 }}>
-                        {filtered.length} / {pendingOrders.length} orders
+                        {filtered.length} / {pendingOrders.length} {lang === 'km' ? 'កញ្ចប់' : 'orders'}
                         {selected.length > 0 && (
                           <span style={{ marginLeft: 8, fontWeight: 600, color: '#d97706' }}>
-                            · {selected.length} selected
+                            · {selected.length} {lang === 'km' ? 'បានជ្រើសរើស' : 'selected'}
                           </span>
                         )}
                       </div>
@@ -152,20 +152,22 @@ export default function AssignPickupPage() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     {selected.length > 0 && (
                       <span style={{ fontSize: 13, fontWeight: 600, color: '#d97706', background: '#fef3c7', padding: '4px 12px', borderRadius: 999 }}>
-                        {selected.length} Selected
+                        {selected.length} {lang === 'km' ? 'បានជ្រើសរើស' : 'Selected'}
                       </span>
                     )}
-                    <button className="btn btn-outline" onClick={load}><MdRefresh size={16} /> Refresh</button>
+                    <button className="btn btn-outline" onClick={load} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <MdRefresh size={16} /> {lang === 'km' ? 'ផ្ទុកឡើងវិញ' : 'Refresh'}
+                    </button>
                   </div>
                 </div>
 
                 {/* Search + page size bar */}
-                <div style={{ padding: '10px 24px', borderBottom: '1px solid var(--border)', display: 'flex', gap: 12, alignItems: 'center', background: 'var(--bg-card)' }}>
-                  <div style={{ flex: 1, position: 'relative' }}>
+                <div style={{ padding: '10px 24px', borderBottom: '1px solid var(--border)', display: 'flex', gap: 12, alignItems: 'center', background: 'var(--bg-card)', flexWrap: 'wrap' }}>
+                  <div style={{ flex: 1, minWidth: 200, position: 'relative' }}>
                     <MdSearch size={18} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
                     <input
                       type="text"
-                      placeholder="ស្វែងរក tracking, merchant, phone..."
+                      placeholder={lang === 'km' ? 'ស្វែងរកលេខតាមដាន, ហាង, លេខទូរស័ព្ទ...' : 'Search tracking, merchant, phone...'}
                       value={search}
                       onChange={e => setSearch(e.target.value)}
                       style={{
@@ -198,36 +200,40 @@ export default function AssignPickupPage() {
                 </div>
 
                 {/* Table */}
-                {loading ? (
-                  <div className="loading-wrapper"><div className="spinner" /></div>
-                ) : filtered.length === 0 ? (
-                  <div className="empty-state" style={{ margin: 'auto' }}>
-                    <div className="empty-state-icon">{search ? '🔍' : '✅'}</div>
-                    <div className="empty-state-title">{search ? 'No results found' : 'No pending parcels!'}</div>
-                    <div className="empty-state-text">{search ? `No orders match "${search}"` : 'All pending parcels have been assigned for pickup'}</div>
-                  </div>
-                ) : (
-                  <div style={{ overflowY: 'auto', flex: 1 }}>
-                    <table>
-                      <thead style={{ position: 'sticky', top: 0, zIndex: 10, background: 'var(--bg-primary)', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
+                <div style={{ overflowY: 'auto', flex: 1 }}>
+                  <table>
+                    <thead style={{ position: 'sticky', top: 0, zIndex: 10, background: '#2f55a5' }}>
+                      <tr style={{ background: '#2f55a5' }}>
+                        <th style={{ width: 40, paddingLeft: 20, background: '#2f55a5', border: 'none', verticalAlign: 'middle' }}>
+                          <input type="checkbox"
+                            style={{ width: 16, height: 16, cursor: 'pointer' }}
+                            checked={allPageSelected}
+                            onChange={e => togglePageAll(e.target.checked)}
+                          />
+                        </th>
+                        <th style={{ background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('trackingCode')}</th>
+                        <th style={{ background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('merchant')}</th>
+                        <th style={{ background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('receiver')}</th>
+                        <th style={{ background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('address')}</th>
+                        <th style={{ background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('cod')}</th>
+                        <th style={{ background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('deliveryFee')}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {loading ? (
                         <tr>
-                          <th style={{ width: 40, paddingLeft: 24 }}>
-                            <input type="checkbox"
-                              style={{ width: 16, height: 16, cursor: 'pointer' }}
-                              checked={allPageSelected}
-                              onChange={e => togglePageAll(e.target.checked)}
-                            />
-                          </th>
-                          <th>{t('trackingCode')}</th>
-                          <th>{t('merchant')}</th>
-                          <th>{t('receiver')}</th>
-                          <th>{t('address')}</th>
-                          <th>{t('cod')}</th>
-                          <th>{t('deliveryFee')}</th>
+                          <td colSpan={7} style={{ padding: '40px 0', textAlign: 'center' }}>
+                            <div className="loading-wrapper"><div className="spinner" /></div>
+                          </td>
                         </tr>
-                      </thead>
-                      <tbody>
-                        {paginated.map((o: any) => (
+                      ) : filtered.length === 0 ? (
+                        <tr>
+                          <td colSpan={7} style={{ padding: '36px 20px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
+                            {t('noDataFound') || 'គ្មានទិន្នន័យ'}
+                          </td>
+                        </tr>
+                      ) : (
+                        paginated.map((o: any) => (
                           <tr key={o.id} onClick={() => toggleOrder(o.id)}
                             style={{
                               cursor: 'pointer',
@@ -243,31 +249,28 @@ export default function AssignPickupPage() {
                                 onClick={e => e.stopPropagation()}
                               />
                             </td>
-                            <td><code style={{ fontSize: 12, background: 'rgba(0,0,0,0.05)', padding: '4px 8px', borderRadius: 6, fontWeight: 600 }}>{o.trackingCode}</code></td>
-                            <td>
-                              <div style={{ fontWeight: 600, fontSize: 13 }}>{o.merchant?.name || '—'}</div>
-                              {o.merchant?.nameKh && <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{o.merchant.nameKh}</div>}
+                            <td style={{ fontWeight: 600, fontSize: 13, color: 'var(--text-primary)' }}>{o.trackingCode}</td>
+                            <td style={{ fontSize: 13 }}>
+                              {lang === 'km' ? (o.merchant?.nameKh || ((o.merchant?.name && o.merchant.name !== '-' && o.merchant.name !== '—') ? o.merchant.name : '')) : ((o.merchant?.name && o.merchant.name !== '-' && o.merchant.name !== '—') ? o.merchant.name : '')}
                             </td>
-                            <td><div style={{ fontWeight: 600, fontSize: 13 }}>{o.receiverPhone}</div></td>
-                            <td>
-                              <div style={{ fontSize: 12, color: 'var(--text-primary)', maxWidth: 160, wordBreak: 'break-word', lineHeight: 1.4 }}>
-                                {o.receiverAddress || <span style={{ color: 'var(--text-muted)' }}>—</span>}
-                              </div>
+                            <td style={{ fontSize: 13, fontWeight: 600 }}>{(o.receiverPhone && o.receiverPhone !== '-' && o.receiverPhone !== '—') ? o.receiverPhone : ''}</td>
+                            <td style={{ fontSize: 12, color: 'var(--text-primary)', maxWidth: 180 }}>
+                              {(o.receiverAddress && o.receiverAddress !== '-' && o.receiverAddress !== '—') ? o.receiverAddress : ''}
                             </td>
                             <td style={{ fontWeight: 700 }}>{formatCOD(o.cod, o.codCurrency || 'USD')}</td>
                             <td style={{ color: 'var(--success)', fontWeight: 600 }}>${parseFloat(o.deliveryFee).toFixed(2)}</td>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
 
-                {/* Pagination */}
+                {/* Left Pagination */}
                 {!loading && filtered.length > 0 && (
                   <div style={{ padding: '10px 24px', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-card)', gap: 12, flexWrap: 'wrap' }}>
                     <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                      Showing {(safePage - 1) * pageSize + 1}–{Math.min(safePage * pageSize, filtered.length)} of {filtered.length}
+                      {lang === 'km' ? `បង្ហាញ ${(safePage - 1) * pageSize + 1}–${Math.min(safePage * pageSize, filtered.length)} នៃ ${filtered.length}` : `Showing ${(safePage - 1) * pageSize + 1}–${Math.min(safePage * pageSize, filtered.length)} of ${filtered.length}`}
                     </span>
                     <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                       <button onClick={() => setCurrentPage(1)} disabled={safePage === 1} style={paginationBtnStyle(safePage === 1)}>«</button>
@@ -297,11 +300,11 @@ export default function AssignPickupPage() {
             <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 120px)' }}>
               <div className="card" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
                 {/* Driver header */}
-                <div className="card-header" style={{ padding: '16px 24px', background: 'var(--bg-primary)' }}>
-                  <span className="card-title" style={{ fontSize: 16 }}>🚗 {t('assignPickupDriver')}</span>
+                <div className="card-header" style={{ padding: '16px 20px', background: 'var(--bg-primary)' }}>
+                  <span className="card-title" style={{ fontSize: 15 }}>🚗 {lang === 'km' ? 'ជ្រើសរើសអ្នកដឹក' : t('assignPickupDriver')}</span>
                   {selectedDriver && (
                     <button onClick={() => setSelectedDriver(null)} style={{ fontSize: 12, color: 'var(--danger)', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 8, padding: '4px 10px', cursor: 'pointer', fontWeight: 600 }}>
-                      ✕ Clear
+                      ✕ {lang === 'km' ? 'សម្អាត' : 'Clear'}
                     </button>
                   )}
                 </div>
@@ -311,7 +314,7 @@ export default function AssignPickupPage() {
                   <div style={{ position: 'relative' }}>
                     <MdSearch size={16} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
                     <input type="text"
-                      placeholder="ស្វែងរក driver name, zone..."
+                      placeholder={lang === 'km' ? 'ស្វែងរកឈ្មោះអ្នកដឹក, តំបន់...' : 'Search driver name, zone...'}
                       value={driverSearch}
                       onChange={e => setDriverSearch(e.target.value)}
                       style={{
@@ -329,72 +332,95 @@ export default function AssignPickupPage() {
                       </button>
                     )}
                   </div>
+                  {driverSearch && (
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 6 }}>
+                      {filteredDrivers.length} {lang === 'km' ? 'អ្នកដឹកត្រូវបានរកឃើញ' : 'drivers found'}
+                    </div>
+                  )}
                 </div>
 
-                <div style={{ flex: 1, overflowY: 'auto', padding: 16 }}>
+                <div style={{ flex: 1, overflowY: 'auto', padding: 12 }}>
                   {filteredDrivers.length === 0 ? (
-                    <div className="empty-state" style={{ padding: '40px 16px' }}>
-                      <div className="empty-state-title">No available drivers</div>
-                      <div className="empty-state-text">All drivers might be busy or offline.</div>
+                    <div style={{ padding: '36px 16px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
+                      {lang === 'km' ? 'មិនមានអ្នកដឹកទំនេរទេ' : 'No available drivers'}
                     </div>
                   ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                      {filteredDrivers.map((d: any) => (
-                        <div key={d.id}
-                          onClick={() => setSelectedDriver(d.id)}
-                          style={{
-                            display: 'flex', alignItems: 'center', gap: 14,
-                            padding: '14px 16px', borderRadius: '12px',
-                            border: `2px solid ${selectedDriver === d.id ? '#d97706' : 'var(--border)'}`,
-                            background: selectedDriver === d.id ? '#fef3c7' : 'var(--bg-card)',
-                            boxShadow: selectedDriver === d.id ? '0 4px 12px rgba(217,119,6,0.15)' : 'none',
-                            cursor: 'pointer', transition: 'all 0.2s ease',
-                            transform: selectedDriver === d.id ? 'translateY(-2px)' : 'none'
-                          }}>
-                          <div style={{
-                            width: 44, height: 44, borderRadius: '50%',
-                            background: selectedDriver === d.id ? '#d97706' : 'var(--bg-primary)',
-                            color: selectedDriver === d.id ? '#fff' : 'var(--text-secondary)',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            fontWeight: 700, fontSize: 16, transition: 'all 0.2s'
-                          }}>
-                            {d.name.charAt(0)}
-                          </div>
-                          <div style={{ flex: 1 }}>
-                            <div style={{ fontWeight: 700, fontSize: 14, color: selectedDriver === d.id ? '#92400e' : 'var(--text-primary)' }}>
-                              {d.name} {d.nameKh && <span style={{ fontWeight: 500, fontSize: 13 }}>({d.nameKh})</span>}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      {filteredDrivers.map((d: any) => {
+                        const isSelected = selectedDriver === d.id;
+                        return (
+                          <div
+                            key={d.id}
+                            onClick={() => setSelectedDriver(d.id)}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 10,
+                              padding: '10px 12px',
+                              borderRadius: 10,
+                              border: `1.5px solid ${isSelected ? '#d97706' : 'var(--border)'}`,
+                              background: isSelected ? '#fef3c7' : 'var(--bg-card)',
+                              cursor: 'pointer',
+                              transition: 'all 0.15s ease',
+                            }}
+                          >
+                            <input
+                              type="radio"
+                              name="selectedPickupDriver"
+                              checked={isSelected}
+                              onChange={() => setSelectedDriver(d.id)}
+                              style={{ width: 16, height: 16, cursor: 'pointer', accentColor: '#d97706', flexShrink: 0 }}
+                            />
+                            <div style={{
+                              width: 34, height: 34, borderRadius: '50%',
+                              background: isSelected ? '#d97706' : '#e2e8f0',
+                              color: isSelected ? '#fff' : '#64748b',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              fontSize: 14, fontWeight: 700, flexShrink: 0
+                            }}>
+                              {((lang === 'km' && d.nameKh) ? d.nameKh : d.name || 'D').charAt(0).toUpperCase()}
                             </div>
-                            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
-                              📍 {d.zone?.name || t('noZone')}
-                            </div>
-                          </div>
-                          <div style={{ textAlign: 'right' }}>
-                            <Badge status={d.status} />
-                            {selectedDriver === d.id && (
-                              <div style={{ marginTop: 6, color: '#d97706', fontSize: 18 }}>
-                                <MdWarehouse />
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ fontWeight: 600, fontSize: 13, color: isSelected ? '#92400e' : 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                {lang === 'km' ? (d.nameKh || d.name) : (d.name || d.nameKh)}
                               </div>
-                            )}
+                              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                                {d.phone && <span>📞 {d.phone}</span>}
+                                {d.zone?.name && <span>📍 {d.zone.name}</span>}
+                              </div>
+                            </div>
+                            <span style={{
+                              fontSize: 11, padding: '2px 8px', borderRadius: 999, fontWeight: 600,
+                              background: d.status === 'available' ? '#dcfce7' : '#fef3c7',
+                              color: d.status === 'available' ? '#16a34a' : '#d97706',
+                              flexShrink: 0
+                            }}>
+                              {d.status === 'available' ? (lang === 'km' ? 'ទំនេរ' : 'Available') : (lang === 'km' ? 'ជាប់រវល់' : 'Busy')}
+                            </span>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </div>
 
                 {/* Action bottom bar */}
-                <div style={{ padding: '20px 24px', borderTop: '1px solid var(--border)', background: 'var(--bg-card)', boxShadow: '0 -4px 12px rgba(0,0,0,0.03)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                <div style={{ padding: '16px 20px', borderTop: '1px solid var(--border)', background: 'var(--bg-card)', boxShadow: '0 -4px 12px rgba(0,0,0,0.03)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
                     <div>
-                      <div style={{ fontSize: 13, color: 'var(--text-muted)', fontWeight: 500 }}>Selected Orders</div>
-                      <div style={{ fontSize: 24, fontWeight: 800, color: selected.length > 0 ? 'var(--text-primary)' : 'var(--text-muted)' }}>
-                        {selected.length}
+                      <div style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 500 }}>
+                        {lang === 'km' ? 'កញ្ចប់បានជ្រើសរើស' : 'Selected Orders'}
+                      </div>
+                      <div style={{ fontSize: 20, fontWeight: 800, color: selected.length > 0 ? '#d97706' : 'var(--text-muted)' }}>
+                        {selected.length} {lang === 'km' ? 'កញ្ចប់' : ''}
                       </div>
                     </div>
                     <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontSize: 13, color: 'var(--text-muted)', fontWeight: 500 }}>Pickup Driver</div>
-                      <div style={{ fontSize: 15, fontWeight: 700, color: selectedDriver ? '#d97706' : 'var(--danger)' }}>
-                        {selectedDriver ? drivers.find(d => d.id === selectedDriver)?.name : 'None selected'}
+                      <div style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 500 }}>
+                        {lang === 'km' ? 'អ្នកដឹកដែលបានចាត់' : 'Pickup Driver'}
+                      </div>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: selectedDriver ? '#d97706' : 'var(--danger)' }}>
+                        {selectedDriver ? (lang === 'km' ? (drivers.find(d => d.id === selectedDriver)?.nameKh || drivers.find(d => d.id === selectedDriver)?.name) : drivers.find(d => d.id === selectedDriver)?.name) : (lang === 'km' ? 'មិនទាន់ជ្រើស' : 'None selected')}
                       </div>
                     </div>
                   </div>
@@ -404,7 +430,8 @@ export default function AssignPickupPage() {
                     onClick={handleAssignPickup}
                     disabled={assigning || selected.length === 0 || !selectedDriver}
                     style={{
-                      justifyContent: 'center', padding: '14px', fontSize: 15, borderRadius: 12,
+                      justifyContent: 'center', padding: '12px', fontSize: 14, fontWeight: 700, borderRadius: 10,
+                      minHeight: 42,
                       background: (selected.length > 0 && selectedDriver) ? '#d97706' : 'var(--border)',
                       color: (selected.length > 0 && selectedDriver) ? '#fff' : 'var(--text-muted)',
                       border: 'none', cursor: (selected.length > 0 && selectedDriver) ? 'pointer' : 'not-allowed',
@@ -412,8 +439,8 @@ export default function AssignPickupPage() {
                       boxShadow: (selected.length > 0 && selectedDriver) ? '0 8px 16px rgba(217,119,6,0.25)' : 'none',
                       transition: 'all 0.2s',
                     }}>
-                    <MdWarehouse size={20} />
-                    {assigning ? 'Assigning...' : t('confirmPickupAssignment')}
+                    <MdWarehouse size={18} />
+                    {assigning ? (lang === 'km' ? 'កំពុងចាត់តាំង...' : 'Assigning...') : (lang === 'km' ? `ចាត់តាំងការប្រមូល (${selected.length})` : t('confirmPickupAssignment'))}
                   </button>
                 </div>
               </div>

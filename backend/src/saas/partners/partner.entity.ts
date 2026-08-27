@@ -8,7 +8,7 @@ import {
   OneToOne,
   JoinColumn,
 } from 'typeorm';
-import { User } from '../../users/users.entity';
+import { User } from '../../users/entities/users.entity';
 import { Coupon } from '../coupons/coupon.entity';
 import { Commission } from '../commissions/commission.entity';
 

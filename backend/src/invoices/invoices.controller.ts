@@ -16,7 +16,7 @@ export class InvoicesController {
   @ApiOperation({ summary: 'Save printed invoices' })
   @LogActivity({ action: 'CREATE_INVOICE', entityName: 'Invoice', description: 'Generated and printed invoice' })
   create(@Body() dto: CreateInvoiceDto) {
-    return this.invoicesService.createInvoices(dto.orderIds);
+    return this.invoicesService.createInvoices(dto.parcelIds);
   }
 
   @Get()

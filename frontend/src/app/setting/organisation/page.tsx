@@ -6,9 +6,11 @@ import { isAuthenticated } from '@/lib/auth';
 import Sidebar from '@/components/layout/Sidebar';
 import Topbar from '@/components/layout/Topbar';
 import api from '@/lib/api';
+import { useLanguage } from '@/lib/LanguageContext';
 
 export default function OrganisationSettingsPage() {
   const router = useRouter();
+  const { t, lang } = useLanguage();
   const [form, setForm] = useState({
     name: 'EBS Digital Solutions',
     phone: '+855 78 000 000',
@@ -46,10 +48,10 @@ export default function OrganisationSettingsPage() {
     setSuccessMsg('');
     try {
       await api.post('/settings/organisation', form);
-      setSuccessMsg('Organisation settings saved successfully!');
+      setSuccessMsg(t('orgSavedSuccess'));
       setTimeout(() => setSuccessMsg(''), 3000);
     } catch {
-      alert('Failed to save settings');
+      alert(lang === 'km' ? 'មិនអាចរក្សាទុកការកំណត់បានទេ' : 'Failed to save settings');
     }
     setSaving(false);
   };
@@ -67,10 +69,10 @@ export default function OrganisationSettingsPage() {
     <div className="app-layout">
       <Sidebar />
       <div className="main-content">
-        <Topbar title="Organisation Settings" subtitle="Configure business profile and branding metadata" />
+        <Topbar title={t('organizationSetting')} subtitle={t('organizationSubtitle')} />
         <div className="page-content">
           <div className="card">
-            <div className="card-header"><span className="card-title">🏢 Organisation Details</span></div>
+            <div className="card-header"><span className="card-title">{t('organizationDetails')}</span></div>
             <div className="card-body">
               <form onSubmit={handleSubmit}>
                 {successMsg && (
@@ -80,7 +82,7 @@ export default function OrganisationSettingsPage() {
                 )}
 
                 <div className="form-group">
-                  <label className="form-label">Company Name <span>*</span></label>
+                  <label className="form-label">{t('companyName')} <span>*</span></label>
                   <input
                     type="text"
                     className="form-control"
@@ -92,7 +94,7 @@ export default function OrganisationSettingsPage() {
 
                 <div className="form-row">
                   <div className="form-group">
-                    <label className="form-label">Phone <span>*</span></label>
+                    <label className="form-label">{t('orgPhone')} <span>*</span></label>
                     <input
                       type="text"
                       className="form-control"
@@ -102,7 +104,7 @@ export default function OrganisationSettingsPage() {
                     />
                   </div>
                   <div className="form-group">
-                    <label className="form-label">Email Address <span>*</span></label>
+                    <label className="form-label">{t('orgEmail')} <span>*</span></label>
                     <input
                       type="email"
                       className="form-control"
@@ -114,7 +116,7 @@ export default function OrganisationSettingsPage() {
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">Website</label>
+                  <label className="form-label">{t('orgWebsite')}</label>
                   <input
                     type="text"
                     className="form-control"
@@ -124,7 +126,7 @@ export default function OrganisationSettingsPage() {
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">Address <span>*</span></label>
+                  <label className="form-label">{t('orgAddress')} <span>*</span></label>
                   <textarea
                     className="form-control"
                     rows={3}
@@ -137,7 +139,7 @@ export default function OrganisationSettingsPage() {
 
                 <div style={{ marginTop: 20, textAlign: 'right' }}>
                   <button type="submit" className="btn btn-primary" disabled={saving}>
-                    {saving ? 'Saving...' : 'Save Changes'}
+                    {saving ? t('savingChanges') : t('saveChanges')}
                   </button>
                 </div>
               </form>

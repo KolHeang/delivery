@@ -31,6 +31,14 @@ export class ExpensesController {
     return this.expensesService.findTypes();
   }
 
+  @Patch('types/:id')
+  updateType(
+    @Param('id') id: string,
+    @Body() body: { name?: string; description?: string },
+  ) {
+    return this.expensesService.updateType(parseInt(id), body);
+  }
+
   @Delete('types/:id')
   deleteType(@Param('id') id: string) {
     return this.expensesService.deleteType(parseInt(id));

@@ -8,7 +8,7 @@ import {
   JoinColumn,
   OneToMany,
 } from 'typeorm';
-import { User } from '../../users/users.entity';
+import { User } from '../../users/entities/users.entity';
 import { Subscription } from '../subscriptions/subscription.entity';
 import { Coupon } from '../coupons/coupon.entity';
 import { SaasPayment } from '../payments/saas-payment.entity';

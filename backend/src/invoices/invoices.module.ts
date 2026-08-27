@@ -1,12 +1,12 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { Invoice } from './invoice.entity';
-import { Order } from '../orders/order.entity';
+import { Invoice } from './entities/invoice.entity';
+import { Parcel } from '../parcels/entities/parcel.entity';
 import { InvoicesService } from './invoices.service';
 import { InvoicesController } from './invoices.controller';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Invoice, Order])],
+  imports: [TypeOrmModule.forFeature([Invoice, Parcel])],
   controllers: [InvoicesController],
   providers: [InvoicesService],
   exports: [InvoicesService],

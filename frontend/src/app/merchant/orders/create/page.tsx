@@ -219,7 +219,7 @@ export default function MerchantCreateOrderPage() {
         payload.zoneId = resolvedZoneId;
       }
 
-      await api.post('/mobile/merchant/orders', payload);
+      await api.post('/mobile/merchant/parcels', payload);
       setSuccess(true);
       setForm(prev => ({
         ...prev,

@@ -5,10 +5,10 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 
 import { User } from '../users/entities/users.entity';
 import { Merchant } from '../merchants/entities/merchant.entity';
-import { Order } from '../orders/entities/order.entity';
-import { OrderHistory } from '../orders/entities/order-history.entity';
-import { PickupRequest } from '../orders/entities/pickup-request.entity';
-import { StaffPayment } from '../payments/entities/staff-payment.entity';
+import { Parcel } from '../parcels/entities/parcel.entity';
+import { ParcelEvent } from '../parcels/entities/parcel-event.entity';
+import { PickupRequest } from '../parcels/entities/pickup-request.entity';
+import { DriverPayment } from '../payments/entities/driver-payment.entity';
 import { RefreshToken } from '../auth/entities/refresh-token.entity';
 import { DeviceToken } from '../auth/entities/device-token.entity';
 
@@ -24,10 +24,10 @@ import { MerchantService } from './merchant/merchant.service';
     TypeOrmModule.forFeature([
       User,
       Merchant,
-      Order,
-      OrderHistory,
+      Parcel,
+      ParcelEvent,
       PickupRequest,
-      StaffPayment,
+      DriverPayment,
       RefreshToken,
       DeviceToken,
     ]),

@@ -109,7 +109,7 @@ function TrackingPageContent() {
     setError("");
     setOrder(null);
     try {
-      const res = await api.get(`/orders/tracking/${encodeURIComponent(searchStr.trim())}`);
+      const res = await api.get(`/parcels/tracking/${encodeURIComponent(searchStr.trim())}`);
       if (res.data) {
         setOrder(res.data);
       } else {

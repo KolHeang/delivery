@@ -87,7 +87,7 @@ export default function DeliveriesPage() {
   const handleUpdatePickupDriver = async (orderId: number, driverId: string) => {
     try {
       const val = driverId ? parseInt(driverId) : null;
-      await api.patch(`/orders/${orderId}`, { pickupDriverId: val });
+      await api.patch(`/parcels/${orderId}`, { pickupDriverId: val });
       await load();
     } catch (err) {
       console.error(err);
@@ -97,7 +97,7 @@ export default function DeliveriesPage() {
   const handleUpdateDeliveryDriver = async (orderId: number, driverId: string) => {
     try {
       const val = driverId ? parseInt(driverId) : null;
-      await api.patch(`/orders/${orderId}`, { driverId: val });
+      await api.patch(`/parcels/${orderId}`, { driverId: val });
       await load();
     } catch (err) {
       console.error(err);
@@ -187,7 +187,7 @@ export default function DeliveriesPage() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await api.get('/orders', {
+      const res = await api.get('/parcels', {
         params: {
           page: currentPage,
           limit: pageSize,
@@ -235,7 +235,7 @@ export default function DeliveriesPage() {
 
   const handleDelete = async (id: number) => {
     if (!confirm('Delete this delivery?')) return;
-    try { await api.delete(`/orders/${id}`); await load(); } catch {}
+    try { await api.delete(`/parcels/${id}`); await load(); } catch {}
   };
 
   const handleStatusChange = (id: number, status: string) => {
@@ -251,7 +251,7 @@ export default function DeliveriesPage() {
   const submitStatusWithRemark = async () => {
     if (!remarkModal) return;
     try {
-      await api.patch(`/orders/${remarkModal.orderId}/status`, {
+      await api.patch(`/parcels/${remarkModal.orderId}/status`, {
         status: remarkModal.newStatus,
         note: remarkText.trim() || undefined,
       });
@@ -270,7 +270,7 @@ export default function DeliveriesPage() {
     if (!confirm(lang === 'km' ? `ទទួលកញ្ចប់អីវ៉ាន់ចំនួន ${pickedUpIds.length} ចូលឃ្លាំង?` : `Receive ${pickedUpIds.length} parcel(s) into warehouse?`)) return;
     setLoading(true);
     try {
-      await Promise.all(pickedUpIds.map(id => api.patch(`/orders/${id}/status`, { status: 'in-warehouse' })));
+      await Promise.all(pickedUpIds.map(id => api.patch(`/parcels/${id}/status`, { status: 'in-warehouse' })));
       setSelectedIds(prev => prev.filter(id => !pickedUpIds.includes(id)));
       await load();
       alert(lang === 'km' ? 'បានទទួលចូលឃ្លាំងដោយជោគជ័យ!' : 'Received into warehouse successfully!');

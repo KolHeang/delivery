@@ -25,9 +25,9 @@ export class ReportsController {
     return this.reportsService.getDriverPerformance();
   }
 
-  @Get('order-summary')
-  getOrderSummary() {
-    return this.reportsService.getOrderSummary();
+  @Get('parcel-summary')
+  getParcelSummary() {
+    return this.reportsService.getParcelSummary();
   }
 
   @Get('shop-summary')

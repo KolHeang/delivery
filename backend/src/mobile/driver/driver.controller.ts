@@ -19,8 +19,8 @@ import {
 } from '@nestjs/swagger';
 import { DriverService } from './driver.service';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
-import { UpdateOrderStatusDto } from '../../orders/dto/order.dto';
-import { ConfirmPickupDto } from '../../orders/dto/pickup-request.dto';
+import { UpdateParcelStatusDto } from '../../parcels/dto/parcel.dto';
+import { ConfirmPickupDto } from '../../parcels/dto/pickup-request.dto';
 
 @ApiTags('Mobile Driver')
 @ApiBearerAuth()
@@ -71,21 +71,21 @@ export class DriverController {
 
   @Get('scan/:code')
   @ApiOperation({
-    summary: 'Scan QR code / tracking code to look up order details',
+    summary: 'Scan QR code / tracking code to look up parcel details',
   })
-  scanOrderByCode(@Request() req: any, @Param('code') code: string) {
-    return this.driverService.scanOrder(req.user.id, code);
+  scanParcelByCode(@Request() req: any, @Param('code') code: string) {
+    return this.driverService.scanParcel(req.user.id, code);
   }
 
   @Post('scan')
   @ApiOperation({
-    summary: 'Scan QR code / barcode payload to look up order details',
+    summary: 'Scan QR code / barcode payload to look up parcel details',
   })
   @ApiBody({
     schema: { type: 'object', properties: { code: { type: 'string' } } },
   })
-  scanOrder(@Request() req: any, @Body('code') code: string) {
-    return this.driverService.scanOrder(req.user.id, code);
+  scanParcel(@Request() req: any, @Body('code') code: string) {
+    return this.driverService.scanParcel(req.user.id, code);
   }
 
   @Post('scan/claim')
@@ -93,8 +93,8 @@ export class DriverController {
   @ApiBody({
     schema: { type: 'object', properties: { code: { type: 'string' } } },
   })
-  claimScannedOrder(@Request() req: any, @Body('code') code: string) {
-    return this.driverService.claimScannedOrder(req.user.id, code);
+  claimScannedParcel(@Request() req: any, @Body('code') code: string) {
+    return this.driverService.claimScannedParcel(req.user.id, code);
   }
 
   @Post('scan/update-status')
@@ -115,9 +115,9 @@ export class DriverController {
   updateScannedStatus(
     @Request() req: any,
     @Body('code') code: string,
-    @Body() dto: UpdateOrderStatusDto,
+    @Body() dto: UpdateParcelStatusDto,
   ) {
-    return this.driverService.updateScannedOrderStatus(req.user.id, code, dto);
+    return this.driverService.updateScannedParcelStatus(req.user.id, code, dto);
   }
 
   @Get('tasks')
@@ -193,9 +193,9 @@ export class DriverController {
   updateStatus(
     @Request() req: any,
     @Param('id', ParseIntPipe) id: number,
-    @Body() dto: UpdateOrderStatusDto,
+    @Body() dto: UpdateParcelStatusDto,
   ) {
-    return this.driverService.updateOrderStatus(req.user.id, id, dto);
+    return this.driverService.updateParcelStatus(req.user.id, id, dto);
   }
 
   @Get('summary')

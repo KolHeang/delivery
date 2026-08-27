@@ -6,7 +6,7 @@ import {
   ManyToOne,
   JoinColumn,
 } from 'typeorm';
-import { Order } from '../../orders/entities/order.entity';
+import { Parcel } from '../../parcels/entities/parcel.entity';
 
 @Entity('invoices')
 export class Invoice {
@@ -16,12 +16,12 @@ export class Invoice {
   @Column({ name: 'invoice_number', unique: true })
   invoiceNumber: string;
 
-  @ManyToOne(() => Order, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'order_id' })
-  order: Order;
+  @ManyToOne(() => Parcel, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'parcel_id' })
+  parcel: Parcel;
 
-  @Column({ name: 'order_id' })
-  orderId: number;
+  @Column({ name: 'parcel_id' })
+  parcelId: number;
 
   @CreateDateColumn({ name: 'created_at' })
   printedAt: Date;

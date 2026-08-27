@@ -10,7 +10,7 @@ import { VehiclesModule } from './vehicles/vehicles.module';
 import { DriversModule } from './drivers/drivers.module';
 import { CustomersModule } from './customers/customers.module';
 import { MerchantsModule } from './merchants/merchants.module';
-import { OrdersModule } from './orders/orders.module';
+import { ParcelsModule } from './parcels/parcels.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { ReportsModule } from './reports/reports.module';
 import { ExpensesModule } from './expenses/expenses.module';
@@ -38,7 +38,7 @@ import { ActivityLogInterceptor } from './activity-logs/activity-log.interceptor
     DriversModule,
     CustomersModule,
     MerchantsModule,
-    OrdersModule,
+    ParcelsModule,
     DashboardModule,
     ReportsModule,
     ExpensesModule,

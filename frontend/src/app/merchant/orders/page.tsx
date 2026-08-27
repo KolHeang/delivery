@@ -69,7 +69,7 @@ export default function MerchantOrdersPage() {
     const loadOrders = async () => {
       setLoading(true);
       try {
-        const res = await api.get('/mobile/merchant/orders');
+        const res = await api.get('/mobile/merchant/parcels');
         setOrders(res.data);
       } catch (err) {
         console.error('Failed to load merchant orders', err);

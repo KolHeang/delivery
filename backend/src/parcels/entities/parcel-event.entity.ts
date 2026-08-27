@@ -6,15 +6,15 @@ import {
   ManyToOne,
   JoinColumn,
 } from 'typeorm';
-import { Order } from './order.entity';
+import { Parcel } from './parcel.entity';
 
-@Entity('order_histories')
-export class OrderHistory {
+@Entity('parcel_events')
+export class ParcelEvent {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ name: 'order_id' })
-  orderId: number;
+  @Column({ name: 'parcel_id' })
+  parcelId: number;
 
   @Column()
   status: string;
@@ -25,7 +25,7 @@ export class OrderHistory {
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 
-  @ManyToOne(() => Order, (order) => order.histories, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'order_id' })
-  order: Order;
+  @ManyToOne(() => Parcel, (parcel) => parcel.events, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'parcel_id' })
+  parcel: Parcel;
 }

@@ -39,7 +39,7 @@ export default function AssignPickupPage() {
     setLoading(true);
     try {
       const [orders, drvs] = await Promise.all([
-        api.get('/orders/pending-pickup'),
+        api.get('/parcels/pending-pickup'),
         api.get('/drivers/available'),
       ]);
       setPendingOrders(orders.data);
@@ -106,7 +106,7 @@ export default function AssignPickupPage() {
     if (!selectedDriver || selected.length === 0) return;
     setAssigning(true);
     try {
-      await Promise.all(selected.map(id => api.post(`/orders/${id}/assign-pickup`, { driverId: selectedDriver })));
+      await Promise.all(selected.map(id => api.post(`/parcels/${id}/assign-pickup`, { driverId: selectedDriver })));
       const count = selected.length;
       setSelected([]);
       setSelectedDriver(null);

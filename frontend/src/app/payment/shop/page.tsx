@@ -149,7 +149,7 @@ export default function PaymentWithShopPage() {
     try {
       const [merchantRes, orderRes, orgRes] = await Promise.all([
         api.get('/merchants'),
-        api.get('/orders'),
+        api.get('/parcels'),
         api.get('/settings/organisation').catch(() => null),
       ]);
       setMerchants(merchantRes.data || []);
@@ -433,7 +433,7 @@ export default function PaymentWithShopPage() {
         const groupFailedOrders = filteredOrders.filter(
           o => o.merchantId === mId && (o.status === 'failed' || o.status === 'returned') && o.merchantPaymentStatus === 'unpaid'
         );
-        const orderIds = [...groupOrders.map(o => o.id), ...groupFailedOrders.map(o => o.id)];
+        const parcelIds = [...groupOrders.map(o => o.id), ...groupFailedOrders.map(o => o.id)];
 
         await api.post('/payments/shop', {
           merchantId: mId,
@@ -444,7 +444,7 @@ export default function PaymentWithShopPage() {
           note: lang === 'km' 
             ? `ទូទាត់ប្រាក់ហាង។ USD: $${groupPayableUSD.toFixed(2)}, KHR: ${groupPayableKHR.toLocaleString()} KHR`
             : `Settle shop payout. USD: $${groupPayableUSD.toFixed(2)}, KHR: ${groupPayableKHR.toLocaleString()} KHR`,
-          orderIds,
+          parcelIds,
           telegramReport: {
             totalCount: groupOrders.length + groupFailedOrders.length,
             newCount: 0,
@@ -841,7 +841,7 @@ export default function PaymentWithShopPage() {
                                       const newVal = parseFloat(e.target.value) || 0;
                                       if (newVal !== parseFloat(o.cod)) {
                                         try {
-                                          await api.patch('/orders/' + o.id, { cod: newVal });
+                                          await api.patch('/parcels/' + o.id, { cod: newVal });
                                           setOrders(prev => prev.map(item => item.id === o.id ? { ...item, cod: newVal } : item));
                                         } catch (err: any) {
                                           alert(lang === 'km' ? 'កែប្រែប្រាក់មិនបានសម្រេច' : 'Failed to update COD: ' + err.message);
@@ -872,7 +872,7 @@ export default function PaymentWithShopPage() {
                                       const newVal = parseFloat(e.target.value) || 0;
                                       if (newVal !== parseFloat(o.deliveryFee)) {
                                         try {
-                                          await api.patch('/orders/' + o.id, { deliveryFee: newVal });
+                                          await api.patch('/parcels/' + o.id, { deliveryFee: newVal });
                                           setOrders(prev => prev.map(item => item.id === o.id ? { ...item, deliveryFee: newVal } : item));
                                         } catch (err: any) {
                                           alert(lang === 'km' ? 'កែប្រែថ្លៃសេវាដឹកមិនបានសម្រេច' : 'Failed to update Delivery Fee: ' + err.message);

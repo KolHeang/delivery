@@ -64,7 +64,7 @@ export default function PrintInvoicePage() {
   useEffect(() => {
     if (!isAuthenticated()) { router.push('/'); return; }
     Promise.all([
-      api.get('/orders'),
+      api.get('/parcels'),
       api.get('/merchants'),
       api.get('/drivers')
     ])
@@ -148,7 +148,7 @@ export default function PrintInvoicePage() {
 
   const handlePrint = async () => {
     try {
-      await api.post('/invoices', { orderIds: selectedIds });
+      await api.post('/invoices', { parcelIds: selectedIds });
     } catch (err) {
       console.error('Failed to save printed invoices:', err);
     }

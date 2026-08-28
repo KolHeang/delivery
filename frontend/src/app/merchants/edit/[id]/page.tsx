@@ -164,11 +164,11 @@ export default function EditShopPage() {
     <div className="app-layout">
       <Sidebar />
       <div className="main-content">
-        <Topbar title={t("editShop")} subtitle="Update shop details and settings" />
+        <Topbar title={t("editShop")} subtitle="កែប្រែព័ត៌មាន និងការកំណត់របស់ហាងទំនិញ" />
         <div className="page-content">
           <div className="card">
             <div className="card-header">
-              <span className="card-title">🏪 {t("editShop")}</span>
+              <span className="card-title">{t("editShop")}</span>
             </div>
             <div className="card-body">
               <form onSubmit={handleSubmit}>
@@ -225,7 +225,7 @@ export default function EditShopPage() {
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
                   <div className="form-group">
                     <label className="form-label">
-                      {t("deliveryFee")} <span>*</span>
+                      {t("deliveryFee")} <span style={{ color: '#ef4444' }}>*</span>
                     </label>
                     <input
                       type="number"
@@ -238,7 +238,7 @@ export default function EditShopPage() {
                   </div>
                   <div className="form-group">
                     <label className="form-label">
-                      {t("exchangeRate")} <span>*</span>
+                      {t("exchangeRate")} <span style={{ color: '#ef4444' }}>*</span>
                     </label>
                     <input
                       type="number"
@@ -253,13 +253,14 @@ export default function EditShopPage() {
                 {/* Section 2: Shop Info */}
                 <div
                   style={{
-                    background: "#eeeeee",
+                    background: "#f8fafc",
+                    border: "1px solid var(--border)",
                     padding: "10px 16px",
                     fontWeight: "bold",
                     fontSize: 13,
                     color: "#334155",
                     margin: "20px 0 16px",
-                    borderRadius: 4,
+                    borderRadius: 6,
                   }}
                 >
                   {t("shopInfo")}
@@ -269,7 +270,7 @@ export default function EditShopPage() {
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
                   <div className="form-group">
                     <label className="form-label">
-                      {t("name")} <span>*</span>
+                      {t("name")} <span style={{ color: '#ef4444' }}>*</span>
                     </label>
                     <input
                       type="text"
@@ -282,7 +283,7 @@ export default function EditShopPage() {
                   </div>
                   <div className="form-group">
                     <label className="form-label">
-                      {t("phone")} <span>*</span>
+                      {t("phone")} <span style={{ color: '#ef4444' }}>*</span>
                     </label>
                     <input
                       type="text"
@@ -298,7 +299,7 @@ export default function EditShopPage() {
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
                   <div className="form-group">
                     <label className="form-label">
-                      {t("email")} <span>*</span>
+                      {t("email")} <span style={{ color: '#ef4444' }}>*</span>
                     </label>
                     <input
                       type="email"
@@ -311,7 +312,7 @@ export default function EditShopPage() {
                   </div>
                   <div className="form-group">
                     <label className="form-label">
-                      {t("address")} <span>*</span>
+                      {t("address")} <span style={{ color: '#ef4444' }}>*</span>
                     </label>
                     <input
                       type="text"
@@ -339,13 +340,14 @@ export default function EditShopPage() {
                 {/* Section 3: Bank Info */}
                 <div
                   style={{
-                    background: "#eeeeee",
+                    background: "#f8fafc",
+                    border: "1px solid var(--border)",
                     padding: "10px 16px",
                     fontWeight: "bold",
                     fontSize: 13,
                     color: "#334155",
                     margin: "20px 0 16px",
-                    borderRadius: 4,
+                    borderRadius: 6,
                   }}
                 >
                   {t("bankInfo")}
@@ -443,22 +445,22 @@ export default function EditShopPage() {
                 >
                   <button
                     type="button"
-                    className="btn btn-outline"
+                    className="btn btn-cancel"
+                    style={{ background: '#dc2626', color: '#ffffff', border: '1px solid #dc2626', fontWeight: 700 }}
                     onClick={() => router.push("/merchants")}
                   >
                     {t("cancel")}
                   </button>
                   <button
                     type="submit"
+                    className="btn btn-primary"
                     style={{
-                      background: "var(--accent)",
-                      color: "#fff",
+                      background: "#2563eb",
+                      color: "#ffffff",
+                      border: "1px solid #2563eb",
                       padding: "10px 24px",
-                      border: "none",
                       borderRadius: 6,
                       fontWeight: "bold",
-                      cursor: "pointer",
-                      transition: "opacity 0.2s",
                     }}
                     disabled={saving}
                   >

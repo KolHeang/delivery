@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { getUser, clearAuth, User } from '@/lib/auth';
 import { useLanguage } from '@/lib/LanguageContext';
 import { MdNotifications, MdRefresh, MdPerson, MdLogout, MdKeyboardArrowDown, MdTranslate } from 'react-icons/md';
+import { FlagKm, FlagEn } from '@/components/ui/Flags';
 import Badge from '@/components/ui/Badge';
 
 interface TopbarProps {
@@ -75,26 +76,46 @@ export default function Topbar({ title, subtitle }: TopbarProps) {
 
           {/* Language Toggle */}
           <button
-            className="topbar-btn"
             title="Switch Language"
             onClick={() => setLang(lang === 'en' ? 'km' : 'en')}
             style={{
-              display: 'flex',
+              display: 'inline-flex',
               alignItems: 'center',
-              gap: 4,
-              fontSize: 12,
-              fontWeight: 700,
-              letterSpacing: '0.04em',
-              minWidth: 52,
+              gap: 8,
+              fontSize: 13,
+              fontWeight: 800,
+              letterSpacing: '0.02em',
               justifyContent: 'center',
-              background: 'rgba(255,255,255,0.12)',
-              border: '1px solid rgba(255,255,255,0.2)',
-              borderRadius: 8,
-              padding: '4px 8px',
+              background: 'rgba(255, 255, 255, 0.12)',
+              border: '1px solid rgba(255, 255, 255, 0.22)',
+              borderRadius: 10,
+              padding: '0 12px',
+              height: 36,
+              color: '#ffffff',
+              cursor: 'pointer',
+              transition: 'all 0.15s ease',
+              boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)';
+              e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.35)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.12)';
+              e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.22)';
             }}
           >
-            <MdTranslate size={14} />
-            {lang === 'en' ? 'KH' : 'EN'}
+            {lang === 'km' ? (
+              <>
+                <FlagKm size={20} />
+                <span>ខ្មែរ</span>
+              </>
+            ) : (
+              <>
+                <FlagEn size={20} />
+                <span>EN</span>
+              </>
+            )}
           </button>
 
           {user && (

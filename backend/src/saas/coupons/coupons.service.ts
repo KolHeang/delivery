@@ -4,7 +4,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, ILike } from 'typeorm';
 import { Coupon } from './coupon.entity';
 
 @Injectable()
@@ -14,11 +14,39 @@ export class CouponsService {
     private readonly couponRepo: Repository<Coupon>,
   ) {}
 
-  async findAll(): Promise<Coupon[]> {
-    return this.couponRepo.find({
+  async findAll(query?: { page?: number; limit?: number; search?: string }): Promise<any> {
+    const page = query?.page !== undefined ? Math.max(1, Number(query.page)) : undefined;
+    const limit = query?.limit !== undefined ? Math.max(1, Number(query.limit)) : 10;
+
+    let where: any = {};
+    if (query?.search) {
+      where = { code: ILike(`%${query.search}%`) };
+    }
+
+    const findOptions: any = {
+      where,
       relations: { partner: true },
       order: { createdAt: 'DESC' },
+    };
+
+    if (page === undefined) {
+      return this.couponRepo.find(findOptions);
+    }
+
+    const [result, total] = await this.couponRepo.findAndCount({
+      ...findOptions,
+      skip: (page - 1) * limit,
+      take: limit,
     });
+
+    return {
+      result,
+      data: result,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 
   async findById(id: number): Promise<Coupon> {

@@ -47,11 +47,7 @@ export class Subscription {
   @Column({ name: 'company_name', nullable: true })
   companyName: string;
 
-  @Column({ name: 'subdomain', nullable: true })
-  subdomain: string;
 
-  @Column({ name: 'custom_domain', nullable: true })
-  customDomain: string;
 
   @Column({ name: 'plan_id' })
   planId: number;

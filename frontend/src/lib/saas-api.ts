@@ -10,6 +10,7 @@ export interface Plan {
   maxUsers: number;
   maxOrdersPerMonth: number;
   maxDrivers: number;
+  maxMerchants?: number;
   maxVehicles: number;
   features: Record<string, boolean>;
   isActive: boolean;
@@ -73,8 +74,10 @@ export interface SaasInvoice {
 
 export const saasApi = {
   // Plans
-  getPlans: async (all = false): Promise<Plan[]> => {
-    const res = await api.get(`/saas/plans${all ? '?all=true' : ''}`);
+  getPlans: async (all = false, params?: any): Promise<any> => {
+    const res = await api.get('/saas/plans', {
+      params: { ...(all ? { all: 'true' } : {}), ...params },
+    });
     return res.data;
   },
 
@@ -151,8 +154,8 @@ export const saasApi = {
     return res.data;
   },
 
-  getCoupons: async () => {
-    const res = await api.get('/saas/coupons');
+  getCoupons: async (params?: any) => {
+    const res = await api.get('/saas/coupons', { params });
     return res.data;
   },
 
@@ -188,13 +191,13 @@ export const saasApi = {
   },
 
   // Super Admin
-  getAllSubscriptions: async () => {
-    const res = await api.get('/saas/subscriptions');
+  getAllSubscriptions: async (params?: any) => {
+    const res = await api.get('/saas/subscriptions', { params });
     return res.data;
   },
 
-  getAllInvoices: async () => {
-    const res = await api.get('/saas/invoices');
+  getAllInvoices: async (params?: any) => {
+    const res = await api.get('/saas/invoices', { params });
     return res.data;
   },
 
@@ -203,18 +206,48 @@ export const saasApi = {
     return res.data;
   },
 
+  createInvoice: async (data: any) => {
+    const res = await api.post('/saas/invoices', data);
+    return res.data;
+  },
+
+  createRenewalInvoice: async (data: {
+    subscriptionId?: number;
+    planId?: number;
+    billingCycle?: string;
+    totalAmount?: number;
+  }) => {
+    const res = await api.post('/saas/invoices', data);
+    return res.data;
+  },
+
   updateSubscriptionStatus: async (id: number, status: string) => {
     const res = await api.put(`/saas/subscriptions/${id}/status`, { status });
     return res.data;
   },
 
-  getAllPartners: async () => {
-    const res = await api.get('/saas/partners');
+  getAllPartners: async (params?: any) => {
+    const res = await api.get('/saas/partners', { params });
     return res.data;
   },
 
-  getAllCommissions: async () => {
-    const res = await api.get('/saas/commissions');
+  createPartner: async (data: any) => {
+    const res = await api.post('/saas/partners', data);
+    return res.data;
+  },
+
+  updatePartner: async (id: number, data: any) => {
+    const res = await api.put(`/saas/partners/${id}`, data);
+    return res.data;
+  },
+
+  deletePartner: async (id: number) => {
+    const res = await api.delete(`/saas/partners/${id}`);
+    return res.data;
+  },
+
+  getAllCommissions: async (params?: any) => {
+    const res = await api.get('/saas/commissions', { params });
     return res.data;
   },
 
@@ -231,8 +264,8 @@ export const saasApi = {
   },
 
   // SaaS Platform Master Admins (Dedicated saas_admins table)
-  getSaasAdmins: async () => {
-    const res = await api.get('/saas/admins');
+  getSaasAdmins: async (params?: any) => {
+    const res = await api.get('/saas/admins', { params });
     return res.data;
   },
 
@@ -257,8 +290,60 @@ export const saasApi = {
     return res.data;
   },
 
+  // Dynamic Multi-Domain Management (saas_domains)
+  resolveDomain: async (domain: string) => {
+    const res = await api.get(`/saas/domains/resolve?domain=${encodeURIComponent(domain)}`);
+    return res.data;
+  },
+
+  getDomains: async (tenantId?: number) => {
+    const res = await api.get(`/saas/domains${tenantId ? `?tenantId=${tenantId}` : ''}`);
+    return res.data;
+  },
+
+  addDomain: async (data: {
+    tenantId: number;
+    domain: string;
+    isPrimary?: boolean;
+    domainType?: string;
+    dnsTarget?: string;
+  }) => {
+    const res = await api.post('/saas/domains', data);
+    return res.data;
+  },
+
+  setPrimaryDomain: async (domainId: number) => {
+    const res = await api.patch(`/saas/domains/${domainId}/primary`);
+    return res.data;
+  },
+
+  verifyDomain: async (domainId: number) => {
+    const res = await api.patch(`/saas/domains/${domainId}/verify`);
+    return res.data;
+  },
+
+  deleteDomain: async (domainId: number) => {
+    const res = await api.delete(`/saas/domains/${domainId}`);
+    return res.data;
+  },
+
+  getSaasAdminById: async (id: number) => {
+    const res = await api.get(`/saas/admins/${id}`);
+    return res.data;
+  },
+
   deleteTenant: async (id: number) => {
     const res = await api.delete(`/saas/tenants/${id}`);
+    return res.data;
+  },
+
+  getCouponById: async (id: number) => {
+    const res = await api.get(`/saas/coupons/${id}`);
+    return res.data;
+  },
+
+  updateCoupon: async (id: number, data: any) => {
+    const res = await api.put(`/saas/coupons/${id}`, data);
     return res.data;
   },
 

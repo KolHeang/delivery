@@ -7,7 +7,9 @@ import Sidebar from '@/components/layout/Sidebar';
 import Topbar from '@/components/layout/Topbar';
 import api from '@/lib/api';
 import { useLanguage } from '@/lib/LanguageContext';
-import { MdAdd, MdEdit, MdDelete, MdSecurity } from 'react-icons/md';
+import { MdSecurity } from 'react-icons/md';
+import { FaRegEdit, FaTrashAlt } from 'react-icons/fa';
+import { FiPlusCircle } from 'react-icons/fi';
 import Pagination from '@/components/ui/Pagination';
 
 interface Permission {
@@ -111,8 +113,8 @@ export default function RolesListPage() {
           <div className="card">
             <div className="card-header">
               <span className="card-title">🛡️ {t('systemRoles')}</span>
-              <button className="btn btn-primary btn-sm" onClick={openCreate}>
-                <MdAdd size={14} /> {t('addRole')}
+              <button className="btn btn-primary btn-sm" onClick={() => router.push('/setting/role/create')}>
+                <FiPlusCircle size={14} /> {t('addRole')}
               </button>
             </div>
             <div style={{ overflowX: 'auto' }}>
@@ -167,7 +169,7 @@ export default function RolesListPage() {
                           <td>
                             <div style={{ display: 'flex', gap: 6 }}>
                               <button className="btn btn-ghost btn-icon btn-sm" onClick={() => openEdit(d.id)}>
-                                <MdEdit size={15} />
+                                <FaRegEdit size={14} />
                               </button>
                               {!isSystemRole && (
                                 <button
@@ -175,7 +177,7 @@ export default function RolesListPage() {
                                   style={{ color: 'var(--danger)' }}
                                   onClick={() => handleDelete(d)}
                                 >
-                                  <MdDelete size={15} />
+                                  <FaTrashAlt size={13} />
                                 </button>
                               )}
                             </div>

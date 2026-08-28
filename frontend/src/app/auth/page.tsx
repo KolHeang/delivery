@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
 import { saasApi } from '@/lib/saas-api';
@@ -8,12 +8,13 @@ import { setAuth } from '@/lib/auth';
 import { useLanguage } from '@/lib/LanguageContext';
 import { useTenant } from '@/lib/TenantContext';
 import { MdEmail, MdLock, MdVisibility, MdVisibilityOff } from 'react-icons/md';
+import { FlagKm, FlagEn } from '@/components/ui/Flags';
 
 const loginTranslations: Record<string, Record<string, string>> = {
   en: {
     subtitle: 'Log in to manage your deliveries',
-    emailLabel: 'Email Address',
-    emailPlaceholder: 'Enter your email',
+    emailLabel: 'Email',
+    emailPlaceholder: 'Enter email',
     passwordLabel: 'Password',
     passwordPlaceholder: '••••••••',
     forgotPassword: 'Forgot Password?',
@@ -23,13 +24,13 @@ const loginTranslations: Record<string, Record<string, string>> = {
   },
   km: {
     subtitle: 'ចូលគណនីដើម្បីគ្រប់គ្រងការដឹកជញ្ជូនរបស់អ្នក',
-    emailLabel: 'អាសយដ្ឋានអ៊ីមែល',
-    emailPlaceholder: 'បញ្ចូលអ៊ីមែលរបស់អ្នក',
+    emailLabel: 'អ៊ីមែល',
+    emailPlaceholder: 'បញ្ចូលអ៊ីមែល',
     passwordLabel: 'ពាក្យសម្ងាត់',
     passwordPlaceholder: '••••••••',
     forgotPassword: 'ភ្លេចពាក្យសម្ងាត់?',
-    forgotPasswordAlert: 'សូមទាក់ទងអ្នកគ្រប់គ្រងប្រព័ន្ធ (Admin) ដើម្បីកំណត់ពាក្យសម្ងាត់របស់អ្នកឡើងវិញ។',
-    signInBtn: 'ចូលប្រព័ន្ធ',
+    forgotPasswordAlert: 'សូមទាក់ទងអ្នកគ្រប់គ្រងប្រព័ន្ធ ដើម្បីកំណត់ពាក្យសម្ងាត់របស់អ្នកឡើងវិញ។',
+    signInBtn: 'ចូលប្រើប្រាស់',
     signingIn: 'កំពុងចូល...',
   }
 };
@@ -48,8 +49,6 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    // ប្រសិនបើកំពុងតែ Login ស្រាប់ហើយ មិនឲ្យដំណើរការទៅមុខទៀតទេ (ការពារចុច Double Click)
     if (loading) return;
 
     setLoading(true);
@@ -57,7 +56,8 @@ export default function LoginPage() {
     try {
       const res = await api.post('/auth/login', form);
       setAuth(res.data.access_token, res.data.user);
-      router.push('/dashboard');
+      window.location.href = '/dashboard';
+      return;
     } catch (err: any) {
       try {
         const saasRes = await saasApi.adminLogin(form.email, form.password);
@@ -71,524 +71,761 @@ export default function LoginPage() {
             permissions: ['*'],
           });
           localStorage.setItem('saas_admin', JSON.stringify(saasRes.admin));
-          router.push('/admin/saas');
+          window.location.href = '/admin/saas';
           return;
         }
       } catch (saasErr) {
         // fallback to standard error
       }
 
-      setError(err.response?.data?.message || 'អ៊ីមែល ឬ ពាក្យសម្ងាត់មិនត្រឹមត្រូវទេ');
+      setError(err.response?.data?.message || (lang === 'km' ? 'អ៊ីមែល ឬ ពាក្យសម្ងាត់មិនត្រឹមត្រូវទេ' : 'Invalid email or password'));
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="login-page">
-      {/* Animated Background Elements */}
-      <div className="bg-shape shape-1"></div>
-      <div className="bg-shape shape-2"></div>
-      <div className="bg-shape shape-3"></div>
-      <div className="bg-shape shape-4"></div>
+    <div className="blueprint-login-container">
+      {/* Route Path Following Animation Styles with Larger Vectors */}
+      <style jsx global>{`
+        @keyframes networkFlow {
+          to { stroke-dashoffset: -60; }
+        }
 
-      <style dangerouslySetInnerHTML={{
-        __html: `
-        .login-page {
-          background-color: #ffffff;
+        @keyframes moveAlongRoute1 {
+          0%   { offset-distance: 0%;   opacity: 0; }
+          4%   { opacity: 1; }
+          96%  { opacity: 1; }
+          100% { offset-distance: 100%; opacity: 0; }
+        }
+
+        @keyframes moveAlongRoute2 {
+          0%   { offset-distance: 0%;   opacity: 0; }
+          4%   { opacity: 1; }
+          96%  { opacity: 1; }
+          100% { offset-distance: 100%; opacity: 0; }
+        }
+
+        @keyframes radarPulse {
+          0%   { transform: scale(0.85); opacity: 0.85; }
+          100% { transform: scale(2.4);  opacity: 0; }
+        }
+
+        @keyframes personBounce {
+          0%, 100% { transform: translateY(0px) rotate(0deg); }
+          25%       { transform: translateY(-10px) rotate(-1.5deg); }
+          50%       { transform: translateY(-4px) rotate(0deg); }
+          75%       { transform: translateY(-12px) rotate(1.5deg); }
+        }
+
+        @keyframes legSwingL {
+          0%, 100% { transform: rotate(0deg);  transform-origin: top center; }
+          25%       { transform: rotate(22deg);  transform-origin: top center; }
+          50%       { transform: rotate(0deg);  transform-origin: top center; }
+          75%       { transform: rotate(-18deg); transform-origin: top center; }
+        }
+
+        @keyframes legSwingR {
+          0%, 100% { transform: rotate(0deg);  transform-origin: top center; }
+          25%       { transform: rotate(-20deg); transform-origin: top center; }
+          50%       { transform: rotate(0deg);  transform-origin: top center; }
+          75%       { transform: rotate(20deg);  transform-origin: top center; }
+        }
+
+        @keyframes armSwingL {
+          0%, 100% { transform: rotate(0deg);  transform-origin: top center; }
+          25%       { transform: rotate(-18deg); transform-origin: top center; }
+          50%       { transform: rotate(0deg);  transform-origin: top center; }
+          75%       { transform: rotate(16deg);  transform-origin: top center; }
+        }
+
+        @keyframes armSwingR {
+          0%, 100% { transform: rotate(0deg);  transform-origin: top center; }
+          25%       { transform: rotate(18deg);  transform-origin: top center; }
+          50%       { transform: rotate(0deg);  transform-origin: top center; }
+          75%       { transform: rotate(-16deg); transform-origin: top center; }
+        }
+
+        .blueprint-login-container {
+          min-height: 100vh;
+          width: 100vw;
+          background: #f8fafc;
           display: flex;
           align-items: center;
           justify-content: center;
-          min-height: 100vh;
-          padding: 24px;
+          padding: 24px 16px;
+          font-family: 'Kantumruy Pro', 'Inter', sans-serif;
           position: relative;
           overflow: hidden;
-          font-family: 'Kantumruy Pro', 'Inter', sans-serif;
         }
 
-        .bg-shape {
+        /* SaaS-style Dot Matrix + Grid (delivery orange accent) */
+        .blueprint-grid {
           position: absolute;
-          filter: blur(100px);
-          z-index: 0;
-          border-radius: 50%;
-          animation: float 25s infinite ease-in-out alternate;
-          opacity: 0.85;
-        }
-        
-        .shape-1 {
-          top: -10%; left: -10%;
-          width: 550px; height: 550px;
-          background: rgba(59, 130, 246, 0.07);
-          animation-delay: 0s;
-        }
-        .shape-2 {
-          bottom: -10%; right: -5%;
-          width: 600px; height: 600px;
-          background: rgba(139, 92, 246, 0.07);
-          animation-delay: -5s;
-        }
-        .shape-3 {
-          top: 30%; left: 60%;
-          width: 450px; height: 450px;
-          background: rgba(236, 72, 153, 0.04);
-          animation-delay: -11s;
-        }
-        .shape-4 {
-          bottom: 20%; left: 5%;
-          width: 450px; height: 450px;
-          background: rgba(34, 211, 238, 0.05);
-          animation-delay: -17s;
-        }
-        
-        @keyframes float {
-          0% { transform: translate(0, 0) scale(1); }
-          50% { transform: translate(40px, -60px) scale(1.08); }
-          100% { transform: translate(-30px, 30px) scale(0.95); }
-        }
-
-        .login-container-wrapper {
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          width: 100%;
-          max-width: 440px;
-          z-index: 1;
-        }
-
-        .login-card {
-          background: #ffffff; 
-          border-radius: 24px;
-          border: 1px solid #e2e8f0;
-          box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.08), 
-                      0 0 0 1px rgba(15, 23, 42, 0.02);
-          padding: 48px 40px;
-          width: 100%;
-          position: relative;
-          z-index: 1;
-        }
-
-        .logo-container {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          margin-bottom: 36px;
-        }
-
-        .logo-icon {
-          width: 60px;
-          height: 60px;
-          border-radius: 16px;
-          background: linear-gradient(135deg, #2f55a5, #4f46e5);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 28px;
-          box-shadow: 0 4px 12px rgba(47, 85, 165, 0.15);
-          margin-bottom: 20px;
-          color: #ffffff;
-        }
-
-        .logo-title {
-          font-size: 26px;
-          font-weight: 800;
-          color: #0f172a;
-          margin: 0;
-          letter-spacing: -0.5px;
-        }
-
-        .logo-accent {
-          color: #2f55a5;
-        }
-
-        .logo-subtitle {
-          color: #64748b;
-          font-size: 13.5px;
-          margin-top: 8px;
-          font-weight: 500;
-          text-align: center;
-        }
-
-        .form-group {
-          margin-bottom: 20px;
-          display: flex;
-          flex-direction: column;
-        }
-
-        .form-label {
-          color: #475569;
-          font-size: 12.5px;
-          font-weight: 600;
-          margin-bottom: 8px;
-        }
-
-        .input-wrapper {
-          position: relative;
-          display: flex;
-          align-items: center;
-          width: 100%;
-        }
-
-        .input-icon {
-          position: absolute;
-          left: 16px;
-          color: #475569;
-          font-size: 20px;
-          pointer-events: none;
-          transition: color 0.2s ease;
-        }
-
-        .form-input {
-          background: #ffffff;
-          border: 1.5px solid #94a3b8;
-          color: #0f172a;
-          padding: 13px 16px 13px 46px;
-          border-radius: 12px;
-          font-size: 14.5px;
-          font-weight: 500;
-          width: 100%;
-          transition: all 0.2s ease;
-          outline: none;
-        }
-
-        .form-input:focus {
-          border-color: #2f55a5;
-          box-shadow: 0 0 0 3px rgba(47, 85, 165, 0.15);
-        }
-
-        .input-wrapper:focus-within .input-icon {
-          color: #2f55a5;
-        }
-
-        .form-input::placeholder {
-          color: #475569;
-        }
-
-        .password-toggle-btn {
-          position: absolute;
-          right: 16px;
-          background: transparent;
-          border: none;
-          color: #475569;
-          font-size: 20px;
-          cursor: pointer;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          padding: 0;
-          outline: none;
-          transition: color 0.2s ease;
-        }
-
-        .password-toggle-btn:hover {
-          color: #475569;
-        }
-
-        .forgot-password-container {
-          display: flex;
-          justify-content: flex-end;
-          margin-top: -12px;
-          margin-bottom: 24px;
-        }
-
-        .forgot-link {
-          color: #2f55a5;
-          font-size: 12.5px;
-          font-weight: 600;
-          text-decoration: none;
-          cursor: pointer;
-          transition: color 0.2s ease;
-        }
-
-        .forgot-link:hover {
-          color: #1e3b75;
-          text-decoration: underline;
-        }
-
-        /* Modal Styles */
-        .modal-backdrop {
-          position: fixed;
           inset: 0;
-          background: rgba(15, 23, 42, 0.3);
-          backdrop-filter: blur(8px);
-          -webkit-backdrop-filter: blur(8px);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          z-index: 100;
-          animation: fadeIn 0.2s ease-out;
+          background-image:
+            radial-gradient(rgba(245, 158, 11, 0.14) 1.5px, transparent 1.5px),
+            linear-gradient(to right, rgba(226, 232, 240, 0.4) 1px, transparent 1px),
+            linear-gradient(to bottom, rgba(226, 232, 240, 0.4) 1px, transparent 1px);
+          background-size: 32px 32px;
+          pointer-events: none;
+          z-index: 1;
         }
 
-        .modal-card {
-          background: #ffffff;
-          border-radius: 20px;
-          padding: 32px;
-          max-width: 360px;
-          width: 90%;
-          text-align: center;
-          box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-          border: 1px solid #e2e8f0;
-          animation: scaleUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-        }
-
-        .modal-icon {
-          font-size: 40px;
-          margin-bottom: 16px;
-        }
-
-        .modal-title {
-          font-size: 18px;
-          font-weight: 700;
-          color: #0f172a;
-          margin-bottom: 12px;
-        }
-
-        .modal-text {
-          font-size: 14px;
-          color: #475569;
-          line-height: 1.6;
-          margin-bottom: 24px;
-        }
-
-        .modal-close-btn {
-          background: #2f55a5;
-          color: #ffffff;
-          border: none;
-          padding: 10px 24px;
-          font-size: 14px;
-          font-weight: 700;
-          border-radius: 10px;
-          cursor: pointer;
-          transition: background 0.2s;
-          width: 100%;
-        }
-
-        .modal-close-btn:hover {
-          background: #1e3b75;
-        }
-
-        @keyframes fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-
-        @keyframes scaleUp {
-          from { transform: scale(0.95); opacity: 0; }
-          to { transform: scale(1); opacity: 1; }
-        }
-
-        .login-error {
-          background: rgba(239, 68, 68, 0.05);
-          border: 1px solid rgba(239, 68, 68, 0.15);
-          color: #b91c1c;
-          padding: 12px 16px;
-          border-radius: 12px;
-          font-size: 13px;
-          margin-bottom: 20px;
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          font-weight: 500;
-        }
-
-        .login-btn {
-          background: #2f55a5;
-          color: #ffffff;
-          padding: 13px;
-          border-radius: 12px;
-          font-size: 15px;
-          font-weight: 700;
-          border: none;
-          cursor: pointer;
-          width: 100%;
-          transition: background 0.2s ease, transform 0.1s ease;
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          gap: 8px;
-        }
-
-        .login-btn:hover {
-          background: #1e3b75;
-        }
-        
-        .login-btn:active {
-          transform: scale(0.99);
-        }
-
-        .login-btn:disabled {
-          background: #e2e8f0;
-          color: #94a3b8;
-          cursor: not-allowed;
-        }
-
-        .lang-switcher {
+        /* Motorcycle on path */
+        .moto-on-path {
           position: absolute;
-          top: 24px;
-          right: 24px;
-          background: #f1f5f9;
+          top: 0;
+          left: 0;
+          width: 72px;
+          height: 52px;
+          offset-path: path("M -100,180 C 320,50 520,350 920,180 C 1320,10 1550,390 2050,200");
+          offset-rotate: auto;
+          animation: moveAlongRoute1 15s linear infinite;
+          z-index: 4;
+          pointer-events: none;
+          filter: drop-shadow(0 4px 10px rgba(245, 158, 11, 0.25));
+        }
+
+        /* Delivery Van on path */
+        .van-on-path {
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 82px;
+          height: 52px;
+          offset-path: path("M -100,680 C 380,490 700,750 1150,560 C 1500,390 1750,690 2150,520");
+          offset-rotate: auto;
+          animation: moveAlongRoute2 18s linear infinite;
+          z-index: 4;
+          pointer-events: none;
+          filter: drop-shadow(0 4px 10px rgba(43, 82, 154, 0.2));
+        }
+
+        /* Walking people */
+        .person-node {
+          position: absolute;
+          z-index: 3;
+          pointer-events: none;
+          animation: personBounce 1.2s ease-in-out infinite;
+          filter: drop-shadow(0 4px 10px rgba(0,0,0,0.13));
+        }
+
+        .person-leg-l { animation: legSwingL 0.6s ease-in-out infinite; transform-origin: top center; }
+        .person-leg-r { animation: legSwingR 0.6s ease-in-out infinite; transform-origin: top center; }
+        .person-arm-l { animation: armSwingL 0.6s ease-in-out infinite; transform-origin: top center; }
+        .person-arm-r { animation: armSwingR 0.6s ease-in-out infinite; transform-origin: top center; }
+
+        /* GPS pulse dots */
+        .radar-node {
+          position: absolute;
+          width: 14px;
+          height: 14px;
+          border-radius: 50%;
+          background: #f59e0b;
+          z-index: 2;
+          pointer-events: none;
+        }
+
+        .radar-node::after {
+          content: '';
+          position: absolute;
+          inset: -8px;
+          border-radius: 50%;
+          border: 2px solid #fbbf24;
+          animation: radarPulse 2s ease-out infinite;
+        }
+
+        .clean-card {
+          width: 100%;
+          max-width: 420px;
+          background: #ffffff;
+          border-radius: 22px;
+          padding: 40px 34px;
           border: 1px solid #e2e8f0;
-          border-radius: 10px;
-          padding: 2px;
-          display: flex;
-          gap: 2px;
+          box-shadow: 0 20px 40px -12px rgba(15, 23, 42, 0.08), 0 1px 3px rgba(0, 0, 0, 0.02);
+          position: relative;
           z-index: 10;
         }
+      `}</style>
 
-        .lang-btn {
-          background: transparent;
-          border: none;
-          color: #64748b;
-          padding: 6px 12px;
-          font-size: 11.5px;
-          font-weight: 700;
-          border-radius: 6px;
-          cursor: pointer;
-          transition: all 0.2s ease;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          line-height: 1;
-        }
+      {/* 1. Blueprint Grid Background */}
+      <div className="blueprint-grid" />
 
-        .lang-btn.active {
-          background: #ffffff;
-          color: #0f172a;
-          box-shadow: 0 1px 3px rgba(0,0,0,0.06);
-        }
-      `}} />
+      {/* 2. SVG Route Paths — SaaS-style dashed network lines */}
+      <svg
+        style={{
+          position: 'absolute',
+          inset: 0,
+          width: '100%',
+          height: '100%',
+          pointerEvents: 'none',
+          zIndex: 2,
+        }}
+        viewBox="0 0 1920 1080"
+        preserveAspectRatio="none"
+      >
+        {/* Route 1: Top Curve — amber/orange delivery brand */}
+        <path
+          d="M -100,180 C 320,50 520,350 920,180 C 1320,10 1550,390 2050,200"
+          fill="none"
+          stroke="rgba(245, 158, 11, 0.38)"
+          strokeWidth="3.5"
+          strokeDasharray="9,11"
+          style={{ animation: 'networkFlow 2.2s linear infinite' }}
+        />
 
-      <div className="login-container-wrapper">
-        <div className="login-card">
-          {/* Floating Language Switcher */}
-          <div className="lang-switcher">
-            <button
-              className={`lang-btn ${lang === 'en' ? 'active' : ''}`}
-              onClick={() => setLang('en')}
-              type="button"
-            >
-              EN
-            </button>
-            <button
-              className={`lang-btn ${lang === 'km' ? 'active' : ''}`}
-              onClick={() => setLang('km')}
-              type="button"
-            >
-              ខ្មែរ
-            </button>
+        {/* Route 2: Bottom Curve — blue delivery brand */}
+        <path
+          d="M -100,680 C 380,490 700,750 1150,560 C 1500,390 1750,690 2150,520"
+          fill="none"
+          stroke="rgba(43, 82, 154, 0.32)"
+          strokeWidth="3.5"
+          strokeDasharray="11,13"
+          style={{ animation: 'networkFlow 2.8s linear infinite' }}
+        />
+      </svg>
+
+      {/* 3. Large Delivery Motorcycle & Courier Rider */}
+      <div className="moto-on-path">
+        <svg width="72" height="52" viewBox="0 0 48 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="10" cy="26" r="7" stroke="#1e3b75" strokeWidth="2.5" fill="#f8fafc" />
+          <circle cx="10" cy="26" r="2.5" fill="#1e3b75" />
+          <circle cx="38" cy="26" r="7" stroke="#1e3b75" strokeWidth="2.5" fill="#f8fafc" />
+          <circle cx="38" cy="26" r="2.5" fill="#1e3b75" />
+          <path d="M10 26L20 18H28L38 26M22 18L18 26M33 13L38 26" stroke="#1e3b75" strokeWidth="2.5" strokeLinecap="round" />
+          <path d="M16 23C16 19 21 16 28 17L34 23" fill="#2563eb" />
+          <circle cx="27" cy="8" r="4.5" fill="#0f172a" />
+          <path d="M28 6.5H31C32 6.5 32.5 7.5 32 8.5L30 10H27" fill="#38bdf8" />
+          <path d="M23 13C23 13 25 10.5 28 12C31 13.5 30 17 28 19L22 22" fill="#1e40af" />
+          <path d="M26 14L32 16M32 14V17" stroke="#0f172a" strokeWidth="2" strokeLinecap="round" />
+          <rect x="7" y="10" width="13" height="11" rx="2" fill="#f59e0b" stroke="#d97706" strokeWidth="1.5" />
+          <path d="M10 13H17M10 16H15" stroke="#ffffff" strokeWidth="1.5" strokeLinecap="round" />
+        </svg>
+      </div>
+
+      {/* 4. Large Delivery Van Truck & Driver */}
+      <div className="van-on-path">
+        <svg width="82" height="52" viewBox="0 0 54 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="2" y="7" width="34" height="20" rx="3" fill="#2b529a" />
+          <path d="M6 12H18M6 16H14" stroke="#60a5fa" strokeWidth="1.8" strokeLinecap="round" />
+          <rect x="23" y="11" width="9" height="9" rx="1.5" fill="#ffffff" opacity="0.9" />
+          <path d="M25 14H30M25 17H28" stroke="#2b529a" strokeWidth="1.2" />
+          <path d="M36 12H44C46.5 12 49 14.5 50 17.5L52 23.5C52.5 25 51.5 27 49.5 27H36V12Z" fill="#1e3b75" />
+          <path d="M38 14H43.5L46.5 19H38V14Z" fill="#bae6fd" />
+          <circle cx="41" cy="16.5" r="2" fill="#0f172a" />
+          <path d="M51 22H53V25H51V22Z" fill="#facc15" />
+          <circle cx="12" cy="27" r="5.5" stroke="#0f172a" strokeWidth="2.5" fill="#e2e8f0" />
+          <circle cx="12" cy="27" r="2" fill="#0f172a" />
+          <circle cx="43" cy="27" r="5.5" stroke="#0f172a" strokeWidth="2.5" fill="#e2e8f0" />
+          <circle cx="43" cy="27" r="2" fill="#0f172a" />
+        </svg>
+      </div>
+
+      {/* 5. Courier & Customer Figures - Walking Animation */}
+
+      {/* Person 1: Courier with delivery box (top right) */}
+      <div className="person-node" style={{ top: '120px', right: '13%' }}>
+        <svg width="48" height="64" viewBox="0 0 32 44" fill="none">
+          {/* Head */}
+          <circle cx="16" cy="7" r="5.5" fill="#1e3b75" />
+          {/* Helmet */}
+          <path d="M10.5 6C10.5 3.5 13 1.5 16 1.5C19 1.5 21.5 3.5 21.5 6H10.5Z" fill="#facc15" />
+          {/* Body */}
+          <path d="M10 15C10 13 13 12.5 16 12.5C19 12.5 22 13 22 15L23 26H9L10 15Z" fill="#2563eb" />
+          {/* Delivery Box on back */}
+          <rect x="20" y="14" width="11" height="10" rx="1.5" fill="#f59e0b" stroke="#d97706" strokeWidth="1.2" />
+          <path d="M23 17H28M23 20H26" stroke="#ffffff" strokeWidth="1.2" strokeLinecap="round" />
+          {/* Left arm (swings forward) */}
+          <g className="person-arm-l">
+            <path d="M10 16L6 23" stroke="#1e3b75" strokeWidth="2.5" strokeLinecap="round" />
+          </g>
+          {/* Right arm (swings back) */}
+          <g className="person-arm-r">
+            <path d="M22 16L26 22" stroke="#1e3b75" strokeWidth="2.5" strokeLinecap="round" />
+          </g>
+          {/* Left leg */}
+          <g className="person-leg-l">
+            <path d="M13 26L11 38" stroke="#0f172a" strokeWidth="2.8" strokeLinecap="round" />
+            <path d="M11 38L8 41" stroke="#0f172a" strokeWidth="2" strokeLinecap="round" />
+          </g>
+          {/* Right leg */}
+          <g className="person-leg-r">
+            <path d="M19 26L21 38" stroke="#0f172a" strokeWidth="2.8" strokeLinecap="round" />
+            <path d="M21 38L24 41" stroke="#0f172a" strokeWidth="2" strokeLinecap="round" />
+          </g>
+        </svg>
+      </div>
+
+      {/* Person 2: Customer receiving (bottom left) */}
+      <div className="person-node" style={{ bottom: '140px', left: '11%', animationDelay: '-0.6s' }}>
+        <svg width="48" height="64" viewBox="0 0 32 44" fill="none">
+          {/* Head */}
+          <circle cx="16" cy="7" r="5.5" fill="#0f172a" />
+          {/* Hair */}
+          <path d="M10.5 6C10.5 3 13 1 16 1C19 1 21.5 3 21.5 6H10.5Z" fill="#2b529a" />
+          {/* Body */}
+          <path d="M11 15C11 13 13 12.5 16 12.5C19 12.5 21 13 21 15L22 26H10L11 15Z" fill="#059669" />
+          {/* Tablet/phone in hand */}
+          <rect x="3" y="17" width="7" height="10" rx="1.2" fill="#38bdf8" stroke="#0284c7" strokeWidth="1" />
+          <path d="M5 20H8M5 23H7" stroke="#ffffff" strokeWidth="1" strokeLinecap="round" />
+          {/* Left arm holding tablet */}
+          <path d="M11 16L7 20" stroke="#0f172a" strokeWidth="2.5" strokeLinecap="round" />
+          {/* Right arm (swings) */}
+          <g className="person-arm-r">
+            <path d="M21 16L25 22" stroke="#0f172a" strokeWidth="2.5" strokeLinecap="round" />
+          </g>
+          {/* Left leg */}
+          <g className="person-leg-l" style={{ animationDelay: '0.3s' }}>
+            <path d="M13 26L11 38" stroke="#1e293b" strokeWidth="2.8" strokeLinecap="round" />
+            <path d="M11 38L8 41" stroke="#1e293b" strokeWidth="2" strokeLinecap="round" />
+          </g>
+          {/* Right leg */}
+          <g className="person-leg-r" style={{ animationDelay: '0.3s' }}>
+            <path d="M19 26L21 38" stroke="#1e293b" strokeWidth="2.8" strokeLinecap="round" />
+            <path d="M21 38L24 41" stroke="#1e293b" strokeWidth="2" strokeLinecap="round" />
+          </g>
+        </svg>
+      </div>
+
+      {/* Person 3: Extra small courier (bottom right) */}
+      <div className="person-node" style={{ bottom: '180px', right: '10%', animationDelay: '-1.1s' }}>
+        <svg width="40" height="54" viewBox="0 0 32 44" fill="none">
+          <circle cx="16" cy="7" r="5" fill="#7c3aed" />
+          <path d="M10.5 6C10.5 3.5 13 1.5 16 1.5C19 1.5 21.5 3.5 21.5 6H10.5Z" fill="#a78bfa" />
+          <path d="M11 15C11 13 13.5 12.5 16 12.5C18.5 12.5 21 13 21 15L22.5 26H9.5L11 15Z" fill="#6d28d9" />
+          <rect x="20" y="13" width="9" height="8" rx="1.2" fill="#f59e0b" stroke="#d97706" strokeWidth="1" />
+          <g className="person-arm-l">
+            <path d="M11 16L7 22" stroke="#5b21b6" strokeWidth="2.5" strokeLinecap="round" />
+          </g>
+          <g className="person-arm-r">
+            <path d="M21 15L25 20" stroke="#5b21b6" strokeWidth="2.5" strokeLinecap="round" />
+          </g>
+          <g className="person-leg-l">
+            <path d="M13 26L11 38" stroke="#3b0764" strokeWidth="2.8" strokeLinecap="round" />
+            <path d="M11 38L8 41" stroke="#3b0764" strokeWidth="2" strokeLinecap="round" />
+          </g>
+          <g className="person-leg-r">
+            <path d="M19 26L21 38" stroke="#3b0764" strokeWidth="2.8" strokeLinecap="round" />
+            <path d="M21 38L24 41" stroke="#3b0764" strokeWidth="2" strokeLinecap="round" />
+          </g>
+        </svg>
+      </div>
+
+      {/* 6. Pulsing GPS Radar Points */}
+      <div className="radar-node" style={{ top: '180px', left: '16%' }} />
+      <div className="radar-node" style={{ top: '180px', right: '22%' }} />
+      <div className="radar-node" style={{ bottom: '260px', left: '20%' }} />
+      <div className="radar-node" style={{ bottom: '220px', right: '16%' }} />
+
+      {/* 7. Top Right Flag Switcher */}
+      <div
+        style={{
+          position: 'absolute',
+          top: 20,
+          right: 20,
+          zIndex: 20,
+          display: 'flex',
+          alignItems: 'center',
+          background: '#ffffff',
+          border: '1px solid #e2e8f0',
+          borderRadius: 12,
+          padding: 3,
+          boxShadow: '0 2px 6px rgba(0, 0, 0, 0.04)',
+        }}
+      >
+        <button
+          type="button"
+          onClick={() => setLang('km')}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+            padding: '6px 12px',
+            borderRadius: 9,
+            border: 'none',
+            fontSize: 12.5,
+            fontWeight: 700,
+            cursor: 'pointer',
+            background: lang === 'km' ? '#2b529a' : 'transparent',
+            color: lang === 'km' ? '#ffffff' : '#64748b',
+            transition: 'all 0.15s ease',
+          }}
+        >
+          <FlagKm size={18} />
+          <span>ខ្មែរ</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setLang('en')}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+            padding: '6px 12px',
+            borderRadius: 9,
+            border: 'none',
+            fontSize: 12.5,
+            fontWeight: 700,
+            cursor: 'pointer',
+            background: lang === 'en' ? '#2b529a' : 'transparent',
+            color: lang === 'en' ? '#ffffff' : '#64748b',
+            transition: 'all 0.15s ease',
+          }}
+        >
+          <FlagEn size={18} />
+          <span>EN</span>
+        </button>
+      </div>
+
+      {/* 8. Clean Centered Card - FULLY DYNAMIC BRANDING */}
+      <div className="clean-card">
+        {/* Dynamic Brand Header */}
+        <div style={{ textAlign: 'center', marginBottom: 28 }}>
+          <div
+            style={{
+              width: 90,
+              height: 90,
+              borderRadius: 22,
+              background: tenant?.logoUrl ? '#ffffff' : 'linear-gradient(135deg, #1e3a8a 0%, #2b529a 60%, #3b6cc4 100%)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 16px',
+              boxShadow: '0 8px 24px rgba(43, 82, 154, 0.28)',
+              color: '#ffffff',
+              border: '2.5px solid #e2e8f0',
+              overflow: 'hidden',
+              padding: tenant?.logoUrl ? 8 : 0,
+            }}
+          >
+            {tenant?.logoUrl ? (
+              <img
+                src={tenant.logoUrl}
+                alt={tenant.companyName}
+                style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+              />
+            ) : (
+              <svg width="58" height="58" viewBox="0 0 58 58" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="5" y="24" width="30" height="17" rx="3" fill="white" fillOpacity="0.95" />
+                <path d="M35 27H45C47 27 49.5 29 50.5 32L52 37C52.5 38.5 51.5 41 49.5 41H35V27Z" fill="white" fillOpacity="0.82" />
+                <path d="M37 29H43L46 35H37V29Z" fill="#93c5fd" />
+                <rect x="9" y="27" width="9" height="6" rx="1.5" fill="#93c5fd" />
+                <path d="M9 36H22M9 39H18" stroke="#2b529a" strokeWidth="1.5" strokeLinecap="round" />
+                <rect x="50" y="34" width="3" height="4" rx="1" fill="#fbbf24" />
+                <circle cx="15" cy="41" r="5" fill="#1e3a8a" stroke="white" strokeWidth="1.5" />
+                <circle cx="15" cy="41" r="2" fill="white" />
+                <circle cx="43" cy="41" r="5" fill="#1e3a8a" stroke="white" strokeWidth="1.5" />
+                <circle cx="43" cy="41" r="2" fill="white" />
+                <path d="M29 5C25 5 21.5 8.5 21.5 12.5C21.5 17.5 29 24 29 24C29 24 36.5 17.5 36.5 12.5C36.5 8.5 33 5 29 5Z" fill="#f59e0b" />
+                <circle cx="29" cy="12.5" r="3.5" fill="white" />
+              </svg>
+            )}
           </div>
 
-          <div className="logo-container">
-            <div className="logo-icon">
-              📦
+          {/* Dynamic Company / Workspace Title */}
+          <h1
+            style={{
+              fontSize: 27,
+              fontWeight: 900,
+              color: '#0f172a',
+              margin: '0 0 6px',
+              letterSpacing: '-0.4px',
+            }}
+          >
+            {tenant?.companyName ? (
+              <span style={{ textTransform: 'capitalize' }}>{tenant.companyName}</span>
+            ) : workspaceSubdomain ? (
+              <span style={{ textTransform: 'capitalize' }}>{workspaceSubdomain} Express</span>
+            ) : (
+              <>EBS<span style={{ color: '#2b529a' }}>Express</span></>
+            )}
+          </h1>
+
+          {/* Dynamic Workspace Subdomain Pill */}
+          {workspaceSubdomain && (
+            <div
+              style={{
+                background: '#eff6ff',
+                color: '#2b529a',
+                padding: '3px 12px',
+                borderRadius: 20,
+                fontSize: 11.5,
+                fontWeight: 700,
+                marginBottom: 6,
+                border: '1px solid #bfdbfe',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+              }}
+            >
+              🏢 Workspace: {workspaceSubdomain}.ebsexpress.com
             </div>
-            <h1 className="logo-title">
-              {tenant ? (
-                <span style={{ textTransform: 'capitalize' }}>{tenant.companyName}</span>
-              ) : workspaceSubdomain ? (
-                <span style={{ textTransform: 'capitalize' }}>{workspaceSubdomain} Express</span>
-              ) : (
-                <>EBS<span className="logo-accent">Express</span></>
-              )}
-            </h1>
-            {workspaceSubdomain && (
-              <div
+          )}
+
+          {/* Dynamic Subtitle */}
+          <p style={{ fontSize: 13, color: '#64748b', margin: 0, fontWeight: 500 }}>
+            {tenant?.companyName
+              ? (lang === 'km' ? `ចូលគ្រប់គ្រងប្រព័ន្ធដឹកជញ្ជូន ${tenant.companyName}` : `Sign in to manage ${tenant.companyName} logistics`)
+              : t.subtitle}
+          </p>
+        </div>
+
+        {/* Error Alert */}
+        {error && (
+          <div
+            style={{
+              background: '#fef2f2',
+              border: '1px solid #fecaca',
+              color: '#dc2626',
+              padding: '10px 12px',
+              borderRadius: 12,
+              fontSize: 12.5,
+              fontWeight: 600,
+              marginBottom: 18,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+            }}
+          >
+            <span>⚠️</span>
+            <span>{error}</span>
+          </div>
+        )}
+
+        {/* Form Inputs */}
+        <form onSubmit={handleSubmit}>
+          {/* Email */}
+          <div style={{ marginBottom: 18 }}>
+            <label
+              style={{
+                display: 'block',
+                fontSize: 13.5,
+                fontWeight: 700,
+                color: '#1e293b',
+                marginBottom: 7,
+              }}
+            >
+              {t.emailLabel}
+            </label>
+            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+              <MdEmail
+                size={19}
+                color="#94a3b8"
+                style={{ position: 'absolute', left: 14, pointerEvents: 'none' }}
+              />
+              <input
+                id="email"
+                type="email"
+                required
+                autoComplete="email"
+                value={form.email}
+                onChange={e => setForm({ ...form, email: e.target.value })}
+                placeholder={t.emailPlaceholder}
                 style={{
-                  background: '#eff6ff',
-                  color: '#2563eb',
-                  padding: '3px 14px',
-                  borderRadius: 20,
-                  fontSize: 12,
-                  fontWeight: 700,
-                  marginTop: 8,
-                  border: '1px solid #bfdbfe',
-                  display: 'inline-flex',
+                  width: '100%',
+                  padding: '13px 16px 13px 44px',
+                  borderRadius: 14,
+                  border: '1.5px solid #e2e8f0',
+                  background: '#f8fafc',
+                  fontSize: 14.5,
+                  fontWeight: 500,
+                  color: '#0f172a',
+                  outline: 'none',
+                  transition: 'all 0.2s ease',
+                }}
+                onFocus={(e) => {
+                  e.currentTarget.style.borderColor = '#2563eb';
+                  e.currentTarget.style.background = '#ffffff';
+                  e.currentTarget.style.boxShadow = '0 0 0 4px rgba(37, 99, 235, 0.12)';
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.borderColor = '#e2e8f0';
+                  e.currentTarget.style.background = '#f8fafc';
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Password */}
+          <div style={{ marginBottom: 16 }}>
+            <label
+              style={{
+                display: 'block',
+                fontSize: 13.5,
+                fontWeight: 700,
+                color: '#1e293b',
+                marginBottom: 7,
+              }}
+            >
+              {t.passwordLabel}
+            </label>
+            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+              <MdLock
+                size={19}
+                color="#94a3b8"
+                style={{ position: 'absolute', left: 14, pointerEvents: 'none' }}
+              />
+              <input
+                id="password"
+                type={showPassword ? 'text' : 'password'}
+                required
+                autoComplete="current-password"
+                value={form.password}
+                onChange={e => setForm({ ...form, password: e.target.value })}
+                placeholder={t.passwordPlaceholder}
+                style={{
+                  width: '100%',
+                  padding: '13px 44px 13px 44px',
+                  borderRadius: 14,
+                  border: '1.5px solid #e2e8f0',
+                  background: '#f8fafc',
+                  fontSize: 14.5,
+                  fontWeight: 500,
+                  color: '#0f172a',
+                  outline: 'none',
+                  transition: 'all 0.2s ease',
+                }}
+                onFocus={(e) => {
+                  e.currentTarget.style.borderColor = '#2563eb';
+                  e.currentTarget.style.background = '#ffffff';
+                  e.currentTarget.style.boxShadow = '0 0 0 4px rgba(37, 99, 235, 0.12)';
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.borderColor = '#e2e8f0';
+                  e.currentTarget.style.background = '#f8fafc';
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                style={{
+                  position: 'absolute',
+                  right: 14,
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  color: '#94a3b8',
+                  padding: 4,
+                  display: 'flex',
                   alignItems: 'center',
-                  gap: 6,
                 }}
               >
-                🏢 Workspace: {workspaceSubdomain}.ebsexpress.com
-              </div>
-            )}
-            <p className="logo-subtitle">
-              {tenant ? `ចូលគ្រប់គ្រងប្រព័ន្ធដឹកជញ្ជូន ${tenant.companyName.toUpperCase()}` : t.subtitle}
-            </p>
+                {showPassword ? <MdVisibilityOff size={20} /> : <MdVisibility size={20} />}
+              </button>
+            </div>
           </div>
 
-          <form onSubmit={handleSubmit} className="login-form">
-            {error && (
-              <div className="login-error">
-                ⚠️ {error}
-              </div>
-            )}
+          {/* Forgot Password */}
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 20 }}>
+            <span
+              onClick={() => setShowForgotModal(true)}
+              style={{
+                color: '#2563eb',
+                fontSize: 12.5,
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.textDecoration = 'underline')}
+              onMouseLeave={(e) => (e.currentTarget.style.textDecoration = 'none')}
+            >
+              {t.forgotPassword}
+            </span>
+          </div>
 
-            <div className="form-group">
-              <label className="form-label">{t.emailLabel}</label>
-              <div className="input-wrapper">
-                <MdEmail className="input-icon" />
-                <input
-                  id="email"
-                  type="email"
-                  className="form-input"
-                  placeholder={t.emailPlaceholder}
-                  value={form.email}
-                  onChange={e => setForm({ ...form, email: e.target.value })}
-                  required
-                  autoComplete="email"
-                />
-              </div>
-            </div>
+          {/* Submit Button */}
+          <button
+            id="login-btn"
+            type="submit"
+            disabled={loading}
+            style={{
+              width: '100%',
+              padding: '13.5px 20px',
+              borderRadius: 14,
+              border: 'none',
+              background: 'linear-gradient(135deg, #1e40af 0%, #2563eb 100%)',
+              color: '#ffffff',
+              fontSize: 15,
+              fontWeight: 700,
+              cursor: loading ? 'not-allowed' : 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8,
+              boxShadow: '0 4px 14px rgba(37, 99, 235, 0.28)',
+              transition: 'all 0.2s ease',
+              opacity: loading ? 0.8 : 1,
+            }}
+          >
+            <span>{loading ? t.signingIn : t.signInBtn}</span>
+          </button>
+        </form>
 
-            <div className="form-group" style={{ marginBottom: '16px' }}>
-              <label className="form-label">{t.passwordLabel}</label>
-              <div className="input-wrapper">
-                <MdLock className="input-icon" />
-                <input
-                  id="password"
-                  type={showPassword ? 'text' : 'password'}
-                  className="form-input"
-                  placeholder={t.passwordPlaceholder}
-                  value={form.password}
-                  onChange={e => setForm({ ...form, password: e.target.value })}
-                  required
-                  autoComplete="current-password"
-                  style={{ paddingRight: '46px' }}
-                />
-                <button
-                  type="button"
-                  className="password-toggle-btn"
-                  onClick={() => setShowPassword(!showPassword)}
-                >
-                  {showPassword ? <MdVisibilityOff /> : <MdVisibility />}
-                </button>
-              </div>
-            </div>
-
-            {/* Forgot Password Link */}
-            <div className="forgot-password-container">
-              <span className="forgot-link" onClick={() => setShowForgotModal(true)}>
-                {t.forgotPassword}
-              </span>
-            </div>
-
-            <button id="login-btn" type="submit" className="login-btn" disabled={loading}>
-              {loading ? t.signingIn : t.signInBtn}
-              {!loading && <span style={{ fontSize: 18 }}>→</span>}
-            </button>
-          </form>
+        {/* Dynamic Footer */}
+        <div
+          style={{
+            marginTop: 26,
+            textAlign: 'center',
+            fontSize: 12,
+            color: '#94a3b8',
+            fontWeight: 500,
+          }}
+        >
+          {tenant?.companyName ? `${tenant.companyName} • Delivery System` : 'EBS Express • Delivery Management System'}
         </div>
       </div>
 
       {/* Forgot Password Modal */}
       {showForgotModal && (
-        <div className="modal-backdrop">
-          <div className="modal-card">
-            <div className="modal-icon">🔑</div>
-            <h3 className="modal-title">{t.forgotPassword}</h3>
-            <p className="modal-text">{t.forgotPasswordAlert}</p>
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(15, 23, 42, 0.4)',
+            backdropFilter: 'blur(6px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 100,
+            padding: 16,
+          }}
+          onClick={() => setShowForgotModal(false)}
+        >
+          <div
+            style={{
+              background: '#ffffff',
+              borderRadius: 18,
+              padding: '30px 26px',
+              maxWidth: 360,
+              width: '100%',
+              textAlign: 'center',
+              boxShadow: '0 20px 30px rgba(0, 0, 0, 0.15)',
+              border: '1px solid #e2e8f0',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ fontSize: 36, marginBottom: 12 }}>🔑</div>
+            <h3 style={{ fontSize: 17, fontWeight: 800, color: '#0f172a', marginBottom: 8 }}>
+              {t.forgotPassword}
+            </h3>
+            <p style={{ fontSize: 13, color: '#64748b', lineHeight: 1.6, marginBottom: 20 }}>
+              {t.forgotPasswordAlert}
+            </p>
             <button
               type="button"
-              className="modal-close-btn"
               onClick={() => setShowForgotModal(false)}
+              style={{
+                background: '#2563eb',
+                color: '#ffffff',
+                border: 'none',
+                padding: '10px 20px',
+                fontSize: 14,
+                fontWeight: 700,
+                borderRadius: 10,
+                cursor: 'pointer',
+                width: '100%',
+                boxShadow: '0 4px 12px rgba(37, 99, 235, 0.25)',
+              }}
             >
               OK
             </button>

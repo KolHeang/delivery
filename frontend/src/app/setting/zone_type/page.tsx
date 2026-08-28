@@ -6,7 +6,9 @@ import { isAuthenticated } from '@/lib/auth';
 import Sidebar from '@/components/layout/Sidebar';
 import Topbar from '@/components/layout/Topbar';
 import api from '@/lib/api';
-import { MdAdd, MdEdit, MdDelete, MdMoreHoriz, MdClose, MdBookmark } from 'react-icons/md';
+import { MdMoreHoriz, MdClose, MdBookmark } from 'react-icons/md';
+import { FaRegEdit, FaTrashAlt } from 'react-icons/fa';
+import { FiPlusCircle } from 'react-icons/fi';
 import { useLanguage } from '@/lib/LanguageContext';
 import Modal from '@/components/ui/Modal';
 import Pagination from '@/components/ui/Pagination';
@@ -108,7 +110,7 @@ export default function ZonesPage() {
             <div className="card-header">
               <span className="card-title">🗺️ {lang === 'km' ? 'តំបន់ដែលបានកំណត់' : 'Zones Configured'}</span>
               <button className="btn btn-primary btn-sm" onClick={openCreate}>
-                <MdAdd size={14} /> {lang === 'km' ? 'បន្ថែមតំបន់' : 'Add Zone'}
+                <FiPlusCircle size={14} /> {lang === 'km' ? 'បន្ថែមតំបន់' : 'Add Zone'}
               </button>
             </div>
             <div style={{ overflowX: 'auto' }}>
@@ -215,7 +217,7 @@ export default function ZonesPage() {
                                 onMouseEnter={(e) => e.currentTarget.style.color = '#0f172a'}
                                 onMouseLeave={(e) => e.currentTarget.style.color = '#64748b'}
                               >
-                                <MdAdd size={20} />
+                                <FiPlusCircle size={16} />
                               </button>
                               {/* Edit */}
                               <button
@@ -236,7 +238,7 @@ export default function ZonesPage() {
                                 onMouseEnter={(e) => e.currentTarget.style.color = '#0f172a'}
                                 onMouseLeave={(e) => e.currentTarget.style.color = '#64748b'}
                               >
-                                <MdEdit size={20} />
+                                <FaRegEdit size={16} />
                               </button>
                               {/* Delete */}
                               <button
@@ -257,7 +259,7 @@ export default function ZonesPage() {
                                 onMouseEnter={(e) => e.currentTarget.style.opacity = '0.7'}
                                 onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
                               >
-                                <MdDelete size={20} />
+                                <FaTrashAlt size={16} />
                               </button>
                             </div>
                           </td>

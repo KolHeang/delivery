@@ -6,6 +6,7 @@ import {
   Delete,
   Body,
   Param,
+  Query,
   UseGuards,
   Request,
 } from '@nestjs/common';
@@ -17,10 +18,16 @@ import { Partner } from './partner.entity';
 export class PartnersController {
   constructor(private readonly partnersService: PartnersService) {}
 
-  @UseGuards(JwtAuthGuard)
   @Get('my-stats')
   async getMyStats(@Request() req: any) {
-    const partner = await this.partnersService.findByUserId(req.user.id);
+    const userId = req.user?.id;
+    if (!userId) {
+      return {
+        isPartner: false,
+        message: 'You are not logged in.',
+      };
+    }
+    const partner = await this.partnersService.findByUserId(userId);
     if (!partner) {
       return {
         isPartner: false,
@@ -54,8 +61,16 @@ export class PartnersController {
   }
 
   @Get()
-  async getAll() {
-    return this.partnersService.findAll();
+  async getAll(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('search') search?: string,
+  ) {
+    return this.partnersService.findAll({
+      page: page ? +page : undefined,
+      limit: limit ? +limit : undefined,
+      search,
+    });
   }
 
   @Get(':id')

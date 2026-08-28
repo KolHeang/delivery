@@ -7,7 +7,9 @@ import Sidebar from '@/components/layout/Sidebar';
 import Topbar from '@/components/layout/Topbar';
 import Modal from '@/components/ui/Modal';
 import api from '@/lib/api';
-import { MdAdd, MdSearch, MdEdit, MdDelete } from 'react-icons/md';
+import { MdSearch } from 'react-icons/md';
+import { FaRegEdit, FaTrashAlt } from 'react-icons/fa';
+import { FiPlusCircle } from 'react-icons/fi';
 import { useLanguage } from '@/lib/LanguageContext';
 import Pagination from '@/components/ui/Pagination';
 
@@ -86,7 +88,7 @@ export default function CustomersPage() {
           <div className="card">
             <div className="card-header">
               <span className="card-title">👥 {t('customersListTitle')}</span>
-              <button className="btn btn-primary btn-sm" onClick={openCreate}><MdAdd size={14} /> {t('addCustomer')}</button>
+              <button className="btn btn-primary btn-sm" onClick={openCreate}><FiPlusCircle size={14} /> {t('addCustomer')}</button>
             </div>
             <div style={{ overflowX: 'auto' }}>
               <table>
@@ -125,8 +127,8 @@ export default function CustomersPage() {
                         <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>{new Date(c.createdAt).toLocaleDateString()}</td>
                         <td>
                           <div style={{ display: 'flex', gap: 4, justifyContent: 'center' }}>
-                            <button className="btn btn-ghost btn-icon btn-sm" onClick={() => openEdit(c)}><MdEdit size={15} /></button>
-                            <button className="btn btn-ghost btn-icon btn-sm" style={{ color: 'var(--danger)' }} onClick={() => del(c.id)}><MdDelete size={15} /></button>
+                            <button className="btn btn-ghost btn-icon btn-sm" onClick={() => openEdit(c)}><FaRegEdit size={14} /></button>
+                            <button className="btn btn-ghost btn-icon btn-sm" style={{ color: 'var(--danger)' }} onClick={() => del(c.id)}><FaTrashAlt size={13} /></button>
                           </div>
                         </td>
                       </tr>

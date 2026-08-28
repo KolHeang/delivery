@@ -28,6 +28,7 @@ import {
   MdLogout,
   MdKeyboardArrowDown,
 } from 'react-icons/md';
+import { SaasCloudIcon } from '@/components/ui/SaasCloudIcon';
 
 export default function CreateTenantPage() {
   const router = useRouter();
@@ -90,7 +91,6 @@ export default function CreateTenantPage() {
     }
 
     loadPlans();
-    generatePassword();
   }, []);
 
   const handleLogout = () => {
@@ -206,31 +206,30 @@ export default function CreateTenantPage() {
         }}
       >
         {/* Brand Header */}
-        <div style={{ padding: '22px 20px', display: 'flex', alignItems: 'center', gap: 12, borderBottom: '1px solid rgba(255,255,255,0.15)' }}>
+        <div style={{ height: 64, padding: '0 20px', display: 'flex', alignItems: 'center', gap: 12, borderBottom: '1px solid rgba(255,255,255,0.12)', boxSizing: 'border-box' }}>
           <div
             style={{
-              width: 44,
-              height: 44,
+              width: 40,
+              height: 40,
               borderRadius: 12,
-              background: 'linear-gradient(135deg, #3b82f6, #6366f1)',
+              background: '#ffffff',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              fontSize: 24,
-              color: '#fff',
-              boxShadow: '0 4px 14px rgba(0,0,0,0.2)',
+              boxShadow: '0 4px 14px rgba(0,0,0,0.18)',
+              padding: 2,
+              boxSizing: 'border-box',
               flexShrink: 0,
             }}
           >
-            👑
+            <SaasCloudIcon size={34} />
           </div>
           <div>
-            <div style={{ fontSize: 16, fontWeight: 900, color: '#ffffff', letterSpacing: '-0.3px', lineHeight: 1.2 }}>
+            <div style={{ fontSize: 15, fontWeight: 900, color: '#ffffff', letterSpacing: '-0.2px', lineHeight: 1.2 }}>
               EBS Master SaaS
             </div>
-            <div style={{ fontSize: 11, color: '#93c5fd', fontWeight: 800, marginTop: 3, display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#4ade80', boxShadow: '0 0 8px #4ade80' }} />
-              SUPER ADMIN PORTAL
+            <div style={{ fontSize: 10.5, color: '#93c5fd', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              ● SUPER ADMIN PORTAL
             </div>
           </div>
         </div>
@@ -381,11 +380,11 @@ export default function CreateTenantPage() {
         <header
           style={{
             height: 64,
-            background: 'linear-gradient(135deg, #1e3b75 0%, #2b529a 100%)',
+            background: '#2b529a',
             borderBottom: '1px solid rgba(255, 255, 255, 0.12)',
-            padding: '0 32px',
+            padding: '0 28px',
             display: 'flex',
-            justifyContent: 'space-between',
+            justifyContent: 'flex-end',
             alignItems: 'center',
             position: 'sticky',
             top: 0,
@@ -393,11 +392,6 @@ export default function CreateTenantPage() {
             boxShadow: '0 4px 16px rgba(0,0,0,0.06)',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#4ade80', boxShadow: '0 0 8px #4ade80' }} />
-            <span style={{ fontSize: 13, color: '#ffffff', fontWeight: 700 }}>EBS Cloud Administration</span>
-          </div>
-
           {/* User Profile Dropdown */}
           <div style={{ position: 'relative', paddingLeft: 14, borderLeft: '1px solid rgba(255, 255, 255, 0.2)' }}>
             <button
@@ -559,317 +553,256 @@ export default function CreateTenantPage() {
         </header>
 
         {/* Page Content Body */}
-        <main style={{ flex: 1, padding: '32px', maxWidth: 960, margin: '0 auto', width: '100%' }}>
+        <main style={{ flex: 1, padding: '24px 32px', width: '100%', minWidth: 0, boxSizing: 'border-box' }}>
           {/* Back Button & Title */}
-          <div style={{ marginBottom: 28 }}>
+          <div style={{ marginBottom: 20 }}>
             <Link
-              href="/admin/saas"
+              href="/admin/saas?tab=tenants"
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: 8,
-                color: '#64748b',
+                gap: 6,
+                color: 'var(--text-muted)',
                 textDecoration: 'none',
-                fontSize: 13.5,
-                fontWeight: 700,
-                marginBottom: 12,
-                transition: 'color 0.15s',
+                fontSize: 13,
+                fontWeight: 600,
+                marginBottom: 10,
               }}
             >
-              <MdArrowBack size={18} />
+              <MdArrowBack size={16} />
               <span>ត្រឡប់ទៅបញ្ជីក្រុមហ៊ុន</span>
             </Link>
 
-            <h1 style={{ fontSize: 24, fontWeight: 900, color: '#0f172a', margin: '0 0 6px', letterSpacing: '-0.3px' }}>
-              🏢 បង្កើតក្រុមហ៊ុន & Workspace ថ្មីជូនអតិថិជន
+            <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 4px' }}>
+              បង្កើតក្រុមហ៊ុន & Workspace ថ្មី
             </h1>
-            <p style={{ fontSize: 13.5, color: '#64748b', margin: 0 }}>
+            <p style={{ fontSize: 12.5, color: 'var(--text-muted)', margin: 0 }}>
               ប្រព័ន្ធនឹងដំឡើង Workspace Subdomain ស្វ័យប្រវត្តិ និងបង្កើតគណនី Admin សម្រាប់ផ្ញើជូនភ្ញៀវ
             </p>
           </div>
 
           {/* If Created Success */}
           {createdCredentials ? (
-            <div style={{ background: '#ffffff', borderRadius: 24, padding: '40px', border: '1px solid #e2e8f0', boxShadow: '0 10px 30px -10px rgba(0,0,0,0.06)', textAlign: 'center' }}>
-              <div style={{ width: 72, height: 72, borderRadius: '50%', background: 'linear-gradient(135deg, #dcfce7, #bbf7d0)', color: '#15803d', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 36, margin: '0 auto 20px' }}>
-                🎉
+            <div className="card" style={{ textAlign: 'center', padding: '40px 30px' }}>
+              <div style={{ width: 64, height: 64, borderRadius: '50%', background: '#dcfce7', color: '#15803d', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32, margin: '0 auto 16px' }}>
+                ✓
               </div>
-              <h2 style={{ fontSize: 24, fontWeight: 900, color: '#0f172a', margin: '0 0 8px' }}>
+              <h2 style={{ fontSize: 22, fontWeight: 800, color: '#0f172a', margin: '0 0 8px' }}>
                 បានបង្កើតក្រុមហ៊ុន & គណនីជោគជ័យ!
               </h2>
-              <p style={{ fontSize: 14, color: '#64748b', margin: '0 0 28px' }}>
+              <p style={{ fontSize: 13.5, color: '#64748b', margin: '0 0 24px' }}>
                 ព័ត៌មាន Workspace និងគណនី Admin ត្រូវបានរៀបចំរួចរាល់។ សូមចម្លងព័ត៌មានខាងក្រោមផ្ញើជូនភ្ញៀវ៖
               </p>
 
-              <div style={{ background: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: 20, padding: '24px', textAlign: 'left', marginBottom: 28, fontSize: 14.5, lineHeight: 2 }}>
-                <div>🏢 <strong>ក្រុមហ៊ុន៖</strong> <span style={{ color: '#0f172a', fontWeight: 900 }}>{createdCredentials.companyName}</span></div>
-                <div>🌐 <strong>តំណភ្ជាប់ Workspace:</strong> <a href={`${createdCredentials.url}/auth`} target="_blank" rel="noreferrer" style={{ color: '#2563eb', fontWeight: 800, textDecoration: 'none' }}>{createdCredentials.url}/auth</a></div>
-                <div>👤 <strong>Email Login:</strong> <span style={{ color: '#0f172a', fontWeight: 800 }}>{createdCredentials.email}</span></div>
-                <div>🔑 <strong>Password:</strong> <span style={{ color: '#16a34a', fontWeight: 900, background: '#dcfce7', padding: '3px 10px', borderRadius: 8 }}>{createdCredentials.password}</span></div>
-                <div>🏷️ <strong>កញ្ចប់សេវា៖</strong> <span style={{ fontWeight: 700, color: '#4f46e5' }}>{createdCredentials.planName}</span></div>
+              <div style={{ background: '#f8fafc', border: '1px solid var(--border)', borderRadius: 12, padding: '20px', textAlign: 'left', marginBottom: 24, fontSize: 14, lineHeight: 2, maxWidth: 640, margin: '0 auto 24px' }}>
+                <div>🏢 <strong>ក្រុមហ៊ុន៖</strong> <span style={{ color: '#0f172a', fontWeight: 700, marginLeft: 6 }}>{createdCredentials.companyName}</span></div>
+                <div>🌐 <strong>តំណភ្ជាប់ Workspace:</strong> <a href={`${createdCredentials.url}/auth`} target="_blank" rel="noreferrer" style={{ color: '#2563eb', fontWeight: 700, textDecoration: 'none', marginLeft: 6 }}>{createdCredentials.url}/auth</a></div>
+                <div>👤 <strong>Email Login:</strong> <span style={{ color: '#0f172a', fontWeight: 700, marginLeft: 6 }}>{createdCredentials.email}</span></div>
+                <div>🔑 <strong>Password:</strong> <span style={{ color: '#16a34a', fontWeight: 800, background: '#dcfce7', padding: '2px 8px', borderRadius: 6, marginLeft: 6 }}>{createdCredentials.password}</span></div>
+                <div>🏷️ <strong>កញ្ចប់សេវា៖</strong> <span style={{ fontWeight: 700, color: '#4f46e5', marginLeft: 6 }}>{createdCredentials.planName}</span></div>
               </div>
 
-              <div style={{ display: 'flex', gap: 14, justifyContent: 'center', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
                 <button
+                  type="button"
                   onClick={handleCopyCredentials}
-                  style={{
-                    padding: '13px 26px',
-                    borderRadius: 14,
-                    border: 'none',
-                    background: copied ? '#10b981' : '#0f172a',
-                    color: '#fff',
-                    fontWeight: 800,
-                    fontSize: 14,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 8,
-                    transition: 'all 0.2s',
-                    boxShadow: '0 4px 14px rgba(15,23,42,0.15)',
-                  }}
+                  className="btn btn-primary"
                 >
-                  {copied ? <MdCheck size={18} /> : <MdContentCopy size={18} />}
+                  {copied ? <MdCheck size={16} /> : <MdContentCopy size={16} />}
                   <span>{copied ? 'បានចម្លងរួចរាល់!' : 'ចម្លងព័ត៌មានផ្ញើឱ្យភ្ញៀវ'}</span>
                 </button>
 
                 <a
-                  href={`https://t.me/share/url?url=${encodeURIComponent(createdCredentials.url)}&text=${encodeURIComponent(getShareableText())}`}
+                  href={`${createdCredentials.url}/auth`}
                   target="_blank"
                   rel="noreferrer"
-                  style={{
-                    padding: '13px 22px',
-                    borderRadius: 14,
-                    border: '1px solid #cbd5e1',
-                    background: '#fff',
-                    color: '#0088cc',
-                    fontWeight: 800,
-                    fontSize: 14,
-                    textDecoration: 'none',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 8,
-                  }}
+                  className="btn btn-outline"
                 >
-                  <MdShare size={18} /> ផ្ញើតាម Telegram
+                  <MdShare size={16} /> ផ្ញើតាម Telegram
                 </a>
 
                 <Link
                   href="/admin/saas"
-                  style={{
-                    padding: '13px 22px',
-                    borderRadius: 14,
-                    border: '1px solid #cbd5e1',
-                    background: '#fff',
-                    color: '#64748b',
-                    fontWeight: 800,
-                    fontSize: 14,
-                    textDecoration: 'none',
-                    display: 'flex',
-                    alignItems: 'center',
-                  }}
+                  className="btn btn-outline"
                 >
-                  ត្រឡប់ទៅផ្ទាំងគ្រប់គ្រង
+                  ត្រឡប់ទៅបញ្ជីក្រុមហ៊ុន
                 </Link>
               </div>
             </div>
           ) : (
             /* Full Form */
-            <form onSubmit={handleSubmit} style={{ background: '#ffffff', borderRadius: 24, padding: '36px', border: '1px solid #e2e8f0', boxShadow: '0 10px 30px -10px rgba(0,0,0,0.04)' }}>
-              {/* Section 1: Company & Subdomain */}
-              <div style={{ marginBottom: 32 }}>
-                <div style={{ fontSize: 16, fontWeight: 900, color: '#0f172a', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ width: 28, height: 28, borderRadius: 8, background: '#eff6ff', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}>1</span>
-                  <span>ព័ត៌មានក្រុមហ៊ុន & Workspace Subdomain</span>
-                </div>
+            <div className="card">
+              <div className="card-header">
+                <span className="card-title">បង្កើតក្រុមហ៊ុន និង Workspace ថ្មី</span>
+              </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
-                  <div>
-                    <label style={{ display: 'block', fontSize: 13, fontWeight: 800, color: '#334155', marginBottom: 8 }}>
-                      ឈ្មោះក្រុមហ៊ុន / អាជីវកម្មដឹកជញ្ជូន <span style={{ color: '#ef4444' }}>*</span>
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="ឧ. Angkor Express, Battambang Logistics"
-                      value={companyForm.companyName}
-                      onChange={handleCompanyNameChange}
-                      style={{ width: '100%', padding: '13px 16px', borderRadius: 12, border: '1.5px solid #cbd5e1', fontSize: 14, outline: 'none' }}
-                    />
+              <div className="card-body">
+                <form onSubmit={handleSubmit}>
+                  {/* Section 1: Company & Subdomain */}
+                  <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 14, display: 'flex', alignItems: 'center' }}>
+                    ១. ព័ត៌មានក្រុមហ៊ុន និង Workspace
                   </div>
 
-                  <div>
-                    <label style={{ display: 'block', fontSize: 13, fontWeight: 800, color: '#334155', marginBottom: 8 }}>
-                      Workspace Subdomain <span style={{ color: '#ef4444' }}>*</span>
-                    </label>
-                    <div style={{ display: 'flex', alignItems: 'center' }}>
-                      <span style={{ background: '#f1f5f9', border: '1.5px solid #cbd5e1', borderRight: 'none', padding: '13px 14px', borderTopLeftRadius: 12, borderBottomLeftRadius: 12, color: '#64748b', fontSize: 13 }}>https://</span>
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label className="form-label">
+                        ឈ្មោះក្រុមហ៊ុន <span>*</span>
+                      </label>
                       <input
                         type="text"
                         required
-                        placeholder="angkorexpress"
-                        value={companyForm.subdomain}
-                        onChange={(e) => setCompanyForm({ ...companyForm, subdomain: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') })}
-                        style={{ flex: 1, padding: '13px 14px', border: '1.5px solid #cbd5e1', borderRadius: 0, fontSize: 14, fontWeight: 800, color: '#2563eb', outline: 'none' }}
+                        className="form-control"
+                        placeholder="ឧ. Angkor Express, Battambang Logistics"
+                        value={companyForm.companyName}
+                        onChange={handleCompanyNameChange}
                       />
-                      <span style={{ background: '#f1f5f9', border: '1.5px solid #cbd5e1', borderLeft: 'none', padding: '13px 14px', borderTopRightRadius: 12, borderBottomRightRadius: 12, color: '#64748b', fontSize: 13 }}>.ebsexpress.com</span>
                     </div>
-                  </div>
-                </div>
-              </div>
 
-              <div style={{ borderTop: '1px solid #f1f5f9', marginBottom: 32 }} />
-
-              {/* Section 2: Plan & Billing */}
-              <div style={{ marginBottom: 32 }}>
-                <div style={{ fontSize: 16, fontWeight: 900, color: '#0f172a', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ width: 28, height: 28, borderRadius: 8, background: '#eff6ff', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}>2</span>
-                  <span>កញ្ចប់សេវាកម្ម & វដ្តបង់ប្រាក់</span>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
-                  <div>
-                    <label style={{ display: 'block', fontSize: 13, fontWeight: 800, color: '#334155', marginBottom: 8 }}>កញ្ចប់សេវា (Plan Tier)</label>
-                    <select
-                      value={companyForm.planId}
-                      onChange={(e) => setCompanyForm({ ...companyForm, planId: Number(e.target.value) })}
-                      style={{ width: '100%', padding: '13px 16px', borderRadius: 12, border: '1.5px solid #cbd5e1', fontSize: 14, fontWeight: 700, outline: 'none', background: '#fff' }}
-                    >
-                      {plans.map((p) => (
-                        <option key={p.id} value={p.id}>{p.name} (${p.priceMonthly}/m - {p.maxOrdersPerMonth} orders/m)</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label style={{ display: 'block', fontSize: 13, fontWeight: 800, color: '#334155', marginBottom: 8 }}>វដ្តបង់ប្រាក់ (Billing Cycle)</label>
-                    <select
-                      value={companyForm.billingCycle}
-                      onChange={(e) => setCompanyForm({ ...companyForm, billingCycle: e.target.value as any })}
-                      style={{ width: '100%', padding: '13px 16px', borderRadius: 12, border: '1.5px solid #cbd5e1', fontSize: 14, fontWeight: 700, outline: 'none', background: '#fff' }}
-                    >
-                      <option value="monthly">បង់ប្រចាំខែ (Monthly)</option>
-                      <option value="yearly">បង់ប្រចាំឆ្នាំ (Yearly - ទទួល Discount ពិសេស)</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-              <div style={{ borderTop: '1px solid #f1f5f9', marginBottom: 32 }} />
-
-              {/* Section 3: Admin User Credentials */}
-              <div style={{ marginBottom: 36 }}>
-                <div style={{ fontSize: 16, fontWeight: 900, color: '#0f172a', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ width: 28, height: 28, borderRadius: 8, background: '#eff6ff', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}>3</span>
-                  <span>ព័ត៌មានគណនី Admin សម្រាប់ Login</span>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 20 }}>
-                  <div>
-                    <label style={{ display: 'block', fontSize: 13, fontWeight: 800, color: '#334155', marginBottom: 8 }}>
-                      ឈ្មោះម្ចាស់ក្រុមហ៊ុន / Admin Name
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="ឧ. Sok Dara"
-                      value={companyForm.adminName}
-                      onChange={(e) => setCompanyForm({ ...companyForm, adminName: e.target.value })}
-                      style={{ width: '100%', padding: '13px 16px', borderRadius: 12, border: '1.5px solid #cbd5e1', fontSize: 14, outline: 'none' }}
-                    />
-                  </div>
-
-                  <div>
-                    <label style={{ display: 'block', fontSize: 13, fontWeight: 800, color: '#334155', marginBottom: 8 }}>
-                      លេខទូរស័ព្ទ (Phone)
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="012 345 678"
-                      value={companyForm.phone}
-                      onChange={(e) => setCompanyForm({ ...companyForm, phone: e.target.value })}
-                      style={{ width: '100%', padding: '13px 16px', borderRadius: 12, border: '1.5px solid #cbd5e1', fontSize: 14, outline: 'none' }}
-                    />
-                  </div>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
-                  <div>
-                    <label style={{ display: 'block', fontSize: 13, fontWeight: 800, color: '#334155', marginBottom: 8 }}>
-                      Email សម្រាប់ Login <span style={{ color: '#ef4444' }}>*</span>
-                    </label>
-                    <input
-                      type="email"
-                      required
-                      placeholder="client@gmail.com"
-                      value={companyForm.email}
-                      onChange={(e) => setCompanyForm({ ...companyForm, email: e.target.value })}
-                      style={{ width: '100%', padding: '13px 16px', borderRadius: 12, border: '1.5px solid #cbd5e1', fontSize: 14, outline: 'none' }}
-                    />
-                  </div>
-
-                  <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                      <label style={{ fontSize: 13, fontWeight: 800, color: '#334155' }}>
-                        Password <span style={{ color: '#ef4444' }}>*</span>
+                    <div className="form-group">
+                      <label className="form-label">
+                        ឈ្មោះ Subdomain សម្រាប់ Workspace <span>*</span>
                       </label>
-                      <button
-                        type="button"
-                        onClick={generatePassword}
-                        style={{ fontSize: 12, background: 'none', border: 'none', color: '#2563eb', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
-                      >
-                        <MdAutoAwesome />
-                        <span>បង្កើត Password ថ្មី (Auto-Gen)</span>
-                      </button>
+                      <div style={{ display: 'flex' }}>
+                        <input
+                          type="text"
+                          required
+                          className="form-control"
+                          style={{ borderTopRightRadius: 0, borderBottomRightRadius: 0 }}
+                          placeholder="angkorexpress"
+                          value={companyForm.subdomain}
+                          onChange={(e) => setCompanyForm({ ...companyForm, subdomain: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') })}
+                        />
+                        <span style={{
+                          padding: '0 12px',
+                          background: '#f8fafc',
+                          border: '1.5px solid var(--border)',
+                          borderLeft: 'none',
+                          borderTopRightRadius: 'var(--radius)',
+                          borderBottomRightRadius: 'var(--radius)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          color: 'var(--text-secondary)',
+                          fontSize: 12.5,
+                          fontWeight: 600,
+                          whiteSpace: 'nowrap',
+                        }}>
+                          .ebsexpress.com
+                        </span>
+                      </div>
                     </div>
-                    <input
-                      type="text"
-                      required
-                      value={companyForm.password}
-                      onChange={(e) => setCompanyForm({ ...companyForm, password: e.target.value })}
-                      style={{ width: '100%', padding: '13px 16px', borderRadius: 12, border: '1.5px solid #cbd5e1', fontSize: 14, fontWeight: 800, color: '#0f172a', outline: 'none' }}
-                    />
                   </div>
-                </div>
-              </div>
 
-              {/* Submit Buttons */}
-              <div style={{ display: 'flex', gap: 14, justifyContent: 'flex-end', paddingTop: 16, borderTop: '1px solid #f1f5f9' }}>
-                <Link
-                  href="/admin/saas"
-                  style={{
-                    padding: '13px 24px',
-                    borderRadius: 12,
-                    border: '1.5px solid #cbd5e1',
-                    background: '#fff',
-                    color: '#64748b',
-                    fontWeight: 800,
-                    textDecoration: 'none',
-                    fontSize: 14,
-                    display: 'flex',
-                    alignItems: 'center',
-                  }}
-                >
-                  បោះបង់
-                </Link>
-                <button
-                  type="submit"
-                  disabled={creating}
-                  style={{
-                    padding: '13px 32px',
-                    borderRadius: 12,
-                    border: 'none',
-                    background: '#2f55a5',
-                    color: '#fff',
-                    fontWeight: 800,
-                    fontSize: 14,
-                    cursor: creating ? 'not-allowed' : 'pointer',
-                    boxShadow: '0 6px 18px rgba(47,85,165,0.3)',
-                    transition: 'all 0.15s',
-                  }}
-                >
-                  {creating ? 'កំពុងបង្កើត Workspace...' : '🚀 បង្កើតក្រុមហ៊ុន & Setup Workspace'}
-                </button>
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label className="form-label">កញ្ចប់គម្រោងតម្លៃ</label>
+                      <select
+                        className="form-control"
+                        value={companyForm.planId}
+                        onChange={(e) => setCompanyForm({ ...companyForm, planId: Number(e.target.value) })}
+                      >
+                        {plans.map((p) => (
+                          <option key={p.id} value={p.id}>{p.name} (${Number(p.priceMonthly).toFixed(2)}/ខែ — {p.maxOrdersPerMonth} orders/ខែ)</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="form-group">
+                      <label className="form-label">វដ្តទូទាត់ប្រាក់</label>
+                      <select
+                        className="form-control"
+                        value={companyForm.billingCycle}
+                        onChange={(e) => setCompanyForm({ ...companyForm, billingCycle: e.target.value as any })}
+                      >
+                        <option value="monthly">ទូទាត់ប្រចាំខែ</option>
+                        <option value="yearly">ទូទាត់ប្រចាំឆ្នាំ (មានបញ្ចុះតម្លៃពិសេស)</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Section 2: Admin User Credentials */}
+                  <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text-primary)', margin: '20px 0 14px', display: 'flex', alignItems: 'center' }}>
+                    ២. គណនី Admin ដំបូងសម្រាប់ក្រុមហ៊ុន
+                  </div>
+
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label className="form-label">
+                        ឈ្មោះអ្នកគ្រប់គ្រង
+                      </label>
+                      <input
+                        type="text"
+                        className="form-control"
+                        placeholder="ឧ. Sok Dara"
+                        value={companyForm.adminName}
+                        onChange={(e) => setCompanyForm({ ...companyForm, adminName: e.target.value })}
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label className="form-label">
+                        លេខទូរស័ព្ទ
+                      </label>
+                      <input
+                        type="text"
+                        className="form-control"
+                        placeholder="012 345 678"
+                        value={companyForm.phone}
+                        onChange={(e) => setCompanyForm({ ...companyForm, phone: e.target.value })}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label className="form-label">
+                        អ៊ីមែលសម្រាប់ Login <span>*</span>
+                      </label>
+                      <input
+                        type="email"
+                        required
+                        className="form-control"
+                        placeholder="client@gmail.com"
+                        value={companyForm.email}
+                        onChange={(e) => setCompanyForm({ ...companyForm, email: e.target.value })}
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label className="form-label">
+                        ពាក្យសម្ងាត់ <span>*</span>
+                      </label>
+                      <input
+                        type="password"
+                        required
+                        className="form-control"
+                        placeholder="បញ្ចូលពាក្យសម្ងាត់..."
+                        value={companyForm.password}
+                        onChange={(e) => setCompanyForm({ ...companyForm, password: e.target.value })}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Submit Buttons */}
+                  <div style={{ marginTop: 24, display: 'flex', gap: 12, justifyContent: 'flex-end', borderTop: '1px solid var(--border)', paddingTop: 16 }}>
+                    <Link
+                      href="/admin/saas?tab=tenants"
+                      className="btn btn-cancel"
+                      style={{ background: '#dc2626', color: '#ffffff', border: '1px solid #dc2626', fontWeight: 700 }}
+                    >
+                      បោះបង់
+                    </Link>
+                    <button
+                      type="submit"
+                      disabled={creating}
+                      className="btn btn-primary"
+                      style={{ background: '#2563eb', color: '#ffffff', border: '1px solid #2563eb', fontWeight: 700 }}
+                    >
+                      {creating ? 'កំពុងរក្សាទុក...' : 'រក្សាទុក'}
+                    </button>
+                  </div>
+                </form>
               </div>
-            </form>
+            </div>
           )}
         </main>
       </div>

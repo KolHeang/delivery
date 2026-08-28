@@ -6,6 +6,7 @@ import {
   Delete,
   Param,
   Body,
+  Query,
   ParseIntPipe,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
@@ -30,8 +31,18 @@ export class SaasAdminsController {
 
   @Get()
   @ApiOperation({ summary: 'Get all SaaS Platform Admins' })
-  findAll() {
-    return this.saasAdminsService.findAll();
+  findAll(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('search') search?: string,
+    @Query('role') role?: string,
+  ) {
+    return this.saasAdminsService.findAll({
+      page: page ? +page : undefined,
+      limit: limit ? +limit : undefined,
+      search,
+      role,
+    });
   }
 
   @Get(':id')

@@ -56,7 +56,6 @@ export default function Sidebar() {
       permission: 'merchants.read',
       items: [
         { href: '/merchants', label: t('shopList') },
-        { href: '/merchants/create', label: t('createShop'), permission: 'merchants.create' },
       ],
     },
     {
@@ -66,7 +65,6 @@ export default function Sidebar() {
       permission: 'users.read',
       items: [
         { href: '/user', label: t('staffList') || 'List Staff' },
-        { href: '/user/create', label: t('createStaff') || 'Create Staff', permission: 'users.create' },
       ],
     },
     {
@@ -85,9 +83,7 @@ export default function Sidebar() {
       icon: MdReceipt,
       permission: 'expenses.read',
       items: [
-        { href: '/expense/create', label: t('addExpense'), permission: 'expenses.create' },
         { href: '/expense', label: t('expenseList') },
-        { href: '/income/create', label: t('addIncome'), permission: 'incomes.create' },
         { href: '/income', label: t('incomeList'), permission: 'incomes.read' },
         { href: '/income/type', label: t('typeOfIncome'), permission: 'incomes.read' },
         { href: '/expense/type', label: t('typeOfExpense'), permission: 'expenses.read' },
@@ -106,7 +102,7 @@ export default function Sidebar() {
       icon: MdSettings,
       permission: 'settings.manage',
       items: [
-        { href: '/billing', label: 'គម្រោង & វិក្កយបត្រ (Billing)' },
+        { href: '/billing', label: lang === 'km' ? 'គម្រោង & វិក្កយបត្រ' : 'Billing & Plans' },
         { href: '/setting/zone_type', label: t('zoneType'), permission: 'zones.read' },
         { href: '/setting/role', label: t('permission'), permission: 'users.manage' },
         { href: '/setting/organisation', label: t('organizationSetting') },
@@ -296,17 +292,21 @@ export default function Sidebar() {
                     gap: 2
                   }}>
                     {visibleItems.map(item => {
-                      const exactActive = pathname === item.href;
+                      const isItemActive = pathname === item.href || (
+                        item.href !== '/dashboard' &&
+                        pathname.startsWith(item.href + '/') &&
+                        !visibleItems.some(other => other.href !== item.href && other.href.startsWith(item.href) && (pathname === other.href || pathname.startsWith(other.href + '/')))
+                      );
 
                       return (
                         <Link
                           key={item.href}
                           href={item.href}
-                          className={`sidebar-item ${exactActive ? 'active' : ''}`}
+                          className={`sidebar-item ${isItemActive ? 'active' : ''}`}
                           style={{
                             fontSize: '13.5px',
                             padding: '8px 12px',
-                            opacity: exactActive ? 1 : 0.85,
+                            opacity: isItemActive ? 1 : 0.85,
                             borderRadius: 'var(--radius-sm)',
                             position: 'relative',
                           }}
@@ -318,8 +318,8 @@ export default function Sidebar() {
                             width: 6,
                             height: 6,
                             borderRadius: '50%',
-                            background: exactActive ? '#c084fc' : 'rgba(255, 255, 255, 0.25)',
-                            boxShadow: exactActive ? '0 0 6px #c084fc' : 'none',
+                            background: isItemActive ? '#c084fc' : 'rgba(255, 255, 255, 0.25)',
+                            boxShadow: isItemActive ? '0 0 6px #c084fc' : 'none',
                             transition: 'all 0.2s ease',
                           }} />
                           {item.label}

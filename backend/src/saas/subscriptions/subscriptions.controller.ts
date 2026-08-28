@@ -6,6 +6,7 @@ import {
   Patch,
   Body,
   Param,
+  Query,
   UseGuards,
   Request,
 } from '@nestjs/common';
@@ -20,7 +21,9 @@ export class SubscriptionsController {
   @UseGuards(JwtAuthGuard)
   @Get('me')
   async getMySubscription(@Request() req: any) {
-    return this.subService.getMySubscription(req.user.id);
+    const userId = req.user?.id;
+    if (!userId) return null;
+    return this.subService.getMySubscription(userId);
   }
 
   @Get('by-subdomain/:subdomain')
@@ -71,8 +74,18 @@ export class SubscriptionsController {
   }
 
   @Get()
-  async getAll() {
-    return this.subService.findAll();
+  async getAll(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('search') search?: string,
+    @Query('status') status?: string,
+  ) {
+    return this.subService.findAll({
+      page: page ? +page : undefined,
+      limit: limit ? +limit : undefined,
+      search,
+      status,
+    });
   }
 
   @Put(':id/status')

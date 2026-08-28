@@ -7,7 +7,9 @@ import Sidebar from '@/components/layout/Sidebar';
 import Topbar from '@/components/layout/Topbar';
 import Badge from '@/components/ui/Badge';
 import api from '@/lib/api';
-import { MdAdd, MdSearch, MdEdit, MdDelete } from 'react-icons/md';
+import { MdSearch } from 'react-icons/md';
+import { FaRegEdit, FaTrashAlt } from 'react-icons/fa';
+import { FiPlusCircle } from 'react-icons/fi';
 import { useLanguage } from '@/lib/LanguageContext';
 import Pagination from '@/components/ui/Pagination';
 
@@ -119,7 +121,7 @@ export default function StaffPage() {
             <div className="card-header">
               <span className="card-title">👥 {t('staffListTitle')}</span>
               <button className="btn btn-primary btn-sm" onClick={openCreate}>
-                <MdAdd size={14} /> {t('addStaff')}
+                <FiPlusCircle size={14} /> {t('addStaff')}
               </button>
             </div>
             <div style={{ overflowX: 'auto' }}>
@@ -188,7 +190,7 @@ export default function StaffPage() {
                         <td>
                           <div style={{ display: 'flex', gap: 4 }}>
                             <button className="btn btn-ghost btn-icon btn-sm" onClick={() => openEdit(d)}>
-                              <MdEdit size={15} />
+                              <FaRegEdit size={14} />
                             </button>
                             <button
                               className="btn btn-ghost btn-icon btn-sm"
@@ -196,7 +198,7 @@ export default function StaffPage() {
                               onClick={() => del(d.id)}
                               disabled={d.id === currentUser?.id}
                             >
-                              <MdDelete size={15} />
+                              <FaTrashAlt size={13} />
                             </button>
                           </div>
                         </td>

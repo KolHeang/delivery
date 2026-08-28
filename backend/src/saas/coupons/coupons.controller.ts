@@ -6,6 +6,7 @@ import {
   Delete,
   Body,
   Param,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { CouponsService } from './coupons.service';
@@ -24,8 +25,16 @@ export class CouponsController {
   }
 
   @Get()
-  async getAll() {
-    return this.couponsService.findAll();
+  async getAll(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('search') search?: string,
+  ) {
+    return this.couponsService.findAll({
+      page: page ? +page : undefined,
+      limit: limit ? +limit : undefined,
+      search,
+    });
   }
 
   @Get(':id')

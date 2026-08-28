@@ -56,13 +56,25 @@ api.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401 && typeof window !== 'undefined') {
       const pathname = window.location.pathname;
-      const isAuthPage = pathname === '/auth' || pathname === '/driver/login' || pathname === '/merchant/login' || pathname === '/';
-      const isLoginRequest = error.config?.url?.includes('/auth/login') || error.config?.url?.includes('/mobile/auth/');
+      const isAuthPage =
+        pathname === '/auth' ||
+        pathname === '/driver/login' ||
+        pathname === '/merchant/login' ||
+        pathname === '/admin/saas/login' ||
+        pathname === '/';
+      const isLoginRequest =
+        error.config?.url?.includes('/auth/login') ||
+        error.config?.url?.includes('/saas/admins/login') ||
+        error.config?.url?.includes('/mobile/auth/');
 
       if (!isAuthPage && !isLoginRequest) {
         localStorage.removeItem('access_token');
         localStorage.removeItem('user');
-        window.location.href = '/auth';
+        if (pathname.startsWith('/admin/saas')) {
+          window.location.href = '/admin/saas/login';
+        } else {
+          window.location.href = '/auth';
+        }
       }
     }
     return Promise.reject(error);

@@ -8,7 +8,8 @@ import Topbar from '@/components/layout/Topbar';
 import Modal from '@/components/ui/Modal';
 import Badge from '@/components/ui/Badge';
 import api from '@/lib/api';
-import { MdAdd, MdEdit, MdDelete } from 'react-icons/md';
+import { FaRegEdit, FaTrashAlt } from 'react-icons/fa';
+import { FiPlusCircle } from 'react-icons/fi';
 import Pagination from '@/components/ui/Pagination';
 import { useLanguage } from '@/lib/LanguageContext';
 
@@ -61,7 +62,7 @@ export default function VehiclesPage() {
           <div className="card">
             <div className="card-header">
               <span className="card-title">🚗 Vehicles List</span>
-              <button className="btn btn-primary btn-sm" onClick={openCreate}><MdAdd size={14} /> Add Vehicle</button>
+              <button className="btn btn-primary btn-sm" onClick={openCreate}><FiPlusCircle size={14} /> Add Vehicle</button>
             </div>
             <div style={{ overflowX: 'auto' }}>
               <table>
@@ -103,8 +104,8 @@ export default function VehiclesPage() {
                         <td><Badge status={v.status} /></td>
                         <td>
                           <div style={{ display: 'flex', gap: 4, justifyContent: 'center' }}>
-                            <button className="btn btn-ghost btn-icon btn-sm" onClick={() => openEdit(v)}><MdEdit size={15} /></button>
-                            <button className="btn btn-ghost btn-icon btn-sm" style={{ color: 'var(--danger)' }} onClick={() => del(v.id)}><MdDelete size={15} /></button>
+                            <button className="btn btn-ghost btn-icon btn-sm" onClick={() => openEdit(v)}><FaRegEdit size={14} /></button>
+                            <button className="btn btn-ghost btn-icon btn-sm" style={{ color: 'var(--danger)' }} onClick={() => del(v.id)}><FaTrashAlt size={13} /></button>
                           </div>
                         </td>
                       </tr>

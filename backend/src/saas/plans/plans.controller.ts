@@ -18,9 +18,18 @@ export class PlansController {
   constructor(private readonly plansService: PlansService) {}
 
   @Get()
-  async getAll(@Query('all') all?: string) {
+  async getAll(
+    @Query('all') all?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('search') search?: string,
+  ) {
     const onlyActive = all !== 'true';
-    return this.plansService.findAll(onlyActive);
+    return this.plansService.findAll(onlyActive, {
+      page: page ? +page : undefined,
+      limit: limit ? +limit : undefined,
+      search,
+    });
   }
 
   @Get(':id')

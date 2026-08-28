@@ -9,6 +9,9 @@ export interface TenantInfo {
   subdomain: string;
   customDomain?: string;
   status: string;
+  logoUrl?: string;
+  phone?: string;
+  email?: string;
   plan?: {
     name: string;
     limits?: {
@@ -58,42 +61,60 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
+      const host = window.location.host; // includes port if localhost
       const hostname = window.location.hostname;
       const isIp = /^(\d{1,3}\.){3}\d{1,3}$/.test(hostname);
       
       let detectedSubdomain: string | null = null;
 
-      if (!isIp) {
-        // Handle subdomains: e.g. "ankor.localhost" or "ankor.ebsexpress.com"
+      if (!isIp && hostname !== 'localhost') {
         const parts = hostname.split('.');
         if (parts.length > 1) {
           const first = parts[0].toLowerCase();
-          if (first !== 'www' && first !== 'localhost' && first !== 'app' && first !== 'api') {
+          if (first !== 'www' && first !== 'app' && first !== 'api') {
             detectedSubdomain = first;
           }
         }
       }
 
-      // Also check query param fallback for dev testing: ?tenant=ankor
+      // Query param fallback for dev testing: ?tenant=ankor
       const searchParams = new URLSearchParams(window.location.search);
       if (!detectedSubdomain && searchParams.get('tenant')) {
         detectedSubdomain = searchParams.get('tenant');
       }
 
-      if (detectedSubdomain) {
-        setSubdomain(detectedSubdomain);
-        setIsTenant(true);
-        setLoading(true);
+      // Check if not on root platform domain
+      const isRootPlatform = (hostname === 'localhost' && !detectedSubdomain) || hostname === 'ebsexpress.com' || hostname === 'www.ebsexpress.com';
 
-        const res = await saasApi.getBySubdomain(detectedSubdomain);
-        if (res && res.exists && res.tenant) {
-          setTenant(res.tenant);
+      if (!isRootPlatform || detectedSubdomain) {
+        setLoading(true);
+        // Call Dynamic Domain Resolver
+        const domainToResolve = detectedSubdomain || host;
+        const res = await saasApi.resolveDomain(domainToResolve).catch(() => null);
+
+        if (res && res.found && res.tenant) {
+          setSubdomain(res.tenant.slug);
+          setIsTenant(true);
+          setTenant({
+            id: res.tenant.id,
+            companyName: res.tenant.name,
+            subdomain: res.tenant.slug,
+            logoUrl: res.tenant.logo,
+            phone: res.tenant.phone,
+            email: res.tenant.email,
+            status: res.tenant.status,
+            plan: res.plan,
+          });
           setIsNotFound(false);
-          // Set browser page title
-          document.title = `${res.tenant.companyName} | Delivery Management`;
-        } else {
+          document.title = `${res.tenant.name} | Workspace`;
+        } else if (detectedSubdomain) {
+          setIsTenant(true);
           setTenant(null);
           setIsNotFound(true);
+        } else {
+          setIsTenant(false);
+          setTenant(null);
+          setIsNotFound(false);
         }
       } else {
         setIsTenant(false);

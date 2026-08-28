@@ -131,10 +131,10 @@ export default function CreateShopPage() {
     <div className="app-layout">
       <Sidebar />
       <div className="main-content">
-        <Topbar title={t('createShop')} subtitle="Add new merchant account to the platform" />
+        <Topbar title={t('createShop')} subtitle="បន្ថែម និងបង្កើតព័ត៌មានហាងទំនិញថ្មី" />
         <div className="page-content">
           <div className="card">
-            <div className="card-header"><span className="card-title">🏪 {t('createShop')}</span></div>
+            <div className="card-header"><span className="card-title">{t('createShop')}</span></div>
             <div className="card-body">
               <form onSubmit={handleSubmit}>
                 {/* Shop Photo Upload */}
@@ -178,7 +178,7 @@ export default function CreateShopPage() {
                 {/* Row 1: Delivery Fee & Exchange Rate */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
                   <div className="form-group">
-                    <label className="form-label">{t('deliveryFee')} <span>*</span></label>
+                    <label className="form-label">{t('deliveryFee')} <span style={{ color: '#ef4444' }}>*</span></label>
                     <input
                       type="number"
                       step="0.01"
@@ -189,7 +189,7 @@ export default function CreateShopPage() {
                     />
                   </div>
                   <div className="form-group">
-                    <label className="form-label">{t('exchangeRate')} <span>*</span></label>
+                    <label className="form-label">{t('exchangeRate')} <span style={{ color: '#ef4444' }}>*</span></label>
                     <input
                       type="number"
                       className="form-control"
@@ -201,14 +201,14 @@ export default function CreateShopPage() {
                 </div>
 
                 {/* Section 2: Shop Info */}
-                <div style={{ background: '#eeeeee', padding: '10px 16px', fontWeight: 'bold', fontSize: 13, color: '#334155', margin: '20px 0 16px', borderRadius: 4 }}>
+                <div style={{ background: '#f8fafc', border: '1px solid var(--border)', padding: '10px 16px', fontWeight: 'bold', fontSize: 13, color: '#334155', margin: '20px 0 16px', borderRadius: 6 }}>
                   {t('shopInfo')}
                 </div>
 
                 {/* Row 2: Name, Phone, Email, Address */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
                   <div className="form-group">
-                    <label className="form-label">{t('name')} <span>*</span></label>
+                    <label className="form-label">{t('name')} <span style={{ color: '#ef4444' }}>*</span></label>
                     <input
                       type="text"
                       className="form-control"
@@ -219,7 +219,7 @@ export default function CreateShopPage() {
                     />
                   </div>
                   <div className="form-group">
-                    <label className="form-label">{t('phone')} <span>*</span></label>
+                    <label className="form-label">{t('phone')} <span style={{ color: '#ef4444' }}>*</span></label>
                     <input
                       type="text"
                       className="form-control"
@@ -233,7 +233,7 @@ export default function CreateShopPage() {
                 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
                   <div className="form-group">
-                    <label className="form-label">{t('email')} <span>*</span></label>
+                    <label className="form-label">{t('email')} <span style={{ color: '#ef4444' }}>*</span></label>
                     <input
                       type="email"
                       className="form-control"
@@ -244,7 +244,7 @@ export default function CreateShopPage() {
                     />
                   </div>
                   <div className="form-group">
-                    <label className="form-label">{t('address')} <span>*</span></label>
+                    <label className="form-label">{t('address')} <span style={{ color: '#ef4444' }}>*</span></label>
                     <input
                       type="text"
                       className="form-control"
@@ -269,7 +269,7 @@ export default function CreateShopPage() {
                 </div>
 
                 {/* Section 3: Bank Info */}
-                <div style={{ background: '#eeeeee', padding: '10px 16px', fontWeight: 'bold', fontSize: 13, color: '#334155', margin: '20px 0 16px', borderRadius: 4 }}>
+                <div style={{ background: '#f8fafc', border: '1px solid var(--border)', padding: '10px 16px', fontWeight: 'bold', fontSize: 13, color: '#334155', margin: '20px 0 16px', borderRadius: 6 }}>
                   {t('bankInfo')}
                 </div>
 
@@ -341,10 +341,20 @@ export default function CreateShopPage() {
 
                 {/* Bottom Buttons */}
                 <div style={{ marginTop: 24, display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
-                  <button type="button" className="btn btn-outline" onClick={() => router.push('/merchants')}>
+                  <button
+                    type="button"
+                    className="btn btn-cancel"
+                    style={{ background: '#dc2626', color: '#ffffff', border: '1px solid #dc2626', fontWeight: 700 }}
+                    onClick={() => router.push('/merchants')}
+                  >
                     {t('cancel')}
                   </button>
-                  <button type="submit" style={{ background: 'var(--accent)', color: '#fff', padding: '10px 24px', border: 'none', borderRadius: 6, fontWeight: 'bold', cursor: 'pointer', transition: 'opacity 0.2s' }} disabled={saving}>
+                  <button
+                    type="submit"
+                    className="btn btn-primary"
+                    style={{ background: '#2563eb', color: '#ffffff', border: '1px solid #2563eb', fontWeight: 700, padding: '10px 24px' }}
+                    disabled={saving}
+                  >
                     {saving ? t('saving') : t('save')}
                   </button>
                 </div>

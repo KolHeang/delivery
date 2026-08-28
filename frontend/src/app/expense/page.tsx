@@ -7,7 +7,8 @@ import Sidebar from '@/components/layout/Sidebar';
 import Topbar from '@/components/layout/Topbar';
 import api from '@/lib/api';
 import Badge from '@/components/ui/Badge';
-import { MdAdd, MdTrendingDown } from 'react-icons/md';
+import { MdTrendingDown } from 'react-icons/md';
+import { FiPlusCircle } from 'react-icons/fi';
 import { useLanguage } from '@/lib/LanguageContext';
 import Pagination from '@/components/ui/Pagination';
 
@@ -53,22 +54,9 @@ export default function ExpenseListPage() {
         <div className="page-content">
           <div className="card">
             <div className="card-header">
-              <span className="card-title">💸 {t('outlaysTitle') || 'Outlays & Expenditures'}</span>
-              <button
-                className="btn btn-primary"
-                style={{
-                  padding: '8px 18px',
-                  fontSize: '13.5px',
-                  fontWeight: 600,
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 6,
-                  borderRadius: 8,
-                  cursor: 'pointer',
-                }}
-                onClick={() => router.push('/expense/create')}
-              >
-                <MdAdd size={18} /> {t('addExpense') || 'Add Expense'}
+              <span className="card-title">📉 {t('outlaysTitle') || 'Expenses & Outflows'}</span>
+              <button className="btn btn-primary btn-sm" onClick={() => router.push('/expense/create')}>
+                <FiPlusCircle size={14} /> {t('addExpense') || 'Add Expense'}
               </button>
             </div>
             <div style={{ overflowX: 'auto' }}>

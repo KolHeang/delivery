@@ -61,8 +61,11 @@ import { SaasPaymentsController } from './payments/saas-payments.controller';
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: (config: ConfigService) => ({
-        secret: config.get<string>('JWT_SECRET', 'delivery-secret-key-2026'),
-        signOptions: { expiresIn: '7d' },
+        secret: config.get<string>(
+          'JWT_SECRET',
+          'delivery_jwt_secret_2024_!@#$',
+        ),
+        signOptions: { expiresIn: '30d' },
       }),
       inject: [ConfigService],
     }),

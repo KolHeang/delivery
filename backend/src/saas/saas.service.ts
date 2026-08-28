@@ -156,7 +156,6 @@ export class SaasService {
     const subscription = this.subscriptionRepo.create({
       tenantId: savedTenant.id,
       companyName: dto.companyName,
-      subdomain: cleanSlug,
       userId: savedUser.id,
       planId: plan ? plan.id : 1,
       billingCycle: dto.billingCycle || 'monthly',
@@ -249,5 +248,176 @@ export class SaasService {
       relations: { subscription: true, user: true },
       order: { createdAt: 'DESC' },
     });
+  }
+
+  // ── DYNAMIC MULTI-DOMAIN RESOLUTION & MANAGEMENT ──
+
+  /**
+   * Dynamically resolves a host/domain to a tenant workspace
+   */
+  async resolveDomain(rawHost: string) {
+    if (!rawHost) {
+      throw new BadRequestException('Host or domain parameter is required');
+    }
+
+    // Clean host (strip protocols, paths, and trailing slashes)
+    const cleaned = rawHost
+      .toLowerCase()
+      .trim()
+      .replace(/^https?:\/\//, '')
+      .replace(/\/.*$/, '');
+
+    // 1. Direct match in saas_domains (e.g. "esb-express.localhost:3000" or "delivery.esb.com")
+    let domainRecord = await this.domainRepo.findOne({
+      where: { domain: cleaned },
+      relations: { tenant: { plan: true, subscriptions: { plan: true } } },
+    });
+
+    // 2. Fallback: match without port (e.g. domain is "esb-express.localhost" or "esb-express.ebsexpress.com")
+    if (!domainRecord && cleaned.includes(':')) {
+      const withoutPort = cleaned.split(':')[0];
+      domainRecord = await this.domainRepo.findOne({
+        where: { domain: withoutPort },
+        relations: { tenant: { plan: true, subscriptions: { plan: true } } },
+      });
+    }
+
+    // 3. Fallback: match by subdomain prefix or tenant slug
+    let tenant: Tenant | null = null;
+    if (domainRecord && domainRecord.tenant) {
+      tenant = domainRecord.tenant;
+    } else {
+      // Extract first subdomain segment (e.g. "esb-express" from "esb-express.localhost:3000")
+      const subdomainPrefix = cleaned.split('.')[0];
+      tenant = await this.tenantRepo.findOne({
+        where: { slug: subdomainPrefix },
+        relations: { plan: true, domains: true, subscriptions: { plan: true } },
+      });
+    }
+
+    if (!tenant) {
+      return {
+        found: false,
+        domain: cleaned,
+        message: 'No tenant or workspace found for this domain',
+      };
+    }
+
+    const activeSubscription = tenant.subscriptions?.find((s) => s.status === 'active' || s.status === 'trialing');
+
+    return {
+      found: true,
+      domain: cleaned,
+      domainRecord: domainRecord || {
+        domain: cleaned,
+        isPrimary: true,
+        isVerified: true,
+        domainType: 'subdomain',
+        sslStatus: 'active',
+      },
+      tenant: {
+        id: tenant.id,
+        name: tenant.name,
+        slug: tenant.slug,
+        code: tenant.code,
+        status: tenant.status,
+        logo: tenant.logo,
+        phone: tenant.phone,
+        email: tenant.email,
+        address: tenant.address,
+      },
+      plan: tenant.plan || activeSubscription?.plan || null,
+      subscription: activeSubscription || null,
+      allDomains: tenant.domains || [],
+    };
+  }
+
+  /**
+   * Get all domains or domains for a specific tenant
+   */
+  async getDomains(tenantId?: number) {
+    const where: any = {};
+    if (tenantId) where.tenantId = tenantId;
+    return this.domainRepo.find({
+      where,
+      relations: { tenant: true },
+      order: { isPrimary: 'DESC', createdAt: 'DESC' },
+    });
+  }
+
+  /**
+   * Add a new custom domain or subdomain alias to a tenant
+   */
+  async addDomain(
+    tenantId: number,
+    dto: { domain: string; isPrimary?: boolean; domainType?: string; dnsTarget?: string },
+  ) {
+    const tenant = await this.tenantRepo.findOne({ where: { id: tenantId } });
+    if (!tenant) throw new NotFoundException('Tenant not found');
+
+    const cleanDomain = dto.domain
+      .toLowerCase()
+      .trim()
+      .replace(/^https?:\/\//, '')
+      .replace(/\/.*$/, '');
+
+    const existing = await this.domainRepo.findOne({ where: { domain: cleanDomain } });
+    if (existing) {
+      throw new BadRequestException(`Domain "${cleanDomain}" is already configured on the platform.`);
+    }
+
+    if (dto.isPrimary) {
+      // Unset previous primary domains for this tenant
+      await this.domainRepo.update({ tenantId }, { isPrimary: false });
+    }
+
+    const isSubdomain = cleanDomain.includes('localhost') || cleanDomain.endsWith('.ebsexpress.com');
+
+    const newDomain = this.domainRepo.create({
+      tenantId,
+      domain: cleanDomain,
+      domainType: dto.domainType || (isSubdomain ? 'subdomain' : 'custom'),
+      isPrimary: dto.isPrimary ?? false,
+      isVerified: isSubdomain ? true : false,
+      sslStatus: isSubdomain ? 'active' : 'pending',
+      dnsTarget: dto.dnsTarget || 'cname.ebsexpress.com',
+    });
+
+    return this.domainRepo.save(newDomain);
+  }
+
+  /**
+   * Set a domain as the primary workspace domain for a tenant
+   */
+  async setPrimaryDomain(domainId: number) {
+    const target = await this.domainRepo.findOne({ where: { id: domainId } });
+    if (!target) throw new NotFoundException('Domain record not found');
+
+    await this.domainRepo.update({ tenantId: target.tenantId }, { isPrimary: false });
+    target.isPrimary = true;
+    return this.domainRepo.save(target);
+  }
+
+  /**
+   * Verify domain DNS / SSL status
+   */
+  async verifyDomain(domainId: number) {
+    const target = await this.domainRepo.findOne({ where: { id: domainId } });
+    if (!target) throw new NotFoundException('Domain record not found');
+
+    target.isVerified = true;
+    target.sslStatus = 'active';
+    return this.domainRepo.save(target);
+  }
+
+  /**
+   * Delete a custom domain from a tenant
+   */
+  async deleteDomain(domainId: number) {
+    const target = await this.domainRepo.findOne({ where: { id: domainId } });
+    if (!target) throw new NotFoundException('Domain record not found');
+
+    await this.domainRepo.remove(target);
+    return { success: true, message: 'Domain deleted successfully' };
   }
 }

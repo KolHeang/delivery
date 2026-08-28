@@ -65,14 +65,8 @@ function PricingContent() {
   };
 
   const handleSelectPlan = (plan: Plan) => {
-    const params = new URLSearchParams({
-      planId: plan.id.toString(),
-      cycle: billingCycle,
-    });
-    if (refCode) {
-      params.set('ref', refCode);
-    }
-    router.push(`/checkout?${params.toString()}`);
+    // Checkout is handled by Admin — contact admin to create workspace
+    alert('សូមទំនាក់ទំនង Admin ដើម្បីបង្កើត Workspace សម្រាប់ Plan ' + plan.name + '.\nPlease contact Admin to create your Workspace.');
   };
 
   const calculateDiscountedPrice = (originalPrice: number) => {

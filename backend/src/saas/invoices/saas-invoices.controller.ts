@@ -1,10 +1,12 @@
 import {
   Controller,
   Get,
+  Post,
   Put,
   Patch,
   Param,
   Body,
+  Query,
   UseGuards,
   Request,
 } from '@nestjs/common';
@@ -15,6 +17,11 @@ import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 export class SaasInvoicesController {
   constructor(private readonly invoicesService: SaasInvoicesService) {}
 
+  @Post()
+  async createInvoice(@Body() data: any) {
+    return this.invoicesService.create(data);
+  }
+
   @UseGuards(JwtAuthGuard)
   @Get('my')
   async getMyInvoices(@Request() req: any) {
@@ -22,8 +29,18 @@ export class SaasInvoicesController {
   }
 
   @Get()
-  async getAll() {
-    return this.invoicesService.findAll();
+  async getAll(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('search') search?: string,
+    @Query('status') status?: string,
+  ) {
+    return this.invoicesService.findAll({
+      page: page ? +page : undefined,
+      limit: limit ? +limit : undefined,
+      search,
+      status,
+    });
   }
 
   @Get(':idOrNumber')

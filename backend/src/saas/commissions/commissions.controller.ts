@@ -4,6 +4,7 @@ import {
   Put,
   Param,
   Body,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { CommissionsService } from './commissions.service';
@@ -15,8 +16,18 @@ export class CommissionsController {
   constructor(private readonly commissionsService: CommissionsService) {}
 
   @Get()
-  async getAll() {
-    return this.commissionsService.findAll();
+  async getAll(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('search') search?: string,
+    @Query('status') status?: string,
+  ) {
+    return this.commissionsService.findAll({
+      page: page ? +page : undefined,
+      limit: limit ? +limit : undefined,
+      search,
+      status,
+    });
   }
 
   @Get('partner/:partnerId')

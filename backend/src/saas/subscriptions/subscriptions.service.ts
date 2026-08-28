@@ -4,7 +4,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, ILike } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { Subscription, BillingCycle, SubscriptionStatus } from './subscription.entity';
@@ -12,6 +12,9 @@ import { Plan } from '../plans/plan.entity';
 import { CouponsService } from '../coupons/coupons.service';
 import { SaasInvoicesService } from '../invoices/saas-invoices.service';
 import { User } from '../../users/entities/users.entity';
+import { Tenant } from '../entities/tenant.entity';
+import { TenantDomain } from '../entities/tenant-domain.entity';
+import { Role } from '../../roles/entities/role.entity';
 
 @Injectable()
 export class SubscriptionsService {
@@ -22,25 +25,82 @@ export class SubscriptionsService {
     private readonly planRepo: Repository<Plan>,
     @InjectRepository(User)
     private readonly userRepo: Repository<User>,
+    @InjectRepository(Tenant)
+    private readonly tenantRepo: Repository<Tenant>,
+    @InjectRepository(TenantDomain)
+    private readonly domainRepo: Repository<TenantDomain>,
+    @InjectRepository(Role)
+    private readonly roleRepo: Repository<Role>,
     private readonly couponsService: CouponsService,
     private readonly invoicesService: SaasInvoicesService,
     private readonly jwtService: JwtService,
   ) {}
 
-  async findAll(): Promise<Subscription[]> {
-    return this.subRepo.find({
+  async findAll(query?: { page?: number; limit?: number; search?: string; status?: string }): Promise<any> {
+    const page = query?.page !== undefined ? Math.max(1, Number(query.page)) : undefined;
+    const limit = query?.limit !== undefined ? Math.max(1, Number(query.limit)) : 10;
+
+    let where: any = {};
+    if (query?.status && query.status !== 'all') {
+      where.status = query.status;
+    }
+    if (query?.search) {
+      const term = `%${query.search}%`;
+      where = [
+        { ...where, companyName: ILike(term) },
+        { ...where, user: { email: ILike(term) } },
+      ];
+    }
+
+    const findOptions: any = {
+      where,
       relations: {
         user: true,
         plan: true,
         invoices: true,
+        tenant: true,
       },
       order: { createdAt: 'DESC' },
+    };
+
+    if (page === undefined) {
+      const subs = await this.subRepo.find(findOptions);
+      return subs.map((s) => ({
+        ...s,
+        subdomain: s.tenant?.slug || null,
+      }));
+    }
+
+    const [subs, total] = await this.subRepo.findAndCount({
+      ...findOptions,
+      skip: (page - 1) * limit,
+      take: limit,
     });
+
+    const result = subs.map((s) => ({
+      ...s,
+      subdomain: s.tenant?.slug || null,
+    }));
+
+    return {
+      result,
+      data: result,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 
   async getMySubscription(userId: number) {
+    const user = await this.userRepo.findOne({ where: { id: userId } });
+    const whereConditions: any[] = [{ userId }];
+    if (user?.tenantId) {
+      whereConditions.push({ tenantId: user.tenantId });
+    }
+
     const sub = await this.subRepo.findOne({
-      where: { userId },
+      where: whereConditions,
       relations: {
         plan: true,
         invoices: true,
@@ -76,8 +136,9 @@ export class SubscriptionsService {
       status: isExpired ? 'expired' : sub.status,
       billingCycle: sub.billingCycle,
       companyName: sub.companyName,
-      subdomain: sub.subdomain,
-      customDomain: sub.customDomain,
+      subdomain: undefined,
+      customDomain: undefined,
+
       plan: sub.plan,
       currentPeriodStart: sub.currentPeriodStart,
       currentPeriodEnd: sub.currentPeriodEnd,
@@ -94,9 +155,9 @@ export class SubscriptionsService {
   }
 
   async findBySubdomain(subdomain: string) {
-    const clean = subdomain.toLowerCase().trim();
+    // Now domain lookup should go through saas_domains; this method is a fallback
     const sub = await this.subRepo.findOne({
-      where: [{ subdomain: clean }, { customDomain: clean }],
+      where: { companyName: subdomain },
       relations: {
         user: true,
         plan: true,
@@ -112,8 +173,9 @@ export class SubscriptionsService {
       tenant: {
         id: sub.id,
         companyName: sub.companyName,
-        subdomain: sub.subdomain,
-        customDomain: sub.customDomain,
+        subdomain: undefined,
+        customDomain: undefined,
+
         status: sub.status,
         plan: {
           name: sub.plan?.name,
@@ -134,7 +196,6 @@ export class SubscriptionsService {
     couponCode?: string;
     companyName: string;
     subdomain: string;
-    customDomain?: string;
     adminName: string;
     email: string;
     phone?: string;
@@ -150,7 +211,47 @@ export class SubscriptionsService {
       .trim()
       .replace(/[^a-z0-9-]/g, '');
 
-    // 1. Find or create user
+    // 1. Create or Find Tenant (in saas_tenants)
+    let tenant = await this.tenantRepo.findOne({
+      where: { slug: cleanSubdomain },
+    });
+    if (!tenant) {
+      tenant = this.tenantRepo.create({
+        name: dto.companyName,
+        slug: cleanSubdomain,
+        code: `TENANT-${Math.floor(1000 + Math.random() * 9000)}`,
+        phone: dto.phone,
+        email: dto.email.toLowerCase().trim(),
+        status: 'active',
+        planId: dto.planId,
+      });
+      tenant = await this.tenantRepo.save(tenant);
+    }
+
+    // 1.1 Auto-register default domain in saas_domains
+    const primaryDomainStr = `${cleanSubdomain}.ebsexpress.com`;
+    let existingDomain = await this.domainRepo.findOne({ where: { domain: primaryDomainStr } });
+    if (!existingDomain) {
+      const newDomain = this.domainRepo.create({
+        tenantId: tenant.id,
+        domain: primaryDomainStr,
+        domainType: 'subdomain',
+        isPrimary: true,
+        isVerified: true,
+        sslStatus: 'active',
+      });
+      await this.domainRepo.save(newDomain);
+    }
+
+    // customDomain is now managed via saas_domains table — skip here
+
+
+    // 2. Resolve default Admin role
+    let adminRole = await this.roleRepo.findOne({
+      where: [{ name: 'admin', tenantId: tenant.id }, { name: 'admin' }],
+    });
+
+    // 3. Find or create user
     let user = await this.userRepo.findOne({
       where: { email: dto.email.toLowerCase().trim() },
     });
@@ -163,35 +264,39 @@ export class SubscriptionsService {
         email: dto.email.toLowerCase().trim(),
         phone: dto.phone || '',
         password: hashedPassword,
+        roleId: adminRole?.id,
+        tenantId: tenant.id,
+        tenantSubdomain: cleanSubdomain,
         isActive: true,
+        isStaff: true,
       });
       user = await this.userRepo.save(newUser);
+    } else {
+      user.tenantId = tenant.id;
+      user.tenantSubdomain = cleanSubdomain;
+      if (adminRole?.id) user.roleId = adminRole.id;
+      await this.userRepo.save(user);
     }
 
     if (!user) {
       throw new BadRequestException('Failed to initialize user account');
     }
 
-    // 2. Perform Subscription & Invoice Creation
+    // 4. Perform Subscription & Invoice Creation
     const checkoutResult = await this.checkout(user.id, {
       planId: dto.planId,
       billingCycle: dto.billingCycle,
       couponCode: dto.couponCode,
       companyName: dto.companyName,
-      subdomain: cleanSubdomain,
-      customDomain: dto.customDomain,
+
+      tenantId: tenant.id,
     });
 
-    // Link user to tenant
-    user.tenantId = checkoutResult.subscription.id;
-    user.tenantSubdomain = cleanSubdomain;
-    await this.userRepo.save(user);
-
-    // 3. Issue JWT Token for instant login
+    // 5. Issue JWT Token for instant login
     const payload = {
       sub: user.id,
       email: user.email,
-      role: user.role,
+      role: user.role || 'admin',
       tenantId: user.tenantId,
       tenantSubdomain: user.tenantSubdomain,
     };
@@ -201,6 +306,7 @@ export class SubscriptionsService {
       ...checkoutResult,
       access_token,
       user,
+      tenant,
       workspace: {
         companyName: dto.companyName,
         subdomain: cleanSubdomain,
@@ -216,8 +322,7 @@ export class SubscriptionsService {
       billingCycle: BillingCycle;
       couponCode?: string;
       companyName?: string;
-      subdomain?: string;
-      customDomain?: string;
+      tenantId?: number;
     },
   ) {
     const plan = await this.planRepo.findOne({ where: { id: dto.planId } });
@@ -263,12 +368,12 @@ export class SubscriptionsService {
     if (!sub) {
       sub = this.subRepo.create({
         userId,
+        tenantId: dto.tenantId,
         planId: plan.id,
         billingCycle: dto.billingCycle,
         companyName: dto.companyName,
-        subdomain: dto.subdomain,
-        customDomain: dto.customDomain,
         status: totalAmount === 0 ? 'active' : 'trialing',
+
         currentPeriodStart: now,
         currentPeriodEnd: periodEnd,
       });
@@ -276,10 +381,10 @@ export class SubscriptionsService {
     } else {
       sub.planId = plan.id;
       sub.billingCycle = dto.billingCycle;
+      if (dto.tenantId) sub.tenantId = dto.tenantId;
       if (dto.companyName) sub.companyName = dto.companyName;
-      if (dto.subdomain) sub.subdomain = dto.subdomain;
-      if (dto.customDomain) sub.customDomain = dto.customDomain;
       await this.subRepo.save(sub);
+
     }
 
     // 2. Generate SaaS Invoice

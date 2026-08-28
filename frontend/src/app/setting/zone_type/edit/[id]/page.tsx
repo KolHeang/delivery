@@ -125,21 +125,17 @@ export default function EditZonePage() {
                 </div>
 
                 <div style={{ marginTop: 24, display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
-                  <button type="button" className="btn btn-outline" onClick={() => router.push('/setting/zone_type')}>
+                  <button type="button" className="btn btn-cancel" onClick={() => router.push('/setting/zone_type')}>
                     {lang === 'km' ? 'បោះបង់' : 'Cancel'}
                   </button>
                   <button 
                     type="submit" 
-                    className="btn" 
+                    className="btn btn-primary" 
                     disabled={saving}
                     style={{
-                      background: '#e28a35',
-                      color: '#fff',
-                      border: 'none',
                       padding: '8px 24px',
                       fontWeight: 'bold',
-                      borderRadius: 4,
-                      cursor: 'pointer'
+                      borderRadius: 6,
                     }}
                   >
                     {saving ? (lang === 'km' ? 'កំពុងរក្សា...' : 'Saving...') : (lang === 'km' ? 'រក្សាទុក' : 'Save')}

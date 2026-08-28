@@ -1197,16 +1197,16 @@ export default function PaymentWithShopPage() {
             </div>
             <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', marginTop: 10 }}>
               <button 
-                className="btn btn-outline" 
+                className="btn btn-cancel" 
                 onClick={() => setEditPayment(null)}
-                style={{ height: 38, padding: '0 18px', fontWeight: 600 }}
+                style={{ background: '#dc2626', color: '#ffffff', border: '1px solid #dc2626', height: 38, padding: '0 18px', fontWeight: 700 }}
               >
                 {lang === 'km' ? 'បោះបង់' : 'Cancel'}
               </button>
               <button 
                 className="btn btn-primary" 
                 onClick={handleUpdatePayment}
-                style={{ height: 38, padding: '0 18px', fontWeight: 600 }}
+                style={{ background: '#2563eb', color: '#ffffff', border: '1px solid #2563eb', height: 38, padding: '0 18px', fontWeight: 700 }}
               >
                 {lang === 'km' ? 'រក្សាទុក' : 'Save Changes'}
               </button>

@@ -63,18 +63,18 @@ export default function EditCustomerPage() {
     <div className="app-layout">
       <Sidebar />
       <div className="main-content">
-        <Topbar title={t('editCustomer')} subtitle="Update customer profile" />
+        <Topbar title={t('editCustomer')} subtitle="កែប្រែ និងធ្វើបច្ចុប្បន្នភាពព័ត៌មានអតិថិជន" />
         <div className="page-content">
           <div className="card">
-            <div className="card-header"><span className="card-title">👥 {t('editCustomer')}</span></div>
+            <div className="card-header"><span className="card-title">{t('editCustomer')}</span></div>
             <div className="card-body">
               <form onSubmit={handleSubmit}>
                 <div className="form-group">
-                  <label className="form-label">{t('name')} <span>*</span></label>
+                  <label className="form-label">{t('name')} <span style={{ color: '#ef4444' }}>*</span></label>
                   <input className="form-control" value={form.name} onChange={f('name')} required />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">{t('phone')} <span>*</span></label>
+                  <label className="form-label">{t('phone')} <span style={{ color: '#ef4444' }}>*</span></label>
                   <input className="form-control" value={form.phone} onChange={f('phone')} required />
                 </div>
                 <div className="form-group">
@@ -87,10 +87,20 @@ export default function EditCustomerPage() {
                 </div>
                 
                 <div style={{ marginTop: 20, display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
-                  <button type="button" className="btn btn-outline" onClick={() => router.push('/customers')}>
+                  <button
+                    type="button"
+                    className="btn btn-cancel"
+                    style={{ background: '#dc2626', color: '#ffffff', border: '1px solid #dc2626', fontWeight: 700 }}
+                    onClick={() => router.push('/customers')}
+                  >
                     {t('cancel')}
                   </button>
-                  <button type="submit" className="btn btn-primary" disabled={saving}>
+                  <button
+                    type="submit"
+                    className="btn btn-primary"
+                    style={{ background: '#2563eb', color: '#ffffff', border: '1px solid #2563eb', fontWeight: 700 }}
+                    disabled={saving}
+                  >
                     {saving ? t('saving') : t('save')}
                   </button>
                 </div>

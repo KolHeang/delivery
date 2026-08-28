@@ -92,11 +92,11 @@ export class User {
   @Column({ nullable: true })
   photo: string;
 
-  @ManyToOne(() => Tenant, { nullable: true, onDelete: 'CASCADE' })
+  @ManyToOne(() => Tenant, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'tenant_id' })
   tenant: Tenant;
 
-  @Column({ name: 'tenant_id', default: 1 })
+  @Column({ name: 'tenant_id', nullable: true })
   tenantId: number;
 
   @Column({ name: 'tenant_subdomain', nullable: true })

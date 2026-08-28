@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, ILike } from 'typeorm';
 import { SaasInvoice, SaasInvoiceStatus } from './saas-invoice.entity';
 
 @Injectable()
@@ -10,8 +10,24 @@ export class SaasInvoicesService {
     private readonly invoiceRepo: Repository<SaasInvoice>,
   ) {}
 
-  async findAll(): Promise<SaasInvoice[]> {
-    return this.invoiceRepo.find({
+  async findAll(query?: { page?: number; limit?: number; search?: string; status?: string }): Promise<any> {
+    const page = query?.page !== undefined ? Math.max(1, Number(query.page)) : undefined;
+    const limit = query?.limit !== undefined ? Math.max(1, Number(query.limit)) : 10;
+
+    let where: any = {};
+    if (query?.status && query.status !== 'all') {
+      where.status = query.status;
+    }
+    if (query?.search) {
+      const term = `%${query.search}%`;
+      where = [
+        { ...where, invoiceNumber: ILike(term) },
+        { ...where, user: { email: ILike(term) } },
+      ];
+    }
+
+    const findOptions: any = {
+      where,
       relations: {
         user: true,
         subscription: true,
@@ -19,7 +35,26 @@ export class SaasInvoicesService {
         payments: true,
       },
       order: { createdAt: 'DESC' },
+    };
+
+    if (page === undefined) {
+      return this.invoiceRepo.find(findOptions);
+    }
+
+    const [result, total] = await this.invoiceRepo.findAndCount({
+      ...findOptions,
+      skip: (page - 1) * limit,
+      take: limit,
     });
+
+    return {
+      result,
+      data: result,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 
   async findByUserId(userId: number): Promise<SaasInvoice[]> {

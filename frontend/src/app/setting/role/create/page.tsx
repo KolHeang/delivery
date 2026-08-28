@@ -220,10 +220,20 @@ export default function CreateRolePage() {
                 </div>
 
                 <div style={{ marginTop: 32, display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
-                  <button type="button" className="btn btn-outline" onClick={() => router.push('/setting/role')}>
+                  <button
+                    type="button"
+                    className="btn btn-cancel"
+                    style={{ background: '#dc2626', color: '#ffffff', border: '1px solid #dc2626', fontWeight: 700 }}
+                    onClick={() => router.push('/setting/role')}
+                  >
                     {t('cancel')}
                   </button>
-                  <button type="submit" className="btn btn-primary" disabled={saving}>
+                  <button
+                    type="submit"
+                    className="btn btn-primary"
+                    style={{ background: '#2563eb', color: '#ffffff', border: '1px solid #2563eb', fontWeight: 700 }}
+                    disabled={saving}
+                  >
                     {saving ? t('creatingRole') : t('createRoleTitle')}
                   </button>
                 </div>

@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, ILike } from 'typeorm';
 import { Plan } from './plan.entity';
 
 @Injectable()
@@ -10,14 +10,38 @@ export class PlansService {
     private readonly planRepo: Repository<Plan>,
   ) {}
 
-  async findAll(onlyActive = true): Promise<Plan[]> {
-    if (onlyActive) {
-      return this.planRepo.find({
-        where: { isActive: true },
-        order: { priceMonthly: 'ASC' },
-      });
+  async findAll(onlyActive = true, query?: { page?: number; limit?: number; search?: string }): Promise<any> {
+    const page = query?.page !== undefined ? Math.max(1, Number(query.page)) : undefined;
+    const limit = query?.limit !== undefined ? Math.max(1, Number(query.limit)) : 10;
+
+    let where: any = onlyActive ? { isActive: true } : {};
+    if (query?.search) {
+      where = { ...where, name: ILike(`%${query.search}%`) };
     }
-    return this.planRepo.find({ order: { priceMonthly: 'ASC' } });
+
+    const findOptions: any = {
+      where,
+      order: { priceMonthly: 'ASC' },
+    };
+
+    if (page === undefined) {
+      return this.planRepo.find(findOptions);
+    }
+
+    const [result, total] = await this.planRepo.findAndCount({
+      ...findOptions,
+      skip: (page - 1) * limit,
+      take: limit,
+    });
+
+    return {
+      result,
+      data: result,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 
   async findBySlug(slug: string): Promise<Plan> {

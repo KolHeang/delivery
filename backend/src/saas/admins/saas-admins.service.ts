@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, ConflictException, UnauthorizedException, OnModuleInit } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, ILike } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import { SaasAdmin } from './saas-admin.entity';
 import * as bcrypt from 'bcrypt';
@@ -50,10 +50,45 @@ export class SaasAdminsService {
   }
 
 
-  async findAll(): Promise<SaasAdmin[]> {
-    return this.saasAdminRepo.find({
+  async findAll(query?: { page?: number; limit?: number; search?: string; role?: string }): Promise<any> {
+    const page = query?.page !== undefined ? Math.max(1, Number(query.page)) : undefined;
+    const limit = query?.limit !== undefined ? Math.max(1, Number(query.limit)) : 10;
+
+    let where: any = {};
+    if (query?.role && query.role !== 'all') {
+      where.role = query.role;
+    }
+    if (query?.search) {
+      const term = `%${query.search}%`;
+      where = [
+        { ...where, name: ILike(term) },
+        { ...where, email: ILike(term) },
+      ];
+    }
+
+    const findOptions: any = {
+      where,
       order: { createdAt: 'DESC' },
+    };
+
+    if (page === undefined) {
+      return this.saasAdminRepo.find(findOptions);
+    }
+
+    const [result, total] = await this.saasAdminRepo.findAndCount({
+      ...findOptions,
+      skip: (page - 1) * limit,
+      take: limit,
     });
+
+    return {
+      result,
+      data: result,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 
   async findOne(id: number): Promise<SaasAdmin> {

@@ -8,8 +8,9 @@ import Topbar from '@/components/layout/Topbar';
 import Modal from '@/components/ui/Modal';
 import Badge from '@/components/ui/Badge';
 import api from '@/lib/api';
-import { MdAdd, MdSearch, MdEdit, MdDelete, MdPerson, MdLocationOn } from 'react-icons/md';
-import { FaTelegramPlane } from 'react-icons/fa';
+import { MdSearch, MdPerson, MdLocationOn } from 'react-icons/md';
+import { FaTelegramPlane, FaRegEdit, FaTrashAlt } from 'react-icons/fa';
+import { FiPlusCircle } from 'react-icons/fi';
 import { useLanguage } from '@/lib/LanguageContext';
 import Pagination from '@/components/ui/Pagination';
 
@@ -94,7 +95,7 @@ export default function ShopsPage() {
           <div className="card">
             <div className="card-header">
               <span className="card-title">🏪 {t('shopsListTitle')}</span>
-              <button className="btn btn-primary btn-sm" onClick={openCreate}><MdAdd size={14} /> {t('addShop')}</button>
+              <button className="btn btn-primary btn-sm" onClick={openCreate}><FiPlusCircle size={14} /> {t('addShop')}</button>
             </div>
             <div style={{ overflowX: 'auto' }}>
               <table>
@@ -195,8 +196,8 @@ export default function ShopsPage() {
                         </td>
                         <td>
                           <div style={{ display: 'flex', gap: 4 }}>
-                            <button className="btn btn-ghost btn-icon btn-sm" onClick={() => openEdit(m)}><MdEdit size={15} /></button>
-                            <button className="btn btn-ghost btn-icon btn-sm" style={{ color: 'var(--danger)' }} onClick={() => del(m.id)}><MdDelete size={15} /></button>
+                            <button className="btn btn-ghost btn-icon btn-sm" onClick={() => openEdit(m)}><FaRegEdit size={14} /></button>
+                            <button className="btn btn-ghost btn-icon btn-sm" style={{ color: 'var(--danger)' }} onClick={() => del(m.id)}><FaTrashAlt size={13} /></button>
                           </div>
                         </td>
                       </tr>

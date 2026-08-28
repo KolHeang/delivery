@@ -69,11 +69,11 @@ export default function AddExpensePage() {
         <Topbar title={t('addExpense') || 'Add Expense'} subtitle={t('addExpenseSubtitle') || 'Record a new company expenditure'} />
         <div className="page-content">
           <div className="card">
-            <div className="card-header"><span className="card-title">💸 {t('expenseDetails') || 'Expense Details'}</span></div>
+            <div className="card-header"><span className="card-title">{t('expenseDetails') || 'Expense Details'}</span></div>
             <div className="card-body">
               <form onSubmit={handleSubmit}>
                 <div className="form-group">
-                  <label className="form-label">{t('descOrItem') || 'Description / Item'} <span>*</span></label>
+                  <label className="form-label">{t('descOrItem') || 'Description / Item'} <span style={{ color: '#ef4444' }}>*</span></label>
                   <input
                     type="text"
                     className="form-control"
@@ -85,7 +85,7 @@ export default function AddExpensePage() {
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">{t('expenseCategory') || 'Expense Category / Type'} <span>*</span></label>
+                  <label className="form-label">{t('expenseCategory') || 'Expense Category / Type'} <span style={{ color: '#ef4444' }}>*</span></label>
                   <select
                     className="form-control"
                     value={form.typeId}
@@ -100,7 +100,7 @@ export default function AddExpensePage() {
 
                 <div className="form-row">
                   <div className="form-group">
-                    <label className="form-label">{t('amountUSD') || 'Amount ($)'} <span>*</span></label>
+                    <label className="form-label">{t('amountUSD') || 'Amount ($)'} <span style={{ color: '#ef4444' }}>*</span></label>
                     <input
                       type="number"
                       step="0.01"
@@ -113,7 +113,7 @@ export default function AddExpensePage() {
                     />
                   </div>
                   <div className="form-group">
-                    <label className="form-label">{t('dateLabel') || 'Date'} <span>*</span></label>
+                    <label className="form-label">{t('date') || 'កាលបរិច្ឆេទ'} <span style={{ color: '#ef4444' }}>*</span></label>
                     <input
                       type="date"
                       className="form-control"
@@ -125,10 +125,20 @@ export default function AddExpensePage() {
                 </div>
 
                 <div style={{ marginTop: 20, display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
-                  <button type="button" className="btn btn-outline" onClick={() => router.push('/expense')}>
-                    {t('cancel') || 'Cancel'}
+                  <button
+                    type="button"
+                    className="btn btn-cancel"
+                    style={{ background: '#dc2626', color: '#ffffff', border: '1px solid #dc2626', fontWeight: 700 }}
+                    onClick={() => router.push('/expense')}
+                  >
+                    {t('cancel') || 'បោះបង់'}
                   </button>
-                  <button type="submit" className="btn btn-primary" disabled={saving}>
+                  <button
+                    type="submit"
+                    className="btn btn-primary"
+                    style={{ background: '#2563eb', color: '#ffffff', border: '1px solid #2563eb', fontWeight: 700 }}
+                    disabled={saving}
+                  >
                     {saving ? t('saving') || 'Saving...' : t('addExpense') || 'Add Expense'}
                   </button>
                 </div>

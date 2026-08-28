@@ -4,7 +4,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, ILike } from 'typeorm';
 import { Partner } from './partner.entity';
 import { Commission } from '../commissions/commission.entity';
 
@@ -17,11 +17,45 @@ export class PartnersService {
     private readonly commissionRepo: Repository<Commission>,
   ) {}
 
-  async findAll(): Promise<Partner[]> {
-    return this.partnerRepo.find({
+  async findAll(query?: { page?: number; limit?: number; search?: string }): Promise<any> {
+    const page = query?.page !== undefined ? Math.max(1, Number(query.page)) : undefined;
+    const limit = query?.limit !== undefined ? Math.max(1, Number(query.limit)) : 10;
+
+    let where: any = {};
+    if (query?.search) {
+      const term = `%${query.search}%`;
+      where = [
+        { name: ILike(term) },
+        { email: ILike(term) },
+        { referralCode: ILike(term) },
+        { phone: ILike(term) },
+      ];
+    }
+
+    const findOptions: any = {
+      where,
       relations: { coupons: true },
       order: { createdAt: 'DESC' },
+    };
+
+    if (page === undefined) {
+      return this.partnerRepo.find(findOptions);
+    }
+
+    const [result, total] = await this.partnerRepo.findAndCount({
+      ...findOptions,
+      skip: (page - 1) * limit,
+      take: limit,
     });
+
+    return {
+      result,
+      data: result,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 
   async findById(id: number): Promise<Partner> {

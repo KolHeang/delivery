@@ -103,4 +103,52 @@ export class SaasController {
   getTenantInvoices(@Query('tenantId') tenantId?: string) {
     return this.saasService.getTenantInvoices(tenantId ? +tenantId : undefined);
   }
+
+  // ── DYNAMIC DOMAINS ──
+
+  @Get('domains/resolve')
+  @ApiOperation({ summary: 'Dynamic domain resolver for tenant workspaces' })
+  resolveDomain(@Query('domain') domain: string) {
+    return this.saasService.resolveDomain(domain);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @Get('domains')
+  @ApiOperation({ summary: 'List tenant domains' })
+  getDomains(@Query('tenantId') tenantId?: string) {
+    return this.saasService.getDomains(tenantId ? +tenantId : undefined);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @Post('domains')
+  @ApiOperation({ summary: 'Add a new custom domain or subdomain alias' })
+  addDomain(@Body() body: { tenantId: number; domain: string; isPrimary?: boolean; domainType?: string; dnsTarget?: string }) {
+    return this.saasService.addDomain(body.tenantId, body);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @Patch('domains/:id/primary')
+  @ApiOperation({ summary: 'Set domain as primary for tenant' })
+  setPrimaryDomain(@Param('id', ParseIntPipe) id: number) {
+    return this.saasService.setPrimaryDomain(id);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @Patch('domains/:id/verify')
+  @ApiOperation({ summary: 'Verify domain DNS and SSL' })
+  verifyDomain(@Param('id', ParseIntPipe) id: number) {
+    return this.saasService.verifyDomain(id);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @Delete('domains/:id')
+  @ApiOperation({ summary: 'Delete a domain' })
+  deleteDomain(@Param('id', ParseIntPipe) id: number) {
+    return this.saasService.deleteDomain(id);
+  }
 }

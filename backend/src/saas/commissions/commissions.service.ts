@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, ILike } from 'typeorm';
 import { Commission, CommissionStatus } from './commission.entity';
 import { SaasInvoice } from '../invoices/saas-invoice.entity';
 import { SaasPayment } from '../payments/saas-payment.entity';
@@ -15,11 +15,43 @@ export class CommissionsService {
     private readonly partnerRepo: Repository<Partner>,
   ) {}
 
-  async findAll(): Promise<Commission[]> {
-    return this.commissionRepo.find({
+  async findAll(query?: { page?: number; limit?: number; search?: string; status?: string }): Promise<any> {
+    const page = query?.page !== undefined ? Math.max(1, Number(query.page)) : undefined;
+    const limit = query?.limit !== undefined ? Math.max(1, Number(query.limit)) : 10;
+
+    let where: any = {};
+    if (query?.status && query.status !== 'all') {
+      where.status = query.status;
+    }
+    if (query?.search) {
+      const term = `%${query.search}%`;
+      where = { ...where, partner: { name: ILike(term) } };
+    }
+
+    const findOptions: any = {
+      where,
       relations: { partner: true, invoice: true, payment: true },
       order: { createdAt: 'DESC' },
+    };
+
+    if (page === undefined) {
+      return this.commissionRepo.find(findOptions);
+    }
+
+    const [result, total] = await this.commissionRepo.findAndCount({
+      ...findOptions,
+      skip: (page - 1) * limit,
+      take: limit,
     });
+
+    return {
+      result,
+      data: result,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 
   async findByPartner(partnerId: number): Promise<Commission[]> {

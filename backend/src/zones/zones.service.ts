@@ -5,7 +5,7 @@ import { Zone } from './entities/zone.entity';
 import { SubZone } from './entities/subzone.entity';
 import { CreateZoneDto, UpdateZoneDto } from './dto/zone.dto';
 
-import { paginateRepo } from '../config/pagination';
+import { PaginatedResult } from '../interface/pagination.interface';
 
 @Injectable()
 export class ZonesService {
@@ -15,18 +15,42 @@ export class ZonesService {
     private readonly subZoneRepo: Repository<SubZone>,
   ) {}
 
-  async findAll(query?: { page?: number; limit?: number }): Promise<any> {
-    return paginateRepo(this.repo, query || {}, {
-      relations: { driver: true, subZones: true },
-      order: { name: 'ASC' },
-    });
+  async findAll(query?: { page?: number; limit?: number }, tenantId?: number): Promise<PaginatedResult<Zone>> {
+    const qb = this.repo
+      .createQueryBuilder('zone')
+      .leftJoinAndSelect('zone.driver', 'driver')
+      .leftJoinAndSelect('zone.subZones', 'subZones')
+      .orderBy('zone.name', 'ASC');
+
+    if (tenantId) {
+      qb.andWhere('zone.tenantId = :tenantId', { tenantId });
+    }
+
+    const page = query?.page ? Math.max(1, Number(query.page)) : 1;
+    const limit = query?.limit ? Math.max(1, Number(query.limit)) : 10;
+    const skip = (page - 1) * limit;
+
+    qb.skip(skip).take(limit);
+
+    const [results, total] = await qb.getManyAndCount();
+
+    return {
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+      results,
+    };
   }
 
   async findOne(id: number): Promise<Zone> {
-    const item = await this.repo.findOne({
-      where: { id },
-      relations: { driver: true },
-    });
+    const item = await this.repo
+      .createQueryBuilder('zone')
+      .leftJoinAndSelect('zone.driver', 'driver')
+      .leftJoinAndSelect('zone.subZones', 'subZones')
+      .where('zone.id = :id', { id })
+      .getOne();
+
     if (!item) throw new NotFoundException(`Zone #${id} not found`);
     return item;
   }

@@ -23,6 +23,7 @@ import {
 
 import { useTenant } from '@/lib/TenantContext';
 import { useLanguage } from '@/lib/LanguageContext';
+import { printInvoicePdf } from '@/lib/invoice-pdf';
 
 export default function BillingPage() {
   const router = useRouter();
@@ -584,7 +585,7 @@ export default function BillingPage() {
                             </button>
                           )}
                           <button
-                            onClick={() => alert(tr(`ទាញយកវិក្កយបត្រ #${inv.invoiceNumber} (PDF)`, `Download Invoice #${inv.invoiceNumber} (PDF)`))}
+                            onClick={() => printInvoicePdf(inv)}
                             className="btn btn-ghost btn-sm"
                             style={{
                               fontSize: 12,
@@ -593,6 +594,7 @@ export default function BillingPage() {
                               alignItems: 'center',
                               gap: 4,
                             }}
+                            title={tr('បោះពុម្ព / ទាញយកជា PDF', 'Print / Download PDF')}
                           >
                             <MdDownload size={14} /> PDF
                           </button>

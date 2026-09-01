@@ -11,6 +11,8 @@ interface JwtPayload {
   email: string;
   role: string;
   isSaasAdmin?: boolean;
+  tenantId?: number;
+  tenantSubdomain?: string;
 }
 
 @Injectable()
@@ -20,10 +22,15 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
       secretOrKey: process.env.JWT_SECRET ?? 'delivery_jwt_secret_2024_!@#$',
+      passReqToCallback: true,
     });
   }
 
-  async validate(payload: JwtPayload) {
+  async validate(req: any, payload: JwtPayload) {
+    const headerTenantId = req?.headers?.['x-tenant-id']
+      ? parseInt(req.headers['x-tenant-id'], 10)
+      : undefined;
+
     if (payload.role === 'merchant') {
       const merchant = await this.dataSource.getRepository(Merchant).findOne({
         where: { id: payload.sub },
@@ -37,6 +44,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         role: 'merchant',
         name: merchant.name,
         permissions: [],
+        tenantId: merchant.tenantId ?? payload.tenantId ?? headerTenantId ?? null,
       };
     }
 
@@ -55,6 +63,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
           name: saasAdmin.name,
           isSaasAdmin: true,
           permissions: ['*'],
+          tenantId: headerTenantId ?? null,
         };
       }
     }
@@ -76,6 +85,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         role: user.role,
         roleName: user.roleRelation?.name,
         permissions,
+        tenantId: user.tenantId ?? payload.tenantId ?? headerTenantId ?? null,
       };
     }
 
@@ -91,6 +101,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         name: saasAdminFallback.name,
         isSaasAdmin: true,
         permissions: ['*'],
+        tenantId: headerTenantId ?? null,
       };
     }
 

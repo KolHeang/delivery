@@ -11,22 +11,21 @@ export class DriversService {
   constructor(
     @InjectRepository(User) private readonly repo: Repository<User>,
     @InjectRepository(Role) private readonly roleRepo: Repository<Role>,
-  ) { }
+  ) {}
 
-  findAll(): Promise<User[]> {
-    return this.repo.find({
-      where: { isDriver: true },
-      select: {
-        id: true,
-        name: true,
-        nameKh: true,
-        phone: true,
-        isActive: true,
-        zoneId: true,
-        vehicleId: true,
-      },
-      order: { name: 'ASC' },
-    });
+  async findAll(tenantId?: number): Promise<User[]> {
+    const qb = this.repo
+      .createQueryBuilder('driver')
+      .leftJoinAndSelect('driver.zone', 'zone')
+      .leftJoinAndSelect('driver.vehicle', 'vehicle')
+      .where('driver.isDriver = true')
+      .orderBy('driver.name', 'ASC');
+
+    if (tenantId) {
+      qb.andWhere('driver.tenantId = :tenantId', { tenantId });
+    }
+
+    return qb.getMany();
   }
 
   async findByIdentifier(identifier: string): Promise<User | null> {
@@ -44,23 +43,36 @@ export class DriversService {
   }
 
   async findOne(id: number): Promise<User> {
-    const item = await this.repo.findOne({
-      where: { id, isDriver: true },
-      relations: { zone: true, vehicle: true, roleRelation: true },
-    });
+    const item = await this.repo
+      .createQueryBuilder('driver')
+      .leftJoinAndSelect('driver.zone', 'zone')
+      .leftJoinAndSelect('driver.vehicle', 'vehicle')
+      .leftJoinAndSelect('driver.roleRelation', 'roleRelation')
+      .where('driver.id = :id', { id })
+      .andWhere('driver.isDriver = true')
+      .getOne();
+
     if (!item) throw new NotFoundException(`Driver #${id} not found`);
     return item;
   }
 
-  async findAvailable(): Promise<User[]> {
-    return this.repo.find({
-      where: { isDriver: true, isActive: true },
-      relations: { zone: true, vehicle: true, roleRelation: true },
-      order: { name: 'ASC' },
-    });
+  async findAvailable(tenantId?: number): Promise<User[]> {
+    const qb = this.repo
+      .createQueryBuilder('driver')
+      .leftJoinAndSelect('driver.zone', 'zone')
+      .leftJoinAndSelect('driver.vehicle', 'vehicle')
+      .where('driver.isDriver = true')
+      .andWhere('driver.isActive = true')
+      .orderBy('driver.name', 'ASC');
+
+    if (tenantId) {
+      qb.andWhere('driver.tenantId = :tenantId', { tenantId });
+    }
+
+    return qb.getMany();
   }
 
-  async create(dto: CreateDriverDto): Promise<User> {
+  async create(dto: CreateDriverDto, tenantId?: number): Promise<User> {
     const rawPassword = dto.password || '123456';
     const hashed = await bcrypt.hash(rawPassword, 10);
     let roleId = dto.roleId;
@@ -84,6 +96,7 @@ export class DriversService {
       salary: dto.salary ? parseFloat(dto.salary as any) : 0,
       roleId,
       password: hashed,
+      tenantId: tenantId ?? null,
     });
     return this.repo.save(driver);
   }
@@ -101,8 +114,8 @@ export class DriversService {
   }
 
   async remove(id: number): Promise<{ message: string }> {
-    await this.findOne(id);
-    await this.repo.delete(id);
-    return { message: 'Driver deleted successfully' };
+    const driver = await this.findOne(id);
+    await this.repo.remove(driver);
+    return { message: `Driver #${id} deleted successfully` };
   }
 }

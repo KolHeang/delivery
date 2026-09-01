@@ -38,6 +38,7 @@ export class SubscriptionsController {
       planId: number;
       billingCycle: BillingCycle;
       couponCode?: string;
+      referralCode?: string;
       companyName: string;
       subdomain: string;
       customDomain?: string;
@@ -91,16 +92,16 @@ export class SubscriptionsController {
   @Put(':id/status')
   async updateStatus(
     @Param('id') id: number,
-    @Body() body: { status: string },
+    @Body() body: { status: string; currentPeriodEnd?: string },
   ) {
-    return this.subService.updateStatus(+id, body.status);
+    return this.subService.updateStatus(+id, body.status, body.currentPeriodEnd);
   }
 
   @Patch(':id/status')
   async patchStatus(
     @Param('id') id: number,
-    @Body() body: { status: string },
+    @Body() body: { status: string; currentPeriodEnd?: string },
   ) {
-    return this.subService.updateStatus(+id, body.status);
+    return this.subService.updateStatus(+id, body.status, body.currentPeriodEnd);
   }
 }

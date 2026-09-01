@@ -32,6 +32,16 @@ api.interceptors.request.use((config) => {
       detectedSubdomain = searchParams.get('tenant');
     }
 
+    try {
+      const rawUser = localStorage.getItem('user');
+      if (rawUser) {
+        const u = JSON.parse(rawUser);
+        if (u?.tenantId) {
+          config.headers['x-tenant-id'] = u.tenantId.toString();
+        }
+      }
+    } catch {}
+
     if (detectedSubdomain) {
       config.headers['x-tenant-subdomain'] = detectedSubdomain;
     }

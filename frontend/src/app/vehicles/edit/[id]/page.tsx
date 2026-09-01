@@ -24,8 +24,8 @@ export default function EditVehiclePage() {
     
     const load = async () => {
       try {
-        const res = await api.get(`/vehicles`);
-        const vehicle = res.data.find((v: any) => v.id === parseInt(params.id as string));
+        const res = await api.get(`/vehicles/${params.id}`);
+        const vehicle = res.data;
         if (vehicle) {
           setForm({
             plate: vehicle.plate || '',

@@ -50,9 +50,9 @@ export default function ShopsPage() {
         }),
         api.get('/select/zones')
       ]);
-      if (r.data && r.data.result !== undefined) {
-        setItems(r.data.result);
-        setTotalItems(r.data.total);
+      if (r.data && (r.data.results !== undefined || r.data.result !== undefined)) {
+        setItems(r.data.results || r.data.result || []);
+        setTotalItems(r.data.total ?? 0);
       } else {
         setItems(Array.isArray(r.data) ? r.data : []);
         setTotalItems(Array.isArray(r.data) ? r.data.length : 0);
@@ -101,107 +101,112 @@ export default function ShopsPage() {
               <table>
                 <thead>
                   <tr>
-                    <th>{t('colNo')}</th>
-                    <th>{t('code')}</th>
-                    <th>{t('name')}</th>
-                    <th>{t('phone')}</th>
-                    <th>{t('telegram')}</th>
-                    <th>{t('mapsLocation')}</th>
-                    <th>{t('serviceLabel')}</th>
-                    <th>{t('branch')}</th>
-                    <th>{t('status')}</th>
-                    <th>{t('actions')}</th>
+                    <th>{t('colNo') || 'ល.រ'}</th>
+                    <th>{t('name') || 'ឈ្មោះ'}</th>
+                    <th>{t('phone') || 'ទូរស័ព្ទ'}</th>
+                    <th>Telegram</th>
+                    <th>{t('address') || 'ទីតាំង'}</th>
+                    <th>{t('deliveryFee') || 'សេវាដឹក'}</th>
+                    <th>{t('branch') || 'សាខា'}</th>
+                    <th>{t('status') || 'ស្ថានភាព'}</th>
+                    <th>{t('actions') || 'សកម្មភាព'}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {loading ? (
                     <tr>
-                      <td colSpan={10} style={{ padding: '40px 0', textAlign: 'center' }}>
+                      <td colSpan={9} style={{ padding: '40px 0', textAlign: 'center' }}>
                         <div className="loading-wrapper"><div className="spinner" /></div>
                       </td>
                     </tr>
                   ) : filtered.length === 0 ? (
                     <tr>
-                      <td colSpan={10} style={{ padding: '36px 20px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
+                      <td colSpan={9} style={{ padding: '36px 20px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
                         {t('noDataFound') || 'គ្មានទិន្នន័យ'}
                       </td>
                     </tr>
                   ) : (
-                    filtered.map((m: any, i) => (
-                      <tr key={m.id}>
-                        <td style={{ color: 'var(--text-muted)', fontSize: 12 }}>{(currentPage - 1) * pageSize + i + 1}</td>
-                        <td><code style={{ fontSize: 12, background: 'var(--bg-primary)', padding: '2px 8px', borderRadius: 4 }}>{String(m.id).padStart(6, '0')}</code></td>
-                        <td>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                            <div style={{
-                              width: 32, height: 32, borderRadius: '50%',
-                              background: '#e2e8f0', color: '#94a3b8',
-                              display: 'flex', alignItems: 'center', justifyContent: 'center',
-                              fontSize: 18, flexShrink: 0, overflow: 'hidden'
-                            }}>
-                              {m.photo ? (
-                                <img src={m.photo} alt={m.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                              ) : (
-                                <span style={{ fontSize: 16 }}>🏪</span>
-                              )}
+                    filtered.map((m: any, i) => {
+                      const tg = m.telegram || m.telegramPhone;
+                      const hasDeliveryFee = m.deliveryFee != null && m.deliveryFee !== '' && !isNaN(Number(m.deliveryFee)) && Number(m.deliveryFee) > 0;
+                      
+                      return (
+                        <tr key={m.id}>
+                          <td style={{ color: 'var(--text-muted)', fontSize: 12 }}>{(currentPage - 1) * pageSize + i + 1}</td>
+                          <td>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                              <div style={{
+                                width: 32, height: 32, borderRadius: '50%',
+                                background: '#e2e8f0', color: '#94a3b8',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                fontSize: 18, flexShrink: 0, overflow: 'hidden'
+                              }}>
+                                {m.photo ? (
+                                  <img src={m.photo} alt={m.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                ) : (
+                                  <span style={{ fontSize: 16 }}>🏪</span>
+                                )}
+                              </div>
+                              <div>
+                                <div style={{ fontWeight: 600 }}>{m.name}</div>
+                                {m.nameKh && m.nameKh !== m.name && <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{m.nameKh}</div>}
+                              </div>
                             </div>
-                            <div>
-                              <div style={{ fontWeight: 600 }}>{m.name}</div>
-                              {m.nameKh && <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{m.nameKh}</div>}
+                          </td>
+                          <td>{m.phone || ''}</td>
+                          <td>
+                            {tg ? (
+                              <a
+                                href={tg.startsWith('http') ? tg : `https://t.me/${tg.replace(/[^0-9a-zA-Z_+]/g, '')}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: '#0088cc', textDecoration: 'none', fontWeight: 500, fontSize: 12 }}
+                              >
+                                <FaTelegramPlane size={14} /> {tg}
+                              </a>
+                            ) : null}
+                          </td>
+                          <td style={{ fontSize: 12, maxWidth: 180 }}>
+                            {m.mapsLocation ? (
+                              <a
+                                href={m.mapsLocation}
+                                target="_blank"
+                                rel="noreferrer"
+                                style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--accent)', textDecoration: 'none', fontWeight: 500, fontSize: 12 }}
+                              >
+                                <MdLocationOn size={14} /> {m.address || 'Maps'}
+                              </a>
+                            ) : (
+                              m.address || ''
+                            )}
+                          </td>
+                          <td style={{ fontWeight: 600 }}>
+                            {hasDeliveryFee ? (
+                              `$${Number(m.deliveryFee).toFixed(2)}`
+                            ) : (
+                              <span style={{
+                                padding: '3px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600,
+                                background: m.pricingTier === 'premium' ? '#fef3c7' : m.pricingTier === 'standard' ? '#e0e7ff' : '#f1f5f9',
+                                color: m.pricingTier === 'premium' ? '#b45309' : m.pricingTier === 'standard' ? '#4338ca' : '#475569',
+                                textTransform: 'uppercase'
+                              }}>
+                                {m.pricingTier || 'STANDARD'}
+                              </span>
+                            )}
+                          </td>
+                          <td style={{ fontSize: 12 }}>{m.zone?.name || m.contact || ''}</td>
+                          <td>
+                            <Badge status={m.active ? 'active' : 'inactive'} />
+                          </td>
+                          <td>
+                            <div style={{ display: 'flex', gap: 4 }}>
+                              <button className="btn btn-ghost btn-icon btn-sm" onClick={() => openEdit(m)}><FaRegEdit size={14} /></button>
+                              <button className="btn btn-ghost btn-icon btn-sm" style={{ color: 'var(--danger)' }} onClick={() => del(m.id)}><FaTrashAlt size={13} /></button>
                             </div>
-                          </div>
-                        </td>
-                        <td>{m.phone}</td>
-                        <td>
-                          {m.telegramPhone ? (
-                            <a
-                              href={`https://t.me/${m.telegramPhone.replace(/[^0-9+]/g, '')}`}
-                              target="_blank"
-                              rel="noreferrer"
-                              style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: '#0088cc', textDecoration: 'none', fontWeight: 500, fontSize: 12 }}
-                            >
-                              <FaTelegramPlane size={14} /> {m.telegramPhone}
-                            </a>
-                          ) : (
-                            <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>—</span>
-                          )}
-                        </td>
-                        <td>
-                          {m.mapsLocation ? (
-                            <a
-                              href={m.mapsLocation}
-                              target="_blank"
-                              rel="noreferrer"
-                              style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--accent)', textDecoration: 'none', fontWeight: 500, fontSize: 12 }}
-                            >
-                              <MdLocationOn size={14} /> Maps
-                            </a>
-                          ) : (
-                            <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>—</span>
-                          )}
-                        </td>
-                        <td>
-                          <span style={{
-                            padding: '3px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600,
-                            background: m.serviceLabel === 'vip' ? '#fef3c7' : m.serviceLabel === 'special' ? '#e0e7ff' : '#f1f5f9',
-                            color: m.serviceLabel === 'vip' ? '#b45309' : m.serviceLabel === 'special' ? '#4338ca' : '#475569',
-                            textTransform: 'uppercase'
-                          }}>
-                            {m.serviceLabel || 'NORMAL'}
-                          </span>
-                        </td>
-                        <td style={{ fontSize: 12 }}>{m.contact || 'EBS Express'}</td>
-                        <td>
-                          <Badge status={m.active ? 'active' : 'inactive'} />
-                        </td>
-                        <td>
-                          <div style={{ display: 'flex', gap: 4 }}>
-                            <button className="btn btn-ghost btn-icon btn-sm" onClick={() => openEdit(m)}><FaRegEdit size={14} /></button>
-                            <button className="btn btn-ghost btn-icon btn-sm" style={{ color: 'var(--danger)' }} onClick={() => del(m.id)}><FaTrashAlt size={13} /></button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))
+                          </td>
+                        </tr>
+                      );
+                    })
                   )}
                 </tbody>
               </table>

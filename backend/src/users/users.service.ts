@@ -10,7 +10,7 @@ import * as bcrypt from 'bcrypt';
 import { User } from './entities/users.entity';
 import { Role } from '../roles/entities/role.entity';
 import { CreateUserDto, UpdateUserDto } from './dto/user.dto';
-import { paginateRepo } from '../config/pagination';
+import { PaginatedResult } from '../interface/pagination.interface';
 
 @Injectable()
 export class UsersService implements OnModuleInit {
@@ -38,39 +38,54 @@ export class UsersService implements OnModuleInit {
     search?: string;
     tenantId?: number;
     tenantSubdomain?: string;
-  }): Promise<any> {
-    let where: any = {};
-    const tenantFilter: any = {};
+  }): Promise<PaginatedResult<User>> {
+    const qb = this.repo
+      .createQueryBuilder('user')
+      .leftJoinAndSelect('user.zone', 'zone')
+      .leftJoinAndSelect('user.vehicle', 'vehicle')
+      .leftJoinAndSelect('user.roleRelation', 'roleRelation')
+      .orderBy('user.createdAt', 'DESC');
+
     if (query?.tenantId) {
-      tenantFilter.tenantId = query.tenantId;
+      qb.andWhere('user.tenantId = :tenantId', { tenantId: query.tenantId });
     } else if (query?.tenantSubdomain) {
-      tenantFilter.tenantSubdomain = query.tenantSubdomain;
+      qb.andWhere('user.tenantSubdomain = :tenantSubdomain', { tenantSubdomain: query.tenantSubdomain });
     }
 
     if (query?.search) {
-      const term = `%${query.search}%`;
-      where = [
-        { ...tenantFilter, name: ILike(term) },
-        { ...tenantFilter, nameKh: ILike(term) },
-        { ...tenantFilter, phone: ILike(term) },
-        { ...tenantFilter, email: ILike(term) },
-      ];
-    } else if (Object.keys(tenantFilter).length > 0) {
-      where = tenantFilter;
+      const term = `%${query.search.trim()}%`;
+      qb.andWhere(
+        '(user.name ILIKE :term OR user.nameKh ILIKE :term OR user.phone ILIKE :term OR user.email ILIKE :term)',
+        { term },
+      );
     }
 
-    return paginateRepo(this.repo, query || {}, {
-      where,
-      relations: { zone: true, vehicle: true, roleRelation: true },
-      order: { createdAt: 'DESC' },
-    });
+    const page = query?.page ? Math.max(1, Number(query.page)) : 1;
+    const limit = query?.limit ? Math.max(1, Number(query.limit)) : 10;
+    const skip = (page - 1) * limit;
+
+    qb.skip(skip).take(limit);
+
+    const [results, total] = await qb.getManyAndCount();
+
+    return {
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+      results,
+    };
   }
 
   async findOne(id: number): Promise<User> {
-    const user = await this.repo.findOne({
-      where: { id },
-      relations: { zone: true, vehicle: true, roleRelation: true },
-    });
+    const user = await this.repo
+      .createQueryBuilder('user')
+      .leftJoinAndSelect('user.zone', 'zone')
+      .leftJoinAndSelect('user.vehicle', 'vehicle')
+      .leftJoinAndSelect('user.roleRelation', 'roleRelation')
+      .where('user.id = :id', { id })
+      .getOne();
+
     if (!user) throw new NotFoundException('User not found');
     return user;
   }
@@ -86,14 +101,12 @@ export class UsersService implements OnModuleInit {
   }
 
   async findOneWithPermissions(id: number): Promise<User | null> {
-    return this.repo.findOne({
-      where: { id },
-      relations: {
-        roleRelation: {
-          permissions: true,
-        },
-      },
-    });
+    return this.repo
+      .createQueryBuilder('user')
+      .leftJoinAndSelect('user.roleRelation', 'roleRelation')
+      .leftJoinAndSelect('roleRelation.permissions', 'permissions')
+      .where('user.id = :id', { id })
+      .getOne();
   }
 
   async create(

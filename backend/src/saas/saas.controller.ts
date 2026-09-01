@@ -82,9 +82,17 @@ export class SaasController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @Delete('tenants/:id')
-  @ApiOperation({ summary: 'Delete tenant' })
+  @ApiOperation({ summary: 'Suspend / Soft-delete tenant' })
   deleteTenant(@Param('id', ParseIntPipe) id: number) {
     return this.saasService.deleteTenant(id);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @Patch('tenants/:id/reactivate')
+  @ApiOperation({ summary: 'Reactivate suspended tenant' })
+  reactivateTenant(@Param('id', ParseIntPipe) id: number) {
+    return this.saasService.reactivateTenant(id);
   }
 
   // ── Subscriptions & Invoices ──

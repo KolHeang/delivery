@@ -8,6 +8,7 @@ import Topbar from '@/components/layout/Topbar';
 import api from '@/lib/api';
 import { MdPrint, MdArrowBack, MdPhone, MdInventory } from 'react-icons/md';
 import { useLanguage } from '@/lib/LanguageContext';
+import { useTenant } from '@/lib/TenantContext';
 import DateInput, { getLocalDateString, formatDateToDDMMYYYY } from '@/components/ui/DateInput';
 
 const formatCOD = (cod: any, currency: string) => {
@@ -18,29 +19,31 @@ const formatCOD = (cod: any, currency: string) => {
 const getStatusLabel = (status: string, lang: string) => {
   switch (status) {
     case 'pending':
-      return <span style={{ background: '#78716c', color: '#fff', padding: '4px 10px', borderRadius: 4, fontSize: 11, fontWeight: 'bold' }}>{lang === 'km' ? 'បញ្ចូលចុង' : 'Pending'}</span>;
+      return <span style={{ background: '#f59e0b', color: '#fff', padding: '3px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600, whiteSpace: 'nowrap' }}>{lang === 'km' ? 'រង់ចាំ' : 'Pending'}</span>;
     case 'assigned':
-      return <span style={{ background: '#3b82f6', color: '#fff', padding: '4px 10px', borderRadius: 4, fontSize: 11, fontWeight: 'bold' }}>{lang === 'km' ? 'ចាត់តាំងរួច' : 'Assigned'}</span>;
+      return <span style={{ background: '#3b82f6', color: '#fff', padding: '3px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600, whiteSpace: 'nowrap' }}>{lang === 'km' ? 'ចាត់តាំងរួច' : 'Assigned'}</span>;
     case 'picked-up':
-      return <span style={{ background: '#8b5cf6', color: '#fff', padding: '4px 10px', borderRadius: 4, fontSize: 11, fontWeight: 'bold' }}>{lang === 'km' ? 'បានទទួល' : 'Picked Up'}</span>;
+      return <span style={{ background: '#8b5cf6', color: '#fff', padding: '3px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600, whiteSpace: 'nowrap' }}>{lang === 'km' ? 'បានទទួល' : 'Picked Up'}</span>;
+    case 'in-warehouse':
+      return <span style={{ background: '#64748b', color: '#fff', padding: '3px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600, whiteSpace: 'nowrap' }}>{lang === 'km' ? 'ក្នុងឃ្លាំង' : 'In Warehouse'}</span>;
     case 'in-transit':
-      return <span style={{ background: '#0d9488', color: '#fff', padding: '4px 10px', borderRadius: 4, fontSize: 11, fontWeight: 'bold' }}>{lang === 'km' ? 'កំពុងដំណើរការដឹក' : 'In Transit'}</span>;
+      return <span style={{ background: '#0d9488', color: '#fff', padding: '3px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600, whiteSpace: 'nowrap' }}>{lang === 'km' ? 'កំពុងដឹក' : 'In Transit'}</span>;
     case 'delivered':
-      return <span style={{ background: '#10b981', color: '#fff', padding: '4px 10px', borderRadius: 4, fontSize: 11, fontWeight: 'bold' }}>{lang === 'km' ? 'ដឹកជោគជ័យ' : 'Delivered'}</span>;
+      return <span style={{ background: '#10b981', color: '#fff', padding: '3px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600, whiteSpace: 'nowrap' }}>{lang === 'km' ? 'ជោគជ័យ' : 'Delivered'}</span>;
     case 'failed':
-      return <span style={{ background: '#ef4444', color: '#fff', padding: '4px 10px', borderRadius: 4, fontSize: 11, fontWeight: 'bold' }}>{lang === 'km' ? 'មិនជោគជ័យ' : 'Failed'}</span>;
+      return <span style={{ background: '#ef4444', color: '#fff', padding: '3px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600, whiteSpace: 'nowrap' }}>{lang === 'km' ? 'មិនជោគជ័យ' : 'Failed'}</span>;
     case 'returned':
-      return <span style={{ background: '#6b7280', color: '#fff', padding: '4px 10px', borderRadius: 4, fontSize: 11, fontWeight: 'bold' }}>{lang === 'km' ? 'បង្វិលត្រឡប់' : 'Returned'}</span>;
+      return <span style={{ background: '#6b7280', color: '#fff', padding: '3px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600, whiteSpace: 'nowrap' }}>{lang === 'km' ? 'បង្វិលត្រឡប់' : 'Returned'}</span>;
     default:
-      return <span style={{ background: '#6b7280', color: '#fff', padding: '4px 10px', borderRadius: 4, fontSize: 11, fontWeight: 'bold' }}>{status}</span>;
+      return <span style={{ background: '#6b7280', color: '#fff', padding: '3px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600, whiteSpace: 'nowrap' }}>{status}</span>;
   }
 };
 
 const getDriverLabel = (driver: any, lang: string) => {
   if (!driver) {
-    return <span style={{ background: '#0284c7', color: '#fff', padding: '4px 10px', borderRadius: 4, fontSize: 11, fontWeight: 'bold' }}>{lang === 'km' ? 'មិនទាន់ធ្វើការ assign អ្នកដឹក' : 'Driver not assigned'}</span>;
+    return '';
   }
-  return <span style={{ fontWeight: 'bold', color: '#0f172a' }}>{lang === 'km' && driver.nameKh ? driver.nameKh : driver.name}</span>;
+  return <span style={{ fontWeight: 600, color: '#0f172a' }}>{lang === 'km' && driver.nameKh ? driver.nameKh : driver.name}</span>;
 };
 
 export default function PrintInvoicePage() {
@@ -59,20 +62,44 @@ export default function PrintInvoicePage() {
   const [endDate, setEndDate] = useState(() => getLocalDateString());
   const [filteredOrders, setFilteredOrders] = useState<any[]>([]);
   const { lang } = useLanguage();
+  const { tenant } = useTenant();
   const [isDirectMode, setIsDirectMode] = useState(false);
+  const [orgInfo, setOrgInfo] = useState<{ name?: string; phone?: string; address?: string; logo?: string }>({});
+
+  const getDynamicCompanyName = () => {
+    if (orgInfo?.name) return orgInfo.name;
+    if (tenant?.companyName) return tenant.companyName;
+    if (typeof window !== 'undefined') {
+      const hostname = window.location.hostname;
+      const parts = hostname.split('.');
+      if (parts.length > 1 && parts[0] !== 'www' && parts[0] !== 'localhost') {
+        return parts[0]
+          .split('-')
+          .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+          .join(' ');
+      }
+    }
+    return 'Delivery Express';
+  };
+
+  const dynamicCompanyName = getDynamicCompanyName();
 
   useEffect(() => {
     if (!isAuthenticated()) { router.push('/'); return; }
     Promise.all([
       api.get('/parcels'),
       api.get('/select/merchants'),
-      api.get('/select/drivers')
+      api.get('/select/drivers'),
+      api.get('/settings/organisation').catch(() => null),
     ])
-      .then(([oRes, mRes, dRes]) => {
-        const orderData = Array.isArray(oRes.data) ? oRes.data : (oRes.data?.result || []);
+      .then(([oRes, mRes, dRes, orgRes]) => {
+        const orderData = Array.isArray(oRes.data) ? oRes.data : (oRes.data?.results || oRes.data?.result || []);
         setOrders(orderData);
-        setMerchants(Array.isArray(mRes.data) ? mRes.data : (mRes.data?.result || []));
-        setDrivers(Array.isArray(dRes.data) ? dRes.data : (dRes.data?.result || []));
+        setMerchants(Array.isArray(mRes.data) ? mRes.data : (mRes.data?.results || mRes.data?.result || []));
+        setDrivers(Array.isArray(dRes.data) ? dRes.data : (dRes.data?.results || dRes.data?.result || []));
+        if (orgRes && orgRes.data) {
+          setOrgInfo(orgRes.data);
+        }
         
         const params = new URLSearchParams(window.location.search);
         const singleId = params.get('id');
@@ -423,11 +450,11 @@ export default function PrintInvoicePage() {
               </span>
             </div>
             <div className="table-wrapper" style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 1050 }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
                   <tr>
-                    <th style={{ width: 50, textAlign: 'center' }}>{lang === 'km' ? 'ល.រ' : 'No.'}</th>
-                    <th style={{ width: 95, textAlign: 'center' }}>
+                    <th style={{ width: 45, textAlign: 'center' }}>{lang === 'km' ? 'ល.រ' : 'No.'}</th>
+                    <th style={{ width: 85, textAlign: 'center' }}>
                       <label style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, cursor: 'pointer', margin: 0, fontWeight: 700 }}>
                         <input
                           type="checkbox"
@@ -438,14 +465,14 @@ export default function PrintInvoicePage() {
                         <span>{lang === 'km' ? 'ទាំងអស់' : 'All'}</span>
                       </label>
                     </th>
-                    <th style={{ width: 140 }}>{lang === 'km' ? 'លេខបញ្ជូន' : 'Delivery Number'}</th>
-                    <th style={{ width: 110 }}>{lang === 'km' ? 'កាលបរិច្ឆេទ' : 'Date'}</th>
-                    <th style={{ width: 160 }}>{lang === 'km' ? 'ឈ្មោះហាង' : 'Shop Name'}</th>
-                    <th>{lang === 'km' ? 'អាសយដ្ឋាន' : 'Address'}</th>
-                    <th style={{ width: 130 }}>{lang === 'km' ? 'លេខអ្នកទទួល' : 'Receiver Phone'}</th>
-                    <th style={{ width: 120, textAlign: 'right' }}>{lang === 'km' ? 'ចំនួនប្រាក់' : 'Amount'}</th>
-                    <th style={{ width: 140 }}>{lang === 'km' ? 'ដឹកដោយ' : 'Driver'}</th>
-                    <th style={{ width: 110, textAlign: 'center' }}>{lang === 'km' ? 'ស្ថានភាព' : 'Status'}</th>
+                    <th style={{ width: 135 }}>{lang === 'km' ? 'លេខបញ្ជូន' : 'Delivery Number'}</th>
+                    <th style={{ width: 105 }}>{lang === 'km' ? 'កាលបរិច្ឆេទ' : 'Date'}</th>
+                    <th style={{ width: 150 }}>{lang === 'km' ? 'ឈ្មោះហាង' : 'Shop Name'}</th>
+                    <th style={{ width: 180 }}>{lang === 'km' ? 'អាសយដ្ឋាន' : 'Address'}</th>
+                    <th style={{ width: 125 }}>{lang === 'km' ? 'លេខអ្នកទទួល' : 'Receiver Phone'}</th>
+                    <th style={{ width: 135, textAlign: 'right' }}>{lang === 'km' ? 'ចំនួនប្រាក់' : 'Amount'}</th>
+                    <th style={{ width: 135 }}>{lang === 'km' ? 'អ្នកដឹក' : 'Driver'}</th>
+                    <th style={{ width: 105, textAlign: 'center' }}>{lang === 'km' ? 'ស្ថានភាព' : 'Status'}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -471,9 +498,9 @@ export default function PrintInvoicePage() {
                         <td style={{ color: 'var(--text-secondary)', fontSize: 12 }}>
                           {o.createdAt ? formatDateToDDMMYYYY(o.createdAt) : ''}
                         </td>
-                        <td style={{ fontWeight: 600 }}>{o.merchant?.nameKh || o.merchant?.name || '—'}</td>
-                        <td style={{ fontSize: 12.5, color: 'var(--text-secondary)' }}>{o.receiverAddress || '—'}</td>
-                        <td style={{ fontSize: 12.5 }}>{o.receiverPhone || '—'}</td>
+                        <td style={{ fontWeight: 600 }}>{o.merchant?.nameKh || o.merchant?.name || ''}</td>
+                        <td style={{ fontSize: 12.5, color: 'var(--text-secondary)' }}>{o.receiverAddress || ''}</td>
+                        <td style={{ fontSize: 12.5 }}>{o.receiverPhone || ''}</td>
                         <td style={{ textAlign: 'right', fontWeight: 700, color: 'var(--danger)' }}>
                           {parseFloat(o.cod || 0).toFixed(2)} ({o.codCurrency || 'USD'})
                         </td>
@@ -514,24 +541,29 @@ export default function PrintInvoicePage() {
                 {/* Header: Logo + Brand + QR Code */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <div style={{
-                      width: 40, height: 40, borderRadius: 10,
-                      background: 'linear-gradient(135deg, #2563eb, #4f46e5)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      color: '#fff', fontSize: 20,
-                      flexShrink: 0,
-                      boxShadow: '0 4px 8px rgba(37, 99, 235, 0.25)',
-                      WebkitPrintColorAdjust: 'exact',
-                      printColorAdjust: 'exact'
-                    }}>
-                      📦
-                    </div>
+                    {tenant?.logoUrl || orgInfo.logo ? (
+                      <img 
+                        src={tenant?.logoUrl || orgInfo.logo} 
+                        alt="Logo" 
+                        style={{ width: 40, height: 40, borderRadius: 10, objectFit: 'contain' }} 
+                      />
+                    ) : (
+                      <div style={{
+                        width: 40, height: 40, borderRadius: 10,
+                        background: 'linear-gradient(135deg, #2563eb, #4f46e5)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        color: '#fff', fontSize: 20,
+                        flexShrink: 0,
+                        boxShadow: '0 4px 8px rgba(37, 99, 235, 0.25)',
+                        WebkitPrintColorAdjust: 'exact',
+                        printColorAdjust: 'exact'
+                      }}>
+                        📦
+                      </div>
+                    )}
                     <div style={{ display: 'flex', flexDirection: 'column' }}>
                       <span style={{ fontSize: 18, fontWeight: 900, color: '#1e3a8a', letterSpacing: '0.5px', lineHeight: 1.1, WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
-                        EBS<span style={{ color: '#2563eb' }}>Express</span>
-                      </span>
-                      <span style={{ fontSize: 9, color: '#64748b', marginTop: 2, letterSpacing: '0.4px', fontWeight: 600 }}>
-                        Delivery System
+                        {dynamicCompanyName}
                       </span>
                     </div>
                   </div>

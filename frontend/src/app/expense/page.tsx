@@ -11,6 +11,7 @@ import { MdTrendingDown } from 'react-icons/md';
 import { FiPlusCircle } from 'react-icons/fi';
 import { useLanguage } from '@/lib/LanguageContext';
 import Pagination from '@/components/ui/Pagination';
+import { formatDate } from '@/lib/date-utils';
 
 export default function ExpenseListPage() {
   const router = useRouter();
@@ -27,8 +28,8 @@ export default function ExpenseListPage() {
       const res = await api.get('/expenses', {
         params: { page: currentPage, limit: pageSize }
       });
-      if (res.data && res.data.result !== undefined) {
-        setExpenses(res.data.result || []);
+      if (res.data && (res.data.results !== undefined || res.data.result !== undefined)) {
+        setExpenses(res.data.results || res.data.result || []);
         setTotalItems(res.data.total || 0);
       } else {
         setExpenses(Array.isArray(res.data) ? res.data : []);
@@ -94,7 +95,7 @@ export default function ExpenseListPage() {
                           </span>
                         </td>
                         <td style={{ fontWeight: 600, color: 'var(--danger)', textAlign: 'right' }}>-${parseFloat(e.amount).toFixed(2)}</td>
-                        <td style={{ fontSize: 12 }}>{new Date(e.date).toLocaleDateString()}</td>
+                        <td style={{ fontSize: 12 }}>{formatDate(e.date)}</td>
                       </tr>
                     ))
                   )}

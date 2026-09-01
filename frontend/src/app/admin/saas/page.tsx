@@ -42,9 +42,18 @@ import {
   MdReceiptLong,
   MdDownload,
   MdAutorenew,
+  MdPublic,
+  MdDns,
+  MdStar,
+  MdDeleteOutline,
+  MdAdd,
+  MdLink,
+  MdInfoOutline,
+  MdShield,
 } from 'react-icons/md';
 import { FaRegEdit, FaTrashAlt } from 'react-icons/fa';
 import { FiPlusCircle } from 'react-icons/fi';
+import { printInvoicePdf } from '@/lib/invoice-pdf';
 import { FlagKm, FlagEn } from '@/components/ui/Flags';
 import { SaasCloudIcon } from '@/components/ui/SaasCloudIcon';
 import Pagination from '@/components/ui/Pagination';
@@ -194,6 +203,8 @@ export default function SaasMasterPortal() {
     domainType: 'custom',
     isPrimary: false,
   });
+  const [copiedDns, setCopiedDns] = useState<string | null>(null);
+  const [copiedDomain, setCopiedDomain] = useState<string | null>(null);
 
   // Modal 7: Create / Edit Affiliate Partner State
   const [partners, setPartners] = useState<any[]>([]);
@@ -275,6 +286,25 @@ export default function SaasMasterPortal() {
     return `${day}-${month}-${year}`;
   };
 
+  const getTenantWorkspaceBaseUrl = (subdomain?: string) => {
+    if (!subdomain) return '';
+    const sub = subdomain.toLowerCase().trim();
+    if (typeof window !== 'undefined') {
+      const hostname = window.location.hostname;
+      const port = window.location.port ? `:${window.location.port}` : '';
+      const protocol = window.location.protocol;
+
+      if (hostname.includes('localhost') || hostname === '127.0.0.1') {
+        return `${protocol}//${sub}.localhost${port}`;
+      } else {
+        const parts = hostname.split('.');
+        const rootDomain = parts.length > 2 ? parts.slice(-2).join('.') : hostname;
+        return `${protocol}//${sub}.${rootDomain}${port}`;
+      }
+    }
+    return `http://${sub}.localhost:3000`;
+  };
+
   const handleOpenRenewModal = (tenantSub: any) => {
     setSelectedTenantForRenew(tenantSub);
     setRenewDuration('1y');
@@ -304,7 +334,7 @@ export default function SaasMasterPortal() {
         nextEnd = new Date(customEndDate);
       }
 
-      await saasApi.updateSubscriptionStatus(selectedTenantForRenew.id, 'active');
+      await saasApi.updateSubscriptionStatus(selectedTenantForRenew.id, 'active', nextEnd);
       alert(tr('បានបន្តសុពលភាពជោគជ័យ!', 'Subscription extended successfully!'));
       setShowRenewModal(false);
       loadAllData();
@@ -517,16 +547,30 @@ export default function SaasMasterPortal() {
     }
   };
 
-  const handleDeleteTenant = async (id: number, name: string) => {
-    if (!confirm(tr(`តើអ្នកពិតជាចង់លុបក្រុមហ៊ុន "${name}" មែនទេ?`, `Are you sure you want to remove tenant "${name}"?`))) {
+  const handleDeleteTenant = async (id: number, name: string, isSuspended?: boolean) => {
+    if (isSuspended) {
+      if (!confirm(tr(`តើអ្នកចង់បើកដំណើរការ (Reactivate) ក្រុមហ៊ុន "${name}" ឡើងវិញមែនទេ?`, `Are you sure you want to reactivate tenant "${name}"?`))) {
+        return;
+      }
+      try {
+        await saasApi.reactivateTenant(id);
+        alert(tr('បានបើកដំណើរការក្រុមហ៊ុនឡើងវិញជោគជ័យ!', 'Tenant reactivated successfully!'));
+        loadAllData();
+      } catch (err: any) {
+        alert(err.response?.data?.message || tr('បរាជ័យក្នុងការបើកដំណើរការ', 'Failed to reactivate tenant'));
+      }
+      return;
+    }
+
+    if (!confirm(tr(`តើអ្នកពិតជាចង់ផ្អាកដំណើរការ (Suspend) ក្រុមហ៊ុន "${name}" មែនទេ?\n(ទិន្នន័យទាំងអស់នឹងត្រូវបានរក្សាទុកដោយសុវត្ថិភាព ប៉ុន្តែបុគ្គលិកទាំងអស់នឹងមិនអាចចូល Login បានឡើយ)`, `Are you sure you want to suspend tenant "${name}"? All operational data will be safely archived, but users will be blocked from logging in.`))) {
       return;
     }
     try {
       await saasApi.deleteTenant(id);
-      alert(tr('បានលុបក្រុមហ៊ុនជោគជ័យ!', 'Tenant removed successfully!'));
+      alert(tr('បានផ្អាកដំណើរការក្រុមហ៊ុនជោគជ័យ!', 'Tenant suspended successfully!'));
       loadAllData();
     } catch (err: any) {
-      alert(err.response?.data?.message || tr('បរាជ័យក្នុងការលុបក្រុមហ៊ុន', 'Failed to remove tenant'));
+      alert(err.response?.data?.message || tr('បរាជ័យក្នុងការផ្អាកក្រុមហ៊ុន', 'Failed to suspend tenant'));
     }
   };
 
@@ -792,16 +836,35 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
       isPrimary: false,
     });
     setShowDomainModal(true);
-    await loadTenantDomains(tenantOrSub.tenantId || tenantOrSub.id);
+    await loadTenantDomains(tenantOrSub.tenantId || tenantOrSub.id, tenantOrSub);
   };
 
-  const loadTenantDomains = async (tenantId: number) => {
+  const loadTenantDomains = async (tenantId: number, tenantObj?: any) => {
+    const currentTenant = tenantObj || selectedTenantForDomains;
+    const defaultSub = currentTenant?.subdomain || currentTenant?.slug || currentTenant?.tenant?.slug || 'tenant';
+    const fallbackList = [
+      {
+        id: 0,
+        domain: `${defaultSub}.ebsexpress.com`,
+        isPrimary: true,
+        isVerified: true,
+        domainType: 'subdomain',
+        sslStatus: 'active',
+      },
+    ];
+
     try {
       setLoadingDomains(true);
       const res = await saasApi.getDomains(tenantId);
-      setTenantDomainsList(Array.isArray(res) ? res : []);
+      const list = Array.isArray(res) ? res : res?.data || [];
+      if (list.length > 0) {
+        setTenantDomainsList(list);
+      } else {
+        setTenantDomainsList(fallbackList);
+      }
     } catch (err) {
-      console.error('Failed to load tenant domains:', err);
+      console.warn('Tenant domains API returned error, showing default subdomain:', err);
+      setTenantDomainsList(fallbackList);
     } finally {
       setLoadingDomains(false);
     }
@@ -1490,10 +1553,10 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
                       <th style={{ width: 44, textAlign: 'center', whiteSpace: 'nowrap' }}>{tr('ល.រ', 'No.')}</th>
                       <th style={{ whiteSpace: 'nowrap', minWidth: 150 }}>{tr('ឈ្មោះក្រុមហ៊ុន', 'Company')}</th>
                       <th style={{ whiteSpace: 'nowrap' }}>{tr('Workspace Subdomain', 'Workspace Subdomain')}</th>
-                      <th style={{ whiteSpace: 'nowrap' }}>{tr('ឈ្មោះ Admin', 'Admin Name')}</th>
                       <th style={{ whiteSpace: 'nowrap' }}>{tr('Email', 'Email')}</th>
                       <th style={{ whiteSpace: 'nowrap' }}>{tr('លេខទូរស័ព្ទ', 'Phone')}</th>
-                      <th style={{ whiteSpace: 'nowrap' }}>{tr('កញ្ចប់សេវា', 'Plan & Cycle')}</th>
+                      <th style={{ whiteSpace: 'nowrap' }}>{tr('កញ្ចប់សេវា', 'Plan Tier')}</th>
+                      <th style={{ whiteSpace: 'nowrap' }}>{tr('វដ្តទូទាត់', 'Billing Cycle')}</th>
                       <th style={{ whiteSpace: 'nowrap' }}>{tr('ស្ថានភាព', 'Status')}</th>
                       <th style={{ whiteSpace: 'nowrap' }}>{tr('ថ្ងៃផុតកំណត់', 'Expires At')}</th>
                       <th style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>{tr('សកម្មភាព', 'Actions')}</th>
@@ -1515,21 +1578,16 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
                         <td>
                           {(s.subdomain || s.tenant?.slug) ? (
                             <a
-                              href={`/auth?tenant=${s.subdomain || s.tenant?.slug}`}
+                              href={getTenantWorkspaceBaseUrl(s.subdomain || s.tenant?.slug) + '/auth'}
                               target="_blank"
                               rel="noreferrer"
-                              style={{ color: 'var(--accent)', fontWeight: 500, textDecoration: 'none' }}
+                              style={{ color: 'var(--accent)', fontWeight: 600, textDecoration: 'none' }}
                             >
-                              {s.subdomain || s.tenant?.slug}.ebsexpress.com
+                              {getTenantWorkspaceBaseUrl(s.subdomain || s.tenant?.slug).replace(/^https?:\/\//, '')}
                             </a>
                           ) : (
                             <span style={{ color: 'var(--text-muted)' }}>-</span>
                           )}
-                        </td>
-                        <td>
-                          <span style={{ color: 'var(--text-primary)', fontSize: 13 }}>
-                            {s.user?.name || (s.subdomain === 'main' ? 'Keo Sambath' : s.subdomain === 'speedpost' ? 'Chan Vicheka' : s.subdomain === 'angkor' ? 'Sok Dara' : '-')}
-                          </span>
                         </td>
                         <td>
                           <div style={{ color: 'var(--text-primary)', fontSize: 12.5 }}>
@@ -1542,12 +1600,18 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
                           </div>
                         </td>
                         <td>
-                          <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+                          <span style={{ fontWeight: 600, color: '#0f172a', fontSize: 13.5 }}>
                             {s.plan?.name || `Plan #${s.planId}`}
-                          </div>
-                          <div style={{ fontSize: 11.5, color: 'var(--text-muted)' }}>
+                          </span>
+                        </td>
+                        <td>
+                          <span style={{
+                            color: s.billingCycle === 'yearly' ? '#059669' : '#475569',
+                            fontWeight: s.billingCycle === 'yearly' ? 600 : 500,
+                            fontSize: 13,
+                          }}>
                             {s.billingCycle === 'yearly' ? tr('ប្រចាំឆ្នាំ', 'Yearly') : tr('ប្រចាំខែ', 'Monthly')}
-                          </div>
+                          </span>
                         </td>
                         <td>
                           <span
@@ -1579,7 +1643,7 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
                             </button>
                             {(s.subdomain || s.tenant?.slug) && (
                               <a
-                                href={`/auth?tenant=${s.subdomain || s.tenant?.slug}`}
+                                href={getTenantWorkspaceBaseUrl(s.subdomain || s.tenant?.slug) + '/auth'}
                                 target="_blank"
                                 rel="noreferrer"
                                 className="btn btn-ghost btn-icon btn-sm"
@@ -1588,14 +1652,25 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
                                 <MdOpenInNew size={16} />
                               </a>
                             )}
-                            <button
-                              className="btn btn-ghost btn-icon btn-sm"
-                              style={{ color: 'var(--danger)' }}
-                              onClick={() => handleDeleteTenant(s.id, s.companyName || `Tenant #${s.id}`)}
-                              title={tr('លុបក្រុមហ៊ុន', 'Remove Tenant')}
-                            >
-                              <FaTrashAlt size={13} />
-                            </button>
+                            {s.status === 'cancelled' || s.tenant?.status === 'suspended' ? (
+                              <button
+                                className="btn btn-ghost btn-icon btn-sm"
+                                style={{ color: '#16a34a' }}
+                                onClick={() => handleDeleteTenant(s.tenantId || s.tenant?.id || s.id, s.companyName || `Tenant #${s.id}`, true)}
+                                title={tr('បើកដំណើរការក្រុមហ៊ុនឡើងវិញ (Reactivate)', 'Reactivate Tenant')}
+                              >
+                                <MdCheck size={16} />
+                              </button>
+                            ) : (
+                              <button
+                                className="btn btn-ghost btn-icon btn-sm"
+                                style={{ color: 'var(--danger)' }}
+                                onClick={() => handleDeleteTenant(s.tenantId || s.tenant?.id || s.id, s.companyName || `Tenant #${s.id}`, false)}
+                                title={tr('ផ្អាកដំណើរការក្រុមហ៊ុន (Suspend)', 'Suspend Tenant')}
+                              >
+                                <FaTrashAlt size={13} />
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -1669,7 +1744,7 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
                   </div>
 
                   <div className="card-body">
-                    <form onSubmit={handleCreateCompanySubmit}>
+                    <form onSubmit={handleCreateCompanySubmit} autoComplete="off">
                       {/* SECTION 1: Company & Workspace */}
                       <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 14, display: 'flex', alignItems: 'center' }}>
                         {tr('១. ព័ត៌មានក្រុមហ៊ុន និង Workspace', '1. Company & Workspace Details')}
@@ -1797,6 +1872,9 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
                           </label>
                           <input
                             type="email"
+                            name="new_tenant_admin_email"
+                            id="new_tenant_admin_email"
+                            autoComplete="off"
                             required
                             className="form-control"
                             placeholder="client@delivery.com"
@@ -1811,6 +1889,9 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
                           </label>
                           <input
                             type="password"
+                            name="new_tenant_admin_password"
+                            id="new_tenant_admin_password"
+                            autoComplete="new-password"
                             required
                             className="form-control"
                             placeholder={tr('បញ្ចូលពាក្យសម្ងាត់...', 'Enter password...')}
@@ -1988,9 +2069,10 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
                                   </button>
                                 )}
                                 <button
-                                  onClick={() => alert(tr(`ទាញយកវិក្កយបត្រ #${inv.invoiceNumber} (PDF)`, `Download Invoice #${inv.invoiceNumber} (PDF)`))}
+                                  onClick={() => printInvoicePdf(inv)}
                                   className="btn btn-ghost btn-sm"
-                                  style={{ fontSize: 12, fontWeight: 700 }}
+                                  style={{ fontSize: 12, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                                  title={tr('បោះពុម្ព / ទាញយកជា PDF', 'Print / Download PDF')}
                                 >
                                   <MdDownload size={14} /> PDF
                                 </button>
@@ -3103,189 +3185,358 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
             right: 0,
             bottom: 0,
             background: 'rgba(15, 23, 42, 0.65)',
-            backdropFilter: 'blur(10px)',
+            backdropFilter: 'blur(8px)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             zIndex: 999,
-            padding: 20,
+            padding: 16,
           }}
         >
-          <div style={{
-            background: '#ffffff',
-            borderRadius: 24,
-            width: '100%',
-            maxWidth: 660,
-            maxHeight: '90vh',
-            display: 'flex',
-            flexDirection: 'column',
-            boxShadow: '0 25px 60px -15px rgba(0,0,0,0.3)',
-            border: '1px solid #e2e8f0',
-            overflow: 'hidden',
-          }}>
-            {/* ── Fixed Header ── */}
-            <div style={{ padding: '24px 28px 16px', borderBottom: '1.5px solid #f1f5f9', flexShrink: 0 }}>
-
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <div style={{ width: 42, height: 42, borderRadius: 12, background: 'linear-gradient(135deg, #eff6ff, #dbeafe)', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, border: '1px solid #bfdbfe', flexShrink: 0 }}>
-                    🌐
-                  </div>
-                  <div>
-                    <h3 style={{ fontSize: 17, fontWeight: 900, color: '#0f172a', margin: '0 0 2px', letterSpacing: '-0.3px' }}>
-                      {tr('គ្រប់គ្រង Dynamic Domains & URLs', 'Manage Dynamic Domains & URLs')}
-                    </h3>
-                    <p style={{ fontSize: 12.5, color: '#64748b', margin: 0, fontWeight: 600 }}>
-                      🏢 {selectedTenantForDomains.companyName || `Tenant #${selectedTenantForDomains.id}`}
-                    </p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setShowDomainModal(false)}
-                  style={{ background: '#f1f5f9', border: 'none', width: 34, height: 34, borderRadius: 10, cursor: 'pointer', fontWeight: 900, color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+          <div
+            style={{
+              background: '#ffffff',
+              borderRadius: 20,
+              width: '100%',
+              maxWidth: 560,
+              maxHeight: '90vh',
+              display: 'flex',
+              flexDirection: 'column',
+              boxShadow: '0 20px 50px -10px rgba(15, 23, 42, 0.25)',
+              border: '1px solid #e2e8f0',
+              overflow: 'hidden',
+              fontFamily: "'Kantumruy Pro', 'Inter', sans-serif",
+            }}
+          >
+            {/* ── 1. Clean Minimal Header ── */}
+            <div
+              style={{
+                padding: '20px 24px 16px',
+                borderBottom: '1px solid #f1f5f9',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div
+                  style={{
+                    width: 38,
+                    height: 38,
+                    borderRadius: 10,
+                    background: '#eff6ff',
+                    color: '#2563eb',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: 20,
+                    flexShrink: 0,
+                  }}
                 >
-                  ✕
-                </button>
+                  <MdPublic size={22} />
+                </div>
+                <div>
+                  <h3 style={{ fontSize: 16, fontWeight: 900, color: '#0f172a', margin: 0 }}>
+                    {tr('គ្រប់គ្រង Domain', 'Manage Domains')}
+                  </h3>
+                  <div style={{ fontSize: 12, color: '#64748b', marginTop: 2, fontWeight: 600 }}>
+                    🏢 {selectedTenantForDomains.companyName || `Tenant #${selectedTenantForDomains.id}`}
+                  </div>
+                </div>
               </div>
+
+              <button
+                onClick={() => setShowDomainModal(false)}
+                style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: 8,
+                  border: 'none',
+                  background: '#f1f5f9',
+                  color: '#64748b',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  fontSize: 15,
+                  fontWeight: 700,
+                }}
+              >
+                ✕
+              </button>
             </div>
 
-            {/* ── Scrollable Domain List ── */}
-            <div style={{ flex: 1, overflowY: 'auto', padding: '16px 28px' }}>
-              <div style={{ fontSize: 12.5, fontWeight: 800, color: '#334155', marginBottom: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span>{tr('Domains ដែលបានភ្ជាប់', 'Connected Domains')}</span>
-                {loadingDomains && <span style={{ fontSize: 12, color: '#2563eb' }}>{tr('Loading...', 'Loading...')}</span>}
-              </div>
-
-
-              {tenantDomainsList.length === 0 && !loadingDomains ? (
-                <div style={{ padding: '24px', textAlign: 'center', background: '#f8fafc', borderRadius: 14, border: '1px dashed #cbd5e1', color: '#64748b', fontSize: 13.5 }}>
-                  {tr('មិនទាន់មាន Domain បន្ថែមទេ។ Subdomain ដើមនឹងដំណើរការជា Default។', 'No custom domains configured yet. Primary subdomain is active.')}
+            {/* ── 2. Modal Body ── */}
+            <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 18 }}>
+              {/* Add Domain Input (Inline Clean Form) */}
+              <form onSubmit={handleAddDomainSubmit}>
+                <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. app.mycompany.com"
+                    value={newDomainForm.domain}
+                    onChange={(e) => setNewDomainForm({ ...newDomainForm, domain: e.target.value.toLowerCase().trim() })}
+                    style={{
+                      flex: 1,
+                      padding: '10px 14px',
+                      borderRadius: 10,
+                      border: '1.5px solid #cbd5e1',
+                      fontSize: 13,
+                      fontWeight: 600,
+                      outline: 'none',
+                      background: '#ffffff',
+                      fontFamily: 'monospace',
+                    }}
+                  />
+                  <button
+                    type="submit"
+                    disabled={addingDomain}
+                    style={{
+                      padding: '10px 18px',
+                      borderRadius: 10,
+                      border: 'none',
+                      background: '#2563eb',
+                      color: '#ffffff',
+                      fontWeight: 800,
+                      fontSize: 13,
+                      cursor: addingDomain ? 'not-allowed' : 'pointer',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {addingDomain ? '...' : '+ ' + tr('បន្ថែម', 'Add')}
+                  </button>
                 </div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {tenantDomainsList.map((d) => (
-                    <div
-                      key={d.id}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        padding: '14px 18px',
-                        borderRadius: 14,
-                        background: d.isPrimary ? '#eff6ff' : '#f8fafc',
-                        border: d.isPrimary ? '1.5px solid #bfdbfe' : '1px solid #e2e8f0',
-                        flexWrap: 'wrap',
-                        gap: 12,
-                      }}
-                    >
-                      <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <span style={{ fontFamily: 'monospace', fontWeight: 800, fontSize: 14.5, color: '#0f172a' }}>
-                            {d.domain}
-                          </span>
-                          {d.isPrimary && (
-                            <span style={{ fontSize: 11, fontWeight: 800, padding: '2px 8px', borderRadius: 6, background: '#2563eb', color: '#fff' }}>
-                              👑 {tr('ចម្បង (Primary)', 'PRIMARY')}
-                            </span>
-                          )}
-                          <span
-                            style={{
-                              fontSize: 11,
-                              fontWeight: 800,
-                              padding: '2px 8px',
-                              borderRadius: 6,
-                              background: d.isVerified ? '#dcfce7' : '#fef3c7',
-                              color: d.isVerified ? '#15803d' : '#b45309',
-                            }}
-                          >
-                            {d.isVerified ? `✅ ${tr('ផ្ទៀងផ្ទាត់រួច', 'Verified')}` : `⏳ ${tr('រង់ចាំ DNS', 'Pending DNS')}`}
-                          </span>
-                        </div>
-                        <div style={{ fontSize: 11.5, color: '#64748b', marginTop: 3 }}>
-                          {tr('ប្រភេទ', 'Type')}: <strong>{d.domainType || 'custom'}</strong> • SSL: <strong>{d.sslStatus || 'active'}</strong>
-                        </div>
-                      </div>
 
-                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-                        {!d.isVerified && (
-                          <button
-                            onClick={() => handleVerifyDomain(d.id)}
-                            style={{ padding: '6px 12px', borderRadius: 8, background: '#10b981', color: '#fff', border: 'none', fontSize: 12, fontWeight: 800, cursor: 'pointer' }}
-                          >
-                            ⚡ {tr('ផ្ទៀងផ្ទាត់', 'Verify')}
-                          </button>
-                        )}
-                        {!d.isPrimary && (
-                          <button
-                            onClick={() => handleSetPrimaryDomain(d.id)}
-                            style={{ padding: '6px 12px', borderRadius: 8, background: '#fff', color: '#2563eb', border: '1px solid #bfdbfe', fontSize: 12, fontWeight: 800, cursor: 'pointer' }}
-                          >
-                            ⭐ {tr('ដាក់ជាចម្បង', 'Set Primary')}
-                          </button>
-                        )}
-                        <button
-                          onClick={() => handleDeleteDomain(d.id)}
-                          style={{ padding: '6px 10px', borderRadius: 8, background: '#fee2e2', color: '#ef4444', border: '1px solid #fecaca', fontSize: 12, fontWeight: 800, cursor: 'pointer' }}
-                          title={tr('លុប Domain', 'Delete Domain')}
-                        >
-                          🗑️
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-            {/* ── Fixed Bottom Panel: Add Domain Form + DNS Guide ── */}
-            <div style={{ flexShrink: 0, borderTop: '1.5px solid #f1f5f9', padding: '16px 28px 20px' }}>
-              {/* Add New Domain Form */}
-              <div style={{ marginBottom: 12 }}>
-                <div style={{ fontSize: 13, fontWeight: 900, color: '#0f172a', marginBottom: 10 }}>
-                  ➕ {tr('បន្ថែម Domain ថ្មី', 'Add New Domain')}
-                </div>
-                <form onSubmit={handleAddDomainSubmit}>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: 10, marginBottom: 10 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <label
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      fontSize: 12,
+                      fontWeight: 600,
+                      color: '#475569',
+                      cursor: 'pointer',
+                      userSelect: 'none',
+                    }}
+                  >
                     <input
-                      type="text"
-                      required
-                      placeholder="e.g. express.mycompany.com"
-                      value={newDomainForm.domain}
-                      onChange={(e) => setNewDomainForm({ ...newDomainForm, domain: e.target.value })}
-                      style={{ padding: '9px 12px', borderRadius: 9, border: '1.5px solid #cbd5e1', fontSize: 13, fontWeight: 600, outline: 'none', background: '#fff' }}
+                      type="checkbox"
+                      checked={newDomainForm.isPrimary}
+                      onChange={(e) => setNewDomainForm({ ...newDomainForm, isPrimary: e.target.checked })}
+                      style={{ width: 14, height: 14, accentColor: '#2563eb', cursor: 'pointer' }}
                     />
-                    <select
-                      value={newDomainForm.domainType}
-                      onChange={(e) => setNewDomainForm({ ...newDomainForm, domainType: e.target.value })}
-                      style={{ padding: '9px 12px', borderRadius: 9, border: '1.5px solid #cbd5e1', fontSize: 13, fontWeight: 700, outline: 'none', background: '#fff' }}
-                    >
-                      <option value="custom">Custom Domain</option>
-                      <option value="subdomain">Subdomain Alias</option>
-                    </select>
+                    <span>{tr('កំណត់ជា Domain ចម្បង (Primary)', 'Set as Primary Domain')}</span>
+                  </label>
+
+                  <select
+                    value={newDomainForm.domainType}
+                    onChange={(e) => setNewDomainForm({ ...newDomainForm, domainType: e.target.value })}
+                    style={{
+                      padding: '3px 8px',
+                      borderRadius: 6,
+                      border: '1px solid #cbd5e1',
+                      fontSize: 11.5,
+                      fontWeight: 600,
+                      color: '#64748b',
+                      background: '#f8fafc',
+                      outline: 'none',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <option value="custom">Custom Domain</option>
+                    <option value="subdomain">Subdomain</option>
+                  </select>
+                </div>
+              </form>
+
+              {/* Connected Domains List */}
+              <div>
+                <div style={{ fontSize: 12.5, fontWeight: 800, color: '#334155', marginBottom: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span>{tr('Domains ដែលបានភ្ជាប់', 'Connected Domains')} ({tenantDomainsList.length})</span>
+                  {loadingDomains && <span style={{ fontSize: 11, color: '#2563eb' }}>{tr('កំពុងទាញ...', 'Loading...')}</span>}
+                </div>
+
+                {tenantDomainsList.length === 0 && !loadingDomains ? (
+                  <div
+                    style={{
+                      padding: '24px',
+                      textAlign: 'center',
+                      background: '#f8fafc',
+                      borderRadius: 12,
+                      border: '1px dashed #cbd5e1',
+                      color: '#64748b',
+                      fontSize: 12.5,
+                    }}
+                  >
+                    {tr('មិនទាន់មាន Domain បន្ថែមទេ។', 'No custom domains added yet.')}
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, fontWeight: 700, color: '#334155', cursor: 'pointer' }}>
-                      <input
-                        type="checkbox"
-                        checked={newDomainForm.isPrimary}
-                        onChange={(e) => setNewDomainForm({ ...newDomainForm, isPrimary: e.target.checked })}
-                        style={{ width: 15, height: 15, cursor: 'pointer' }}
-                      />
-                      {tr('ជា Primary', 'Set as Primary')}
-                    </label>
-                    <button
-                      type="submit"
-                      disabled={addingDomain}
-                      style={{ padding: '9px 20px', borderRadius: 9, border: 'none', background: 'linear-gradient(135deg, #1e3b75, #2563eb)', color: '#fff', fontWeight: 800, fontSize: 13, cursor: addingDomain ? 'not-allowed' : 'pointer', boxShadow: '0 4px 12px rgba(37,99,235,0.25)' }}
-                    >
-                      {addingDomain ? tr('កំពុងបន្ថែម...', 'Adding...') : '➕ ' + tr('បន្ថែម Domain', 'Add Domain')}
-                    </button>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {tenantDomainsList.map((d) => {
+                      const domainUrl = d.domain.startsWith('http') ? d.domain : `https://${d.domain}`;
+                      const isCopied = copiedDomain === d.domain;
+
+                      return (
+                        <div
+                          key={d.id}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            padding: '12px 14px',
+                            borderRadius: 12,
+                            background: d.isPrimary ? '#eff6ff' : '#f8fafc',
+                            border: d.isPrimary ? '1.5px solid #bfdbfe' : '1px solid #e2e8f0',
+                            gap: 10,
+                          }}
+                        >
+                          {/* Domain Info */}
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                              <a
+                                href={domainUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                style={{
+                                  fontFamily: 'monospace',
+                                  fontWeight: 800,
+                                  fontSize: 13.5,
+                                  color: '#0f172a',
+                                  textDecoration: 'none',
+                                  wordBreak: 'break-all',
+                                }}
+                              >
+                                {d.domain}
+                              </a>
+
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  navigator.clipboard.writeText(d.domain);
+                                  setCopiedDomain(d.domain);
+                                  setTimeout(() => setCopiedDomain(null), 2000);
+                                }}
+                                style={{
+                                  background: 'transparent',
+                                  border: 'none',
+                                  color: isCopied ? '#15803d' : '#94a3b8',
+                                  cursor: 'pointer',
+                                  padding: 0,
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                }}
+                                title="Copy"
+                              >
+                                {isCopied ? <MdCheck size={14} color="#15803d" /> : <MdContentCopy size={14} />}
+                              </button>
+                            </div>
+
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4, fontSize: 11 }}>
+                              {d.isPrimary && (
+                                <span style={{ fontWeight: 800, color: '#2563eb' }}>
+                                  👑 {tr('ចម្បង', 'Primary')}
+                                </span>
+                              )}
+                              <span style={{ color: d.isVerified ? '#15803d' : '#b45309', fontWeight: 700 }}>
+                                ● {d.isVerified ? tr('SSL សកម្ម', 'SSL Active') : tr('រង់ចាំ DNS', 'Pending DNS')}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Action Buttons */}
+                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                            {!d.isPrimary && (
+                              <button
+                                type="button"
+                                onClick={() => handleSetPrimaryDomain(d.id)}
+                                style={{
+                                  padding: '5px 9px',
+                                  borderRadius: 6,
+                                  background: '#ffffff',
+                                  color: '#2563eb',
+                                  border: '1px solid #bfdbfe',
+                                  fontSize: 11.5,
+                                  fontWeight: 700,
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                {tr('ដាក់ជាចម្បង', 'Set Primary')}
+                              </button>
+                            )}
+
+                            {!d.isPrimary && (
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteDomain(d.id)}
+                                style={{
+                                  width: 28,
+                                  height: 28,
+                                  borderRadius: 6,
+                                  background: 'transparent',
+                                  color: '#ef4444',
+                                  border: 'none',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  cursor: 'pointer',
+                                }}
+                                title={tr('លុប Domain', 'Delete Domain')}
+                              >
+                                <MdDeleteOutline size={17} />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
-                </form>
+                )}
               </div>
-              {/* DNS Guide */}
-              <div style={{ padding: '10px 14px', borderRadius: 10, background: '#eff6ff', border: '1px solid #bfdbfe' }}>
-                <div style={{ fontSize: 11.5, color: '#1e3b75', fontWeight: 800, marginBottom: 3 }}>
-                  💡 CNAME: <code>express.mycompany.com</code> ➔ <code>cname.ebsexpress.com</code> &nbsp;|&nbsp; A Record: <code>76.76.21.21</code>
+
+              {/* Minimal DNS Guide Footer */}
+              <div
+                style={{
+                  background: '#f8fafc',
+                  borderRadius: 10,
+                  border: '1px solid #e2e8f0',
+                  padding: '10px 14px',
+                  fontSize: 11.5,
+                  color: '#475569',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 6 }}>
+                  <div>
+                    <strong>CNAME:</strong> <code style={{ color: '#2563eb' }}>cname.ebsexpress.com</code>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText('cname.ebsexpress.com');
+                      setCopiedDns('cname');
+                      setTimeout(() => setCopiedDns(null), 2000);
+                    }}
+                    style={{ background: 'transparent', border: 'none', color: '#2563eb', fontSize: 11, cursor: 'pointer', fontWeight: 700 }}
+                  >
+                    {copiedDns === 'cname' ? '✓ Copied' : 'Copy CNAME'}
+                  </button>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
+                  <div>
+                    <strong>A Record:</strong> <code style={{ color: '#059669' }}>76.76.21.21</code>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText('76.76.21.21');
+                      setCopiedDns('a-record');
+                      setTimeout(() => setCopiedDns(null), 2000);
+                    }}
+                    style={{ background: 'transparent', border: 'none', color: '#059669', fontSize: 11, cursor: 'pointer', fontWeight: 700 }}
+                  >
+                    {copiedDns === 'a-record' ? '✓ Copied' : 'Copy A Record'}
+                  </button>
                 </div>
               </div>
             </div>
@@ -3297,155 +3548,388 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
 
 
       {/* MODAL 8: Renew / Extend Company Validity Modal */}
-      {showRenewModal && selectedTenantForRenew && (
-        <div
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'rgba(15, 23, 42, 0.65)',
-            backdropFilter: 'blur(8px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 9999,
-            padding: 16,
-          }}
-        >
+      {showRenewModal && selectedTenantForRenew && (() => {
+        // Calculate live new expiry date preview
+        let baseDate = new Date();
+        if (selectedTenantForRenew.currentPeriodEnd) {
+          const curr = new Date(selectedTenantForRenew.currentPeriodEnd);
+          if (curr.getTime() > baseDate.getTime()) {
+            baseDate = curr;
+          }
+        }
+        const calcNewEnd = new Date(baseDate);
+        if (renewDuration === '1y') calcNewEnd.setFullYear(calcNewEnd.getFullYear() + 1);
+        else if (renewDuration === '6m') calcNewEnd.setMonth(calcNewEnd.getMonth() + 6);
+        else if (renewDuration === '1m') calcNewEnd.setMonth(calcNewEnd.getMonth() + 1);
+        else if (renewDuration === 'custom' && customEndDate) {
+          const cDate = new Date(customEndDate);
+          if (!isNaN(cDate.getTime())) calcNewEnd.setTime(cDate.getTime());
+        }
+
+        const daysRemaining = selectedTenantForRenew.currentPeriodEnd
+          ? Math.ceil((new Date(selectedTenantForRenew.currentPeriodEnd).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+          : 0;
+
+        return (
           <div
             style={{
-              background: '#ffffff',
-              borderRadius: 24,
-              width: '100%',
-              maxWidth: 460,
-              boxShadow: '0 25px 60px -15px rgba(0,0,0,0.25)',
-              border: '1px solid #e2e8f0',
-              overflow: 'hidden',
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'rgba(15, 23, 42, 0.7)',
+              backdropFilter: 'blur(12px)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 9999,
+              padding: 16,
+              fontFamily: "'Kantumruy Pro', 'Inter', sans-serif",
             }}
           >
-            <div style={{ padding: '20px 24px', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <div style={{ width: 38, height: 38, borderRadius: 12, background: '#eff6ff', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>
-                  🔄
-                </div>
-                <div>
-                  <h3 style={{ fontSize: 16, fontWeight: 900, color: '#0f172a', margin: 0 }}>
-                    {tr('បន្តសុពលភាពក្រុមហ៊ុន', 'Extend Subscription Validity')}
-                  </h3>
-                  <div style={{ fontSize: 12, color: '#64748b', fontWeight: 600 }}>
-                    {selectedTenantForRenew.companyName || `Company #${selectedTenantForRenew.id}`}
-                  </div>
-                </div>
-              </div>
-              <button
-                onClick={() => setShowRenewModal(false)}
-                style={{ background: 'transparent', border: 'none', fontSize: 18, cursor: 'pointer', color: '#94a3b8' }}
-              >
-                ✕
-              </button>
-            </div>
-
-            <div style={{ padding: '20px 24px' }}>
-              {/* Current Status Info */}
-              <div style={{ background: '#f8fafc', borderRadius: 14, padding: '14px 16px', border: '1px solid #e2e8f0', marginBottom: 18 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                  <span style={{ fontSize: 12, color: '#64748b', fontWeight: 700 }}>{tr('កញ្ចប់បច្ចុប្បន្ន', 'Current Plan')}:</span>
-                  <span style={{ fontSize: 12.5, fontWeight: 800, color: '#0f172a' }}>{selectedTenantForRenew.plan?.name || 'Professional'}</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ fontSize: 12, color: '#64748b', fontWeight: 700 }}>{tr('ថ្ងៃផុតកំណត់បច្ចុប្បន្ន', 'Current Expiry')}:</span>
-                  <span style={{ fontSize: 12.5, fontWeight: 800, color: '#2563eb' }}>{formatDate(selectedTenantForRenew.currentPeriodEnd)}</span>
-                </div>
-              </div>
-
-              {/* Renewal Duration Selector */}
-              <div style={{ marginBottom: 18 }}>
-                <label style={{ display: 'block', fontSize: 12.5, fontWeight: 800, color: '#334155', marginBottom: 8 }}>
-                  {tr('ជ្រើសរើសរយៈពេលបន្តសុពលភាព', 'Select Extension Period')}
-                </label>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
-                  {[
-                    { key: '1y', label: tr('+1 ឆ្នាំ', '+1 Year') },
-                    { key: '6m', label: tr('+6 ខែ', '+6 Months') },
-                    { key: '1m', label: tr('+1 ខែ', '+1 Month') },
-                  ].map((dur) => (
-                    <button
-                      key={dur.key}
-                      type="button"
-                      onClick={() => setRenewDuration(dur.key as any)}
-                      style={{
-                        padding: '10px 12px',
-                        borderRadius: 12,
-                        border: renewDuration === dur.key ? '2px solid #2563eb' : '1.5px solid #e2e8f0',
-                        background: renewDuration === dur.key ? '#eff6ff' : '#ffffff',
-                        color: renewDuration === dur.key ? '#1d4ed8' : '#475569',
-                        fontSize: 13,
-                        fontWeight: 800,
-                        cursor: 'pointer',
-                        transition: 'all 0.15s',
-                      }}
-                    >
-                      {dur.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Custom Date Option */}
-              <div style={{ marginBottom: 20 }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 700, color: '#64748b', marginBottom: 6, cursor: 'pointer' }}>
-                  <input
-                    type="radio"
-                    name="renewType"
-                    checked={renewDuration === 'custom'}
-                    onChange={() => setRenewDuration('custom')}
-                  />
-                  <span>{tr('ឬ កំណត់ថ្ងៃផុតកំណត់ជាក់លាក់ (Custom Date)', 'Or set custom expiry date')}</span>
-                </label>
-                {renewDuration === 'custom' && (
-                  <input
-                    type="date"
-                    value={customEndDate}
-                    onChange={(e) => setCustomEndDate(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '9px 12px',
-                      borderRadius: 10,
-                      border: '1.5px solid #cbd5e1',
-                      fontSize: 13,
-                      outline: 'none',
-                      boxSizing: 'border-box',
-                    }}
-                  />
-                )}
-              </div>
-
-              {/* Confirm Button */}
-              <button
-                type="button"
-                onClick={handleConfirmRenew}
-                disabled={renewing}
+            <div
+              style={{
+                background: '#ffffff',
+                borderRadius: 24,
+                width: '100%',
+                maxWidth: 520,
+                boxShadow: '0 25px 70px -12px rgba(15, 23, 42, 0.35), 0 0 0 1px rgba(226, 232, 240, 0.8)',
+                overflow: 'hidden',
+              }}
+            >
+              {/* ── 1. Header ── */}
+              <div
                 style={{
-                  width: '100%',
-                  padding: '12px 20px',
-                  borderRadius: 12,
-                  background: '#2563eb',
-                  color: '#ffffff',
-                  fontSize: 14,
-                  fontWeight: 800,
-                  border: 'none',
-                  cursor: 'pointer',
-                  boxShadow: '0 4px 14px rgba(37,99,235,0.25)',
+                  padding: '22px 26px 18px',
+                  borderBottom: '1px solid #f1f5f9',
+                  background: 'linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
                 }}
               >
-                {renewing ? tr('កំពុងបន្ត...', 'Extending...') : tr('✅ បន្តសុពលភាពភ្លាមៗ', 'Confirm & Extend Validity')}
-              </button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div
+                    style={{
+                      width: 44,
+                      height: 44,
+                      borderRadius: 14,
+                      background: 'linear-gradient(135deg, #3b82f6, #6366f1)',
+                      color: '#ffffff',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      boxShadow: '0 6px 16px rgba(59, 130, 246, 0.28)',
+                      flexShrink: 0,
+                    }}
+                  >
+                    <MdAutorenew size={24} />
+                  </div>
+                  <div>
+                    <h3 style={{ fontSize: 17, fontWeight: 900, color: '#0f172a', margin: 0, letterSpacing: '-0.2px' }}>
+                      {tr('បន្តសុពលភាពក្រុមហ៊ុន', 'Extend Subscription Validity')}
+                    </h3>
+                    <div style={{ fontSize: 12.5, color: '#64748b', marginTop: 2, display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span>🏢</span>
+                      <strong style={{ color: '#1e293b' }}>
+                        {selectedTenantForRenew.companyName || `Company #${selectedTenantForRenew.id}`}
+                      </strong>
+                    </div>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => setShowRenewModal(false)}
+                  style={{
+                    width: 34,
+                    height: 34,
+                    borderRadius: 10,
+                    border: '1px solid #e2e8f0',
+                    background: '#ffffff',
+                    color: '#64748b',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    fontSize: 16,
+                    fontWeight: 700,
+                    transition: 'all 0.15s',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = '#fee2e2';
+                    e.currentTarget.style.color = '#ef4444';
+                    e.currentTarget.style.borderColor = '#fecaca';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = '#ffffff';
+                    e.currentTarget.style.color = '#64748b';
+                    e.currentTarget.style.borderColor = '#e2e8f0';
+                  }}
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* ── 2. Modal Body ── */}
+              <div style={{ padding: '22px 26px' }}>
+                {/* Current Status Overview Card */}
+                <div
+                  style={{
+                    background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
+                    borderRadius: 16,
+                    padding: '16px 18px',
+                    border: '1px solid #e2e8f0',
+                    marginBottom: 20,
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                    <span style={{ fontSize: 12.5, color: '#64748b', fontWeight: 700 }}>
+                      {tr('កញ្ចប់បច្ចុប្បន្ន', 'Current Plan')}:
+                    </span>
+                    <span
+                      style={{
+                        fontSize: 12,
+                        fontWeight: 800,
+                        padding: '3px 10px',
+                        borderRadius: 8,
+                        background: '#eff6ff',
+                        color: '#2563eb',
+                        border: '1px solid #bfdbfe',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 4,
+                      }}
+                    >
+                      👑 {selectedTenantForRenew.plan?.name || 'Professional'}
+                    </span>
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: 12.5, color: '#64748b', fontWeight: 700 }}>
+                      {tr('ថ្ងៃផុតកំណត់បច្ចុប្បន្ន', 'Current Expiry')}:
+                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontSize: 13, fontWeight: 900, color: '#0f172a', fontFamily: 'monospace' }}>
+                        {formatDate(selectedTenantForRenew.currentPeriodEnd)}
+                      </span>
+                      <span
+                        style={{
+                          fontSize: 11,
+                          fontWeight: 800,
+                          padding: '2px 8px',
+                          borderRadius: 6,
+                          background: daysRemaining > 0 ? '#dcfce7' : '#fee2e2',
+                          color: daysRemaining > 0 ? '#15803d' : '#dc2626',
+                        }}
+                      >
+                        {daysRemaining > 0 ? `នៅសល់ ${daysRemaining} ថ្ងៃ` : 'ផុតកំណត់ហើយ'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Duration Option Cards */}
+                <div style={{ marginBottom: 18 }}>
+                  <label style={{ display: 'block', fontSize: 13, fontWeight: 900, color: '#0f172a', marginBottom: 10 }}>
+                    {tr('ជ្រើសរើសរយៈពេលបន្តសុពលភាព', 'Select Extension Period')}
+                  </label>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
+                    {[
+                      { key: '1y', title: '+1 ឆ្នាំ', subtitle: '12 ខែពេញ', badge: '🔥 សន្សំ 20%', popular: true },
+                      { key: '6m', title: '+6 ខែ', subtitle: 'ពាក់កណ្តាលឆ្នាំ', badge: null, popular: false },
+                      { key: '1m', title: '+1 ខែ', subtitle: '30 ថ្ងៃ', badge: null, popular: false },
+                    ].map((dur) => {
+                      const isSelected = renewDuration === dur.key;
+
+                      return (
+                        <button
+                          key={dur.key}
+                          type="button"
+                          onClick={() => setRenewDuration(dur.key as any)}
+                          style={{
+                            position: 'relative',
+                            padding: '14px 10px 12px',
+                            borderRadius: 16,
+                            border: isSelected ? '2px solid #2563eb' : '1.5px solid #e2e8f0',
+                            background: isSelected
+                              ? 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)'
+                              : '#ffffff',
+                            color: isSelected ? '#1d4ed8' : '#334155',
+                            cursor: 'pointer',
+                            textAlign: 'center',
+                            boxShadow: isSelected ? '0 6px 18px rgba(37, 99, 235, 0.18)' : '0 2px 4px rgba(0,0,0,0.02)',
+                            transition: 'all 0.15s ease',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                        >
+                          {dur.badge && (
+                            <span
+                              style={{
+                                position: 'absolute',
+                                top: -8,
+                                fontSize: 9.5,
+                                fontWeight: 800,
+                                padding: '1px 6px',
+                                borderRadius: 10,
+                                background: '#f59e0b',
+                                color: '#ffffff',
+                                boxShadow: '0 2px 6px rgba(245, 158, 11, 0.3)',
+                              }}
+                            >
+                              {dur.badge}
+                            </span>
+                          )}
+                          <div style={{ fontSize: 16, fontWeight: 900, marginBottom: 2 }}>{dur.title}</div>
+                          <div style={{ fontSize: 11, color: isSelected ? '#2563eb' : '#64748b', fontWeight: 600 }}>
+                            {dur.subtitle}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Custom Date Option */}
+                <div style={{ marginBottom: 18 }}>
+                  <label
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 8,
+                      fontSize: 12.5,
+                      fontWeight: 700,
+                      color: '#475569',
+                      cursor: 'pointer',
+                      userSelect: 'none',
+                      marginBottom: renewDuration === 'custom' ? 8 : 0,
+                    }}
+                  >
+                    <input
+                      type="radio"
+                      name="renewDurationSelect"
+                      checked={renewDuration === 'custom'}
+                      onChange={() => setRenewDuration('custom')}
+                      style={{ width: 16, height: 16, accentColor: '#2563eb', cursor: 'pointer' }}
+                    />
+                    <span>{tr('ឬ កំណត់កាលបរិច្ឆេទជាក់លាក់ (Custom Expiry Date)', 'Or set custom expiry date')}</span>
+                  </label>
+
+                  {renewDuration === 'custom' && (
+                    <div style={{ marginTop: 8 }}>
+                      <input
+                        type="date"
+                        value={customEndDate}
+                        onChange={(e) => setCustomEndDate(e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '10px 14px',
+                          borderRadius: 12,
+                          border: '1.5px solid #cbd5e1',
+                          fontSize: 13,
+                          outline: 'none',
+                          boxSizing: 'border-box',
+                          fontFamily: 'monospace',
+                          fontWeight: 700,
+                        }}
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {/* ── Live New Expiration Preview Box ── */}
+                <div
+                  style={{
+                    background: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)',
+                    borderRadius: 14,
+                    padding: '12px 16px',
+                    border: '1px solid #bbf7d0',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    marginBottom: 20,
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontSize: 18 }}>📅</span>
+                    <div>
+                      <div style={{ fontSize: 11, fontWeight: 800, color: '#15803d', textTransform: 'uppercase' }}>
+                        {tr('ថ្ងៃផុតកំណត់ថ្មីបន្ទាប់ពីបន្ត', 'New Expiration Date')}
+                      </div>
+                      <div style={{ fontSize: 14, fontWeight: 900, color: '#14532d', fontFamily: 'monospace' }}>
+                        {formatDate(calcNewEnd)}
+                      </div>
+                    </div>
+                  </div>
+                  <span style={{ fontSize: 11, fontWeight: 800, color: '#16a34a', background: '#ffffff', padding: '3px 8px', borderRadius: 6, border: '1px solid #bbf7d0' }}>
+                    + {renewDuration === '1y' ? '1 Year' : renewDuration === '6m' ? '6 Months' : renewDuration === '1m' ? '1 Month' : 'Custom'}
+                  </span>
+                </div>
+
+                {/* Action Buttons */}
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <button
+                    type="button"
+                    onClick={() => setShowRenewModal(false)}
+                    style={{
+                      flex: 1,
+                      padding: '12px 16px',
+                      borderRadius: 12,
+                      border: '1px solid #e2e8f0',
+                      background: '#ffffff',
+                      color: '#64748b',
+                      fontSize: 13.5,
+                      fontWeight: 800,
+                      cursor: 'pointer',
+                      transition: 'all 0.15s',
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = '#f8fafc')}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = '#ffffff')}
+                  >
+                    {tr('បោះបង់', 'Cancel')}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleConfirmRenew}
+                    disabled={renewing}
+                    style={{
+                      flex: 2,
+                      padding: '12px 20px',
+                      borderRadius: 12,
+                      background: 'linear-gradient(135deg, #2563eb, #1d4ed8)',
+                      color: '#ffffff',
+                      fontSize: 13.5,
+                      fontWeight: 800,
+                      border: 'none',
+                      cursor: renewing ? 'not-allowed' : 'pointer',
+                      boxShadow: '0 6px 18px rgba(37,99,235,0.3)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 6,
+                      transition: 'all 0.15s',
+                    }}
+                  >
+                    {renewing ? (
+                      <span>⏳ {tr('កំពុងបន្ត...', 'Extending...')}</span>
+                    ) : (
+                      <>
+                        <MdCheck size={18} />
+                        <span>{tr('បន្តសុពលភាពភ្លាមៗ', 'Confirm & Extend Validity')}</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 }

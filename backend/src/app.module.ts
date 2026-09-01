@@ -25,6 +25,7 @@ import { ActivityLogInterceptor } from './activity-logs/activity-log.interceptor
 import { SelectModule } from './select/select.module';
 import { SaasModule } from './saas/saas.module';
 import { SeedModule } from './seed/seed.module';
+import { TelegramModule } from './telegram/telegram.module';
 
 @Module({
   imports: [
@@ -55,6 +56,7 @@ import { SeedModule } from './seed/seed.module';
     SelectModule,
     SaasModule,
     SeedModule,
+    TelegramModule,
   ],
   providers: [
     {

@@ -12,6 +12,7 @@ import { FaRegEdit, FaTrashAlt } from 'react-icons/fa';
 import { FiPlusCircle } from 'react-icons/fi';
 import { useLanguage } from '@/lib/LanguageContext';
 import Pagination from '@/components/ui/Pagination';
+import { formatDate } from '@/lib/date-utils';
 
 
 
@@ -124,7 +125,7 @@ export default function CustomersPage() {
                         <td style={{ fontSize: 12 }}>{c.phone}</td>
                         <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>{c.email || '—'}</td>
                         <td style={{ fontSize: 12, maxWidth: 200 }}>{c.address || '—'}</td>
-                        <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>{new Date(c.createdAt).toLocaleDateString()}</td>
+                        <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>{formatDate(c.createdAt)}</td>
                         <td>
                           <div style={{ display: 'flex', gap: 4, justifyContent: 'center' }}>
                             <button className="btn btn-ghost btn-icon btn-sm" onClick={() => openEdit(c)}><FaRegEdit size={14} /></button>

@@ -133,7 +133,7 @@ export default function DriverTasksPage() {
     if (isManual) setRefreshing(true);
     try {
       const res = await api.get('/mobile/driver/tasks');
-      const list = Array.isArray(res.data) ? res.data : (res.data?.data || []);
+      const list = Array.isArray(res.data) ? res.data : (res.data?.results || res.data?.result || res.data?.data || []);
       setTasks(list);
     } catch (err) {
       console.error('Failed to load driver tasks', err);

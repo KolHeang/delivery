@@ -8,6 +8,7 @@ import Topbar from '@/components/layout/Topbar';
 import api from '@/lib/api';
 import { MdFilterList, MdClear, MdPrint, MdSave, MdMoreHoriz, MdEdit, MdDelete, MdClose } from 'react-icons/md';
 import { useLanguage } from '@/lib/LanguageContext';
+import { useTenant } from '@/lib/TenantContext';
 import DateInput, { formatDateToDDMMYYYY, getLocalDateString } from '@/components/ui/DateInput';
 import Modal from '@/components/ui/Modal';
 
@@ -45,6 +46,7 @@ const getKhmerDateString = (date: Date = new Date()) => {
 export default function PaymentWithStaffPage() {
   const router = useRouter();
   const { t, lang } = useLanguage();
+  const { tenant } = useTenant();
   
   const [drivers, setDrivers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -66,6 +68,24 @@ export default function PaymentWithStaffPage() {
     address: 'Phnom Penh',
   });
 
+  const getDynamicCompanyName = () => {
+    if (orgInfo?.name) return orgInfo.name;
+    if (tenant?.companyName) return tenant.companyName;
+    if (typeof window !== 'undefined') {
+      const hostname = window.location.hostname;
+      const parts = hostname.split('.');
+      if (parts.length > 1 && parts[0] !== 'www' && parts[0] !== 'localhost') {
+        return parts[0]
+          .split('-')
+          .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+          .join(' ');
+      }
+    }
+    return 'Delivery Express';
+  };
+
+  const dynamicCompanyName = getDynamicCompanyName();
+
   // Tabs & History states
   const [activeTab, setActiveTab] = useState<'settle' | 'history'>('settle');
   const [historyData, setHistoryData] = useState<any[]>([]);
@@ -86,7 +106,7 @@ export default function PaymentWithStaffPage() {
     setHistoryLoading(true);
     try {
       const res = await api.get('/payments/staff');
-      setHistoryData(res.data || []);
+      setHistoryData(Array.isArray(res.data) ? res.data : (res.data?.results || res.data?.result || []));
     } catch (err) {
       console.error(err);
     } finally {
@@ -108,14 +128,15 @@ export default function PaymentWithStaffPage() {
     setEditReference(payment.reference || '');
   };
 
-  const handleUpdatePayment = async () => {
+  const handleUpdatePayment = async (e: React.FormEvent) => {
+    e.preventDefault();
     if (!editPayment) return;
     try {
       await api.patch(`/payments/staff/${editPayment.id}`, {
-        amount: parseFloat(editAmount) || 0,
+        amount: parseFloat(editAmount),
         note: editNote,
-        date: editDate || undefined,
-        reference: editReference || undefined,
+        date: editDate,
+        reference: editReference,
       });
       alert(lang === 'km' ? 'ធ្វើបច្ចុប្បន្នភាពបានជោគជ័យ!' : 'Updated successfully!');
       setEditPayment(null);
@@ -126,10 +147,10 @@ export default function PaymentWithStaffPage() {
     }
   };
 
-  const handleDeletePayment = async (paymentId: number) => {
+  const handleDeletePayment = async (id: number) => {
     if (!confirm(lang === 'km' ? 'តើអ្នកប្រាកដជាចង់បង្វិលការទូទាត់របស់អ្នកដឹកនេះថយក្រោយវិញទេ? វានឹងកំណត់ស្ថានភាពកញ្ចប់អីវ៉ាន់ទាំងអស់ទៅជាមិនទាន់ទូទាត់ឡើងវិញ។' : 'Are you sure you want to reverse this driver settlement? This will reset all associated orders back to unpaid.')) return;
     try {
-      await api.delete(`/payments/staff/${paymentId}`);
+      await api.delete(`/payments/staff/${id}`);
       alert(lang === 'km' ? 'បានបង្វិលប្រតិបត្តិការដោយជោគជ័យ!' : 'Reversal completed successfully!');
       loadHistory();
       handleFilter();
@@ -144,7 +165,7 @@ export default function PaymentWithStaffPage() {
         api.get('/select/drivers'),
         api.get('/settings/organisation').catch(() => null)
       ]);
-      setDrivers(Array.isArray(driversRes.data) ? driversRes.data : (driversRes.data?.result || []));
+      setDrivers(Array.isArray(driversRes.data) ? driversRes.data : (driversRes.data?.results || driversRes.data?.result || []));
       setDriverId(''); // Default to "All" (empty string)
       if (orgRes && orgRes.data) {
         setOrgInfo({
@@ -171,10 +192,11 @@ export default function PaymentWithStaffPage() {
   const handleFilter = async () => {
     try {
       const url = driverId 
-        ? `/parcels?driverId=${driverId}`
-        : `/parcels`;
+        ? `/parcels?driverId=${driverId}&limit=1000`
+        : `/parcels?limit=1000`;
       const res = await api.get(url);
-      setOrders(res.data || []);
+      const list = Array.isArray(res.data) ? res.data : (res.data?.results || res.data?.result || []);
+      setOrders(list);
       setSelectedIds([]);
     } catch {
       setOrders([]);
@@ -194,10 +216,11 @@ export default function PaymentWithStaffPage() {
   };
 
   // Filter orders by date client-side
-  const deliveredOrders = orders.filter((o: any) => o.status === 'delivered' || o.status === 'failed' || o.status === 'returned');
-  const pendingOrders = orders.filter((o: any) => o.status !== 'delivered' && o.status !== 'failed' && o.status !== 'returned');
+  const safeOrders = Array.isArray(orders) ? orders : [];
+  const deliveredOrders = safeOrders.filter((o: any) => o.status === 'delivered' || o.status === 'failed' || o.status === 'returned');
+  const pendingOrders = safeOrders.filter((o: any) => o.status !== 'delivered' && o.status !== 'failed' && o.status !== 'returned');
 
-  const filteredOrders = orders.filter((o: any) => {
+  const filteredOrders = safeOrders.filter((o: any) => {
     let dateString = o.deliveredAt;
     if (!dateString && (o.status === 'failed' || o.status === 'returned' || o.status === 'pending')) {
       dateString = o.updatedAt || o.createdAt;
@@ -291,9 +314,8 @@ export default function PaymentWithStaffPage() {
   const printTotalFee = printOrders.reduce((sum, o: any) => sum + parseFloat(o.deliveryFee || '0'), 0);
   const printCodKhr = printOrders.filter((o: any) => o.codCurrency === 'KHR').reduce((sum, o: any) => sum + parseFloat(o.cod || '0'), 0);
   const printCodUsd = printOrders.filter((o: any) => o.codCurrency === 'USD').reduce((sum, o: any) => sum + parseFloat(o.cod || '0'), 0);
-  const printNetReturnUsd = Math.max(0, printCodUsd - printTotalFee);
-  const printRemFee = Math.max(0, printTotalFee - printCodUsd);
-  const printNetReturnKhr = Math.max(0, printCodKhr - (printRemFee * 4100));
+  const printNetReturnUsd = printCodUsd;
+  const printNetReturnKhr = printCodKhr;
 
   // Filter historyData client-side
   const filteredHistory = historyData.filter((h: any) => {
@@ -570,9 +592,8 @@ export default function PaymentWithStaffPage() {
                     const khr = src.filter((o: any) => o.codCurrency === 'KHR').reduce((s: number, o: any) => s + parseFloat(o.cod || '0'), 0);
                     const usd = src.filter((o: any) => o.codCurrency === 'USD').reduce((s: number, o: any) => s + parseFloat(o.cod || '0'), 0);
                     const fee = src.reduce((s: number, o: any) => s + parseFloat(o.deliveryFee || '0'), 0);
-                    const netReturnUSD = Math.max(0, usd - fee);
-                    const remFee = Math.max(0, fee - usd);
-                    const netReturnKHR = Math.max(0, khr - (remFee * 4100));
+                    const netReturnUSD = usd;
+                    const netReturnKHR = khr;
 
                     return (
                       <>
@@ -596,17 +617,6 @@ export default function PaymentWithStaffPage() {
                           <td colSpan={2} style={{ padding: '12px 10px', textAlign: 'right', border: 'none' }}>
                             <span style={{ background: '#dbeafe', color: '#1e40af', padding: '6px 16px', borderRadius: 6, fontWeight: 800, fontSize: 14 }}>
                               ${usd.toFixed(2)}
-                            </span>
-                          </td>
-                          <td style={{ border: 'none' }} />
-                        </tr>
-                        <tr style={{ background: '#f8fafc' }}>
-                          <td colSpan={7} style={{ textAlign: 'right', padding: '12px 16px', fontWeight: 700, color: '#334155', border: 'none' }}>
-                            {lang === 'km' ? 'សរុបប្រាក់កម្រៃដឹករបស់អ្នកដឹក' : 'Driver Delivery Fee'}
-                          </td>
-                          <td colSpan={2} style={{ padding: '12px 10px', textAlign: 'right', border: 'none' }}>
-                            <span style={{ background: '#fee2e2', color: '#dc2626', padding: '6px 16px', borderRadius: 6, fontWeight: 800, fontSize: 14 }}>
-                              -${fee.toFixed(2)}
                             </span>
                           </td>
                           <td style={{ border: 'none' }} />
@@ -921,16 +931,24 @@ export default function PaymentWithStaffPage() {
           {/* Left side: Company Info */}
           <div style={{ fontSize: 11, lineHeight: '1.6', flex: 1 }}>
             <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 6 }}>
-              <div style={{
-                width: 28, height: 28, borderRadius: 6,
-                background: '#2563eb',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: '#fff', fontSize: 15
-              }}>
-                📦
-              </div>
+              {tenant?.logoUrl || orgInfo.logo ? (
+                <img 
+                  src={tenant?.logoUrl || orgInfo.logo} 
+                  alt="Logo" 
+                  style={{ width: 28, height: 28, borderRadius: 6, objectFit: 'contain' }} 
+                />
+              ) : (
+                <div style={{
+                  width: 28, height: 28, borderRadius: 6,
+                  background: '#2563eb',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  color: '#fff', fontSize: 15
+                }}>
+                  📦
+                </div>
+              )}
               <span style={{ fontSize: 14, fontWeight: '800', color: '#1e3a8a', fontStyle: 'italic' }}>
-                {orgInfo.name}
+                {dynamicCompanyName}
               </span>
             </div>
             <div><strong>{lang === 'km' ? 'អាសយដ្ឋាន៖' : 'Address:'}</strong> {orgInfo.address}</div>
@@ -1102,10 +1120,6 @@ export default function PaymentWithStaffPage() {
               <tr>
                 <td style={{ padding: '6px 12px', border: '1px solid #000', textAlign: 'right' }}>{lang === 'km' ? 'ប្រាក់ COD ទទួលបាន' : 'Total COD Collected'}</td>
                 <td style={{ padding: '6px 12px', border: '1px solid #000', fontWeight: 'bold', textAlign: 'right' }}>$ {printCodUsd.toFixed(2)}{printCodKhr > 0 ? ` / ${printCodKhr.toLocaleString()} ${lang === 'km' ? 'រៀល' : 'KHR'}` : (printCodUsd === 0 ? ` / 0 ${lang === 'km' ? 'រៀល' : 'KHR'}` : '')}</td>
-              </tr>
-              <tr>
-                <td style={{ padding: '6px 12px', border: '1px solid #000', textAlign: 'right' }}>{lang === 'km' ? 'ប្រាក់កម្រៃដឹករបស់អ្នកដឹក' : 'Driver Delivery Fee'}</td>
-                <td style={{ padding: '6px 12px', border: '1px solid #000', fontWeight: 'bold', textAlign: 'right' }}>$ {printTotalFee.toFixed(2)}</td>
               </tr>
               <tr style={{ background: '#f0fdf4' }}>
                 <td style={{ padding: '7px 12px', border: '1px solid #000', textAlign: 'right', fontWeight: 'bold', color: '#16a34a' }}>{lang === 'km' ? 'ប្រាក់អ្នកដឹកត្រូវប្រគល់ជូនក្រុមហ៊ុន (Net Return)' : 'Net COD Return to Company'}</td>

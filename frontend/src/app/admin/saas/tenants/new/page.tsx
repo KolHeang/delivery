@@ -43,6 +43,8 @@ export default function CreateTenantPage() {
     subdomain: '',
     planId: 2,
     billingCycle: 'monthly' as 'monthly' | 'yearly',
+    couponCode: '',
+    referralCode: '',
     adminName: '',
     email: '',
     phone: '',
@@ -139,7 +141,7 @@ export default function CreateTenantPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!companyForm.companyName || !companyForm.subdomain || !companyForm.email) {
+    if (!companyForm.companyName || !companyForm.subdomain || !companyForm.email || !companyForm.adminName || !companyForm.phone || !companyForm.password) {
       alert('សូមបញ្ចូលព័ត៌មានចាំបាច់ឱ្យបានគ្រប់គ្រាន់');
       return;
     }
@@ -151,12 +153,14 @@ export default function CreateTenantPage() {
       await saasApi.registerAndCheckout({
         planId: Number(companyForm.planId),
         billingCycle: companyForm.billingCycle,
+        couponCode: companyForm.couponCode.trim() || undefined,
+        referralCode: companyForm.referralCode.trim() || undefined,
         companyName: companyForm.companyName.trim(),
         subdomain: companyForm.subdomain.trim(),
-        adminName: companyForm.adminName.trim() || companyForm.companyName.trim(),
+        adminName: companyForm.adminName.trim(),
         email: companyForm.email.trim().toLowerCase(),
-        phone: companyForm.phone.trim() || undefined,
-        password: companyForm.password || '123456',
+        phone: companyForm.phone.trim(),
+        password: companyForm.password,
       });
 
       // Return immediately to the company list
@@ -637,7 +641,7 @@ export default function CreateTenantPage() {
               </div>
 
               <div className="card-body">
-                <form onSubmit={handleSubmit}>
+                <form onSubmit={handleSubmit} autoComplete="off">
                   {/* Section 1: Company & Subdomain */}
                   <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 14, display: 'flex', alignItems: 'center' }}>
                     ១. ព័ត៌មានក្រុមហ៊ុន និង Workspace
@@ -686,7 +690,9 @@ export default function CreateTenantPage() {
                           fontWeight: 600,
                           whiteSpace: 'nowrap',
                         }}>
-                          .ebsexpress.com
+                          {typeof window !== 'undefined' && window.location.host.includes('localhost')
+                            ? `.localhost:${window.location.port || '3000'}`
+                            : '.ebsexpress.com'}
                         </span>
                       </div>
                     </div>
@@ -719,18 +725,56 @@ export default function CreateTenantPage() {
                     </div>
                   </div>
 
-                  {/* Section 2: Admin User Credentials */}
+                  {/* Section 2: Coupon & Referral */}
                   <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text-primary)', margin: '20px 0 14px', display: 'flex', alignItems: 'center' }}>
-                    ២. គណនី Admin ដំបូងសម្រាប់ក្រុមហ៊ុន
+                    ២. គូប៉ុង និង ដៃគូសហការ
                   </div>
 
                   <div className="form-row">
                     <div className="form-group">
                       <label className="form-label">
-                        ឈ្មោះអ្នកគ្រប់គ្រង
+                        លេខកូដគូប៉ុង
                       </label>
                       <input
                         type="text"
+                        className="form-control"
+                        placeholder="ឧ. SAVE20, LAUNCH50"
+                        value={companyForm.couponCode}
+                        onChange={(e) => setCompanyForm({ ...companyForm, couponCode: e.target.value.toUpperCase() })}
+                      />
+                      <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
+                        {companyForm.couponCode ? '✅ នឹងត្រូវបានផ្ទៀងផ្ទាត់ពេលបង្កើតជាវ' : 'ទុកទំនេរ បើគ្មានគូប៉ុង'}
+                      </div>
+                    </div>
+
+                    <div className="form-group">
+                      <label className="form-label">
+                        លេខកូដដៃគូ
+                      </label>
+                      <input
+                        type="text"
+                        className="form-control"
+                        placeholder="ឧ. PARTNER-001, REF-KH"
+                        value={companyForm.referralCode}
+                        onChange={(e) => setCompanyForm({ ...companyForm, referralCode: e.target.value.toUpperCase() })}
+                      />
+                      <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>ទុកទំនេរ បើគ្មានដៃគូសហការ</div>
+                    </div>
+                  </div>
+
+                  {/* Section 3: Admin User Credentials */}
+                  <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text-primary)', margin: '20px 0 14px', display: 'flex', alignItems: 'center' }}>
+                    ៣. គណនី Admin ដំបូងសម្រាប់ក្រុមហ៊ុន
+                  </div>
+
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label className="form-label">
+                        ឈ្មោះអ្នកគ្រប់គ្រង <span>*</span>
+                      </label>
+                      <input
+                        type="text"
+                        required
                         className="form-control"
                         placeholder="ឧ. Sok Dara"
                         value={companyForm.adminName}
@@ -740,10 +784,11 @@ export default function CreateTenantPage() {
 
                     <div className="form-group">
                       <label className="form-label">
-                        លេខទូរស័ព្ទ
+                        លេខទូរស័ព្ទ <span>*</span>
                       </label>
                       <input
                         type="text"
+                        required
                         className="form-control"
                         placeholder="012 345 678"
                         value={companyForm.phone}
@@ -759,6 +804,9 @@ export default function CreateTenantPage() {
                       </label>
                       <input
                         type="email"
+                        name="tenant_admin_email_field"
+                        id="tenant_admin_email_field"
+                        autoComplete="off"
                         required
                         className="form-control"
                         placeholder="client@gmail.com"
@@ -773,6 +821,9 @@ export default function CreateTenantPage() {
                       </label>
                       <input
                         type="password"
+                        name="tenant_admin_password_field"
+                        id="tenant_admin_password_field"
+                        autoComplete="new-password"
                         required
                         className="form-control"
                         placeholder="បញ្ចូលពាក្យសម្ងាត់..."

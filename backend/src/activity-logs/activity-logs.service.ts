@@ -13,6 +13,7 @@ export interface CreateLogParams {
   payload?: any;
   userId?: number | null;
   merchantId?: number | null;
+  tenantId?: number | null;
 }
 
 @Injectable()
@@ -33,6 +34,7 @@ export class ActivityLogsService {
       payload: params.payload,
       userId: params.userId ?? null,
       merchantId: params.merchantId ?? null,
+      tenantId: params.tenantId ?? null,
     });
     return this.activityLogRepository.save(logEntry);
   }

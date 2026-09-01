@@ -8,6 +8,7 @@ import Topbar from '@/components/layout/Topbar';
 import api from '@/lib/api';
 import { MdPrint, MdSearch, MdArrowBack, MdEdit, MdDelete, MdClose, MdSave } from 'react-icons/md';
 import { useLanguage } from '@/lib/LanguageContext';
+import { useTenant } from '@/lib/TenantContext';
 import DateInput, { formatDateToDDMMYYYY, getLocalDateString } from '@/components/ui/DateInput';
 import Modal from '@/components/ui/Modal';
 
@@ -38,12 +39,36 @@ const getKhmerDateString = (date: Date = new Date()) => {
 export default function PaymentWithShopPage() {
   const router = useRouter();
   const { lang, t } = useLanguage();
+  const { tenant } = useTenant();
 
   const [merchants, setMerchants] = useState<any[]>([]);
   const [orders, setOrders] = useState<any[]>([]);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [orgInfo, setOrgInfo] = useState<any>({
+    name: 'E-Express',
+    phone: '011609414',
+    address: 'Phnom Penh',
+  });
+
+  const getDynamicCompanyName = () => {
+    if (orgInfo?.name) return orgInfo.name;
+    if (tenant?.companyName) return tenant.companyName;
+    if (typeof window !== 'undefined') {
+      const hostname = window.location.hostname;
+      const parts = hostname.split('.');
+      if (parts.length > 1 && parts[0] !== 'www' && parts[0] !== 'localhost') {
+        return parts[0]
+          .split('-')
+          .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+          .join(' ');
+      }
+    }
+    return 'Delivery Express';
+  };
+
+  const dynamicCompanyName = getDynamicCompanyName();
 
   // Tabs & History states
   const [activeTab, setActiveTab] = useState<'settle' | 'history'>('settle');
@@ -127,11 +152,6 @@ export default function PaymentWithShopPage() {
   // Interactive UI State
   const [expandedMerchantId, setExpandedMerchantId] = useState<number | null>(null);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
-  const [orgInfo, setOrgInfo] = useState<any>({
-    name: 'E-Express',
-    phone: '011609414',
-    address: 'Phnom Penh',
-  });
   const originalFilterRef = useRef<string | null>(null);
   const isPrintingDetailRef = useRef<boolean>(false);
 
@@ -152,8 +172,8 @@ export default function PaymentWithShopPage() {
         api.get('/parcels'),
         api.get('/settings/organisation').catch(() => null),
       ]);
-      setMerchants(Array.isArray(merchantRes.data) ? merchantRes.data : (merchantRes.data?.result || []));
-      setOrders(Array.isArray(orderRes.data) ? orderRes.data : (orderRes.data?.result || []));
+      setMerchants(Array.isArray(merchantRes.data) ? merchantRes.data : (merchantRes.data?.results || merchantRes.data?.result || []));
+      setOrders(Array.isArray(orderRes.data) ? orderRes.data : (orderRes.data?.results || orderRes.data?.result || []));
       if (orgRes && orgRes.data) {
         setOrgInfo({
           name: orgRes.data.name || 'E-Express',
@@ -1292,16 +1312,24 @@ export default function PaymentWithShopPage() {
                   {/* Left side: Company Info */}
                   <div style={{ fontSize: 11, lineHeight: '1.6', flex: 1 }}>
                     <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 6 }}>
-                      <div style={{
-                        width: 28, height: 28, borderRadius: 6,
-                        background: '#2563eb',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        color: '#fff', fontSize: 15
-                      }}>
-                        📦
-                      </div>
+                      {tenant?.logoUrl || orgInfo.logo ? (
+                        <img 
+                          src={tenant?.logoUrl || orgInfo.logo} 
+                          alt="Logo" 
+                          style={{ width: 28, height: 28, borderRadius: 6, objectFit: 'contain' }} 
+                        />
+                      ) : (
+                        <div style={{
+                          width: 28, height: 28, borderRadius: 6,
+                          background: '#2563eb',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          color: '#fff', fontSize: 15
+                        }}>
+                          📦
+                        </div>
+                      )}
                       <span style={{ fontSize: 14, fontWeight: '800', color: '#1e3a8a', fontStyle: 'italic' }}>
-                        {orgInfo.name}
+                        {dynamicCompanyName}
                       </span>
                     </div>
                     <div><strong>{lang === 'km' ? 'អាសយដ្ឋាន៖' : 'Address:'}</strong> {orgInfo.address}</div>

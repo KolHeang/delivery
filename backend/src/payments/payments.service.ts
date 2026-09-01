@@ -7,6 +7,7 @@ import { User } from '../users/entities/users.entity';
 import { Merchant } from '../merchants/entities/merchant.entity';
 import { Parcel } from '../parcels/entities/parcel.entity';
 import { Organisation } from '../settings/entities/organisation.entity';
+import { TelegramService } from '../telegram/telegram.service';
 
 @Injectable()
 export class PaymentsService {
@@ -17,6 +18,7 @@ export class PaymentsService {
     @InjectRepository(Merchant) private merchantRepo: Repository<Merchant>,
     @InjectRepository(Parcel) private parcelRepo: Repository<Parcel>,
     @InjectRepository(Organisation) private orgRepo: Repository<Organisation>,
+    private readonly telegramService: TelegramService,
   ) { }
 
   // Driver Payments
@@ -28,6 +30,7 @@ export class PaymentsService {
     note?: string,
     parcelIds?: number[],
     userId?: number,
+    tenantId?: number,
   ) {
     const driver = await this.userRepo.findOne({
       where: { id: driverId },
@@ -42,6 +45,7 @@ export class PaymentsService {
       note,
       parcelIds,
       createdById: userId,
+      tenantId,
     });
     const saved = await this.driverPaymentRepo.save(payment);
 
@@ -107,6 +111,7 @@ export class PaymentsService {
       detailUrl?: string;
     },
     userId?: number,
+    tenantId?: number,
   ) {
     const merchant = await this.merchantRepo.findOne({
       where: { id: merchantId },
@@ -122,11 +127,12 @@ export class PaymentsService {
       note,
       parcelIds,
       createdById: userId,
+      tenantId,
     });
     const saved = await this.merchantPaymentRepo.save(payment);
 
     // Update merchant balance (deduct payout amount)
-    merchant.balance = parseFloat(merchant.balance as any) - amount;
+    merchant.balance = parseFloat(merchant.balance as any || 0) - amount;
     await this.merchantRepo.save(merchant);
 
     if (parcelIds && parcelIds.length > 0) {
@@ -140,8 +146,7 @@ export class PaymentsService {
     }
 
     // Send Telegram Notification
-    const targetChatId = merchant.telegram || process.env.CHAT_ID;
-    if (targetChatId && telegramReport) {
+    if (telegramReport) {
       const d = date ? new Date(date) : new Date();
       const day = String(d.getDate()).padStart(2, '0');
       const month = String(d.getMonth() + 1).padStart(2, '0');
@@ -165,7 +170,7 @@ export class PaymentsService {
         `-------------------------\n` +
         `របាយការណ៍លម្អិត ចុចត្រង់នេះ: <a href="${telegramReport.detailUrl || ''}">Click Detail</a>`;
 
-      await this.sendTelegramMessage(targetChatId.trim(), text);
+      await this.telegramService.notifyMerchant(merchantId, 'PAYMENT_SETTLEMENT', text);
     }
 
     return saved;
@@ -305,41 +310,9 @@ export class PaymentsService {
   }
 
   async sendTelegramMessage(chatId: string, text: string) {
-    const token = process.env.TELEGRAM_BOT_TOKEN;
-    if (!token) {
-      console.warn('TELEGRAM_BOT_TOKEN is not defined in environment variables');
-      return;
-    }
-
-    // Normalize username/chat ID
-    let targetChatId = chatId.trim();
-    if (!targetChatId.match(/^-?\d+$/) && !targetChatId.startsWith('@')) {
-      targetChatId = `@${targetChatId}`;
-    }
-
-    try {
-      const response = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          chat_id: targetChatId,
-          text: text,
-          parse_mode: 'HTML',
-          disable_web_page_preview: true,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`Telegram API responded with error: ${response.status} ${errorText}`);
-      } else {
-        console.log(`Telegram message sent successfully to ${targetChatId}`);
-      }
-    } catch (err) {
-      console.error('Failed to send Telegram message:', err);
-    }
+    return this.telegramService.sendMessage(chatId, text, {
+      eventType: 'PAYMENT_SETTLEMENT',
+    });
   }
 
   async deleteDriverPayment(id: number) {

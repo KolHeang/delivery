@@ -15,6 +15,7 @@ import { User } from '../../users/entities/users.entity';
 import { Tenant } from '../entities/tenant.entity';
 import { TenantDomain } from '../entities/tenant-domain.entity';
 import { Role } from '../../roles/entities/role.entity';
+import { Permission } from '../../roles/entities/permission.entity';
 
 @Injectable()
 export class SubscriptionsService {
@@ -31,6 +32,8 @@ export class SubscriptionsService {
     private readonly domainRepo: Repository<TenantDomain>,
     @InjectRepository(Role)
     private readonly roleRepo: Repository<Role>,
+    @InjectRepository(Permission)
+    private readonly permissionRepo: Repository<Permission>,
     private readonly couponsService: CouponsService,
     private readonly invoicesService: SaasInvoicesService,
     private readonly jwtService: JwtService,
@@ -246,10 +249,9 @@ export class SubscriptionsService {
     // customDomain is now managed via saas_domains table — skip here
 
 
-    // 2. Resolve default Admin role
-    let adminRole = await this.roleRepo.findOne({
-      where: [{ name: 'admin', tenantId: tenant.id }, { name: 'admin' }],
-    });
+    // 2. Auto-seed default Roles (admin, staff, driver, merchant) for this tenant
+    const tenantRoles = await this.seedTenantDefaultRoles(tenant.id);
+    const adminRole = tenantRoles['admin'] || (await this.roleRepo.findOne({ where: { name: 'admin' } }));
 
     // 3. Find or create user
     let user = await this.userRepo.findOne({
@@ -358,11 +360,18 @@ export class SubscriptionsService {
     });
 
     const now = new Date();
+    const isFree = totalAmount === 0;
     const periodEnd = new Date(now);
-    if (dto.billingCycle === 'yearly') {
-      periodEnd.setFullYear(periodEnd.getFullYear() + 1);
+
+    if (isFree) {
+      if (dto.billingCycle === 'yearly') {
+        periodEnd.setFullYear(periodEnd.getFullYear() + 1);
+      } else {
+        periodEnd.setMonth(periodEnd.getMonth() + 1);
+      }
     } else {
-      periodEnd.setMonth(periodEnd.getMonth() + 1);
+      // 7-day free trial period for newly registered unpaid workspaces
+      periodEnd.setDate(periodEnd.getDate() + 7);
     }
 
     if (!sub) {
@@ -372,7 +381,7 @@ export class SubscriptionsService {
         planId: plan.id,
         billingCycle: dto.billingCycle,
         companyName: dto.companyName,
-        status: totalAmount === 0 ? 'active' : 'trialing',
+        status: isFree ? 'active' : 'trialing',
 
         currentPeriodStart: now,
         currentPeriodEnd: periodEnd,
@@ -383,8 +392,10 @@ export class SubscriptionsService {
       sub.billingCycle = dto.billingCycle;
       if (dto.tenantId) sub.tenantId = dto.tenantId;
       if (dto.companyName) sub.companyName = dto.companyName;
+      sub.currentPeriodStart = now;
+      sub.currentPeriodEnd = periodEnd;
+      sub.status = isFree ? 'active' : 'trialing';
       await this.subRepo.save(sub);
-
     }
 
     // 2. Generate SaaS Invoice
@@ -428,10 +439,92 @@ export class SubscriptionsService {
     return { success: true, message: 'Subscription cancelled successfully' };
   }
 
-  async updateStatus(id: number, status: SubscriptionStatus | string) {
+  async updateStatus(id: number, status: SubscriptionStatus | string, currentPeriodEnd?: string | Date) {
     const sub = await this.subRepo.findOne({ where: { id } });
     if (!sub) throw new NotFoundException('Subscription not found');
     sub.status = status as SubscriptionStatus;
+    if (currentPeriodEnd) {
+      sub.currentPeriodEnd = new Date(currentPeriodEnd);
+    }
     return this.subRepo.save(sub);
+  }
+
+  /**
+   * Seed default roles (admin, staff, driver, merchant) with appropriate permissions for a specific tenant
+   */
+  async seedTenantDefaultRoles(tenantId: number): Promise<Record<string, Role>> {
+    const allPerms = await this.permissionRepo.find();
+
+    const roleDefinitions = [
+      {
+        name: 'admin',
+        description: 'សិទ្ធិគ្រប់គ្រងប្រព័ន្ធពេញលេញ (Full Administrator)',
+        filter: () => true, // All permissions
+      },
+      {
+        name: 'staff',
+        description: 'បុគ្គលិកប្រតិបត្តិការទូទៅ (Operations Staff)',
+        filter: (p: Permission) =>
+          !p.name.startsWith('roles.') &&
+          !p.name.startsWith('settings.role') &&
+          !p.name.startsWith('settings.activity_log'),
+      },
+      {
+        name: 'driver',
+        description: 'អ្នកដឹកជញ្ជូន (Driver Courier Access)',
+        filter: (p: Permission) =>
+          [
+            'parcels.read',
+            'parcels.update',
+            'drivers.read',
+            'vehicles.read',
+            'zones.read',
+            'reports.view',
+            'reports.operation_driver',
+            'reports.operation_driver_daily',
+          ].includes(p.name),
+      },
+      {
+        name: 'merchant',
+        description: 'ហាង និងអ្នកផ្ញើទំនិញ (Merchant Portal Access)',
+        filter: (p: Permission) =>
+          [
+            'parcels.create',
+            'parcels.read',
+            'merchants.read',
+            'reports.view',
+            'reports.operation_merchant',
+            'reports.operation_merchant_daily',
+          ].includes(p.name),
+      },
+    ];
+
+    const results: Record<string, Role> = {};
+
+    for (const def of roleDefinitions) {
+      let role = await this.roleRepo.findOne({
+        where: { name: def.name, tenantId },
+        relations: { permissions: true },
+      });
+
+      const matchedPerms = allPerms.filter(def.filter);
+
+      if (!role) {
+        role = this.roleRepo.create({
+          name: def.name,
+          description: def.description,
+          tenantId,
+          permissions: matchedPerms,
+        });
+        role = await this.roleRepo.save(role);
+      } else if (!role.permissions || role.permissions.length === 0) {
+        role.permissions = matchedPerms;
+        role = await this.roleRepo.save(role);
+      }
+
+      results[def.name] = role;
+    }
+
+    return results;
   }
 }

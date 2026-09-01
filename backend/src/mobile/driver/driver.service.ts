@@ -124,30 +124,9 @@ export class DriverService {
   ) {
     const query = this.parcelRepo
       .createQueryBuilder('parcel')
-      .leftJoin('parcel.merchant', 'merchant')
-      .addSelect([
-        'parcel.id',
-        'parcel.trackingCode',
-        'parcel.receiverName',
-        'parcel.receiverPhone',
-        'parcel.receiverAddress',
-        'parcel.cod',
-        'parcel.codCurrency',
-        'parcel.deliveryFee',
-        'parcel.status',
-        'parcel.driverId',
-        'parcel.pickupDriverId',
-        'parcel.itemType',
-        'parcel.note',
-        'parcel.createdAt',
-        'parcel.deliveredAt',
-        'parcel.assignedAt',
-        'merchant.id',
-        'merchant.name',
-        'merchant.nameKh',
-        'merchant.phone',
-        'merchant.address',
-      ])
+      .leftJoinAndSelect('parcel.merchant', 'merchant')
+      .leftJoinAndSelect('parcel.customer', 'customer')
+      .leftJoinAndSelect('parcel.zone', 'zone')
       .orderBy('parcel.createdAt', 'DESC');
 
     // 1. Apply Status & Driver Logic
@@ -178,13 +157,13 @@ export class DriverService {
       query.andWhere(
         new Brackets((qb) => {
           const searchTerm = `%${search}%`;
-          qb.where('parcel.trackingCode::text ILIKE :searchTerm', {
+          qb.where('parcel.trackingCode ILIKE :searchTerm', {
             searchTerm,
           })
-            .orWhere('parcel.receiverPhone::text ILIKE :searchTerm', {
+            .orWhere('parcel.receiverPhone ILIKE :searchTerm', {
               searchTerm,
             })
-            .orWhere('parcel.receiverAddress::text ILIKE :searchTerm', {
+            .orWhere('parcel.receiverAddress ILIKE :searchTerm', {
               searchTerm,
             });
         }),
@@ -194,8 +173,8 @@ export class DriverService {
     // 3. Apply Date Filter Logic
     if (startDate && endDate) {
       query.andWhere(
-        'COALESCE(parcel.deliveredAt, parcel.assignedAt, parcel.updatedAt, parcel.createdAt) >= :startDate AND COALESCE(parcel.deliveredAt, parcel.assignedAt, parcel.updatedAt, parcel.createdAt) <= :endDate',
-        { startDate, endDate },
+        'COALESCE(parcel.deliveredAt, parcel.assignedAt, parcel.createdAt) >= :startDate AND COALESCE(parcel.deliveredAt, parcel.assignedAt, parcel.createdAt) <= :endDate',
+        { startDate: new Date(startDate), endDate: new Date(endDate) },
       );
     }
 
@@ -210,6 +189,7 @@ export class DriverService {
       .getManyAndCount();
 
     return {
+      results: result,
       result,
       total,
       page: pageNum,
@@ -241,13 +221,13 @@ export class DriverService {
       query.andWhere(
         new Brackets((qb) => {
           const searchTerm = `%${search}%`;
-          qb.where('parcel.trackingCode::text ILIKE :searchTerm', {
+          qb.where('parcel.trackingCode ILIKE :searchTerm', {
             searchTerm,
           })
-            .orWhere('parcel.receiverPhone::text ILIKE :searchTerm', {
+            .orWhere('parcel.receiverPhone ILIKE :searchTerm', {
               searchTerm,
             })
-            .orWhere('parcel.receiverAddress::text ILIKE :searchTerm', {
+            .orWhere('parcel.receiverAddress ILIKE :searchTerm', {
               searchTerm,
             });
         }),
@@ -256,8 +236,8 @@ export class DriverService {
 
     if (startDate && endDate) {
       query.andWhere(
-        'COALESCE(parcel.deliveredAt, parcel.assignedAt, parcel.updatedAt, parcel.createdAt) >= :startDate AND COALESCE(parcel.deliveredAt, parcel.assignedAt, parcel.updatedAt, parcel.createdAt) <= :endDate',
-        { startDate, endDate },
+        'COALESCE(parcel.deliveredAt, parcel.assignedAt, parcel.createdAt) >= :startDate AND COALESCE(parcel.deliveredAt, parcel.assignedAt, parcel.createdAt) <= :endDate',
+        { startDate: new Date(startDate), endDate: new Date(endDate) },
       );
     }
 

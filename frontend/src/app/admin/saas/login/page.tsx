@@ -10,7 +10,6 @@ import {
   MdLock,
   MdVisibility,
   MdVisibilityOff,
-  MdSecurity,
   MdDns,
 } from 'react-icons/md';
 import { FlagKm, FlagEn } from '@/components/ui/Flags';
@@ -569,25 +568,6 @@ export default function SaasAdminLoginPage() {
             EBS Master SaaS
           </h1>
 
-          <div
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 5,
-              padding: '3px 12px',
-              borderRadius: 20,
-              background: '#eff6ff',
-              color: '#2563eb',
-              fontSize: 11.5,
-              fontWeight: 800,
-              border: '1px solid #bfdbfe',
-              marginBottom: 6,
-            }}
-          >
-            <MdSecurity size={13} />
-            <span>Platform Super Admin</span>
-          </div>
-
           <p style={{ fontSize: 13, color: '#64748b', margin: 0, fontWeight: 500 }}>
             {tr('ផ្ទាំងចូលគ្រប់គ្រង SaaS Platform Master Admin', 'Login portal for SaaS Platform Master Admin')}
           </p>
@@ -616,7 +596,11 @@ export default function SaasAdminLoginPage() {
         )}
 
         {/* Form Inputs */}
-        <form onSubmit={handleLogin}>
+        <form onSubmit={handleLogin} autoComplete="off">
+          {/* Prevent aggressive browser auto-fill */}
+          <input type="text" name="fake_username" style={{ display: 'none' }} tabIndex={-1} autoComplete="off" />
+          <input type="password" name="fake_password" style={{ display: 'none' }} tabIndex={-1} autoComplete="new-password" />
+
           {/* Email */}
           <div style={{ marginBottom: 18 }}>
             <label
@@ -639,6 +623,10 @@ export default function SaasAdminLoginPage() {
               <input
                 type="email"
                 required
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="none"
+                spellCheck={false}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder={tr('បញ្ចូលអ៊ីមែល', 'Enter email')}
@@ -689,6 +677,7 @@ export default function SaasAdminLoginPage() {
               <input
                 type={showPassword ? 'text' : 'password'}
                 required
+                autoComplete="new-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"

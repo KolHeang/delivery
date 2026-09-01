@@ -87,6 +87,19 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
       const isRootPlatform = (hostname === 'localhost' && !detectedSubdomain) || hostname === 'ebsexpress.com' || hostname === 'www.ebsexpress.com';
 
       if (!isRootPlatform || detectedSubdomain) {
+        if (detectedSubdomain) {
+          setSubdomain(detectedSubdomain);
+          setIsTenant(true);
+          const fallbackName = detectedSubdomain.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+          setTenant({
+            id: 0,
+            companyName: fallbackName,
+            subdomain: detectedSubdomain,
+            status: 'active',
+          });
+          document.title = `${fallbackName} | Workspace`;
+        }
+
         setLoading(true);
         // Call Dynamic Domain Resolver
         const domainToResolve = detectedSubdomain || host;
@@ -107,14 +120,6 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
           });
           setIsNotFound(false);
           document.title = `${res.tenant.name} | Workspace`;
-        } else if (detectedSubdomain) {
-          setIsTenant(true);
-          setTenant(null);
-          setIsNotFound(true);
-        } else {
-          setIsTenant(false);
-          setTenant(null);
-          setIsNotFound(false);
         }
       } else {
         setIsTenant(false);

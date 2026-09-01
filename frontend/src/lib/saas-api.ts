@@ -128,6 +128,7 @@ export const saasApi = {
     planId: number;
     billingCycle: 'monthly' | 'yearly';
     couponCode?: string;
+    referralCode?: string;
     companyName: string;
     subdomain: string;
     customDomain?: string;
@@ -221,8 +222,8 @@ export const saasApi = {
     return res.data;
   },
 
-  updateSubscriptionStatus: async (id: number, status: string) => {
-    const res = await api.put(`/saas/subscriptions/${id}/status`, { status });
+  updateSubscriptionStatus: async (id: number, status: string, currentPeriodEnd?: string | Date) => {
+    const res = await api.put(`/saas/subscriptions/${id}/status`, { status, currentPeriodEnd });
     return res.data;
   },
 
@@ -334,6 +335,11 @@ export const saasApi = {
 
   deleteTenant: async (id: number) => {
     const res = await api.delete(`/saas/tenants/${id}`);
+    return res.data;
+  },
+
+  reactivateTenant: async (id: number) => {
+    const res = await api.patch(`/saas/tenants/${id}/reactivate`);
     return res.data;
   },
 

@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, IsNull } from 'typeorm';
 import { Merchant } from '../merchants/entities/merchant.entity';
 import { User } from '../users/entities/users.entity';
 import { Zone } from '../zones/entities/zone.entity';
@@ -28,8 +28,12 @@ export class SelectService {
     private readonly roleRepo: Repository<Role>,
   ) {}
 
-  async getMerchants() {
+  async getMerchants(tenantId?: number) {
+    const where: any = { active: true };
+    if (tenantId) where.tenantId = tenantId;
+
     return this.merchantRepo.find({
+      where,
       select: {
         id: true,
         name: true,
@@ -45,9 +49,12 @@ export class SelectService {
     });
   }
 
-  async getDrivers() {
+  async getDrivers(tenantId?: number) {
+    const where: any = { isDriver: true, isActive: true };
+    if (tenantId) where.tenantId = tenantId;
+
     return this.userRepo.find({
-      where: { isDriver: true, isActive: true },
+      where,
       select: {
         id: true,
         name: true,
@@ -60,9 +67,12 @@ export class SelectService {
     });
   }
 
-  async getStaff() {
+  async getStaff(tenantId?: number) {
+    const where: any = { isActive: true };
+    if (tenantId) where.tenantId = tenantId;
+
     return this.userRepo.find({
-      where: { isActive: true },
+      where,
       select: {
         id: true,
         name: true,
@@ -74,8 +84,12 @@ export class SelectService {
     });
   }
 
-  async getZones() {
+  async getZones(tenantId?: number) {
+    const where: any = { active: true };
+    if (tenantId) where.tenantId = tenantId;
+
     return this.zoneRepo.find({
+      where,
       select: {
         id: true,
         name: true,
@@ -96,9 +110,12 @@ export class SelectService {
     });
   }
 
-  async getVehicles() {
+  async getVehicles(tenantId?: number) {
+    const where: any = { status: 'active' };
+    if (tenantId) where.tenantId = tenantId;
+
     return this.vehicleRepo.find({
-      where: { status: 'active' },
+      where,
       select: {
         id: true,
         plate: true,
@@ -110,8 +127,12 @@ export class SelectService {
     });
   }
 
-  async getCustomers() {
+  async getCustomers(tenantId?: number) {
+    const where: any = {};
+    if (tenantId) where.tenantId = tenantId;
+
     return this.customerRepo.find({
+      where,
       select: {
         id: true,
         name: true,
@@ -122,8 +143,24 @@ export class SelectService {
     });
   }
 
-  async getRoles() {
+  async getRoles(tenantId?: number) {
+    if (tenantId) {
+      const tenantRoleCount = await this.roleRepo.count({ where: { tenantId } });
+      if (tenantRoleCount > 0) {
+        return this.roleRepo.find({
+          where: { tenantId },
+          select: {
+            id: true,
+            name: true,
+            description: true,
+          },
+          order: { name: 'ASC' },
+        });
+      }
+    }
+
     return this.roleRepo.find({
+      where: { tenantId: IsNull() },
       select: {
         id: true,
         name: true,
@@ -133,12 +170,12 @@ export class SelectService {
     });
   }
 
-  async getAll() {
+  async getAll(tenantId?: number) {
     const [merchants, drivers, zones, vehicles] = await Promise.all([
-      this.getMerchants(),
-      this.getDrivers(),
-      this.getZones(),
-      this.getVehicles(),
+      this.getMerchants(tenantId),
+      this.getDrivers(tenantId),
+      this.getZones(tenantId),
+      this.getVehicles(tenantId),
     ]);
     return { merchants, drivers, zones, vehicles };
   }

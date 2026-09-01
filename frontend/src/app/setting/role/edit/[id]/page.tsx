@@ -18,8 +18,25 @@ interface Role {
   id: number;
   name: string;
   description: string;
+  tenantId?: number | null;
   permissions: Permission[];
 }
+
+const PERM_GROUP_TO_PLAN_FEATURE: Record<string, string> = {
+  parcels: 'delivery',
+  orders: 'delivery',
+  zones: 'delivery',
+  merchants: 'shops',
+  users: 'staff',
+  drivers: 'staff',
+  vehicles: 'staff',
+  payments: 'payment',
+  expenses: 'accounting',
+  incomes: 'accounting',
+  reports: 'reports',
+  settings: 'settings',
+  roles: 'settings',
+};
 
 export default function EditRolePage() {
   const router = useRouter();
@@ -27,6 +44,7 @@ export default function EditRolePage() {
   const { t } = useLanguage();
 
   const [allPermissions, setAllPermissions] = useState<Permission[]>([]);
+  const [planFeatures, setPlanFeatures] = useState<Record<string, boolean> | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -42,19 +60,27 @@ export default function EditRolePage() {
     }
     const load = async () => {
       try {
-        const [pRes, rRes] = await Promise.all([
+        const [pRes, rRes, subRes] = await Promise.allSettled([
           api.get('/roles/permissions'),
-          api.get(`/roles/${params.id}`)
+          api.get(`/roles/${params.id}`),
+          api.get('/saas/subscriptions/me'),
         ]);
         
-        setAllPermissions(pRes.data);
+        if (pRes.status === 'fulfilled') {
+          setAllPermissions(pRes.value.data || []);
+        }
+        if (subRes.status === 'fulfilled' && subRes.value.data?.plan?.features) {
+          setPlanFeatures(subRes.value.data.plan.features);
+        }
         
-        const roleData: Role = rRes.data;
-        if (roleData) {
-          setRoleName(roleData.name);
-          setRoleDescription(roleData.description || '');
-          setSelectedPermissionIds(roleData.permissions.map(p => p.id));
-          setIsSystemRole(['admin', 'staff', 'driver'].includes(roleData.name));
+        if (rRes.status === 'fulfilled') {
+          const roleData: Role = rRes.value.data;
+          if (roleData) {
+            setRoleName(roleData.name);
+            setRoleDescription(roleData.description || '');
+            setSelectedPermissionIds(roleData.permissions.map(p => p.id));
+            setIsSystemRole(roleData.tenantId === null);
+          }
         }
       } catch (err) {
         console.error('Failed to load role details', err);
@@ -65,6 +91,13 @@ export default function EditRolePage() {
     };
     load();
   }, [params.id, router]);
+
+  const isCategoryAllowed = (category: string) => {
+    if (!planFeatures) return true;
+    const requiredFeature = PERM_GROUP_TO_PLAN_FEATURE[category];
+    if (!requiredFeature) return true;
+    return planFeatures[requiredFeature] !== false;
+  };
 
   const handleTogglePermission = (id: number) => {
     setSelectedPermissionIds(prev =>
@@ -113,6 +146,7 @@ export default function EditRolePage() {
     const groups: Record<string, Permission[]> = {};
     allPermissions.forEach(p => {
       const category = p.name.split('.')[0] || 'general';
+      if (!isCategoryAllowed(category)) return;
       if (!groups[category]) {
         groups[category] = [];
       }
@@ -141,13 +175,13 @@ export default function EditRolePage() {
         <div className="page-content">
           <div className="card">
             <div className="card-header">
-              <span className="card-title">🛡️ {t('editRoleForm')}</span>
+              <span className="card-title">{t('editRoleForm')}</span>
             </div>
             <div className="card-body">
               <form onSubmit={handleSave}>
                 <div className="form-row">
                   <div className="form-group">
-                    <label className="form-label">{t('roleName')} <span>*</span></label>
+                    <label className="form-label">{t('roleName')} <span style={{ color: '#ef4444' }}>*</span></label>
                     <input
                       className="form-control"
                       placeholder={t('roleNamePlaceholder')}
@@ -179,8 +213,8 @@ export default function EditRolePage() {
                       return (
                         <div key={groupName} style={{ border: '1px solid var(--border)', borderRadius: '8px', padding: '16px' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border)', paddingBottom: '8px', marginBottom: '12px' }}>
-                            <span style={{ textTransform: 'uppercase', fontWeight: 800, fontSize: '12px', color: 'var(--accent)', letterSpacing: '0.5px' }}>
-                              🔑 {t(('permGroup_' + groupName) as any) || groupName} {t('permissionsLabel')}
+                            <span style={{ textTransform: 'uppercase', fontWeight: 800, fontSize: '13px', color: 'var(--accent)', letterSpacing: '0.5px' }}>
+                              {t(('permGroup_' + groupName) as any) || groupName}
                             </span>
                             <div style={{ display: 'flex', gap: 8 }}>
                               <button

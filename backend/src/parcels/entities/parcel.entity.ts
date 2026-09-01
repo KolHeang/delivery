@@ -38,7 +38,7 @@ export class Parcel {
   @JoinColumn({ name: 'tenant_id' })
   tenant: Tenant;
 
-  @Column({ name: 'tenant_id', default: 1 })
+  @Column({ name: 'tenant_id', nullable: true })
   tenantId: number;
 
   @Column({ name: 'tracking_code', unique: true })
@@ -171,8 +171,13 @@ export class Parcel {
   @BeforeInsert()
   generateTrackingCode() {
     if (!this.trackingCode) {
-      const timestamp = Date.now().toString().slice(-8);
-      this.trackingCode = `CO${timestamp}`;
+      const today = new Date();
+      const day = String(today.getDate()).padStart(2, '0');
+      const month = String(today.getMonth() + 1).padStart(2, '0');
+      const year = today.getFullYear();
+      const rand = String(Math.floor(1000 + Math.random() * 9000));
+
+      this.trackingCode = `CO${day}${month}${year}${rand}`;
     }
   }
 }

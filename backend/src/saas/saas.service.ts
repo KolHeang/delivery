@@ -5,11 +5,12 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { Tenant } from './entities/tenant.entity';
 import { Plan } from './plans/plan.entity';
-import { Subscription } from './subscriptions/subscription.entity';
+import { Subscription, SubscriptionStatus } from './subscriptions/subscription.entity';
 import { TenantDomain } from './entities/tenant-domain.entity';
 import { SaasInvoice } from './invoices/saas-invoice.entity';
 import { User } from '../users/entities/users.entity';
 import { Role } from '../roles/entities/role.entity';
+import { Permission } from '../roles/entities/permission.entity';
 
 @Injectable()
 export class SaasService {
@@ -21,6 +22,7 @@ export class SaasService {
     @InjectRepository(SaasInvoice) private readonly invoiceRepo: Repository<SaasInvoice>,
     @InjectRepository(User) private readonly userRepo: Repository<User>,
     @InjectRepository(Role) private readonly roleRepo: Repository<Role>,
+    @InjectRepository(Permission) private readonly permissionRepo: Repository<Permission>,
     private readonly jwtService: JwtService,
   ) {}
 
@@ -120,13 +122,9 @@ export class SaasService {
     });
     await this.domainRepo.save(domain);
 
-    // 5. Create default Admin Role for this Tenant if not exists
-    let adminRole = await this.roleRepo.findOne({
-      where: [{ name: 'admin', tenantId: savedTenant.id }, { name: 'admin', tenantId: 1 }],
-    });
-    if (!adminRole) {
-      adminRole = await this.roleRepo.findOne({ where: { name: 'admin' } });
-    }
+    // 5. Auto-seed default Roles (admin, staff, driver, merchant) for this Tenant
+    const tenantRoles = await this.seedTenantDefaultRoles(savedTenant.id);
+    const adminRole = tenantRoles['admin'] || (await this.roleRepo.findOne({ where: { name: 'admin' } }));
 
     // 6. Create the First Admin User for the Tenant
     const rawPassword = dto.password || '123456';
@@ -224,8 +222,36 @@ export class SaasService {
 
   async deleteTenant(id: number) {
     const tenant = await this.getTenantById(id);
-    await this.tenantRepo.remove(tenant);
-    return { success: true };
+    tenant.status = 'suspended';
+    await this.tenantRepo.save(tenant);
+
+    // Cancel all subscriptions for this tenant
+    await this.subscriptionRepo.update({ tenantId: id }, { status: 'cancelled' as SubscriptionStatus });
+
+    // Deactivate all users under this tenant to block login
+    await this.userRepo.update({ tenantId: id }, { isActive: false });
+
+    return {
+      success: true,
+      message: 'ក្រុមហ៊ុនត្រូវបានផ្អាកដំណើរការ (Suspended) និងបានបិទគណនីបុគ្គលិកទាំងអស់ដោយសុវត្ថិភាព។',
+    };
+  }
+
+  async reactivateTenant(id: number) {
+    const tenant = await this.getTenantById(id);
+    tenant.status = 'active';
+    await this.tenantRepo.save(tenant);
+
+    // Reactivate subscription
+    await this.subscriptionRepo.update({ tenantId: id }, { status: 'active' as SubscriptionStatus });
+
+    // Reactivate users
+    await this.userRepo.update({ tenantId: id }, { isActive: true });
+
+    return {
+      success: true,
+      message: 'ក្រុមហ៊ុនត្រូវបានបើកដំណើរការឡើងវិញ (Reactivated) ដោយជោគជ័យ!',
+    };
   }
 
   // ── Subscriptions ──
@@ -267,30 +293,26 @@ export class SaasService {
       .replace(/^https?:\/\//, '')
       .replace(/\/.*$/, '');
 
-    // 1. Direct match in saas_domains (e.g. "esb-express.localhost:3000" or "delivery.esb.com")
+    const withoutPort = cleaned.split(':')[0];
+    const subdomainPrefix = withoutPort.split('.')[0];
+
+    // 1. Direct match in saas_domains (with or without port)
     let domainRecord = await this.domainRepo.findOne({
-      where: { domain: cleaned },
+      where: [{ domain: cleaned }, { domain: withoutPort }],
       relations: { tenant: { plan: true, subscriptions: { plan: true } } },
     });
 
-    // 2. Fallback: match without port (e.g. domain is "esb-express.localhost" or "esb-express.ebsexpress.com")
-    if (!domainRecord && cleaned.includes(':')) {
-      const withoutPort = cleaned.split(':')[0];
-      domainRecord = await this.domainRepo.findOne({
-        where: { domain: withoutPort },
-        relations: { tenant: { plan: true, subscriptions: { plan: true } } },
-      });
-    }
-
-    // 3. Fallback: match by subdomain prefix or tenant slug
+    // 2. Fallback: match by tenant slug or code
     let tenant: Tenant | null = null;
     if (domainRecord && domainRecord.tenant) {
       tenant = domainRecord.tenant;
     } else {
-      // Extract first subdomain segment (e.g. "esb-express" from "esb-express.localhost:3000")
-      const subdomainPrefix = cleaned.split('.')[0];
       tenant = await this.tenantRepo.findOne({
-        where: { slug: subdomainPrefix },
+        where: [
+          { slug: subdomainPrefix },
+          { slug: withoutPort },
+          { code: subdomainPrefix },
+        ],
         relations: { plan: true, domains: true, subscriptions: { plan: true } },
       });
     }
@@ -419,5 +441,84 @@ export class SaasService {
 
     await this.domainRepo.remove(target);
     return { success: true, message: 'Domain deleted successfully' };
+  }
+
+  /**
+   * Seed default roles (admin, staff, driver, merchant) with appropriate permissions for a specific tenant
+   */
+  async seedTenantDefaultRoles(tenantId: number): Promise<Record<string, Role>> {
+    const allPerms = await this.permissionRepo.find();
+
+    const roleDefinitions = [
+      {
+        name: 'admin',
+        description: 'សិទ្ធិគ្រប់គ្រងប្រព័ន្ធពេញលេញ (Full Administrator)',
+        filter: () => true, // All permissions
+      },
+      {
+        name: 'staff',
+        description: 'បុគ្គលិកប្រតិបត្តិការទូទៅ (Operations Staff)',
+        filter: (p: Permission) =>
+          !p.name.startsWith('roles.') &&
+          !p.name.startsWith('settings.role') &&
+          !p.name.startsWith('settings.activity_log'),
+      },
+      {
+        name: 'driver',
+        description: 'អ្នកដឹកជញ្ជូន (Driver Courier Access)',
+        filter: (p: Permission) =>
+          [
+            'parcels.read',
+            'parcels.update',
+            'drivers.read',
+            'vehicles.read',
+            'zones.read',
+            'reports.view',
+            'reports.operation_driver',
+            'reports.operation_driver_daily',
+          ].includes(p.name),
+      },
+      {
+        name: 'merchant',
+        description: 'ហាង និងអ្នកផ្ញើទំនិញ (Merchant Portal Access)',
+        filter: (p: Permission) =>
+          [
+            'parcels.create',
+            'parcels.read',
+            'merchants.read',
+            'reports.view',
+            'reports.operation_merchant',
+            'reports.operation_merchant_daily',
+          ].includes(p.name),
+      },
+    ];
+
+    const results: Record<string, Role> = {};
+
+    for (const def of roleDefinitions) {
+      let role = await this.roleRepo.findOne({
+        where: { name: def.name, tenantId },
+        relations: { permissions: true },
+      });
+
+      const matchedPerms = allPerms.filter(def.filter);
+
+      if (!role) {
+        role = this.roleRepo.create({
+          name: def.name,
+          description: def.description,
+          tenantId,
+          permissions: matchedPerms,
+        });
+        role = await this.roleRepo.save(role);
+      } else if (!role.permissions || role.permissions.length === 0) {
+        role.permissions = matchedPerms;
+        role = await this.roleRepo.save(role);
+      }
+
+      results[def.name] = role;
+    }
+
+    return results;
   }
 }

@@ -97,7 +97,7 @@ export class User {
   tenant: Tenant;
 
   @Column({ name: 'tenant_id', nullable: true })
-  tenantId: number;
+  tenantId: number | null;
 
   @Column({ name: 'tenant_subdomain', nullable: true })
   tenantSubdomain: string;

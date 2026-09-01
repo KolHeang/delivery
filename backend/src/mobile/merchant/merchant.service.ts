@@ -76,41 +76,23 @@ export class MerchantService {
   }
 
   async generateNextTrackingCode(): Promise<string> {
+    const today = new Date();
+    const day = String(today.getDate()).padStart(2, '0');
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const year = today.getFullYear();
+    const datePrefix = `CO${day}${month}${year}`;
+
     try {
       const result = await this.parcelRepo.query("SELECT nextval('tracking_code_seq') as nextval");
       const nextval = parseInt(result[0].nextval, 10);
-      return `CO${String(nextval).padStart(8, '0')}`;
+      const seq = String(nextval % 100000).padStart(4, '0');
+      return `${datePrefix}${seq}`;
     } catch (err) {
-      await this.parcelRepo.query("CREATE SEQUENCE IF NOT EXISTS tracking_code_seq START WITH 30220626");
-      const lastParcels = await this.parcelRepo.find({
-        where: [
-          { trackingCode: Like('CO%') },
-          { trackingCode: Like('T%') },
-        ],
-        order: { id: 'DESC' },
-        take: 100,
-      });
-
-      let maxNumber = 30220625;
-      for (const parcel of lastParcels) {
-        if (parcel.trackingCode) {
-          const match = parcel.trackingCode.match(/^CO(\d+)$/);
-          if (match) {
-            const num = parseInt(match[1], 10);
-            if (num > maxNumber) {
-              maxNumber = num;
-            }
-          }
-        }
-      }
-
-      if (maxNumber > 0) {
-        await this.parcelRepo.query(`SELECT setval('tracking_code_seq', ${maxNumber})`);
-      }
-
-      const result = await this.parcelRepo.query("SELECT nextval('tracking_code_seq') as nextval");
-      const nextval = parseInt(result[0].nextval, 10);
-      return `CO${String(nextval).padStart(8, '0')}`;
+      try {
+        await this.parcelRepo.query("CREATE SEQUENCE IF NOT EXISTS tracking_code_seq START WITH 1");
+      } catch {}
+      const rand = String(Math.floor(1000 + Math.random() * 9000));
+      return `${datePrefix}${rand}`;
     }
   }
 

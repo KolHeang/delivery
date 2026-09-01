@@ -30,9 +30,9 @@ export default function VehiclesPage() {
       const r = await api.get('/vehicles', {
         params: { page: currentPage, limit: pageSize }
       });
-      if (r.data && r.data.result !== undefined) {
-        setItems(r.data.result);
-        setTotalItems(r.data.total);
+      if (r.data && (r.data.results !== undefined || r.data.result !== undefined)) {
+        setItems(r.data.results || r.data.result || []);
+        setTotalItems(r.data.total ?? 0);
       } else {
         setItems(Array.isArray(r.data) ? r.data : []);
         setTotalItems(Array.isArray(r.data) ? r.data.length : 0);

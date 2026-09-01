@@ -17,7 +17,7 @@ import {
   AssignPickupDto,
   AssignDeliveryDto,
 } from './dto/parcel.dto';
-import { paginateRepo } from '../config/pagination';
+import { PaginatedResult } from '../interface/pagination.interface';
 
 @Injectable()
 export class ParcelsService {
@@ -27,36 +27,15 @@ export class ParcelsService {
     @InjectRepository(PickupRequest) private readonly pickupRequestRepo: Repository<PickupRequest>,
   ) { }
 
-  private get listRelations(): any {
-    return {
-      merchant: true,
-      customer: true,
-      driver: true,
-      pickupDriver: true,
-      zone: true,
-    };
-  }
 
-  private get detailRelations(): any {
-    return {
-      merchant: true,
-      customer: true,
-      driver: { zone: true, vehicle: true },
-      pickupDriver: true,
-      creator: true,
-      updater: true,
-      zone: true,
-      events: true,
-    };
-  }
 
-  private get relations(): any {
-    return this.detailRelations;
-  }
-
-  async addEvent(parcelId: number, status: string, note?: string): Promise<void> {
+  private async addEvent(parcelId: number, status: string, note?: string) {
     try {
-      const event = this.eventRepo.create({ parcelId, status, note });
+      const event = this.eventRepo.create({
+        parcelId,
+        status,
+        note,
+      });
       await this.eventRepo.save(event);
     } catch (err) {
       console.error(`Failed to add event for parcel #${parcelId} and status ${status}`, err);
@@ -74,72 +53,133 @@ export class ParcelsService {
     merchantPaymentStatus?: string;
     startDate?: string;
     endDate?: string;
-  }): Promise<any> {
-    const baseWhere: any = {};
-    if (query?.status) baseWhere.status = query.status;
-    if (query?.driverId) baseWhere.driverId = query.driverId;
-    if (query?.merchantId) baseWhere.merchantId = query.merchantId;
-    if (query?.driverPaymentStatus)
-      baseWhere.driverPaymentStatus = query.driverPaymentStatus;
-    if (query?.merchantPaymentStatus)
-      baseWhere.merchantPaymentStatus = query.merchantPaymentStatus;
+    tenantId?: number;
+  }): Promise<PaginatedResult<Parcel>> {
+    const qb = this.repo
+      .createQueryBuilder('parcel')
+      .leftJoinAndSelect('parcel.merchant', 'merchant')
+      .leftJoinAndSelect('parcel.driver', 'driver')
+      .leftJoinAndSelect('parcel.pickupDriver', 'pickupDriver')
+      .leftJoinAndSelect('parcel.customer', 'customer')
+      .leftJoinAndSelect('parcel.zone', 'zone')
+      .orderBy('parcel.createdAt', 'DESC');
 
-    if (query?.startDate && query?.endDate) {
-      const start = new Date(query.startDate);
-      start.setHours(0, 0, 0, 0);
-      const end = new Date(query.endDate);
-      end.setHours(23, 59, 59, 999);
-      baseWhere.createdAt = Between(start, end);
-    } else if (query?.startDate) {
-      const start = new Date(query.startDate);
-      start.setHours(0, 0, 0, 0);
-      baseWhere.createdAt = MoreThanOrEqual(start);
-    } else if (query?.endDate) {
-      const end = new Date(query.endDate);
-      end.setHours(23, 59, 59, 999);
-      baseWhere.createdAt = LessThanOrEqual(end);
+    if (query?.tenantId) {
+      qb.andWhere('parcel.tenantId = :tenantId', { tenantId: query.tenantId });
+    }
+    if (query?.status) {
+      qb.andWhere('parcel.status = :status', { status: query.status });
+    }
+    if (query?.driverId) {
+      qb.andWhere('parcel.driverId = :driverId', { driverId: query.driverId });
+    }
+    if (query?.merchantId) {
+      qb.andWhere('parcel.merchantId = :merchantId', { merchantId: query.merchantId });
+    }
+    if (query?.driverPaymentStatus) {
+      qb.andWhere('parcel.driverPaymentStatus = :driverPaymentStatus', { driverPaymentStatus: query.driverPaymentStatus });
+    }
+    if (query?.merchantPaymentStatus) {
+      qb.andWhere('parcel.merchantPaymentStatus = :merchantPaymentStatus', { merchantPaymentStatus: query.merchantPaymentStatus });
     }
 
-    let where: any = baseWhere;
+    const parseFlexibleDate = (dateStr?: string | Date | null): Date | null => {
+      if (!dateStr) return null;
+      if (dateStr instanceof Date) return isNaN(dateStr.getTime()) ? null : dateStr;
+      const str = String(dateStr).trim();
+      const ddmmyyyy = str.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/);
+      if (ddmmyyyy) {
+        const day = parseInt(ddmmyyyy[1], 10);
+        const month = parseInt(ddmmyyyy[2], 10) - 1;
+        const year = parseInt(ddmmyyyy[3], 10);
+        const d = new Date(year, month, day);
+        return isNaN(d.getTime()) ? null : d;
+      }
+      const yyyymmdd = str.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
+      if (yyyymmdd) {
+        const year = parseInt(yyyymmdd[1], 10);
+        const month = parseInt(yyyymmdd[2], 10) - 1;
+        const day = parseInt(yyyymmdd[3], 10);
+        const d = new Date(year, month, day);
+        return isNaN(d.getTime()) ? null : d;
+      }
+      const d = new Date(str);
+      return isNaN(d.getTime()) ? null : d;
+    };
+
+    const start = parseFlexibleDate(query?.startDate);
+    const end = parseFlexibleDate(query?.endDate);
+
+    if (start && end) {
+      start.setHours(0, 0, 0, 0);
+      end.setHours(23, 59, 59, 999);
+      qb.andWhere('parcel.createdAt BETWEEN :start AND :end', { start, end });
+    } else if (start) {
+      start.setHours(0, 0, 0, 0);
+      qb.andWhere('parcel.createdAt >= :start', { start });
+    } else if (end) {
+      end.setHours(23, 59, 59, 999);
+      qb.andWhere('parcel.createdAt <= :end', { end });
+    }
+
     if (query?.search) {
-      const term = ILike(`%${query.search}%`);
-      where = [
-        { ...baseWhere, trackingCode: term },
-        { ...baseWhere, receiverName: term },
-        { ...baseWhere, receiverPhone: term },
-        { ...baseWhere, receiverAddress: term },
-        { ...baseWhere, merchant: { name: term } },
-        { ...baseWhere, driver: { name: term } },
-      ];
+      const term = `%${query.search.trim()}%`;
+      qb.andWhere(
+        '(parcel.trackingCode ILIKE :term OR parcel.receiverName ILIKE :term OR parcel.receiverPhone ILIKE :term OR parcel.receiverAddress ILIKE :term OR merchant.name ILIKE :term OR driver.name ILIKE :term)',
+        { term },
+      );
     }
 
-    return paginateRepo(this.repo, query || {}, {
-      where,
-      relations: this.listRelations,
-      order: { createdAt: 'DESC' },
-    });
+    const page = query?.page ? Math.max(1, Number(query.page)) : 1;
+    const limit = query?.limit ? Math.max(1, Number(query.limit)) : 10;
+    const skip = (page - 1) * limit;
+
+    qb.skip(skip).take(limit);
+
+    const [results, total] = await qb.getManyAndCount();
+
+    return {
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+      results,
+    };
   }
 
   async findOne(id: number): Promise<Parcel> {
-    const item = await this.repo.findOne({
-      where: { id },
-      relations: this.relations,
-    });
+    const item = await this.repo
+      .createQueryBuilder('parcel')
+      .leftJoinAndSelect('parcel.merchant', 'merchant')
+      .leftJoinAndSelect('parcel.driver', 'driver')
+      .leftJoinAndSelect('parcel.pickupDriver', 'pickupDriver')
+      .leftJoinAndSelect('parcel.customer', 'customer')
+      .leftJoinAndSelect('parcel.zone', 'zone')
+      .leftJoinAndSelect('parcel.events', 'events')
+      .where('parcel.id = :id', { id })
+      .getOne();
+
     if (!item) throw new NotFoundException(`Parcel #${id} not found`);
     return item;
   }
 
   async findByTracking(codeOrPhone: string): Promise<Parcel> {
     const term = codeOrPhone.trim();
-    const item = await this.repo.findOne({
-      where: [
-        { trackingCode: term },
-        { receiverPhone: Like(`%${term}%`) },
-        { merchant: { phone: Like(`%${term}%`) } },
-      ],
-      relations: this.relations,
-      order: { createdAt: 'DESC' }
-    });
+    const item = await this.repo
+      .createQueryBuilder('parcel')
+      .leftJoinAndSelect('parcel.merchant', 'merchant')
+      .leftJoinAndSelect('parcel.driver', 'driver')
+      .leftJoinAndSelect('parcel.pickupDriver', 'pickupDriver')
+      .leftJoinAndSelect('parcel.customer', 'customer')
+      .leftJoinAndSelect('parcel.zone', 'zone')
+      .leftJoinAndSelect('parcel.events', 'events')
+      .where(
+        '(parcel.trackingCode = :term OR parcel.receiverPhone ILIKE :phoneTerm OR merchant.phone ILIKE :phoneTerm)',
+        { term, phoneTerm: `%${term}%` },
+      )
+      .orderBy('parcel.createdAt', 'DESC')
+      .getOne();
+
     if (!item)
       throw new NotFoundException(
         `Parcel with tracking or phone ${codeOrPhone} not found`,
@@ -148,84 +188,90 @@ export class ParcelsService {
   }
 
   async findByPhone(phone: string): Promise<Parcel[]> {
-    return this.repo.find({
-      where: { receiverPhone: phone },
-      relations: this.relations,
-      order: { createdAt: 'DESC' },
-    });
+    return this.repo
+      .createQueryBuilder('parcel')
+      .leftJoinAndSelect('parcel.merchant', 'merchant')
+      .leftJoinAndSelect('parcel.driver', 'driver')
+      .leftJoinAndSelect('parcel.pickupDriver', 'pickupDriver')
+      .leftJoinAndSelect('parcel.customer', 'customer')
+      .leftJoinAndSelect('parcel.zone', 'zone')
+      .where('parcel.receiverPhone = :phone', { phone })
+      .orderBy('parcel.createdAt', 'DESC')
+      .getMany();
   }
 
   /** Pending parcels with no driver assigned (used by Assign Delivery page for direct flow) */
-  async findUnassigned(): Promise<Parcel[]> {
-    return this.repo
+  async findUnassigned(tenantId?: number): Promise<Parcel[]> {
+    const qb = this.repo
       .createQueryBuilder('parcel')
       .leftJoinAndSelect('parcel.merchant', 'merchant')
       .leftJoinAndSelect('parcel.customer', 'customer')
       .leftJoinAndSelect('parcel.zone', 'zone')
       .where('parcel.driverId IS NULL')
       .andWhere("parcel.status = 'pending'")
-      .orderBy('parcel.createdAt', 'DESC')
-      .getMany();
+      .orderBy('parcel.createdAt', 'DESC');
+
+    if (tenantId) {
+      qb.andWhere('parcel.tenantId = :tenantId', { tenantId });
+    }
+    return qb.getMany();
   }
 
   /** Pending parcels waiting for a pickup driver (via-warehouse flow) */
-  async findPendingForPickup(): Promise<Parcel[]> {
-    return this.repo
+  async findPendingForPickup(tenantId?: number): Promise<Parcel[]> {
+    const qb = this.repo
       .createQueryBuilder('parcel')
       .leftJoinAndSelect('parcel.merchant', 'merchant')
       .leftJoinAndSelect('parcel.customer', 'customer')
       .leftJoinAndSelect('parcel.zone', 'zone')
       .where('parcel.pickupDriverId IS NULL')
       .andWhere("parcel.status = 'pending'")
-      .orderBy('parcel.createdAt', 'DESC')
-      .getMany();
+      .orderBy('parcel.createdAt', 'DESC');
+
+    if (tenantId) {
+      qb.andWhere('parcel.tenantId = :tenantId', { tenantId });
+    }
+    return qb.getMany();
   }
 
   /** Parcels that have arrived at the warehouse, waiting for delivery assignment (includes already-assigned for reassignment) */
-  async findInWarehouse(): Promise<Parcel[]> {
-    return this.repo.find({
-      where: { status: In(['in-warehouse', 'pending', 'assigned', 'failed']) },
-      relations: this.relations,
-      order: { id: 'DESC' },
-    });
+  async findInWarehouse(tenantId?: number): Promise<Parcel[]> {
+    const qb = this.repo
+      .createQueryBuilder('parcel')
+      .leftJoinAndSelect('parcel.merchant', 'merchant')
+      .leftJoinAndSelect('parcel.driver', 'driver')
+      .leftJoinAndSelect('parcel.pickupDriver', 'pickupDriver')
+      .leftJoinAndSelect('parcel.customer', 'customer')
+      .leftJoinAndSelect('parcel.zone', 'zone')
+      .where('parcel.status IN (:...statuses)', {
+        statuses: ['in-warehouse', 'pending', 'assigned', 'failed'],
+      })
+      .orderBy('parcel.id', 'DESC');
+
+    if (tenantId) {
+      qb.andWhere('parcel.tenantId = :tenantId', { tenantId });
+    }
+    return qb.getMany();
   }
 
   async generateNextTrackingCode(): Promise<string> {
+    const today = new Date();
+    const day = String(today.getDate()).padStart(2, '0');
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const year = today.getFullYear();
+    const datePrefix = `CO${day}${month}${year}`;
+
     try {
       const result = await this.repo.query("SELECT nextval('tracking_code_seq') as nextval");
       const nextval = parseInt(result[0].nextval, 10);
-      return `CO${String(nextval).padStart(8, '0')}`;
+      const seq = String(nextval % 100000).padStart(4, '0');
+      return `${datePrefix}${seq}`;
     } catch (err) {
-      await this.repo.query("CREATE SEQUENCE IF NOT EXISTS tracking_code_seq START WITH 30220626");
-      const lastParcels = await this.repo.find({
-        where: [
-          { trackingCode: Like('CO%') },
-          { trackingCode: Like('T%') },
-        ],
-        order: { id: 'DESC' },
-        take: 100,
-      });
-
-      let maxNumber = 30220625;
-      for (const parcel of lastParcels) {
-        if (parcel.trackingCode) {
-          const match = parcel.trackingCode.match(/^CO(\d+)$/);
-          if (match) {
-            const num = parseInt(match[1], 10);
-            if (num > maxNumber) {
-              maxNumber = num;
-            }
-          }
-        }
-      }
-
-      if (maxNumber > 0) {
-        await this.repo.query(`SELECT setval('tracking_code_seq', ${maxNumber})`);
-      }
-
-      const result = await this.repo.query("SELECT nextval('tracking_code_seq') as nextval");
-      const nextval = parseInt(result[0].nextval, 10);
-      return `CO${String(nextval).padStart(8, '0')}`;
+      try {
+        await this.repo.query("CREATE SEQUENCE IF NOT EXISTS tracking_code_seq START WITH 1");
+      } catch { }
+      const rand = String(Math.floor(1000 + Math.random() * 9000));
+      return `${datePrefix}${rand}`;
     }
   }
 
@@ -391,24 +437,26 @@ export class ParcelsService {
     return { message: 'Parcel deleted successfully' };
   }
 
-  async getStats() {
-    const total = await this.repo.count();
-    const pending = await this.repo.count({ where: { status: 'pending' } });
-    const inWarehouse = await this.repo.count({ where: { status: 'in-warehouse' } });
-    const assigned = await this.repo.count({ where: { status: 'assigned' } });
-    const pickedUp = await this.repo.count({ where: { status: 'picked-up' } });
+  async getStats(tenantId?: number) {
+    const tenantWhere: any = tenantId ? { tenantId } : {};
+    const total = await this.repo.count({ where: tenantWhere });
+    const pending = await this.repo.count({ where: { ...tenantWhere, status: 'pending' } });
+    const inWarehouse = await this.repo.count({ where: { ...tenantWhere, status: 'in-warehouse' } });
+    const assigned = await this.repo.count({ where: { ...tenantWhere, status: 'assigned' } });
+    const pickedUp = await this.repo.count({ where: { ...tenantWhere, status: 'picked-up' } });
     const inTransit = await this.repo.count({
-      where: { status: 'in-transit' },
+      where: { ...tenantWhere, status: 'in-transit' },
     });
-    const delivered = await this.repo.count({ where: { status: 'delivered' } });
-    const failed = await this.repo.count({ where: { status: 'failed' } });
-    const returned = await this.repo.count({ where: { status: 'returned' } });
+    const delivered = await this.repo.count({ where: { ...tenantWhere, status: 'delivered' } });
+    const failed = await this.repo.count({ where: { ...tenantWhere, status: 'failed' } });
+    const returned = await this.repo.count({ where: { ...tenantWhere, status: 'returned' } });
 
-    const revenue = await this.repo
+    const revQb = this.repo
       .createQueryBuilder('parcel')
       .select('SUM(parcel.deliveryFee)', 'total')
-      .where("parcel.status = 'delivered'")
-      .getRawOne();
+      .where("parcel.status = 'delivered'");
+    if (tenantId) revQb.andWhere('parcel.tenantId = :tenantId', { tenantId });
+    const revenue = await revQb.getRawOne();
 
     return {
       total,
@@ -424,10 +472,11 @@ export class ParcelsService {
     };
   }
 
-  async findAllPickupRequests(query?: { status?: string; merchantId?: number }) {
+  async findAllPickupRequests(query?: { status?: string; merchantId?: number; tenantId?: number }) {
     const where: any = {};
     if (query?.status) where.status = query.status;
     if (query?.merchantId) where.merchantId = query.merchantId;
+    if (query?.tenantId) where.tenantId = query.tenantId;
     return this.pickupRequestRepo.find({
       where,
       relations: { merchant: true, pickupDriver: true, parcels: true },

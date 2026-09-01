@@ -60,8 +60,8 @@ export default function AssignDeliveryPage() {
         api.get('/parcels/in-warehouse'),
         api.get('/drivers/available'),
       ]);
-      setUnassigned(orders.data);
-      setDrivers(drvs.data);
+      setUnassigned(Array.isArray(orders.data) ? orders.data : (orders.data?.results || orders.data?.result || []));
+      setDrivers(Array.isArray(drvs.data) ? drvs.data : (drvs.data?.results || drvs.data?.result || []));
     } catch {}
     setLoading(false);
   }, []);
@@ -624,11 +624,11 @@ export default function AssignDeliveryPage() {
                             </div>
                             <span style={{
                               fontSize: 11, padding: '2px 8px', borderRadius: 999, fontWeight: 600,
-                              background: d.status === 'available' ? '#dcfce7' : '#fef3c7',
-                              color: d.status === 'available' ? '#16a34a' : '#d97706',
+                              background: (d.isActive !== false && d.status !== 'busy') ? '#dcfce7' : '#fef3c7',
+                              color: (d.isActive !== false && d.status !== 'busy') ? '#16a34a' : '#d97706',
                               flexShrink: 0
                             }}>
-                              {d.status === 'available' ? (lang === 'km' ? 'ទំនេរ' : 'Available') : (lang === 'km' ? 'ជាប់រវល់' : 'Busy')}
+                              {(d.isActive !== false && d.status !== 'busy') ? (lang === 'km' ? 'ទំនេរ' : 'Available') : (lang === 'km' ? 'ជាប់រវល់' : 'Busy')}
                             </span>
                           </div>
                         );

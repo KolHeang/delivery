@@ -34,6 +34,14 @@ import { LogActivity } from '../activity-logs/activity.decorator';
 export class ParcelsController {
   constructor(private readonly parcelsService: ParcelsService) { }
 
+  private getEffectiveTenantId(req: any): number | undefined {
+    return req?.user?.tenantId
+      ? +req.user.tenantId
+      : req?.headers?.['x-tenant-id']
+      ? +req.headers['x-tenant-id']
+      : undefined;
+  }
+
   @Get()
   @RequirePermissions('parcels.read')
   @ApiQuery({ name: 'page', required: false })
@@ -47,6 +55,7 @@ export class ParcelsController {
   @ApiQuery({ name: 'startDate', required: false })
   @ApiQuery({ name: 'endDate', required: false })
   findAll(
+    @Request() req: any,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
     @Query('search') search?: string,
@@ -69,34 +78,35 @@ export class ParcelsController {
       merchantPaymentStatus,
       startDate,
       endDate,
+      tenantId: this.getEffectiveTenantId(req),
     });
   }
 
   /** Pending parcels with no driver — for direct delivery */
   @Get('unassigned')
   @RequirePermissions('parcels.read')
-  findUnassigned() {
-    return this.parcelsService.findUnassigned();
+  findUnassigned(@Request() req: any) {
+    return this.parcelsService.findUnassigned(this.getEffectiveTenantId(req));
   }
 
   /** Pending parcels waiting for pickup driver */
   @Get('pending-pickup')
   @RequirePermissions('parcels.read')
-  findPendingForPickup() {
-    return this.parcelsService.findPendingForPickup();
+  findPendingForPickup(@Request() req: any) {
+    return this.parcelsService.findPendingForPickup(this.getEffectiveTenantId(req));
   }
 
   /** Parcels at warehouse waiting for delivery assignment */
   @Get('in-warehouse')
   @RequirePermissions('parcels.read')
-  findInWarehouse() {
-    return this.parcelsService.findInWarehouse();
+  findInWarehouse(@Request() req: any) {
+    return this.parcelsService.findInWarehouse(this.getEffectiveTenantId(req));
   }
 
   @Get('stats')
   @RequirePermissions('parcels.read')
-  getStats() {
-    return this.parcelsService.getStats();
+  getStats(@Request() req: any) {
+    return this.parcelsService.getStats(this.getEffectiveTenantId(req));
   }
 
   @Get('tracking/:code')
@@ -115,12 +125,14 @@ export class ParcelsController {
   @Get('pickup-requests')
   @RequirePermissions('parcels.read')
   findAllPickupRequests(
+    @Request() req: any,
     @Query('status') status?: string,
     @Query('merchantId') merchantId?: string,
   ) {
     return this.parcelsService.findAllPickupRequests({
       status,
       merchantId: merchantId ? +merchantId : undefined,
+      tenantId: this.getEffectiveTenantId(req),
     });
   }
 
@@ -169,6 +181,9 @@ export class ParcelsController {
   create(@Body() dto: CreateParcelDto, @Request() req: any) {
     if (!dto.createdById && req?.user?.id) {
       dto.createdById = req.user.id;
+    }
+    if (req?.user?.tenantId) {
+      dto.tenantId = req.user.tenantId;
     }
     return this.parcelsService.create(dto);
   }

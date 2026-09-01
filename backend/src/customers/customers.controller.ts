@@ -6,6 +6,7 @@ import {
   Delete,
   Param,
   Body,
+  Req,
   UseGuards,
   ParseIntPipe,
   Query,
@@ -26,17 +27,22 @@ export class CustomersController {
     @Query('page') page?: string,
     @Query('limit') limit?: string,
     @Query('search') search?: string,
+    @Req() req?: any,
   ) {
+    const tenantId = req?.user?.tenantId;
     return this.customersService.findAll({
       page: page ? +page : undefined,
       limit: limit ? +limit : undefined,
       search,
-    });
+    }, tenantId);
   }
   @Get(':id') findOne(@Param('id', ParseIntPipe) id: number) {
     return this.customersService.findOne(id);
   }
-  @Post() create(@Body() dto: CreateCustomerDto) {
+  @Post() create(@Body() dto: CreateCustomerDto, @Req() req?: any) {
+    if (req?.user?.tenantId) {
+      dto.tenantId = req.user.tenantId;
+    }
     return this.customersService.create(dto);
   }
   @Patch(':id') update(

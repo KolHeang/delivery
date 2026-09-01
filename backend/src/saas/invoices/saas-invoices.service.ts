@@ -120,6 +120,15 @@ export class SaasInvoicesService {
       invoice.paidAt = new Date();
       if (invoice.subscription) {
         invoice.subscription.status = 'active';
+        const now = new Date();
+        invoice.subscription.currentPeriodStart = now;
+        const nextEnd = new Date(now);
+        if (invoice.subscription.billingCycle === 'yearly') {
+          nextEnd.setFullYear(nextEnd.getFullYear() + 1);
+        } else {
+          nextEnd.setMonth(nextEnd.getMonth() + 1);
+        }
+        invoice.subscription.currentPeriodEnd = nextEnd;
         await this.invoiceRepo.manager.save(invoice.subscription);
       }
     }

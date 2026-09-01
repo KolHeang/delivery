@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Query,
+  Req,
   UseGuards,
   ParseIntPipe,
 } from '@nestjs/common';
@@ -18,32 +19,37 @@ export class SelectController {
 
   @Get('all')
   @ApiOperation({ summary: 'Get all common select options in a single call' })
-  getAll() {
-    return this.selectService.getAll();
+  getAll(@Req() req: any) {
+    const tenantId = req.user?.tenantId;
+    return this.selectService.getAll(tenantId);
   }
 
   @Get('merchants')
   @ApiOperation({ summary: 'Get lightweight merchants list for dropdown' })
-  getMerchants() {
-    return this.selectService.getMerchants();
+  getMerchants(@Req() req: any) {
+    const tenantId = req.user?.tenantId;
+    return this.selectService.getMerchants(tenantId);
   }
 
   @Get('drivers')
   @ApiOperation({ summary: 'Get active drivers list for dropdown' })
-  getDrivers() {
-    return this.selectService.getDrivers();
+  getDrivers(@Req() req: any) {
+    const tenantId = req.user?.tenantId;
+    return this.selectService.getDrivers(tenantId);
   }
 
   @Get('staff')
   @ApiOperation({ summary: 'Get staff list for dropdown' })
-  getStaff() {
-    return this.selectService.getStaff();
+  getStaff(@Req() req: any) {
+    const tenantId = req.user?.tenantId;
+    return this.selectService.getStaff(tenantId);
   }
 
   @Get('zones')
   @ApiOperation({ summary: 'Get zones list for dropdown' })
-  getZones() {
-    return this.selectService.getZones();
+  getZones(@Req() req: any) {
+    const tenantId = req.user?.tenantId;
+    return this.selectService.getZones(tenantId);
   }
 
   @Get('subzones')
@@ -55,19 +61,22 @@ export class SelectController {
 
   @Get('vehicles')
   @ApiOperation({ summary: 'Get active vehicles list for dropdown' })
-  getVehicles() {
-    return this.selectService.getVehicles();
+  getVehicles(@Req() req: any) {
+    const tenantId = req.user?.tenantId;
+    return this.selectService.getVehicles(tenantId);
   }
 
   @Get('customers')
   @ApiOperation({ summary: 'Get customers list for dropdown' })
-  getCustomers() {
-    return this.selectService.getCustomers();
+  getCustomers(@Req() req: any) {
+    const tenantId = req.user?.tenantId;
+    return this.selectService.getCustomers(tenantId);
   }
 
   @Get('roles')
   @ApiOperation({ summary: 'Get roles list for dropdown' })
-  getRoles() {
-    return this.selectService.getRoles();
+  getRoles(@Req() req: any) {
+    const tenantId = req.user?.tenantId;
+    return this.selectService.getRoles(tenantId);
   }
 }

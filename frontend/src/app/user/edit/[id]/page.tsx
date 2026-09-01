@@ -54,7 +54,11 @@ export default function EditStaffPage() {
         ]);
         setZones(Array.isArray(z.data) ? z.data : (z.data?.result || []));
         setVehicles(Array.isArray(v.data) ? v.data : (v.data?.result || []));
-        setRoles(Array.isArray(r.data) ? r.data : (r.data?.result || []));
+        const rawRoles = Array.isArray(r.data) ? r.data : (r.data?.result || []);
+        const uniqueRoles = Array.from(
+          new Map(rawRoles.map((item: any) => [item.name.toLowerCase(), item])).values()
+        );
+        setRoles(uniqueRoles);
 
         const i = userRes.data;
         if (i) {

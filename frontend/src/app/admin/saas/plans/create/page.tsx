@@ -15,6 +15,16 @@ import {
   MdAttachMoney,
   MdLogout,
   MdKeyboardArrowDown,
+  MdBarChart,
+  MdLocalShipping,
+  MdStorefront,
+  MdPeople,
+  MdAccountBalanceWallet,
+  MdReceipt,
+  MdSettings,
+  MdLanguage,
+  MdNotifications,
+  MdVpnKey,
 } from 'react-icons/md';
 
 export default function CreatePlanPage() {
@@ -36,6 +46,20 @@ export default function CreatePlanPage() {
     maxVehicles: 15,
     isPopular: false,
     isActive: true,
+    features: {
+      dashboard: true,
+      summary: true,
+      delivery: true,
+      shops: true,
+      staff: true,
+      payment: true,
+      accounting: true,
+      reports: true,
+      settings: true,
+      customDomain: false,
+      telegramBot: true,
+      apiAccess: false,
+    },
   });
 
   useEffect(() => {
@@ -548,6 +572,169 @@ export default function CreatePlanPage() {
                       value={planForm.maxVehicles}
                       onChange={(e) => setPlanForm({ ...planForm, maxVehicles: Number(e.target.value) })}
                     />
+                  </div>
+                </div>
+
+                {/* Feature Permissions / Module Access Controls */}
+                <div style={{ marginTop: 28, marginBottom: 20, background: '#f8fafc', padding: '20px 22px', borderRadius: 16, border: '1px solid #e2e8f0' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6, flexWrap: 'wrap', gap: 10 }}>
+                    <div>
+                      <div style={{ fontSize: 15, fontWeight: 800, color: '#0f172a' }}>
+                        សិទ្ធិ និងមុខងារម៉ូឌុល
+                      </div>
+                      <div style={{ fontSize: 12.5, color: '#64748b', marginTop: 2 }}>
+                        កំណត់សិទ្ធិបើក ឬបិទម៉ូឌុលនីមួយៗនៅលើ Sidebar សម្រាប់ក្រុមហ៊ុនជាវកញ្ចប់នេះ
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPlanForm({
+                            ...planForm,
+                            features: {
+                              dashboard: true, summary: true, delivery: true, shops: true,
+                              staff: true, payment: true, accounting: true, reports: true,
+                              settings: true, customDomain: true, telegramBot: true, apiAccess: true,
+                            },
+                          });
+                        }}
+                        style={{
+                          fontSize: 12.5,
+                          padding: '6px 14px',
+                          background: '#eff6ff',
+                          color: '#2563eb',
+                          border: '1px solid #bfdbfe',
+                          borderRadius: 8,
+                          cursor: 'pointer',
+                          fontWeight: 700,
+                          transition: 'all 0.15s ease',
+                        }}
+                      >
+                        ✓ ជ្រើសទាំងអស់
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPlanForm({
+                            ...planForm,
+                            features: {
+                              dashboard: true, summary: false, delivery: true, shops: true,
+                              staff: false, payment: false, accounting: false, reports: false,
+                              settings: false, customDomain: false, telegramBot: false, apiAccess: false,
+                            },
+                          });
+                        }}
+                        style={{
+                          fontSize: 12.5,
+                          padding: '6px 14px',
+                          background: '#ffffff',
+                          color: '#64748b',
+                          border: '1px solid #cbd5e1',
+                          borderRadius: 8,
+                          cursor: 'pointer',
+                          fontWeight: 600,
+                          transition: 'all 0.15s ease',
+                        }}
+                      >
+                        ✕ មូលដ្ឋាន
+                      </button>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 12, marginTop: 16 }}>
+                    {[
+                      { key: 'dashboard', icon: MdDashboard, label: 'ផ្ទាំងគ្រប់គ្រង', desc: 'ទិដ្ឋភាពទូទៅនៃប្រព័ន្ធ ស្ថិតិកញ្ចប់ និងក្រាហ្វ', color: '#2563eb', bg: '#eff6ff' },
+                      { key: 'summary', icon: MdBarChart, label: 'តារាងសង្ខេប', desc: 'សង្ខេបហាង សង្ខេបការដឹក និងសង្ខេបការទៅយក', color: '#7c3aed', bg: '#f5f3ff' },
+                      { key: 'delivery', icon: MdLocalShipping, label: 'គ្រប់គ្រងការដឹក', desc: 'កត់ត្រាទិន្នន័យ បញ្ជីដឹក វិក្កយបត្រ ទទួលកញ្ចប់ ចែកអ្នកដឹក', color: '#059669', bg: '#ecfdf5' },
+                      { key: 'shops', icon: MdStorefront, label: 'គ្រប់គ្រងហាង', desc: 'បញ្ជីហាងទំនិញ ព័ត៌មានហាង និងកម្រៃសេវាដឹក', color: '#d97706', bg: '#fffbeb' },
+                      { key: 'staff', icon: MdPeople, label: 'គ្រប់គ្រងអ្នកប្រើប្រាស់', desc: 'បញ្ជីអ្នកប្រើប្រាស់ អ្នកគ្រប់គ្រង បុគ្គលិក និងអ្នកដឹក', color: '#4f46e5', bg: '#eef2ff' },
+                      { key: 'payment', icon: MdAccountBalanceWallet, label: 'ការទូទាត់ប្រាក់', desc: 'ទូទាត់ប្រាក់ជាមួយអ្នកដឹក និងទូទាត់ប្រាក់ជាមួយហាង', color: '#0d9488', bg: '#f0fdfa' },
+                      { key: 'accounting', icon: MdReceipt, label: 'គណនេយ្យ', desc: 'បញ្ជីចំណាយ បញ្ជីចំណូល ប្រភេទចំណូល និងក្រុមចំណាយ', color: '#0284c7', bg: '#f0f9ff' },
+                      { key: 'reports', icon: MdBarChart, label: 'របាយការណ៍', desc: 'របាយការណ៍ហិរញ្ញវត្ថុ និងប្រតិបត្តិការដឹកជញ្ជូន', color: '#b45309', bg: '#fffbeb' },
+                      { key: 'settings', icon: MdSettings, label: 'ការកំណត់ផ្សេងៗ', desc: 'តំបន់ដឹក សិទ្ធិអ្នកប្រើប្រាស់ ការកំណត់អង្គភាព និងទូទៅ', color: '#475569', bg: '#f1f5f9' },
+                      { key: 'customDomain', icon: MdLanguage, label: 'ភ្ជាប់ Domain ផ្ទាល់ខ្លួន', desc: 'អនុញ្ញាតឱ្យប្រើប្រាស់ Domain ផ្ទាល់ខ្លួនរបស់ក្រុមហ៊ុន', color: '#2563eb', bg: '#eff6ff' },
+                      { key: 'telegramBot', icon: MdNotifications, label: 'ការជូនដំណឹង Telegram', desc: 'ការជូនដំណឹងស្វ័យប្រវត្តិតាម Telegram Bot', color: '#0284c7', bg: '#f0f9ff' },
+                      { key: 'apiAccess', icon: MdVpnKey, label: 'ប្រព័ន្ធភ្ជាប់ API', desc: 'សិទ្ធិភ្ជាប់ជាមួយ Website ឬប្រព័ន្ធខាងក្រៅ', color: '#e11d48', bg: '#fff1f2' },
+                    ].map((f) => {
+                      const Icon = f.icon;
+                      const isChecked = Boolean((planForm.features as any)?.[f.key] !== false);
+                      return (
+                        <div
+                          key={f.key}
+                          onClick={() => {
+                            setPlanForm({
+                              ...planForm,
+                              features: {
+                                ...planForm.features,
+                                [f.key]: !isChecked,
+                              },
+                            });
+                          }}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 12,
+                            padding: '14px 16px',
+                            background: isChecked ? '#ffffff' : '#f8fafc',
+                            border: `1.5px solid ${isChecked ? '#2563eb' : '#e2e8f0'}`,
+                            borderRadius: 14,
+                            cursor: 'pointer',
+                            transition: 'all 0.15s ease',
+                            boxShadow: isChecked ? '0 4px 12px rgba(37, 99, 235, 0.08)' : 'none',
+                            userSelect: 'none',
+                          }}
+                        >
+                          <div
+                            style={{
+                              width: 38,
+                              height: 38,
+                              borderRadius: 10,
+                              background: isChecked ? f.bg : '#f1f5f9',
+                              color: isChecked ? f.color : '#94a3b8',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              flexShrink: 0,
+                              transition: 'all 0.15s ease',
+                            }}
+                          >
+                            <Icon size={20} />
+                          </div>
+
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: 13.5, fontWeight: 700, color: isChecked ? '#0f172a' : '#64748b' }}>
+                              {f.label}
+                            </div>
+                            <div style={{ fontSize: 11.5, color: '#94a3b8', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              {f.desc}
+                            </div>
+                          </div>
+
+                          {/* Custom Toggle / Checkbox */}
+                          <div
+                            style={{
+                              width: 22,
+                              height: 22,
+                              borderRadius: 6,
+                              border: `2px solid ${isChecked ? '#2563eb' : '#cbd5e1'}`,
+                              background: isChecked ? '#2563eb' : '#ffffff',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              color: '#ffffff',
+                              fontSize: 13,
+                              fontWeight: 900,
+                              flexShrink: 0,
+                              transition: 'all 0.15s ease',
+                            }}
+                          >
+                            {isChecked && '✓'}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
 

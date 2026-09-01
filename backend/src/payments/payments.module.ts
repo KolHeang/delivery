@@ -9,6 +9,8 @@ import { Organisation } from '../settings/entities/organisation.entity';
 import { PaymentsService } from './payments.service';
 import { PaymentsController } from './payments.controller';
 
+import { TelegramModule } from '../telegram/telegram.module';
+
 @Module({
   imports: [
     TypeOrmModule.forFeature([
@@ -19,6 +21,7 @@ import { PaymentsController } from './payments.controller';
       Parcel,
       Organisation,
     ]),
+    TelegramModule,
   ],
   providers: [PaymentsService],
   controllers: [PaymentsController],

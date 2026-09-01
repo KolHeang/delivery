@@ -29,6 +29,7 @@ export class CreateVehicleDto {
   @Transform(({ value }) => value || undefined)
   @IsIn(['active', 'maintenance', 'inactive'])
   status?: string;
+  @ApiProperty({ required: false }) @IsOptional() @IsNumber() @Type(() => Number) tenantId?: number;
 }
 
 export class UpdateVehicleDto {
@@ -49,4 +50,5 @@ export class UpdateVehicleDto {
   @Transform(({ value }) => value || undefined)
   @IsIn(['active', 'maintenance', 'inactive'])
   status?: string;
+  @IsOptional() @IsNumber() @Type(() => Number) tenantId?: number;
 }

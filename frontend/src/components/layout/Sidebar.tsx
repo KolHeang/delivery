@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import { getUser, hasPermission } from '@/lib/auth';
 import { useLanguage } from '@/lib/LanguageContext';
 import { useTenant } from '@/lib/TenantContext';
+import api from '@/lib/api';
 import { saasApi } from '@/lib/saas-api';
 import {
   MdDashboard, MdStorefront, MdPeople, MdLocalShipping,
@@ -25,27 +26,26 @@ export default function Sidebar() {
       key: 'summary',
       label: t('summaryMenu'),
       icon: MdBarChart,
-      permission: 'reports.view',
+      permission: 'reports.view, reports.operation_merchant, reports.operation_driver, reports.operation_pickup',
       items: [
-        { href: '/summary/shop', label: t('shopSummary') },
-        { href: '/summary/delivery', label: t('deliverySummary') },
-        { href: '/summary/pickup', label: t('pickupSummary') },
+        { href: '/summary/shop', label: t('shopSummary'), permission: 'reports.operation_merchant, reports.view' },
+        { href: '/summary/delivery', label: t('deliverySummary'), permission: 'reports.operation_driver, reports.view' },
+        { href: '/summary/pickup', label: t('pickupSummary'), permission: 'reports.operation_pickup, reports.view' },
       ],
     },
     {
       key: 'delivery',
       label: t('manageDelivery'),
       icon: MdLocalShipping,
-      permission: 'orders.read',
+      permission: 'parcels.read, parcels.create, parcels.update',
       items: [
-        { href: '/delivery/entry_data_item', label: t('batchEntryData'), permission: 'orders.create' },
-        { href: '/delivery', label: t('listOfDelivery') },
-        { href: '/delivery/print_invoice', label: t('printInvoiceDelivery') },
-        { href: '/delivery/pickup_requests', label: t('pickupRequests'), permission: 'orders.read' },
-        // { href: '/delivery/assignpickup', label: t('processForPickup'), permission: 'orders.update' },
-        { href: '/delivery/assigndeliveryby', label: t('processForAssign'), permission: 'orders.update' },
-        { href: '/delivery/complete', label: t('completePackage'), permission: 'orders.update' },
-        { href: '/delivery/tracking_delivery', label: t('tracking') },
+        { href: '/delivery/entry_data_item', label: t('batchEntryData'), permission: 'parcels.create' },
+        { href: '/delivery', label: t('listOfDelivery'), permission: 'parcels.read' },
+        { href: '/delivery/print_invoice', label: t('printInvoiceDelivery'), permission: 'parcels.read' },
+        { href: '/delivery/pickup_requests', label: t('pickupRequests'), permission: 'parcels.read' },
+        { href: '/delivery/assigndeliveryby', label: t('processForAssign'), permission: 'parcels.update' },
+        { href: '/delivery/complete', label: t('completePackage'), permission: 'parcels.update' },
+        { href: '/delivery/tracking_delivery', label: t('tracking'), permission: 'parcels.read' },
       ],
     },
 
@@ -55,16 +55,17 @@ export default function Sidebar() {
       icon: MdStorefront,
       permission: 'merchants.read',
       items: [
-        { href: '/merchants', label: t('shopList') },
+        { href: '/merchants', label: t('shopList'), permission: 'merchants.read' },
       ],
     },
     {
       key: 'staff',
       label: t('manageStaff') || 'Manage Staff',
       icon: MdPeople,
-      permission: 'users.read',
+      permission: 'users.read, vehicles.read',
       items: [
-        { href: '/user', label: t('staffList') || 'List Staff' },
+        { href: '/user', label: t('staffList') || 'List Staff', permission: 'users.read' },
+        { href: '/vehicles', label: lang === 'km' ? 'យានយន្ត' : 'Vehicles', permission: 'vehicles.read' },
       ],
     },
     {
@@ -73,17 +74,17 @@ export default function Sidebar() {
       icon: MdAccountBalanceWallet,
       permission: 'payments.read',
       items: [
-        { href: '/payment/driver', label: t('paymentWithDelivery') || 'Payment with Delivery' },
-        { href: '/payment/merchant', label: t('paymentWithShop') },
+        { href: '/payment/driver', label: t('paymentWithDelivery') || 'Payment with Delivery', permission: 'payments.read' },
+        { href: '/payment/merchant', label: t('paymentWithShop'), permission: 'payments.read' },
       ],
     },
     {
       key: 'accounting',
       label: t('accounting'),
       icon: MdReceipt,
-      permission: 'expenses.read',
+      permission: 'expenses.read, incomes.read',
       items: [
-        { href: '/expense', label: t('expenseList') },
+        { href: '/expense', label: t('expenseList'), permission: 'expenses.read' },
         { href: '/income', label: t('incomeList'), permission: 'incomes.read' },
         { href: '/income/type', label: t('typeOfIncome'), permission: 'incomes.read' },
         { href: '/expense/type', label: t('typeOfExpense'), permission: 'expenses.read' },
@@ -94,20 +95,20 @@ export default function Sidebar() {
       label: t('report'),
       icon: MdBarChart,
       href: '/report',
-      permission: 'reports.view',
+      permission: 'reports.view, reports.export, reports.operation_daily, reports.financial_ledger',
     },
     {
       key: 'settings',
       label: t('settings'),
       icon: MdSettings,
-      permission: 'settings.manage',
       items: [
-        { href: '/billing', label: lang === 'km' ? 'គម្រោង & វិក្កយបត្រ' : 'Billing & Plans' },
-        { href: '/setting/zone_type', label: t('zoneType'), permission: 'zones.read' },
-        { href: '/setting/role', label: t('permission'), permission: 'users.manage' },
-        { href: '/setting/organisation', label: t('organizationSetting') },
-        { href: '/setting/general', label: t('generalSettings') },
-        { href: '/setting/activity_log', label: t('activityLogs') || 'Activity Logs' },
+        { href: '/billing', label: lang === 'km' ? 'គម្រោង & វិក្កយបត្រ' : 'Billing & Plans', permission: 'settings.billing' },
+        { href: '/setting/zone_type', label: t('zoneType'), permission: 'settings.zone_type' },
+        { href: '/setting/role', label: t('permission'), permission: 'settings.role, roles.read' },
+        { href: '/setting/organisation', label: t('organizationSetting'), permission: 'settings.organisation' },
+        { href: '/setting/general', label: t('generalSettings'), permission: 'settings.general' },
+        { href: '/setting/telegram', label: lang === 'km' ? 'ការកំណត់ Telegram' : 'Telegram Settings', permission: 'settings.telegram, settings.general, settings.manage' },
+        { href: '/setting/activity_log', label: t('activityLogs') || 'Activity Logs', permission: 'settings.activity_log' },
       ],
     },
   ];
@@ -169,7 +170,33 @@ export default function Sidebar() {
   };
 
   const { tenant, isTenant } = useTenant();
-  const activeCompanyName = tenant?.companyName || subscription?.companyName;
+  const [orgName, setOrgName] = useState<string>('');
+
+  useEffect(() => {
+    const updateOrg = () => {
+      try {
+        const cached = localStorage.getItem('app-org-settings');
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (parsed?.name) setOrgName(parsed.name);
+        }
+      } catch {}
+    };
+    updateOrg();
+    api.get('/settings/organisation').then((res: any) => {
+      if (res.data?.name) {
+        setOrgName(res.data.name);
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('app-org-settings', JSON.stringify(res.data));
+        }
+      }
+    }).catch(() => {});
+
+    window.addEventListener('org-settings-updated', updateOrg);
+    return () => window.removeEventListener('org-settings-updated', updateOrg);
+  }, []);
+
+  const activeCompanyName = orgName || tenant?.companyName || subscription?.companyName;
   const activeSubdomain = tenant?.subdomain || subscription?.subdomain;
 
   return (
@@ -219,18 +246,26 @@ export default function Sidebar() {
       {/* Navigation list */}
       <div className="sidebar-nav" style={{ flex: 1, padding: '12px 8px', overflowY: 'auto' }}>
         {/* Dashboard Link */}
-        <Link
-          href="/dashboard"
-          className={`sidebar-item ${pathname === '/dashboard' ? 'active' : ''}`}
-          style={{ marginBottom: 4 }}
-        >
-          <span className="sidebar-item-icon"><MdDashboard size={18} /></span>
-          {t('dashboard')}
-        </Link>
+        {(!subscription?.plan?.features || subscription.plan.features.dashboard !== false) && (
+          <Link
+            href="/dashboard"
+            className={`sidebar-item ${pathname === '/dashboard' ? 'active' : ''}`}
+            style={{ marginBottom: 4 }}
+          >
+            <span className="sidebar-item-icon"><MdDashboard size={18} /></span>
+            {t('dashboard')}
+          </Link>
+        )}
 
 
         {mounted && menuGroups
-          .filter(group => !group.permission || hasPermission(group.permission))
+          .filter(group => {
+            const planFeatures = subscription?.plan?.features;
+            if (planFeatures && planFeatures[group.key] === false) {
+              return false;
+            }
+            return !group.permission || hasPermission(group.permission);
+          })
           .map(group => {
             const Icon = group.icon;
 

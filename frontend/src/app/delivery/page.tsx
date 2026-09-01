@@ -201,9 +201,9 @@ export default function DeliveriesPage() {
           endDate: endDate || undefined,
         }
       });
-      if (res.data && res.data.result !== undefined) {
-        setOrders(res.data.result);
-        setTotalItems(res.data.total);
+      if (res.data && (res.data.results !== undefined || res.data.result !== undefined)) {
+        setOrders(res.data.results || res.data.result || []);
+        setTotalItems(res.data.total ?? 0);
       } else {
         setOrders(Array.isArray(res.data) ? res.data : []);
         setTotalItems(Array.isArray(res.data) ? res.data.length : 0);
@@ -430,10 +430,10 @@ export default function DeliveriesPage() {
                           <td style={{ fontSize: 11, whiteSpace: 'nowrap' }}>{formatDateTime(o.createdAt)}</td>
                           <td>
                             <span style={{ color: '#2563eb', cursor: 'pointer', textDecoration: 'underline' }} onClick={() => router.push(`/merchants?search=${o.merchant?.name || ''}`)}>
-                              {o.merchant?.nameKh || o.merchant?.name || '—'}
+                              {o.merchant?.nameKh || o.merchant?.name || ''}
                             </span>
                           </td>
-                          <td style={{ fontSize: 12 }}>{o.receiverAddress || '—'}</td>
+                          <td style={{ fontSize: 12 }}>{o.receiverAddress || ''}</td>
                           <td style={{ fontWeight: 600 }}>{o.receiverPhone}</td>
                           <td>
                             <span style={{ color: 'var(--danger, #ef4444)', textDecoration: 'underline', fontWeight: 600 }}>
@@ -560,7 +560,7 @@ export default function DeliveriesPage() {
                                 ?.slice()
                                 .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
                                 .find((h: any) => h.note)?.note || o.note || '';
-                              if (!latestNote) return <span style={{ color: 'var(--text-muted)' }}>—</span>;
+                              if (!latestNote) return null;
                               const isLong = latestNote.length > 40;
                               return (
                                 <span
@@ -592,7 +592,7 @@ export default function DeliveriesPage() {
                           <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>
                             {o.updater?.nameKh || o.updater?.name || (['delivered', 'failed', 'returned'].includes(o.status) 
                               ? (o.driver?.nameKh || o.driver?.name || 'admin') 
-                              : '—')}
+                              : '')}
                           </td>
                           <td>
                             <div style={{ display: 'flex', gap: 4 }}>

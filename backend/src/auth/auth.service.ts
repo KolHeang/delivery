@@ -59,6 +59,7 @@ export class AuthService {
         role: user.role,
         isActive: user.isActive,
         permissions,
+        tenantId: user.tenantId,
       },
     };
   }

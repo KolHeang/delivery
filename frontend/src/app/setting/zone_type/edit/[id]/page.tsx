@@ -23,12 +23,12 @@ export default function EditZonePage() {
     const load = async () => {
       try {
         const [zoneRes, driverRes] = await Promise.all([
-          api.get('/zones'),
+          api.get(`/zones/${params.id}`),
           api.get('/select/drivers')
         ]);
-        setDrivers(Array.isArray(driverRes.data) ? driverRes.data : (driverRes.data?.result || []));
+        setDrivers(Array.isArray(driverRes.data) ? driverRes.data : (driverRes.data?.results || driverRes.data?.result || []));
         
-        const zone = zoneRes.data.find((z: any) => z.id === parseInt(params.id as string));
+        const zone = zoneRes.data;
         if (zone) {
           setForm({
             name: zone.name || '',

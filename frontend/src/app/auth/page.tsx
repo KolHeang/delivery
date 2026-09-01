@@ -39,11 +39,32 @@ export default function LoginPage() {
   const router = useRouter();
   const { lang, setLang } = useLanguage();
   const { tenant, subdomain: workspaceSubdomain, isTenant } = useTenant();
+  const [currentSubdomain, setCurrentSubdomain] = useState<string | null>(null);
   const [form, setForm] = useState({ email: '', password: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showForgotModal, setShowForgotModal] = useState(false);
+
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const hostname = window.location.hostname;
+      if (hostname.includes('.localhost')) {
+        const sub = hostname.split('.localhost')[0].replace(/\..*$/, '').toLowerCase();
+        if (sub && sub !== 'www' && sub !== 'app' && sub !== 'api') {
+          setCurrentSubdomain(sub);
+        }
+      } else {
+        const parts = hostname.split('.');
+        if (parts.length > 2 && parts[0] !== 'www' && parts[0] !== 'app') {
+          setCurrentSubdomain(parts[0].toLowerCase());
+        }
+      }
+    }
+  }, []);
+
+  const activeSubdomain = workspaceSubdomain || currentSubdomain;
+  const activeCompanyName = tenant?.companyName || (activeSubdomain ? activeSubdomain.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') : null);
 
   const t = loginTranslations[lang] || loginTranslations['en'];
 
@@ -533,40 +554,17 @@ export default function LoginPage() {
               letterSpacing: '-0.4px',
             }}
           >
-            {tenant?.companyName ? (
-              <span style={{ textTransform: 'capitalize' }}>{tenant.companyName}</span>
-            ) : workspaceSubdomain ? (
-              <span style={{ textTransform: 'capitalize' }}>{workspaceSubdomain} Express</span>
+            {activeCompanyName ? (
+              <span>{activeCompanyName}</span>
             ) : (
               <>EBS<span style={{ color: '#2b529a' }}>Express</span></>
             )}
           </h1>
 
-          {/* Dynamic Workspace Subdomain Pill */}
-          {workspaceSubdomain && (
-            <div
-              style={{
-                background: '#eff6ff',
-                color: '#2b529a',
-                padding: '3px 12px',
-                borderRadius: 20,
-                fontSize: 11.5,
-                fontWeight: 700,
-                marginBottom: 6,
-                border: '1px solid #bfdbfe',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 6,
-              }}
-            >
-              🏢 Workspace: {workspaceSubdomain}.ebsexpress.com
-            </div>
-          )}
-
           {/* Dynamic Subtitle */}
           <p style={{ fontSize: 13, color: '#64748b', margin: 0, fontWeight: 500 }}>
-            {tenant?.companyName
-              ? (lang === 'km' ? `ចូលគ្រប់គ្រងប្រព័ន្ធដឹកជញ្ជូន ${tenant.companyName}` : `Sign in to manage ${tenant.companyName} logistics`)
+            {activeCompanyName
+              ? (lang === 'km' ? `ចូលគ្រប់គ្រងប្រព័ន្ធដឹកជញ្ជូន ${activeCompanyName}` : `Sign in to manage ${activeCompanyName} logistics`)
               : t.subtitle}
           </p>
         </div>

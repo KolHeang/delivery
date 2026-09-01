@@ -6,6 +6,7 @@ import {
   Delete,
   Param,
   Body,
+  Req,
   UseGuards,
   ParseIntPipe,
   UseInterceptors,
@@ -16,6 +17,8 @@ import { ApiTags, ApiBearerAuth, ApiConsumes } from '@nestjs/swagger';
 import { MerchantsService } from './merchants.service';
 import { CreateMerchantDto, UpdateMerchantDto } from './dto/merchant.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { PermissionsGuard } from '../auth/permissions.guard';
+import { RequirePermissions } from '../auth/permissions.decorator';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { createMulterOptions } from '../config/multer';
 import { MinioService } from '../minio/minio.service';
@@ -23,31 +26,38 @@ import { LogActivity } from '../activity-logs/activity.decorator';
 
 @ApiTags('Merchants')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, PermissionsGuard)
 @Controller('merchants')
 export class MerchantsController {
   constructor(
     private readonly merchantsService: MerchantsService,
     private readonly minioService: MinioService,
-  ) {}
+  ) { }
 
-  @Get() findAll(
+  @Get()
+  @RequirePermissions('merchants.read')
+  findAll(
     @Query('page') page?: string,
     @Query('limit') limit?: string,
     @Query('search') search?: string,
+    @Req() req?: any,
   ) {
+    const tenantId = req?.user?.tenantId;
     return this.merchantsService.findAll({
       page: page ? +page : undefined,
       limit: limit ? +limit : undefined,
       search,
-    });
+    }, tenantId);
   }
-  
-  @Get(':id') findOne(@Param('id', ParseIntPipe) id: number) {
+
+  @Get(':id')
+  @RequirePermissions('merchants.read')
+  findOne(@Param('id', ParseIntPipe) id: number) {
     return this.merchantsService.findOne(id);
   }
 
   @Post()
+  @RequirePermissions('merchants.create')
   @LogActivity({ action: 'CREATE_MERCHANT', entityName: 'Merchant', description: 'Created new merchant/shop' })
   @UseInterceptors(
     FileFieldsInterceptor([
@@ -62,8 +72,12 @@ export class MerchantsController {
   @ApiConsumes('multipart/form-data')
   async create(
     @Body() dto: CreateMerchantDto,
-    @UploadedFiles() files: { photo?: any[], qrImageKhr?: any[], qrImageUsd?: any[] }
+    @UploadedFiles() files: { photo?: any[], qrImageKhr?: any[], qrImageUsd?: any[] },
+    @Req() req?: any,
   ) {
+    if (req?.user?.tenantId) {
+      (dto as any).tenantId = req.user.tenantId;
+    }
     if (files?.photo?.[0]) {
       dto.photo = await this.minioService.uploadFile(files.photo[0], 'merchants');
     }
@@ -77,6 +91,7 @@ export class MerchantsController {
   }
 
   @Patch(':id')
+  @RequirePermissions('merchants.update')
   @LogActivity({ action: 'UPDATE_MERCHANT', entityName: 'Merchant', description: 'Updated merchant/shop details' })
   @UseInterceptors(
     FileFieldsInterceptor([
@@ -107,6 +122,7 @@ export class MerchantsController {
   }
 
   @Delete(':id')
+  @RequirePermissions('merchants.delete')
   @LogActivity({ action: 'DELETE_MERCHANT', entityName: 'Merchant', description: 'Deleted merchant/shop' })
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.merchantsService.remove(id);

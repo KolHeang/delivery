@@ -78,9 +78,9 @@ export default function ActivityLogsPage() {
         },
       });
 
-      if (res.data && res.data.result !== undefined) {
-        setLogs(res.data.result);
-        setTotalItems(res.data.total);
+      if (res.data && (res.data.results !== undefined || res.data.result !== undefined)) {
+        setLogs(res.data.results || res.data.result || []);
+        setTotalItems(res.data.total ?? 0);
       } else {
         setLogs(Array.isArray(res.data) ? res.data : []);
         setTotalItems(Array.isArray(res.data) ? res.data.length : 0);

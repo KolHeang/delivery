@@ -19,7 +19,7 @@ export class Invoice {
   @JoinColumn({ name: 'tenant_id' })
   tenant: Tenant;
 
-  @Column({ name: 'tenant_id', default: 1 })
+  @Column({ name: 'tenant_id', nullable: true })
   tenantId: number;
 
   @Column({ name: 'invoice_number', unique: true })

@@ -8,6 +8,7 @@ import { Tenant } from './entities/tenant.entity';
 import { TenantDomain } from './entities/tenant-domain.entity';
 import { User } from '../users/entities/users.entity';
 import { Role } from '../roles/entities/role.entity';
+import { Permission } from '../roles/entities/permission.entity';
 
 // SaaS Submodules Entities
 import { SaasAdmin } from './admins/saas-admin.entity';
@@ -41,6 +42,7 @@ import { PartnersController } from './partners/partners.controller';
 import { CommissionsController } from './commissions/commissions.controller';
 import { SaasInvoicesController } from './invoices/saas-invoices.controller';
 import { SaasPaymentsController } from './payments/saas-payments.controller';
+import { DomainsController } from './domains/domains.controller';
 
 @Module({
   imports: [
@@ -49,6 +51,7 @@ import { SaasPaymentsController } from './payments/saas-payments.controller';
       TenantDomain,
       User,
       Role,
+      Permission,
       SaasAdmin,
       Plan,
       Subscription,
@@ -92,6 +95,7 @@ import { SaasPaymentsController } from './payments/saas-payments.controller';
     CommissionsController,
     SaasInvoicesController,
     SaasPaymentsController,
+    DomainsController,
   ],
   exports: [
     SaasService,

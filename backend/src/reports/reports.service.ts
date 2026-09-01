@@ -13,9 +13,16 @@ export class ReportsService {
     @InjectRepository(User) private driverRepo: Repository<User>,
     @InjectRepository(Expense) private expenseRepo: Repository<Expense>,
     @InjectRepository(Income) private incomeRepo: Repository<Income>,
-  ) { }
+  ) {}
 
-  async getRevenueReport(period: 'daily' | 'monthly' = 'monthly') {
+  private applyTenant(qb: any, alias: string, tenantId?: number) {
+    if (tenantId) {
+      qb.andWhere(`${alias}.tenantId = :tenantId`, { tenantId });
+    }
+    return qb;
+  }
+
+  async getRevenueReport(period: 'daily' | 'monthly' = 'monthly', tenantId?: number) {
     const groupFormat =
       period === 'daily'
         ? 'DATE(parcel.createdAt)'
@@ -25,7 +32,7 @@ export class ReportsService {
         ? 'DATE(parcel.createdAt)'
         : "TO_CHAR(parcel.createdAt, 'Mon YYYY')";
 
-    return this.parcelRepo
+    const q = this.parcelRepo
       .createQueryBuilder('parcel')
       .select(labelFormat, 'label')
       .addSelect('COUNT(*)', 'totalParcels')
@@ -39,32 +46,40 @@ export class ReportsService {
       )
       .addSelect('SUM(parcel.deliveryFee)', 'revenue')
       .addSelect('SUM(parcel.cod)', 'totalCod')
-      .where("parcel.createdAt >= NOW() - INTERVAL '6 months'")
+      .where("parcel.createdAt >= NOW() - INTERVAL '6 months'");
+
+    this.applyTenant(q, 'parcel', tenantId);
+
+    return q
       .groupBy(`${groupFormat}, ${labelFormat}`)
       .orderBy(groupFormat, 'ASC')
       .getRawMany();
   }
 
-  async getDriverPerformance() {
-    return this.driverRepo
+  async getDriverPerformance(tenantId?: number) {
+    const q = this.driverRepo
       .createQueryBuilder('driver')
       .leftJoinAndSelect('driver.zone', 'zone')
       .leftJoinAndSelect('driver.vehicle', 'vehicle')
-      .where('driver.isDriver = true')
-      .orderBy('driver.totalDeliveries', 'DESC')
-      .getMany();
+      .where('driver.isDriver = true');
+
+    this.applyTenant(q, 'driver', tenantId);
+
+    return q.orderBy('driver.totalDeliveries', 'DESC').getMany();
   }
 
-  async getParcelSummary() {
-    const statusCounts = await this.parcelRepo
+  async getParcelSummary(tenantId?: number) {
+    const statusCountsQb = this.parcelRepo
       .createQueryBuilder('parcel')
       .select('parcel.status', 'status')
       .addSelect('COUNT(*)', 'count')
       .addSelect('SUM(parcel.deliveryFee)', 'revenue')
-      .groupBy('parcel.status')
-      .getRawMany();
+      .where('1=1');
 
-    const zoneRevenue = await this.parcelRepo
+    this.applyTenant(statusCountsQb, 'parcel', tenantId);
+    const statusCounts = await statusCountsQb.groupBy('parcel.status').getRawMany();
+
+    const zoneRevenueQb = this.parcelRepo
       .createQueryBuilder('parcel')
       .leftJoin('parcel.zone', 'zone')
       .select('zone.name', 'zone')
@@ -74,7 +89,10 @@ export class ReportsService {
         'delivered',
       )
       .addSelect('SUM(parcel.deliveryFee)', 'revenue')
-      .where('zone.id IS NOT NULL')
+      .where('zone.id IS NOT NULL');
+
+    this.applyTenant(zoneRevenueQb, 'parcel', tenantId);
+    const zoneRevenue = await zoneRevenueQb
       .groupBy('zone.name')
       .orderBy('SUM(parcel.deliveryFee)', 'DESC')
       .getRawMany();
@@ -82,7 +100,12 @@ export class ReportsService {
     return { statusCounts, zoneRevenue };
   }
 
-  async getShopSummary(startDate?: string, endDate?: string, merchantId?: string) {
+  async getShopSummary(
+    startDate?: string,
+    endDate?: string,
+    merchantId?: string,
+    tenantId?: number,
+  ) {
     let q = this.parcelRepo
       .createQueryBuilder('parcel')
       .leftJoin('parcel.merchant', 'merchant')
@@ -113,8 +136,11 @@ export class ReportsService {
         'codKHR',
       )
       .addSelect('SUM(parcel.deliveryFee)', 'fee')
+      .where('1=1')
       .groupBy('merchant.id')
       .addGroupBy('merchant.name');
+
+    this.applyTenant(q, 'parcel', tenantId);
 
     if (startDate) q = q.andWhere('parcel.createdAt >= :startDate', { startDate });
     if (endDate) q = q.andWhere('parcel.createdAt <= :endDate', { endDate: `${endDate} 23:59:59` });
@@ -138,8 +164,13 @@ export class ReportsService {
     }));
   }
 
-  async getPickupSummary(startDate?: string, endDate?: string, driverId?: string, merchantId?: string) {
-    // pickup driver = pickupDriverId (warehouse flow) OR driverId (direct flow with picked-up status)
+  async getPickupSummary(
+    startDate?: string,
+    endDate?: string,
+    driverId?: string,
+    merchantId?: string,
+    tenantId?: number,
+  ) {
     let q = this.parcelRepo
       .createQueryBuilder('parcel')
       .leftJoin('parcel.pickupDriver', 'pickupDriver')
@@ -150,6 +181,8 @@ export class ReportsService {
       .addSelect('COUNT(DISTINCT merchant.id)', 'shopCount')
       .addSelect('SUM(parcel.deliveryFee)', 'fee')
       .where('parcel.pickupDriverId IS NOT NULL');
+
+    this.applyTenant(q, 'parcel', tenantId);
 
     if (startDate) q = q.andWhere('parcel.warehouseAt >= :startDate', { startDate });
     if (endDate) q = q.andWhere('parcel.warehouseAt <= :endDate', { endDate: `${endDate} 23:59:59` });
@@ -168,7 +201,12 @@ export class ReportsService {
     }));
   }
 
-  async getDeliverySummary(startDate?: string, endDate?: string, driverId?: string) {
+  async getDeliverySummary(
+    startDate?: string,
+    endDate?: string,
+    driverId?: string,
+    tenantId?: number,
+  ) {
     let q = this.parcelRepo
       .createQueryBuilder('parcel')
       .leftJoin('parcel.driver', 'driver')
@@ -197,6 +235,8 @@ export class ReportsService {
       .addSelect('SUM(parcel.deliveryFee)', 'fee')
       .where('parcel.driverId IS NOT NULL');
 
+    this.applyTenant(q, 'parcel', tenantId);
+
     if (startDate) q = q.andWhere('parcel.createdAt >= :startDate', { startDate });
     if (endDate) q = q.andWhere('parcel.createdAt <= :endDate', { endDate: `${endDate} 23:59:59` });
     if (driverId) q = q.andWhere('driver.id = :driverId', { driverId });
@@ -221,13 +261,17 @@ export class ReportsService {
     endDate?: string,
     driverId?: string,
     merchantId?: string,
+    tenantId?: number,
   ) {
     let q = this.parcelRepo
       .createQueryBuilder('parcel')
       .leftJoinAndSelect('parcel.driver', 'driver')
       .leftJoinAndSelect('parcel.merchant', 'merchant')
       .leftJoinAndSelect('parcel.zone', 'zone')
+      .where('1=1')
       .orderBy('parcel.createdAt', 'DESC');
+
+    this.applyTenant(q, 'parcel', tenantId);
 
     if (startDate) q = q.andWhere('parcel.createdAt >= :startDate', { startDate });
     if (endDate) q = q.andWhere('parcel.createdAt <= :endDate', { endDate: `${endDate} 23:59:59` });
@@ -238,41 +282,44 @@ export class ReportsService {
 
     return orders.map((o) => {
       const formatLocal = (d?: Date) => {
-        if (!d) return '—';
+        if (!d) return '';
         const dateObj = new Date(d);
-        if (isNaN(dateObj.getTime())) return '—';
+        if (isNaN(dateObj.getTime())) return '';
         const year = dateObj.getFullYear();
         const month = String(dateObj.getMonth() + 1).padStart(2, '0');
         const day = String(dateObj.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
+        return `${day}-${month}-${year}`;
       };
 
       return {
         id: o.id,
         trackingCode: o.trackingCode,
-        driver: o.driver?.name || '—',
-        shopName: o.merchant?.name || '—',
+        driver: o.driver?.name || '',
+        shopName: o.merchant?.name || '',
         receiverPhone: o.receiverPhone,
-        location: o.zone?.name || o.receiverAddress || '—',
+        location: o.zone?.name || o.receiverAddress || '',
         date: formatLocal(o.createdAt),
         status: o.status,
         currency: o.codCurrency || 'USD',
-        codAmount: parseFloat(o.cod as any || '0'),
-        deliveryFee: parseFloat(o.deliveryFee as any || '0'),
-        paidAmount: parseFloat(o.cod as any || '0'),
+        codAmount: parseFloat((o.cod as any) || '0'),
+        deliveryFee: parseFloat((o.deliveryFee as any) || '0'),
+        paidAmount: parseFloat((o.cod as any) || '0'),
         note: o.note || '',
         deliveredAt: formatLocal(o.deliveredAt),
       };
     });
   }
 
-  async getFinancialReport(startDate?: string, endDate?: string) {
+  async getFinancialReport(startDate?: string, endDate?: string, tenantId?: number) {
     // 1. Group Incomes by month
     const incomeQuery = this.incomeRepo
       .createQueryBuilder('income')
       .select("TO_CHAR(income.date, 'YYYY-MM')", 'monthKey')
       .addSelect("TO_CHAR(income.date, 'Mon YYYY')", 'monthLabel')
       .addSelect('SUM(income.amount)', 'total')
+      .where('1=1');
+    this.applyTenant(incomeQuery, 'income', tenantId);
+    incomeQuery
       .groupBy(
         "TO_CHAR(income.date, 'YYYY-MM'), TO_CHAR(income.date, 'Mon YYYY')",
       )
@@ -284,6 +331,9 @@ export class ReportsService {
       .select("TO_CHAR(expense.date, 'YYYY-MM')", 'monthKey')
       .addSelect("TO_CHAR(expense.date, 'Mon YYYY')", 'monthLabel')
       .addSelect('SUM(expense.amount)', 'total')
+      .where('1=1');
+    this.applyTenant(expenseQuery, 'expense', tenantId);
+    expenseQuery
       .groupBy(
         "TO_CHAR(expense.date, 'YYYY-MM'), TO_CHAR(expense.date, 'Mon YYYY')",
       )
@@ -295,7 +345,9 @@ export class ReportsService {
       .leftJoin('income.type', 'type')
       .select("COALESCE(type.name, 'Other')", 'category')
       .addSelect('SUM(income.amount)', 'total')
-      .groupBy('type.name');
+      .where('1=1');
+    this.applyTenant(incomeCatQuery, 'income', tenantId);
+    incomeCatQuery.groupBy('type.name');
 
     // 4. Breakdown Expenses by category
     const expenseCatQuery = this.expenseRepo
@@ -303,17 +355,23 @@ export class ReportsService {
       .leftJoin('expense.type', 'type')
       .select("COALESCE(type.name, 'Other')", 'category')
       .addSelect('SUM(expense.amount)', 'total')
-      .groupBy('type.name');
+      .where('1=1');
+    this.applyTenant(expenseCatQuery, 'expense', tenantId);
+    expenseCatQuery.groupBy('type.name');
 
     // 5. Detailed Incomes for transaction log
     const detailedIncomeQuery = this.incomeRepo
       .createQueryBuilder('income')
-      .leftJoinAndSelect('income.type', 'type');
+      .leftJoinAndSelect('income.type', 'type')
+      .where('1=1');
+    this.applyTenant(detailedIncomeQuery, 'income', tenantId);
 
     // 6. Detailed Expenses for transaction log
     const detailedExpenseQuery = this.expenseRepo
       .createQueryBuilder('expense')
-      .leftJoinAndSelect('expense.type', 'type');
+      .leftJoinAndSelect('expense.type', 'type')
+      .where('1=1');
+    this.applyTenant(detailedExpenseQuery, 'expense', tenantId);
 
     if (startDate) {
       incomeQuery.andWhere('income.date >= :startDate', { startDate });

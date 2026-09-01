@@ -32,6 +32,7 @@ export class CreateZoneDto {
   @Type(() => Number)
   driverId?: number;
   @ApiProperty({ required: false }) @IsOptional() @IsString() branch?: string;
+  @ApiProperty({ required: false }) @IsOptional() @IsNumber() @Type(() => Number) tenantId?: number;
 }
 
 export class UpdateZoneDto {
@@ -42,6 +43,7 @@ export class UpdateZoneDto {
   @IsOptional() @IsBoolean() active?: boolean;
   @IsOptional() @IsNumber() @Type(() => Number) driverId?: number;
   @IsOptional() @IsString() branch?: string;
+  @IsOptional() @IsNumber() @Type(() => Number) tenantId?: number;
 }
 
 export class CreateSubZoneDto {

@@ -34,6 +34,7 @@ export default function CreateStaffPage() {
   const [loading, setLoading] = useState(true);
 
   const [form, setForm] = useState(emptyForm);
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string>('');
@@ -67,6 +68,13 @@ export default function CreateStaffPage() {
   const f = (k: string) => (e: any) => {
     const val = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
     setForm(p => ({ ...p, [k]: val }));
+    if (errors[k]) {
+      setErrors(prev => {
+        const next = { ...prev };
+        delete next[k];
+        return next;
+      });
+    }
   };
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -78,19 +86,34 @@ export default function CreateStaffPage() {
   };
 
   const save = async () => {
+    const errs: Record<string, string> = {};
     if (!form.name.trim()) {
-      alert('Full Name is required');
-      return;
+      errs.name = 'សូមបំពេញឈ្មោះពេញ (Full Name)';
     }
-    if (form.role !== 'driver' && !form.email.trim()) {
-      alert('Email is required for Admin/Staff');
-      return;
+    if (!form.phone.trim()) {
+      errs.phone = 'សូមបំពេញលេខទូរស័ព្ទ';
     }
-    if (form.role === 'driver' && !form.phone.trim()) {
-      alert('Phone number is required for Driver');
+    if (form.role !== 'driver') {
+      if (!form.email.trim()) {
+        errs.email = 'សូមបំពេញអ៊ីម៉ែល';
+      } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
+        errs.email = 'សូមបំពេញអ៊ីម៉ែលត្រឹមត្រូវ';
+      }
+    } else if (form.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
+      errs.email = 'សូមបំពេញអ៊ីម៉ែលត្រឹមត្រូវ';
+    }
+    if (!form.password) {
+      errs.password = 'សូមបំពេញពាក្យសម្ងាត់';
+    } else if (form.password.length < 6) {
+      errs.password = 'ពាក្យសម្ងាត់ត្រូវមានយ៉ាងហោចណាស់ ៦ តួអក្សរ';
+    }
+
+    if (Object.keys(errs).length > 0) {
+      setErrors(errs);
       return;
     }
 
+    setErrors({});
     const selectedRole = roles.find(r => r.name === form.role);
     setSaving(true);
     try {
@@ -146,7 +169,7 @@ export default function CreateStaffPage() {
               <span className="card-title">{t('addStaff')}</span>
             </div>
             <div className="card-body">
-              <form onSubmit={(e) => { e.preventDefault(); save(); }}>
+              <form onSubmit={(e) => { e.preventDefault(); save(); }} noValidate>
                 <div className="form-row" style={{ alignItems: 'center', marginBottom: 20 }}>
                   <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
                     <div style={{
@@ -181,7 +204,7 @@ export default function CreateStaffPage() {
                 <div className="form-row">
                   <div className="form-group">
                     <label className="form-label">{t('role') || 'តួនាទី'} <span style={{ color: '#ef4444' }}>*</span></label>
-                    <select className="form-control" required value={form.role} onChange={f('role')}>
+                    <select className="form-control" value={form.role} onChange={f('role')}>
                       {roles.map((r: any) => {
                         const n = (r.name || '').toLowerCase();
                         const label = n === 'admin' ? 'អ្នកគ្រប់គ្រង (Admin)' : n === 'staff' ? 'បុគ្គលិក (Staff)' : n === 'driver' ? 'អ្នកដឹកជញ្ជូន (Driver)' : (r.name.charAt(0).toUpperCase() + r.name.slice(1));
@@ -196,12 +219,12 @@ export default function CreateStaffPage() {
                   <div className="form-group">
                     <label className="form-label">{t('fullName')} <span style={{ color: '#ef4444' }}>*</span></label>
                     <input
-                      className="form-control"
-                      required
+                      className={`form-control ${errors.name ? 'is-invalid' : ''}`}
                       value={form.name}
                       onChange={f('name')}
                       placeholder="e.g. Sok Dara"
                     />
+                    {errors.name && <div className="form-error-text">{errors.name}</div>}
                   </div>
                 </div>
 
@@ -220,39 +243,39 @@ export default function CreateStaffPage() {
                       {t('phone')} <span style={{ color: '#ef4444' }}>*</span>
                     </label>
                     <input
-                      className="form-control"
-                      required
+                      className={`form-control ${errors.phone ? 'is-invalid' : ''}`}
                       value={form.phone}
                       onChange={f('phone')}
                       placeholder="e.g. 012-345-678"
                     />
+                    {errors.phone && <div className="form-error-text">{errors.phone}</div>}
                   </div>
                 </div>
 
                 <div className="form-row">
                   <div className="form-group">
                     <label className="form-label">
-                      {t('email')} <span style={{ color: '#ef4444' }}>*</span>
+                      {t('email')} {form.role !== 'driver' && <span style={{ color: '#ef4444' }}>*</span>}
                     </label>
                     <input
                       type="email"
-                      className="form-control"
-                      required={form.role !== 'driver'}
+                      className={`form-control ${errors.email ? 'is-invalid' : ''}`}
                       value={form.email}
                       onChange={f('email')}
                       placeholder="e.g. email@example.com"
                     />
+                    {errors.email && <div className="form-error-text">{errors.email}</div>}
                   </div>
                   <div className="form-group">
                     <label className="form-label">{t('password')} <span style={{ color: '#ef4444' }}>*</span></label>
                     <input
                       type="password"
-                      className="form-control"
-                      required
+                      className={`form-control ${errors.password ? 'is-invalid' : ''}`}
                       value={form.password}
                       onChange={f('password')}
                       placeholder={t('passwordPlaceholder')}
                     />
+                    {errors.password && <div className="form-error-text">{errors.password}</div>}
                   </div>
                 </div>
 

@@ -41,6 +41,7 @@ export default function CreateRolePage() {
 
   const [roleName, setRoleName] = useState('');
   const [roleDescription, setRoleDescription] = useState('');
+  const [roleNameError, setRoleNameError] = useState('');
   const [selectedPermissionIds, setSelectedPermissionIds] = useState<number[]>([]);
 
   useEffect(() => {
@@ -97,9 +98,10 @@ export default function CreateRolePage() {
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!roleName.trim()) {
-      alert(t('roleNameRequired'));
+      setRoleNameError(t('roleNameRequired') || 'សូមបំពេញឈ្មោះតួនាទី (Role Name)');
       return;
     }
+    setRoleNameError('');
 
     setSaving(true);
     try {
@@ -155,18 +157,21 @@ export default function CreateRolePage() {
               <span className="card-title">{t('createRoleForm')}</span>
             </div>
             <div className="card-body">
-              <form onSubmit={handleSave}>
+              <form onSubmit={handleSave} noValidate>
                 <div className="form-row">
                   <div className="form-group">
                     <label className="form-label">{t('roleName')} <span style={{ color: '#ef4444' }}>*</span></label>
                     <input
-                      className="form-control"
+                      className={`form-control ${roleNameError ? 'is-invalid' : ''}`}
                       placeholder={t('roleNamePlaceholder')}
                       value={roleName}
-                      onChange={e => setRoleName(e.target.value)}
-                      required
+                      onChange={e => {
+                        setRoleName(e.target.value);
+                        if (roleNameError) setRoleNameError('');
+                      }}
                       style={{ textTransform: 'lowercase' }}
                     />
+                    {roleNameError && <div className="form-error-text">{roleNameError}</div>}
                   </div>
                   <div className="form-group">
                     <label className="form-label">{t('roleDescription')}</label>

@@ -30,6 +30,8 @@ export default function CreateCouponPage() {
     usageLimit: 100,
   });
 
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
+
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
@@ -70,7 +72,11 @@ export default function CreateCouponPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newCoupon.code) {
+    const newErrors: { [key: string]: string } = {};
+    if (!newCoupon.code.trim()) newErrors.code = 'សូមបញ្ចូល Coupon Code';
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
       alert('សូមបញ្ចូល Coupon Code');
       return;
     }
@@ -410,21 +416,24 @@ export default function CreateCouponPage() {
                 <div className="form-row">
                   <div className="form-group">
                     <label className="form-label">
-                      Coupon Code <span>*</span>
+                      Coupon Code <span style={{ color: '#ef4444' }}>*</span>
                     </label>
                     <input
                       type="text"
-                      required
-                      className="form-control"
+                      className={`form-control ${errors.code ? 'is-invalid' : ''}`}
                       placeholder="ឧ. PROMO2026, SUMMER20"
                       value={newCoupon.code}
-                      onChange={(e) => setNewCoupon({ ...newCoupon, code: e.target.value.toUpperCase() })}
+                      onChange={(e) => {
+                        setNewCoupon({ ...newCoupon, code: e.target.value.toUpperCase() });
+                        if (errors.code) setErrors(prev => { const n = { ...prev }; delete n.code; return n; });
+                      }}
                     />
+                    {errors.code && <div className="form-error-text" style={{ color: '#ef4444', fontSize: 11.5, marginTop: 4, fontWeight: 600 }}>{errors.code}</div>}
                   </div>
 
                   <div className="form-group">
                     <label className="form-label">
-                      ប្រភេទបញ្ចុះតម្លៃ <span>*</span>
+                      ប្រភេទបញ្ចុះតម្លៃ <span style={{ color: '#ef4444' }}>*</span>
                     </label>
                     <select
                       className="form-control"
@@ -440,11 +449,10 @@ export default function CreateCouponPage() {
                 <div className="form-row">
                   <div className="form-group">
                     <label className="form-label">
-                      តម្លៃបញ្ចុះ {newCoupon.discountType === 'percentage' ? '(%)' : '($)'} <span>*</span>
+                      តម្លៃបញ្ចុះ {newCoupon.discountType === 'percentage' ? '(%)' : '($)'} <span style={{ color: '#ef4444' }}>*</span>
                     </label>
                     <input
                       type="number"
-                      required
                       min={1}
                       max={newCoupon.discountType === 'percentage' ? 100 : 10000}
                       className="form-control"

@@ -22,6 +22,7 @@ export default function SaasAdminLoginPage() {
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -29,6 +30,27 @@ export default function SaasAdminLoginPage() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (loading) return;
+
+    const newErrors: { email?: string; password?: string } = {};
+    const emailVal = email.trim();
+    if (!emailVal) {
+      newErrors.email = tr('សូមបំពេញអ៊ីម៉ែល', 'Please enter your email');
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal)) {
+      newErrors.email = tr('សូមបំពេញអ៊ីម៉ែលត្រឹមត្រូវ', 'Please enter a valid email');
+    }
+
+    if (!password) {
+      newErrors.password = tr('សូមបំពេញពាក្យសម្ងាត់', 'Please enter your password');
+    } else if (password.length < 6) {
+      newErrors.password = tr('ពាក្យសម្ងាត់ត្រូវមានយ៉ាងហោចណាស់ ៦ តួអក្សរ', 'Password must be at least 6 characters');
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+
+    setErrors({});
     setError('');
     setLoading(true);
 
@@ -596,7 +618,7 @@ export default function SaasAdminLoginPage() {
         )}
 
         {/* Form Inputs */}
-        <form onSubmit={handleLogin} autoComplete="off">
+        <form onSubmit={handleLogin} autoComplete="off" noValidate>
           {/* Prevent aggressive browser auto-fill */}
           <input type="text" name="fake_username" style={{ display: 'none' }} tabIndex={-1} autoComplete="off" />
           <input type="password" name="fake_password" style={{ display: 'none' }} tabIndex={-1} autoComplete="new-password" />
@@ -617,25 +639,27 @@ export default function SaasAdminLoginPage() {
             <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
               <MdEmail
                 size={19}
-                color="#94a3b8"
+                color={errors.email ? '#ef4444' : '#94a3b8'}
                 style={{ position: 'absolute', left: 14, pointerEvents: 'none' }}
               />
               <input
                 type="email"
-                required
                 autoComplete="off"
                 autoCorrect="off"
                 autoCapitalize="none"
                 spellCheck={false}
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  if (errors.email) setErrors(prev => ({ ...prev, email: undefined }));
+                }}
                 placeholder={tr('បញ្ចូលអ៊ីមែល', 'Enter email')}
                 style={{
                   width: '100%',
                   padding: '13px 16px 13px 44px',
                   borderRadius: 14,
-                  border: '1.5px solid #e2e8f0',
-                  background: '#f8fafc',
+                  border: errors.email ? '1.5px solid #ef4444' : '1.5px solid #e2e8f0',
+                  background: errors.email ? '#fff8f8' : '#f8fafc',
                   fontSize: 14.5,
                   fontWeight: 500,
                   color: '#0f172a',
@@ -643,16 +667,22 @@ export default function SaasAdminLoginPage() {
                   transition: 'all 0.2s ease',
                 }}
                 onFocus={(e) => {
-                  e.currentTarget.style.borderColor = '#2563eb';
+                  e.currentTarget.style.borderColor = errors.email ? '#ef4444' : '#2563eb';
                   e.currentTarget.style.background = '#ffffff';
-                  e.currentTarget.style.boxShadow = '0 0 0 4px rgba(37, 99, 235, 0.12)';
+                  e.currentTarget.style.boxShadow = errors.email ? '0 0 0 4px rgba(239, 68, 68, 0.15)' : '0 0 0 4px rgba(37, 99, 235, 0.12)';
                 }}
                 onBlur={(e) => {
-                  e.currentTarget.style.borderColor = '#e2e8f0';
-                  e.currentTarget.style.background = '#f8fafc';
+                  e.currentTarget.style.borderColor = errors.email ? '#ef4444' : '#e2e8f0';
+                  e.currentTarget.style.background = errors.email ? '#fff8f8' : '#f8fafc';
+                  e.currentTarget.style.boxShadow = 'none';
                 }}
               />
             </div>
+            {errors.email && (
+              <div style={{ color: '#dc2626', fontSize: '12.5px', fontWeight: 600, marginTop: '6px', lineHeight: '1.4' }}>
+                {errors.email}
+              </div>
+            )}
           </div>
 
           {/* Password */}
@@ -671,22 +701,24 @@ export default function SaasAdminLoginPage() {
             <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
               <MdLock
                 size={19}
-                color="#94a3b8"
+                color={errors.password ? '#ef4444' : '#94a3b8'}
                 style={{ position: 'absolute', left: 14, pointerEvents: 'none' }}
               />
               <input
                 type={showPassword ? 'text' : 'password'}
-                required
                 autoComplete="new-password"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  if (errors.password) setErrors(prev => ({ ...prev, password: undefined }));
+                }}
                 placeholder="••••••••"
                 style={{
                   width: '100%',
                   padding: '13px 44px 13px 44px',
                   borderRadius: 14,
-                  border: '1.5px solid #e2e8f0',
-                  background: '#f8fafc',
+                  border: errors.password ? '1.5px solid #ef4444' : '1.5px solid #e2e8f0',
+                  background: errors.password ? '#fff8f8' : '#f8fafc',
                   fontSize: 14.5,
                   fontWeight: 500,
                   color: '#0f172a',
@@ -694,13 +726,14 @@ export default function SaasAdminLoginPage() {
                   transition: 'all 0.2s ease',
                 }}
                 onFocus={(e) => {
-                  e.currentTarget.style.borderColor = '#2563eb';
+                  e.currentTarget.style.borderColor = errors.password ? '#ef4444' : '#2563eb';
                   e.currentTarget.style.background = '#ffffff';
-                  e.currentTarget.style.boxShadow = '0 0 0 4px rgba(37, 99, 235, 0.12)';
+                  e.currentTarget.style.boxShadow = errors.password ? '0 0 0 4px rgba(239, 68, 68, 0.15)' : '0 0 0 4px rgba(37, 99, 235, 0.12)';
                 }}
                 onBlur={(e) => {
-                  e.currentTarget.style.borderColor = '#e2e8f0';
-                  e.currentTarget.style.background = '#f8fafc';
+                  e.currentTarget.style.borderColor = errors.password ? '#ef4444' : '#e2e8f0';
+                  e.currentTarget.style.background = errors.password ? '#fff8f8' : '#f8fafc';
+                  e.currentTarget.style.boxShadow = 'none';
                 }}
               />
               <button
@@ -721,6 +754,11 @@ export default function SaasAdminLoginPage() {
                 {showPassword ? <MdVisibilityOff size={20} /> : <MdVisibility size={20} />}
               </button>
             </div>
+            {errors.password && (
+              <div style={{ color: '#dc2626', fontSize: '12.5px', fontWeight: 600, marginTop: '6px', lineHeight: '1.4' }}>
+                {errors.password}
+              </div>
+            )}
           </div>
 
           {/* Submit Button */}

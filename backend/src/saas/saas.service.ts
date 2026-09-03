@@ -53,7 +53,14 @@ export class SaasService {
       relations: { plan: true, domains: true, subscriptions: true },
     });
     if (!tenant) throw new NotFoundException('Tenant not found');
-    return tenant;
+    const adminUser = await this.userRepo.findOne({
+      where: { tenantId: id },
+      order: { id: 'ASC' },
+    });
+    return {
+      ...tenant,
+      adminUser: adminUser ? { id: adminUser.id, name: adminUser.name, email: adminUser.email, phone: adminUser.phone } : null,
+    };
   }
 
   async getTenantBySlug(slug: string) {
@@ -214,10 +221,66 @@ export class SaasService {
     return this.tenantRepo.save(this.tenantRepo.create(dto));
   }
 
-  async updateTenant(id: number, dto: Partial<Tenant>) {
-    const tenant = await this.getTenantById(id);
-    Object.assign(tenant, dto);
-    return this.tenantRepo.save(tenant);
+  async updateTenant(id: number, dto: any) {
+    const tenant = await this.tenantRepo.findOne({ where: { id } });
+    if (!tenant) throw new NotFoundException('Tenant not found');
+
+    if (dto.name) tenant.name = dto.name;
+    if (dto.slug) tenant.slug = dto.slug;
+    if (dto.code !== undefined) tenant.code = dto.code;
+    if (dto.logo !== undefined) tenant.logo = dto.logo;
+    if (dto.phone !== undefined) tenant.phone = dto.phone;
+    if (dto.email !== undefined) tenant.email = dto.email;
+    if (dto.address !== undefined) tenant.address = dto.address;
+    if (dto.status) tenant.status = dto.status;
+    if (dto.planId) tenant.planId = Number(dto.planId);
+
+    const savedTenant = await this.tenantRepo.save(tenant);
+
+    // Update active subscription
+    if (dto.planId || dto.billingCycle || dto.status) {
+      const sub = await this.subscriptionRepo.findOne({
+        where: { tenantId: id },
+        order: { id: 'DESC' },
+      });
+      if (sub) {
+        if (dto.planId) sub.planId = Number(dto.planId);
+        if (dto.billingCycle) sub.billingCycle = dto.billingCycle;
+        if (dto.status) sub.status = dto.status === 'active' ? 'active' : 'cancelled';
+        await this.subscriptionRepo.save(sub);
+      }
+    }
+
+    // Update primary domain if slug changed
+    if (dto.slug) {
+      await this.domainRepo.update(
+        { tenantId: id, isPrimary: true },
+        { domain: `${dto.slug}.ebsexpress.com` },
+      );
+    }
+
+    // Update tenant admin user
+    const adminUser = await this.userRepo.findOne({
+      where: { tenantId: id },
+      order: { id: 'ASC' },
+    });
+    if (adminUser) {
+      if (dto.adminName) adminUser.name = dto.adminName;
+      if (dto.email) adminUser.email = dto.email;
+      if (dto.phone) adminUser.phone = dto.phone;
+      if (dto.slug) adminUser.tenantSubdomain = dto.slug;
+      if (dto.password && dto.password.trim()) {
+        adminUser.password = await bcrypt.hash(dto.password.trim(), 10);
+      }
+      if (dto.status === 'suspended') {
+        adminUser.isActive = false;
+      } else if (dto.status === 'active') {
+        adminUser.isActive = true;
+      }
+      await this.userRepo.save(adminUser);
+    }
+
+    return savedTenant;
   }
 
   async deleteTenant(id: number) {

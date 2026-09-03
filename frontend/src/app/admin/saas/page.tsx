@@ -129,6 +129,20 @@ export default function SaasMasterPortal() {
     password: '',
   });
 
+  // Modal 1.5: Edit Company / Tenant Info State
+  const [showEditTenantModal, setShowEditTenantModal] = useState(false);
+  const [editingTenant, setEditingTenant] = useState<any>(null);
+  const [savingTenant, setSavingTenant] = useState(false);
+  const [editTenantForm, setEditTenantForm] = useState({
+    id: 0,
+    name: '',
+    phone: '',
+    email: '',
+    address: '',
+    planId: 1,
+    status: 'active',
+  });
+
   // Modal 2: Success Shareable Credentials State
   const [createdCredentials, setCreatedCredentials] = useState<{
     companyName: string;
@@ -223,6 +237,7 @@ export default function SaasMasterPortal() {
     accountName: '',
     isActive: true,
   });
+  const [partnerErrors, setPartnerErrors] = useState<{ [key: string]: string }>({});
 
   const handleSelectMenu = (tab: 'dashboard' | 'tenants' | 'invoices' | 'users' | 'plans' | 'coupons' | 'partners') => {
     setActiveMenu(tab);
@@ -303,6 +318,40 @@ export default function SaasMasterPortal() {
       }
     }
     return `http://${sub}.localhost:3000`;
+  };
+
+  const handleOpenEditTenantModal = (tenantSub: any) => {
+    const t = tenantSub.tenant || tenantSub;
+    const tenantId = t.id || tenantSub.tenantId || tenantSub.id;
+    if (tenantId) {
+      router.push(`/admin/saas/tenants/edit/${tenantId}`);
+    }
+  };
+
+  const handleSaveEditTenantSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editTenantForm.name.trim()) {
+      alert(tr('សូមបញ្ចូលឈ្មោះក្រុមហ៊ុន', 'Please enter company name'));
+      return;
+    }
+    try {
+      setSavingTenant(true);
+      await saasApi.updateTenant(editTenantForm.id, {
+        name: editTenantForm.name,
+        phone: editTenantForm.phone,
+        email: editTenantForm.email,
+        address: editTenantForm.address,
+        planId: Number(editTenantForm.planId),
+        status: editTenantForm.status,
+      });
+      alert(tr('បានកែប្រែព័ត៌មានក្រុមហ៊ុនជោគជ័យ!', 'Company information updated successfully!'));
+      setShowEditTenantModal(false);
+      loadAllData();
+    } catch (err: any) {
+      alert(err.response?.data?.message || tr('បរាជ័យក្នុងការកែប្រែព័ត៌មានក្រុមហ៊ុន', 'Failed to update company information'));
+    } finally {
+      setSavingTenant(false);
+    }
   };
 
   const handleOpenRenewModal = (tenantSub: any) => {
@@ -617,11 +666,13 @@ export default function SaasMasterPortal() {
       accountName: '',
       isActive: true,
     });
+    setPartnerErrors({});
     setActiveMenu('create-partner');
   };
 
   const handleEditPartner = (partner: any) => {
     setEditingPartnerId(partner.id);
+    setPartnerErrors({});
     setPartnerForm({
       name: partner.name || '',
       email: partner.email || '',
@@ -638,7 +689,13 @@ export default function SaasMasterPortal() {
 
   const handlePartnerSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!partnerForm.name || !partnerForm.email || !partnerForm.referralCode) {
+    const newErrors: { [key: string]: string } = {};
+    if (!partnerForm.name.trim()) newErrors.name = tr('សូមបញ្ចូលឈ្មោះដៃគូសហការ', 'Please enter partner name');
+    if (!partnerForm.email.trim()) newErrors.email = tr('សូមបញ្ចូលអ៊ីមែល', 'Please enter email');
+    if (!partnerForm.referralCode.trim()) newErrors.referralCode = tr('សូមបញ្ចូលកូដណែនាំ', 'Please enter referral code');
+
+    if (Object.keys(newErrors).length > 0) {
+      setPartnerErrors(newErrors);
       alert(tr('សូមបំពេញឈ្មោះ, អ៊ីមែល និងកូដណែនាំ', 'Please fill in name, email, and referral code'));
       return;
     }
@@ -1628,6 +1685,14 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
                           <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end', alignItems: 'center' }}>
                             <button
                               className="btn btn-ghost btn-icon btn-sm"
+                              onClick={() => handleOpenEditTenantModal(s)}
+                              title={tr('កែប្រែព័ត៌មានក្រុមហ៊ុន', 'Edit Company')}
+                              style={{ color: '#0284c7' }}
+                            >
+                              <FaRegEdit size={13} />
+                            </button>
+                            <button
+                              className="btn btn-ghost btn-icon btn-sm"
                               onClick={() => handleOpenRenewModal(s)}
                               title={tr('បន្តសុពលភាពក្រុមហ៊ុន', 'Extend Validity / Renew')}
                               style={{ color: '#2563eb' }}
@@ -1744,7 +1809,7 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
                   </div>
 
                   <div className="card-body">
-                    <form onSubmit={handleCreateCompanySubmit} autoComplete="off">
+                    <form onSubmit={handleCreateCompanySubmit} autoComplete="off" noValidate>
                       {/* SECTION 1: Company & Workspace */}
                       <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 14, display: 'flex', alignItems: 'center' }}>
                         {tr('១. ព័ត៌មានក្រុមហ៊ុន និង Workspace', '1. Company & Workspace Details')}
@@ -1753,11 +1818,10 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
                       <div className="form-row">
                         <div className="form-group">
                           <label className="form-label">
-                            {tr('ឈ្មោះក្រុមហ៊ុន', 'Company Name')} <span>*</span>
+                            {tr('ឈ្មោះក្រុមហ៊ុន', 'Company Name')} <span style={{ color: '#ef4444' }}>*</span>
                           </label>
                           <input
                             type="text"
-                            required
                             className="form-control"
                             placeholder={tr('ឧ. Angkor Express Delivery', 'e.g. Angkor Express Delivery')}
                             value={companyForm.companyName}
@@ -1767,32 +1831,34 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
 
                         <div className="form-group">
                           <label className="form-label">
-                            {tr('ឈ្មោះ Subdomain សម្រាប់ Workspace', 'Workspace Subdomain')} <span>*</span>
+                            {tr('ឈ្មោះ Subdomain សម្រាប់ Workspace', 'Workspace Subdomain')} <span style={{ color: '#ef4444' }}>*</span>
                           </label>
                           <div style={{ display: 'flex' }}>
                             <input
                               type="text"
-                              required
                               className="form-control"
                               style={{ borderTopRightRadius: 0, borderBottomRightRadius: 0 }}
                               placeholder="angkor"
                               value={companyForm.subdomain}
                               onChange={(e) => setCompanyForm({ ...companyForm, subdomain: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') })}
                             />
-                            <span style={{
-                              padding: '0 12px',
-                              background: '#f8fafc',
-                              border: '1.5px solid var(--border)',
-                              borderLeft: 'none',
-                              borderTopRightRadius: 'var(--radius)',
-                              borderBottomRightRadius: 'var(--radius)',
-                              display: 'flex',
-                              alignItems: 'center',
-                              color: 'var(--text-secondary)',
-                              fontSize: 12.5,
-                              fontWeight: 600,
-                              whiteSpace: 'nowrap',
-                            }}>
+                            <span
+                              suppressHydrationWarning
+                              style={{
+                                padding: '0 12px',
+                                background: '#f8fafc',
+                                border: '1.5px solid var(--border)',
+                                borderLeft: 'none',
+                                borderTopRightRadius: 'var(--radius)',
+                                borderBottomRightRadius: 'var(--radius)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                color: 'var(--text-secondary)',
+                                fontSize: 12.5,
+                                fontWeight: 600,
+                                whiteSpace: 'nowrap',
+                              }}
+                            >
                               {typeof window !== 'undefined' && window.location.host.includes('localhost') ? '.localhost:3000' : '.ebsexpress.com'}
                             </span>
                           </div>
@@ -1840,7 +1906,7 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
                       <div className="form-row">
                         <div className="form-group">
                           <label className="form-label">
-                            {tr('ឈ្មោះអ្នកគ្រប់គ្រង', 'Admin Full Name')}
+                            {tr('ឈ្មោះអ្នកគ្រប់គ្រង', 'Admin Full Name')} <span style={{ color: '#ef4444' }}>*</span>
                           </label>
                           <input
                             type="text"
@@ -1853,7 +1919,7 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
 
                         <div className="form-group">
                           <label className="form-label">
-                            {tr('លេខទូរស័ព្ទ', 'Phone Number')}
+                            {tr('លេខទូរស័ព្ទ', 'Phone Number')} <span style={{ color: '#ef4444' }}>*</span>
                           </label>
                           <input
                             type="text"
@@ -1868,14 +1934,13 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
                       <div className="form-row">
                         <div className="form-group">
                           <label className="form-label">
-                            {tr('អ៊ីមែលសម្រាប់ Login', 'Login Email')} <span>*</span>
+                            {tr('អ៊ីមែលសម្រាប់ Login', 'Login Email')} <span style={{ color: '#ef4444' }}>*</span>
                           </label>
                           <input
                             type="email"
                             name="new_tenant_admin_email"
                             id="new_tenant_admin_email"
                             autoComplete="off"
-                            required
                             className="form-control"
                             placeholder="client@delivery.com"
                             value={companyForm.email}
@@ -1885,14 +1950,13 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
 
                         <div className="form-group">
                           <label className="form-label">
-                            {tr('ពាក្យសម្ងាត់', 'Password')} <span>*</span>
+                            {tr('ពាក្យសម្ងាត់', 'Password')} <span style={{ color: '#ef4444' }}>*</span>
                           </label>
                           <input
                             type="password"
                             name="new_tenant_admin_password"
                             id="new_tenant_admin_password"
                             autoComplete="new-password"
-                            required
                             className="form-control"
                             placeholder={tr('បញ្ចូលពាក្យសម្ងាត់...', 'Enter password...')}
                             value={companyForm.password}
@@ -2994,7 +3058,7 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
               </div>
 
               <div className="card-body" style={{ padding: '24px 28px' }}>
-                <form onSubmit={handlePartnerSubmit}>
+                <form onSubmit={handlePartnerSubmit} autoComplete="off" noValidate>
                   {/* Section 1: Partner Basic Details */}
                   <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 14, display: 'flex', alignItems: 'center' }}>
                     {tr('១. ព័ត៌មានដៃគូសហការ', '1. Affiliate Partner Details')}
@@ -3003,30 +3067,36 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
                   <div className="form-row" style={{ marginBottom: 16 }}>
                     <div className="form-group">
                       <label className="form-label">
-                        {tr('ឈ្មោះដៃគូសហការ', 'Partner Name')} <span style={{ color: '#dc2626' }}>*</span>
+                        {tr('ឈ្មោះដៃគូសហការ', 'Partner Name')} <span style={{ color: '#ef4444' }}>*</span>
                       </label>
                       <input
                         type="text"
-                        required
-                        className="form-control"
+                        className={`form-control ${partnerErrors.name ? 'is-invalid' : ''}`}
                         placeholder={tr('ឧ. Sok Tech Partner', 'e.g. Sok Tech Partner')}
                         value={partnerForm.name}
-                        onChange={(e) => setPartnerForm({ ...partnerForm, name: e.target.value })}
+                        onChange={(e) => {
+                          setPartnerForm({ ...partnerForm, name: e.target.value });
+                          if (partnerErrors.name) setPartnerErrors(prev => { const n = { ...prev }; delete n.name; return n; });
+                        }}
                       />
+                      {partnerErrors.name && <div className="form-error-text" style={{ color: '#ef4444', fontSize: 11.5, marginTop: 4, fontWeight: 600 }}>{partnerErrors.name}</div>}
                     </div>
 
                     <div className="form-group">
                       <label className="form-label">
-                        {tr('អ៊ីមែល', 'Email')} <span style={{ color: '#dc2626' }}>*</span>
+                        {tr('អ៊ីមែល', 'Email')} <span style={{ color: '#ef4444' }}>*</span>
                       </label>
                       <input
                         type="email"
-                        required
-                        className="form-control"
+                        className={`form-control ${partnerErrors.email ? 'is-invalid' : ''}`}
                         placeholder="partner@company.com"
                         value={partnerForm.email}
-                        onChange={(e) => setPartnerForm({ ...partnerForm, email: e.target.value })}
+                        onChange={(e) => {
+                          setPartnerForm({ ...partnerForm, email: e.target.value });
+                          if (partnerErrors.email) setPartnerErrors(prev => { const n = { ...prev }; delete n.email; return n; });
+                        }}
                       />
+                      {partnerErrors.email && <div className="form-error-text" style={{ color: '#ef4444', fontSize: 11.5, marginTop: 4, fontWeight: 600 }}>{partnerErrors.email}</div>}
                     </div>
                   </div>
 
@@ -3046,23 +3116,26 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
 
                     <div className="form-group">
                       <label className="form-label">
-                        {tr('កូដណែនាំ', 'Referral Code')} <span style={{ color: '#dc2626' }}>*</span>
+                        {tr('កូដណែនាំ', 'Referral Code')} <span style={{ color: '#ef4444' }}>*</span>
                       </label>
                       <input
                         type="text"
-                        required
-                        className="form-control"
+                        className={`form-control ${partnerErrors.referralCode ? 'is-invalid' : ''}`}
                         placeholder="PARTNER15"
                         value={partnerForm.referralCode}
-                        onChange={(e) => setPartnerForm({ ...partnerForm, referralCode: e.target.value.toUpperCase().replace(/[^A-Z0-9_-]/g, '') })}
+                        onChange={(e) => {
+                          setPartnerForm({ ...partnerForm, referralCode: e.target.value.toUpperCase().replace(/[^A-Z0-9_-]/g, '') });
+                          if (partnerErrors.referralCode) setPartnerErrors(prev => { const n = { ...prev }; delete n.referralCode; return n; });
+                        }}
                         style={{ fontFamily: 'monospace', fontWeight: 800, textTransform: 'uppercase' }}
                       />
+                      {partnerErrors.referralCode && <div className="form-error-text" style={{ color: '#ef4444', fontSize: 11.5, marginTop: 4, fontWeight: 600 }}>{partnerErrors.referralCode}</div>}
                     </div>
                   </div>
 
                   <div className="form-group" style={{ marginBottom: 24, maxWidth: 360 }}>
                     <label className="form-label">
-                      {tr('ភាគរយកម្រៃជើងសារ (%)', 'Commission Rate (%)')} <span style={{ color: '#dc2626' }}>*</span>
+                      {tr('ភាគរយកម្រៃជើងសារ (%)', 'Commission Rate (%)')} <span style={{ color: '#ef4444' }}>*</span>
                     </label>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                       <input
@@ -3070,7 +3143,6 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
                         min="1"
                         max="100"
                         step="0.5"
-                        required
                         className="form-control"
                         style={{ width: 120, fontWeight: 700 }}
                         value={partnerForm.commissionRate}
@@ -3269,11 +3341,10 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
             {/* ── 2. Modal Body ── */}
             <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 18 }}>
               {/* Add Domain Input (Inline Clean Form) */}
-              <form onSubmit={handleAddDomainSubmit}>
+              <form onSubmit={handleAddDomainSubmit} noValidate>
                 <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
                   <input
                     type="text"
-                    required
                     placeholder="e.g. app.mycompany.com"
                     value={newDomainForm.domain}
                     onChange={(e) => setNewDomainForm({ ...newDomainForm, domain: e.target.value.toLowerCase().trim() })}
@@ -3930,6 +4001,287 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
           </div>
         );
       })()}
+
+      {/* MODAL: Edit Tenant / Company Information Modal */}
+      {showEditTenantModal && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(15, 23, 42, 0.7)',
+            backdropFilter: 'blur(10px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+            padding: 16,
+            fontFamily: "'Kantumruy Pro', 'Inter', sans-serif",
+          }}
+        >
+          <div
+            style={{
+              background: '#ffffff',
+              borderRadius: 20,
+              width: '100%',
+              maxWidth: 520,
+              maxHeight: '90vh',
+              overflowY: 'auto',
+              boxShadow: '0 25px 70px -12px rgba(15, 23, 42, 0.35), 0 0 0 1px rgba(226, 232, 240, 0.8)',
+            }}
+          >
+            {/* Header */}
+            <div
+              style={{
+                padding: '20px 24px 16px',
+                borderBottom: '1px solid #f1f5f9',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div
+                  style={{
+                    width: 42,
+                    height: 42,
+                    borderRadius: 12,
+                    background: '#e0f2fe',
+                    color: '#0284c7',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: 20,
+                    flexShrink: 0,
+                  }}
+                >
+                  <FaRegEdit size={20} />
+                </div>
+                <div>
+                  <h3 style={{ fontSize: 16.5, fontWeight: 900, color: '#0f172a', margin: 0 }}>
+                    {tr('កែប្រែព័ត៌មានក្រុមហ៊ុន', 'Edit Company Information')}
+                  </h3>
+                  <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>
+                    🏢 ID: #{editTenantForm.id}
+                  </div>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setShowEditTenantModal(false)}
+                style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: 8,
+                  border: '1px solid #e2e8f0',
+                  background: '#ffffff',
+                  color: '#64748b',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  fontSize: 15,
+                  fontWeight: 700,
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Form */}
+            <form onSubmit={handleSaveEditTenantSubmit} style={{ padding: '20px 24px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: 12.5, fontWeight: 700, color: '#334155', marginBottom: 6 }}>
+                    {tr('ឈ្មោះក្រុមហ៊ុន', 'Company Name')} *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={editTenantForm.name}
+                    onChange={(e) => setEditTenantForm({ ...editTenantForm, name: e.target.value })}
+                    style={{
+                      width: '100%',
+                      padding: '10px 14px',
+                      borderRadius: 10,
+                      border: '1.5px solid #cbd5e1',
+                      fontSize: 13,
+                      outline: 'none',
+                      boxSizing: 'border-box',
+                      fontWeight: 600,
+                    }}
+                  />
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: 12.5, fontWeight: 700, color: '#334155', marginBottom: 6 }}>
+                      {tr('លេខទូរស័ព្ទ', 'Phone Number')}
+                    </label>
+                    <input
+                      type="text"
+                      value={editTenantForm.phone}
+                      onChange={(e) => setEditTenantForm({ ...editTenantForm, phone: e.target.value })}
+                      style={{
+                        width: '100%',
+                        padding: '10px 14px',
+                        borderRadius: 10,
+                        border: '1.5px solid #cbd5e1',
+                        fontSize: 13,
+                        outline: 'none',
+                        boxSizing: 'border-box',
+                      }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: 12.5, fontWeight: 700, color: '#334155', marginBottom: 6 }}>
+                      {tr('អ៊ីមែល', 'Email')}
+                    </label>
+                    <input
+                      type="email"
+                      value={editTenantForm.email}
+                      onChange={(e) => setEditTenantForm({ ...editTenantForm, email: e.target.value })}
+                      style={{
+                        width: '100%',
+                        padding: '10px 14px',
+                        borderRadius: 10,
+                        border: '1.5px solid #cbd5e1',
+                        fontSize: 13,
+                        outline: 'none',
+                        boxSizing: 'border-box',
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: 12.5, fontWeight: 700, color: '#334155', marginBottom: 6 }}>
+                      {tr('កញ្ចប់គម្រោង (Plan)', 'Subscription Plan')}
+                    </label>
+                    <select
+                      value={editTenantForm.planId}
+                      onChange={(e) => setEditTenantForm({ ...editTenantForm, planId: Number(e.target.value) })}
+                      style={{
+                        width: '100%',
+                        padding: '10px 14px',
+                        borderRadius: 10,
+                        border: '1.5px solid #cbd5e1',
+                        fontSize: 13,
+                        outline: 'none',
+                        boxSizing: 'border-box',
+                        background: '#ffffff',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      {plans.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.name} (${p.priceMonthly}/m - ${p.priceYearly}/y)
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: 12.5, fontWeight: 700, color: '#334155', marginBottom: 6 }}>
+                      {tr('ស្ថានភាព', 'Status')}
+                    </label>
+                    <select
+                      value={editTenantForm.status}
+                      onChange={(e) => setEditTenantForm({ ...editTenantForm, status: e.target.value })}
+                      style={{
+                        width: '100%',
+                        padding: '10px 14px',
+                        borderRadius: 10,
+                        border: '1.5px solid #cbd5e1',
+                        fontSize: 13,
+                        outline: 'none',
+                        boxSizing: 'border-box',
+                        background: '#ffffff',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <option value="active">Active (សកម្ម)</option>
+                      <option value="suspended">Suspended (ផ្អាក)</option>
+                      <option value="trial">Trial (សាកល្បង)</option>
+                      <option value="expired">Expired (ផុតកំណត់)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: 12.5, fontWeight: 700, color: '#334155', marginBottom: 6 }}>
+                    {tr('អាសយដ្ឋាន', 'Address')}
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={editTenantForm.address}
+                    onChange={(e) => setEditTenantForm({ ...editTenantForm, address: e.target.value })}
+                    style={{
+                      width: '100%',
+                      padding: '10px 14px',
+                      borderRadius: 10,
+                      border: '1.5px solid #cbd5e1',
+                      fontSize: 13,
+                      outline: 'none',
+                      boxSizing: 'border-box',
+                      fontFamily: 'inherit',
+                      resize: 'none',
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div style={{ display: 'flex', gap: 10, marginTop: 22, borderTop: '1px solid #f1f5f9', paddingTop: 16 }}>
+                <button
+                  type="button"
+                  onClick={() => setShowEditTenantModal(false)}
+                  style={{
+                    flex: 1,
+                    padding: '11px 16px',
+                    borderRadius: 10,
+                    border: '1px solid #e2e8f0',
+                    background: '#ffffff',
+                    color: '#64748b',
+                    fontSize: 13,
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                  }}
+                >
+                  {tr('បោះបង់', 'Cancel')}
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingTenant}
+                  style={{
+                    flex: 2,
+                    padding: '11px 16px',
+                    borderRadius: 10,
+                    border: 'none',
+                    background: '#0284c7',
+                    color: '#ffffff',
+                    fontSize: 13,
+                    fontWeight: 800,
+                    cursor: savingTenant ? 'not-allowed' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 6,
+                  }}
+                >
+                  {savingTenant ? tr('កំពុងរក្សាទុក...', 'Saving...') : tr('រក្សាទុកការកែប្រែ', 'Save Changes')}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

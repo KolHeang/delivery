@@ -17,6 +17,7 @@ export default function EditTelegramPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [merchants, setMerchants] = useState<any[]>([]);
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [form, setForm] = useState({
     merchantId: '',
     channelTitle: '',
@@ -78,9 +79,10 @@ export default function EditTelegramPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.chatId.trim()) {
-      alert(isKh ? 'សូមបញ្ចូល Telegram Chat ID' : 'Please provide Telegram Chat ID');
+      setErrors({ chatId: isKh ? 'សូមបញ្ចូល Telegram Chat ID' : 'Please provide Telegram Chat ID' });
       return;
     }
+    setErrors({});
 
     setSaving(true);
     try {
@@ -127,7 +129,7 @@ export default function EditTelegramPage() {
             </div>
 
             <div className="card-body">
-              <form onSubmit={handleSubmit}>
+              <form onSubmit={handleSubmit} noValidate>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
                   {/* Merchant Shop */}
                   <div className="form-group">
@@ -171,12 +173,15 @@ export default function EditTelegramPage() {
                     </label>
                     <input
                       type="text"
-                      className="form-control"
+                      className={`form-control ${errors.chatId ? 'is-invalid' : ''}`}
                       placeholder="761552994 or -100xxxxxxxxxx"
                       value={form.chatId}
-                      onChange={(e) => setForm({ ...form, chatId: e.target.value })}
-                      required
+                      onChange={(e) => {
+                        setForm({ ...form, chatId: e.target.value });
+                        if (errors.chatId) setErrors({});
+                      }}
                     />
+                    {errors.chatId && <div className="form-error-text">{errors.chatId}</div>}
                   </div>
 
                   {/* Chat Type */}

@@ -21,32 +21,31 @@ export default function EditOrderPage() {
   const [customers, setCustomers] = useState<any[]>([]);
   const [zones, setZones] = useState<any[]>([]);
 
-  const [form, setForm] = useState({
-    receiverName: '', receiverPhone: '', receiverAddress: '',
-    weight: 0.5, size: 'small', cod: 0, codCurrency: 'USD', deliveryFee: 0,
-    note: '', merchantId: '', customerId: '', driverId: '', zoneId: ''
-  });
+  const [form, setForm] = useState<any>({});
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    if (!isAuthenticated()) { router.push('/'); return; }
+    if (!isAuthenticated()) {
+      router.push('/');
+      return;
+    }
 
     const init = async () => {
       try {
-        const [m, c, z, orderRes] = await Promise.all([
+        const [zRes, mRes, cRes, oRes] = await Promise.all([
+          api.get('/select/zones'),
           api.get('/select/merchants'),
           api.get('/select/customers'),
-          api.get('/select/zones'),
           api.get(`/parcels/${params.id}`)
         ]);
+        setZones(Array.isArray(zRes.data) ? zRes.data : (zRes.data?.result || []));
+        setMerchants(Array.isArray(mRes.data) ? mRes.data : (mRes.data?.result || []));
+        setCustomers(Array.isArray(cRes.data) ? cRes.data : (cRes.data?.result || []));
 
-        setMerchants(Array.isArray(m.data) ? m.data : (m.data?.result || []));
-        setCustomers(Array.isArray(c.data) ? c.data : (c.data?.result || []));
-        setZones(Array.isArray(z.data) ? z.data : (z.data?.result || []));
-
-        const o = orderRes.data;
+        const o = oRes.data;
         setForm({
           receiverName: o.receiverName || '', receiverPhone: o.receiverPhone || '',
-          receiverAddress: o.receiverAddress || '', weight: o.weight || 0.5, size: o.size || 'small',
+          receiverAddress: o.receiverAddress || '', weight: o.weight || '', size: o.size || 'M',
           cod: o.cod || 0, codCurrency: o.codCurrency || 'USD', deliveryFee: o.deliveryFee || 0, note: o.note || '',
           merchantId: o.merchantId || '', customerId: o.customerId || '',
           driverId: o.driverId || '', zoneId: o.zoneId || ''
@@ -63,8 +62,33 @@ export default function EditOrderPage() {
     init();
   }, [params.id, router]);
 
+  const f = (k: string) => (e: any) => {
+    setForm((p: any) => ({ ...p, [k]: e.target.value }));
+    if (errors[k]) {
+      setErrors(prev => {
+        const next = { ...prev };
+        delete next[k];
+        return next;
+      });
+    }
+  };
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    const errs: Record<string, string> = {};
+    if (!form.receiverPhone || !String(form.receiverPhone).trim()) {
+      errs.receiverPhone = 'សូមបំពេញលេខទូរស័ព្ទអ្នកទទួល (Receiver Phone)';
+    }
+    if (!form.receiverAddress || !String(form.receiverAddress).trim()) {
+      errs.receiverAddress = 'សូមបំពេញអាសយដ្ឋានអ្នកទទួល (Receiver Address)';
+    }
+
+    if (Object.keys(errs).length > 0) {
+      setErrors(errs);
+      return;
+    }
+
+    setErrors({});
     setSaving(true);
     try {
       const payload = {
@@ -82,8 +106,6 @@ export default function EditOrderPage() {
     }
     setSaving(false);
   };
-
-  const f = (k: string) => (e: any) => setForm(p => ({ ...p, [k]: e.target.value }));
 
   if (loading) {
     return (
@@ -108,21 +130,33 @@ export default function EditOrderPage() {
               <span className="card-title">Order Information</span>
             </div>
             <div className="card-body">
-              <form onSubmit={handleSave}>
+              <form onSubmit={handleSave} noValidate>
                 <div className="form-row">
                   <div className="form-group" style={{ display: 'none' }}>
                     <label className="form-label">Receiver Name <span>*</span></label>
                     <input className="form-control" value={form.receiverName || '-'} onChange={f('receiverName')} />
                   </div>
                   <div className="form-group">
-                    <label className="form-label">Receiver Phone <span>*</span></label>
-                    <input className="form-control" value={form.receiverPhone} onChange={f('receiverPhone')} required />
+                    <label className="form-label">Receiver Phone <span style={{ color: '#ef4444' }}>*</span></label>
+                    <input
+                      className={`form-control ${errors.receiverPhone ? 'is-invalid' : ''}`}
+                      value={form.receiverPhone || ''}
+                      onChange={f('receiverPhone')}
+                      placeholder="e.g. 012 345 678"
+                    />
+                    {errors.receiverPhone && <div className="form-error-text">{errors.receiverPhone}</div>}
                   </div>
                 </div>
                 
                 <div className="form-group">
-                  <label className="form-label">Receiver Address <span>*</span></label>
-                  <input className="form-control" value={form.receiverAddress} onChange={f('receiverAddress')} required />
+                  <label className="form-label">Receiver Address <span style={{ color: '#ef4444' }}>*</span></label>
+                  <input
+                    className={`form-control ${errors.receiverAddress ? 'is-invalid' : ''}`}
+                    value={form.receiverAddress || ''}
+                    onChange={f('receiverAddress')}
+                    placeholder="Full delivery address..."
+                  />
+                  {errors.receiverAddress && <div className="form-error-text">{errors.receiverAddress}</div>}
                 </div>
                 
                 <div className="form-row-3" style={{ display: 'none' }}>

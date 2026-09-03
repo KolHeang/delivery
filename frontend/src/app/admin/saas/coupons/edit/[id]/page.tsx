@@ -90,6 +90,8 @@ export default function EditCouponPage() {
     }
   }, [couponId, router]);
 
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
+
   const handleLogout = () => {
     if (confirm('តើអ្នកពិតជាចង់ចាកចេញពីប្រព័ន្ធ (Logout) មែនទេ?')) {
       clearAuth();
@@ -100,7 +102,11 @@ export default function EditCouponPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!couponForm.code) {
+    const newErrors: { [key: string]: string } = {};
+    if (!couponForm.code.trim()) newErrors.code = 'សូមបញ្ចូល Coupon Code';
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
       alert('សូមបញ្ចូល Coupon Code');
       return;
     }
@@ -439,25 +445,28 @@ export default function EditCouponPage() {
               {loading ? (
                 <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>កំពុងទាញយកទិន្នន័យ...</div>
               ) : (
-                <form onSubmit={handleSubmit}>
+                <form onSubmit={handleSubmit} autoComplete="off">
                   <div className="form-row">
                     <div className="form-group">
                       <label className="form-label">
-                        Coupon Code <span>*</span>
+                        Coupon Code <span style={{ color: '#ef4444' }}>*</span>
                       </label>
                       <input
                         type="text"
-                        required
-                        className="form-control"
+                        className={`form-control ${errors.code ? 'is-invalid' : ''}`}
                         placeholder="ឧ. PROMO2026, SUMMER20"
                         value={couponForm.code}
-                        onChange={(e) => setCouponForm({ ...couponForm, code: e.target.value.toUpperCase() })}
+                        onChange={(e) => {
+                          setCouponForm({ ...couponForm, code: e.target.value.toUpperCase() });
+                          if (errors.code) setErrors(prev => { const n = { ...prev }; delete n.code; return n; });
+                        }}
                       />
+                      {errors.code && <div className="form-error-text" style={{ color: '#ef4444', fontSize: 11.5, marginTop: 4, fontWeight: 600 }}>{errors.code}</div>}
                     </div>
 
                     <div className="form-group">
                       <label className="form-label">
-                        ប្រភេទបញ្ចុះតម្លៃ <span>*</span>
+                        ប្រភេទបញ្ចុះតម្លៃ <span style={{ color: '#ef4444' }}>*</span>
                       </label>
                       <select
                         className="form-control"
@@ -473,11 +482,10 @@ export default function EditCouponPage() {
                   <div className="form-row">
                     <div className="form-group">
                       <label className="form-label">
-                        តម្លៃបញ្ចុះ {couponForm.discountType === 'percentage' ? '(%)' : '($)'} <span>*</span>
+                        តម្លៃបញ្ចុះ {couponForm.discountType === 'percentage' ? '(%)' : '($)'} <span style={{ color: '#ef4444' }}>*</span>
                       </label>
                       <input
                         type="number"
-                        required
                         min={1}
                         max={couponForm.discountType === 'percentage' ? 100 : 10000}
                         className="form-control"

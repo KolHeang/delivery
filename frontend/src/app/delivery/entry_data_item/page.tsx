@@ -26,6 +26,8 @@ export default function BatchEntryPage() {
     { receiverName: '-', receiverAddress: '', receiverPhone: '', deliveryFee: '1.25', codUSD: '0', codKHR: '0', pickupId: '', driverId: '', note: '' }
   ]);
 
+  const [rowErrors, setRowErrors] = useState<Record<number, { receiverAddress?: string; receiverPhone?: string }>>({});
+
   useEffect(() => {
     if (!isAuthenticated()) { router.push('/'); return; }
     Promise.all([api.get('/select/merchants'), api.get('/select/zones'), api.get('/select/drivers')])
@@ -74,6 +76,11 @@ export default function BatchEntryPage() {
   const removeRow = (index: number) => {
     if (rows.length === 1) return;
     setRows(prev => prev.filter((_, i) => i !== index));
+    setRowErrors(prev => {
+      const next = { ...prev };
+      delete next[index];
+      return next;
+    });
   };
 
   const handleRowChange = (index: number, key: string, val: any) => {
@@ -83,22 +90,45 @@ export default function BatchEntryPage() {
       }
       return row;
     }));
+    if (rowErrors[index] && (rowErrors[index] as any)[key]) {
+      setRowErrors(prev => ({
+        ...prev,
+        [index]: {
+          ...prev[index],
+          [key]: undefined
+        }
+      }));
+    }
   };
 
   const handleSaveBatch = async () => {
     if (!selectedMerchantId) return alert(lang === 'km' ? 'សូមជ្រើសរើសហាង/អតិថិជន' : 'Please select a Shop/Merchant');
     
     // Validation
+    const errs: Record<number, { receiverAddress?: string; receiverPhone?: string }> = {};
+    let hasError = false;
     for (let i = 0; i < rows.length; i++) {
       const r = rows[i];
-      if (!r.receiverAddress) {
-        return alert(lang === 'km' ? `សូមបំពេញអាសយដ្ឋាននៅជួរទី #${i + 1}` : `Please fill Location/Zone in Row #${i + 1}`);
+      const rowErr: { receiverAddress?: string; receiverPhone?: string } = {};
+      if (!r.receiverAddress.trim()) {
+        rowErr.receiverAddress = 'សូមបំពេញអាសយដ្ឋាន';
+        hasError = true;
       }
-      if (!r.receiverPhone) {
-        return alert(lang === 'km' ? `សូមបំពេញលេខទូរស័ព្ទនៅជួរទី #${i + 1}` : `Please fill Receiver Phone in Row #${i + 1}`);
+      if (!r.receiverPhone.trim()) {
+        rowErr.receiverPhone = 'សូមបំពេញលេខទូរស័ព្ទ';
+        hasError = true;
+      }
+      if (Object.keys(rowErr).length > 0) {
+        errs[i] = rowErr;
       }
     }
 
+    if (hasError) {
+      setRowErrors(errs);
+      return;
+    }
+
+    setRowErrors({});
     setSaving(true);
     try {
       const merchant = merchants.find(m => m.id.toString() === selectedMerchantId);
@@ -241,24 +271,32 @@ export default function BatchEntryPage() {
                       <td style={{ padding: '8px 6px' }}>
                         <input
                           type="text"
-                          className="form-control"
+                          className={`form-control ${rowErrors[idx]?.receiverAddress ? 'is-invalid' : ''}`}
                           placeholder={lang === 'km' ? 'ទីតាំង / អាសយដ្ឋាន' : 'Address location'}
                           value={row.receiverAddress}
                           onChange={e => handleRowChange(idx, 'receiverAddress', e.target.value)}
-                          required
                           style={{ height: 38, fontSize: 13 }}
                         />
+                        {rowErrors[idx]?.receiverAddress && (
+                          <div className="form-error-text" style={{ fontSize: '11px', marginTop: '2px' }}>
+                            {rowErrors[idx].receiverAddress}
+                          </div>
+                        )}
                       </td>
                       <td style={{ padding: '8px 6px' }}>
                         <input
                           type="text"
-                          className="form-control"
+                          className={`form-control ${rowErrors[idx]?.receiverPhone ? 'is-invalid' : ''}`}
                           placeholder={lang === 'km' ? 'ឧ. 012345678' : 'e.g. 012345678'}
                           value={row.receiverPhone}
                           onChange={e => handleRowChange(idx, 'receiverPhone', e.target.value)}
-                          required
                           style={{ height: 38, fontSize: 13 }}
                         />
+                        {rowErrors[idx]?.receiverPhone && (
+                          <div className="form-error-text" style={{ fontSize: '11px', marginTop: '2px' }}>
+                            {rowErrors[idx].receiverPhone}
+                          </div>
+                        )}
                       </td>
                       <td style={{ padding: '8px 6px' }}>
                         <input

@@ -15,6 +15,7 @@ export default function CreateShopPage() {
   const { khrRate } = useSettings();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [form, setForm] = useState({
     name: '',
     nameKh: '',
@@ -63,6 +64,17 @@ export default function CreateShopPage() {
     load();
   }, [router]);
 
+  const handleFieldChange = (field: string, val: string) => {
+    setForm(prev => ({ ...prev, [field]: val }));
+    if (errors[field]) {
+      setErrors(prev => {
+        const next = { ...prev };
+        delete next[field];
+        return next;
+      });
+    }
+  };
+
   const handleFileChange = (field: 'qrImageKhr' | 'qrImageUsd') => (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -77,6 +89,34 @@ export default function CreateShopPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const errs: Record<string, string> = {};
+    if (!form.name.trim()) {
+      errs.name = 'សូមបំពេញឈ្មោះហាង (Shop Name)';
+    }
+    if (!form.phone.trim()) {
+      errs.phone = 'សូមបំពេញលេខទូរស័ព្ទ';
+    }
+    if (!form.email.trim()) {
+      errs.email = 'សូមបំពេញអ៊ីម៉ែល';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
+      errs.email = 'សូមបំពេញអ៊ីម៉ែលត្រឹមត្រូវ';
+    }
+    if (!form.address.trim()) {
+      errs.address = 'សូមបំពេញអាសយដ្ឋាន';
+    }
+    if (!form.deliveryFee) {
+      errs.deliveryFee = 'សូមបំពេញតម្លៃសេវាដឹក';
+    }
+    if (!form.exchangeRate) {
+      errs.exchangeRate = 'សូមបំពេញអត្រាប្តូរប្រាក់';
+    }
+
+    if (Object.keys(errs).length > 0) {
+      setErrors(errs);
+      return;
+    }
+
+    setErrors({});
     setSaving(true);
     try {
       const formData = new FormData();
@@ -136,7 +176,7 @@ export default function CreateShopPage() {
           <div className="card">
             <div className="card-header"><span className="card-title">{t('createShop')}</span></div>
             <div className="card-body">
-              <form onSubmit={handleSubmit}>
+              <form onSubmit={handleSubmit} noValidate>
                 {/* Shop Photo Upload */}
                 <div className="form-row" style={{ alignItems: 'center', marginBottom: 20 }}>
                   <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
@@ -182,21 +222,21 @@ export default function CreateShopPage() {
                     <input
                       type="number"
                       step="0.01"
-                      className="form-control"
+                      className={`form-control ${errors.deliveryFee ? 'is-invalid' : ''}`}
                       value={form.deliveryFee}
-                      onChange={e => setForm({ ...form, deliveryFee: e.target.value })}
-                      required
+                      onChange={e => handleFieldChange('deliveryFee', e.target.value)}
                     />
+                    {errors.deliveryFee && <div className="form-error-text">{errors.deliveryFee}</div>}
                   </div>
                   <div className="form-group">
                     <label className="form-label">{t('exchangeRate')} <span style={{ color: '#ef4444' }}>*</span></label>
                     <input
                       type="number"
-                      className="form-control"
+                      className={`form-control ${errors.exchangeRate ? 'is-invalid' : ''}`}
                       value={form.exchangeRate}
-                      onChange={e => setForm({ ...form, exchangeRate: e.target.value })}
-                      required
+                      onChange={e => handleFieldChange('exchangeRate', e.target.value)}
                     />
+                    {errors.exchangeRate && <div className="form-error-text">{errors.exchangeRate}</div>}
                   </div>
                 </div>
 
@@ -211,23 +251,23 @@ export default function CreateShopPage() {
                     <label className="form-label">{t('name')} <span style={{ color: '#ef4444' }}>*</span></label>
                     <input
                       type="text"
-                      className="form-control"
+                      className={`form-control ${errors.name ? 'is-invalid' : ''}`}
                       placeholder="e.g. Zando Shop"
                       value={form.name}
-                      onChange={e => setForm({ ...form, name: e.target.value })}
-                      required
+                      onChange={e => handleFieldChange('name', e.target.value)}
                     />
+                    {errors.name && <div className="form-error-text">{errors.name}</div>}
                   </div>
                   <div className="form-group">
                     <label className="form-label">{t('phone')} <span style={{ color: '#ef4444' }}>*</span></label>
                     <input
                       type="text"
-                      className="form-control"
+                      className={`form-control ${errors.phone ? 'is-invalid' : ''}`}
                       placeholder="e.g. 012-100-200"
                       value={form.phone}
-                      onChange={e => setForm({ ...form, phone: e.target.value })}
-                      required
+                      onChange={e => handleFieldChange('phone', e.target.value)}
                     />
+                    {errors.phone && <div className="form-error-text">{errors.phone}</div>}
                   </div>
                 </div>
                 
@@ -236,23 +276,23 @@ export default function CreateShopPage() {
                     <label className="form-label">{t('email')} <span style={{ color: '#ef4444' }}>*</span></label>
                     <input
                       type="email"
-                      className="form-control"
+                      className={`form-control ${errors.email ? 'is-invalid' : ''}`}
                       placeholder="e.g. zando@shop.com"
                       value={form.email}
-                      onChange={e => setForm({ ...form, email: e.target.value })}
-                      required
+                      onChange={e => handleFieldChange('email', e.target.value)}
                     />
+                    {errors.email && <div className="form-error-text">{errors.email}</div>}
                   </div>
                   <div className="form-group">
                     <label className="form-label">{t('address')} <span style={{ color: '#ef4444' }}>*</span></label>
                     <input
                       type="text"
-                      className="form-control"
+                      className={`form-control ${errors.address ? 'is-invalid' : ''}`}
                       placeholder="Full address..."
                       value={form.address}
-                      onChange={e => setForm({ ...form, address: e.target.value })}
-                      required
+                      onChange={e => handleFieldChange('address', e.target.value)}
                     />
+                    {errors.address && <div className="form-error-text">{errors.address}</div>}
                   </div>
                 </div>
 

@@ -27,9 +27,10 @@ export default function CreateSaasAdminPage() {
     name: '',
     email: '',
     phone: '',
-    role: 'super_admin',
+    role: '',
     password: '',
   });
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -71,11 +72,30 @@ export default function CreateSaasAdminPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!adminForm.name || !adminForm.email || !adminForm.password) {
-      alert('សូមបំពេញព័ត៌មានចាំបាច់ឱ្យបានគ្រប់គ្រាន់ (*)');
+    const errs: Record<string, string> = {};
+    if (!adminForm.name.trim()) {
+      errs.name = 'សូមបំពេញឈ្មោះអ្នកគ្រប់គ្រង';
+    }
+    if (!adminForm.email.trim()) {
+      errs.email = 'សូមបំពេញអ៊ីម៉ែល';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(adminForm.email.trim())) {
+      errs.email = 'សូមបំពេញអ៊ីម៉ែលត្រឹមត្រូវ';
+    }
+    if (!adminForm.password) {
+      errs.password = 'សូមបំពេញពាក្យសម្ងាត់';
+    } else if (adminForm.password.length < 6) {
+      errs.password = 'ពាក្យសម្ងាត់ត្រូវមានយ៉ាងហោចណាស់ ៦ តួអក្សរ';
+    }
+    if (!adminForm.role) {
+      errs.role = 'សូមជ្រើសរើសតួនាទី';
+    }
+
+    if (Object.keys(errs).length > 0) {
+      setErrors(errs);
       return;
     }
 
+    setErrors({});
     try {
       setCreating(true);
       await saasApi.createSaasAdmin({
@@ -386,134 +406,160 @@ export default function CreateSaasAdminPage() {
         <main style={{ flex: 1, padding: '24px 32px', width: '100%', minWidth: 0, boxSizing: 'border-box' }}>
           {/* Back Button & Title */}
           <div style={{ marginBottom: 20 }}>
-            <Link
-              href="/admin/saas?tab=users"
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 6,
-                color: 'var(--text-muted)',
-                textDecoration: 'none',
-                fontSize: 13,
-                fontWeight: 600,
-                marginBottom: 10,
-              }}
-            >
-              <MdArrowBack size={16} />
-              <span>ត្រឡប់ទៅបញ្ជី SaaS Admins</span>
-            </Link>
+              <Link
+                href="/admin/saas?tab=users"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  color: 'var(--text-muted)',
+                  textDecoration: 'none',
+                  fontSize: 13,
+                  fontWeight: 600,
+                  marginBottom: 10,
+                }}
+              >
+                <MdArrowBack size={16} />
+                <span>ត្រឡប់ទៅបញ្ជី SaaS Admins</span>
+              </Link>
 
-            <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 4px' }}>
-              បង្កើត SaaS Platform Admin ថ្មី
-            </h1>
-            <p style={{ fontSize: 12.5, color: 'var(--text-muted)', margin: 0 }}>
-              គណនី Admin សម្រាប់គ្រប់គ្រងប្រព័ន្ធ Master SaaS (តារាង saas_admins ដាច់ដោយឡែក)
-            </p>
-          </div>
-
-          {/* Form Card */}
-          <div className="card">
-            <div className="card-header">
-              <span className="card-title">ព័ត៌មានគណនី Admin</span>
+              <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 4px' }}>
+                បង្កើត SaaS Platform Admin ថ្មី
+              </h1>
+              <p style={{ fontSize: 12.5, color: 'var(--text-muted)', margin: 0 }}>
+                គណនី Admin សម្រាប់គ្រប់គ្រងប្រព័ន្ធ Master SaaS (តារាង saas_admins ដាច់ដោយឡែក)
+              </p>
             </div>
 
-            <div className="card-body">
-              <form onSubmit={handleSubmit}>
-                <div className="form-row">
-                  <div className="form-group">
-                    <label className="form-label">
-                      ឈ្មោះអ្នកគ្រប់គ្រង <span>*</span>
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      className="form-control"
-                      placeholder="ឧ. John SuperAdmin"
-                      value={adminForm.name}
-                      onChange={(e) => setAdminForm({ ...adminForm, name: e.target.value })}
-                    />
+            {/* Form Card */}
+            <div className="card">
+              <div className="card-header">
+                <span className="card-title">ព័ត៌មានគណនី Admin</span>
+              </div>
+
+              <div className="card-body">
+                <form onSubmit={handleSubmit} autoComplete="off" noValidate>
+                  {/* Invisible fake inputs to prevent aggressive browser autofill */}
+                  <input type="text" style={{ display: 'none' }} tabIndex={-1} readOnly />
+                  <input type="password" style={{ display: 'none' }} tabIndex={-1} readOnly />
+
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label className="form-label">
+                        ឈ្មោះអ្នកគ្រប់គ្រង <span style={{ color: '#ef4444' }}>*</span>
+                      </label>
+                      <input
+                        type="text"
+                        className={`form-control ${errors.name ? 'is-invalid' : ''}`}
+                        placeholder="ឧ. John SuperAdmin"
+                        value={adminForm.name}
+                        onChange={(e) => {
+                          setAdminForm({ ...adminForm, name: e.target.value });
+                          if (errors.name) setErrors(prev => { const n = { ...prev }; delete n.name; return n; });
+                        }}
+                      />
+                      {errors.name && <div className="form-error-text">{errors.name}</div>}
+                    </div>
+
+                    <div className="form-group">
+                      <label className="form-label">
+                        លេខទូរស័ព្ទ
+                      </label>
+                      <input
+                        type="text"
+                        className="form-control"
+                        placeholder="012 345 678"
+                        value={adminForm.phone}
+                        onChange={(e) => setAdminForm({ ...adminForm, phone: e.target.value })}
+                      />
+                    </div>
                   </div>
 
-                  <div className="form-group">
-                    <label className="form-label">
-                      លេខទូរស័ព្ទ
-                    </label>
-                    <input
-                      type="text"
-                      className="form-control"
-                      placeholder="012 345 678"
-                      value={adminForm.phone}
-                      onChange={(e) => setAdminForm({ ...adminForm, phone: e.target.value })}
-                    />
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label className="form-label">
+                        អ៊ីមែលសម្រាប់ Login <span style={{ color: '#ef4444' }}>*</span>
+                      </label>
+                      <input
+                        type="email"
+                        name="saas_new_admin_email_field"
+                        id="saas_new_admin_email_field"
+                        autoComplete="off"
+                        className={`form-control ${errors.email ? 'is-invalid' : ''}`}
+                        placeholder="admin@ebsexpress.com"
+                        value={adminForm.email}
+                        onChange={(e) => {
+                          setAdminForm({ ...adminForm, email: e.target.value });
+                          if (errors.email) setErrors(prev => { const n = { ...prev }; delete n.email; return n; });
+                        }}
+                      />
+                      {errors.email && <div className="form-error-text">{errors.email}</div>}
+                    </div>
+
+                    <div className="form-group">
+                      <label className="form-label">
+                        ពាក្យសម្ងាត់ <span style={{ color: '#ef4444' }}>*</span>
+                      </label>
+                      <input
+                        type="password"
+                        name="saas_new_admin_password_field"
+                        id="saas_new_admin_password_field"
+                        autoComplete="new-password"
+                        className={`form-control ${errors.password ? 'is-invalid' : ''}`}
+                        placeholder="បញ្ចូលពាក្យសម្ងាត់..."
+                        value={adminForm.password}
+                        onChange={(e) => {
+                          setAdminForm({ ...adminForm, password: e.target.value });
+                          if (errors.password) setErrors(prev => { const n = { ...prev }; delete n.password; return n; });
+                        }}
+                      />
+                      {errors.password && <div className="form-error-text">{errors.password}</div>}
+                    </div>
                   </div>
-                </div>
 
-                <div className="form-row">
-                  <div className="form-group">
-                    <label className="form-label">
-                      អ៊ីមែលសម្រាប់ Login <span>*</span>
-                    </label>
-                    <input
-                      type="email"
-                      required
-                      className="form-control"
-                      placeholder="admin@ebsexpress.com"
-                      value={adminForm.email}
-                      onChange={(e) => setAdminForm({ ...adminForm, email: e.target.value })}
-                    />
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label className="form-label">
+                        តួនាទី <span style={{ color: '#ef4444' }}>*</span>
+                      </label>
+                      <select
+                        className={`form-control ${errors.role ? 'is-invalid' : ''}`}
+                        value={adminForm.role}
+                        onChange={(e) => {
+                          setAdminForm({ ...adminForm, role: e.target.value });
+                          if (errors.role) setErrors(prev => { const n = { ...prev }; delete n.role; return n; });
+                        }}
+                      >
+                        <option value="">-- ជ្រើសរើសតួនាទី (Select Role) --</option>
+                        <option value="super_admin">Super Admin (សិទ្ធិពេញលេញលើ SaaS)</option>
+                        <option value="finance_admin">Finance Admin (គ្រប់គ្រងការទូទាត់ & គម្រោង)</option>
+                        <option value="support_admin">Support Admin (ជំនួយការបច្ចេកទេស)</option>
+                      </select>
+                      {errors.role && <div className="form-error-text">{errors.role}</div>}
+                    </div>
                   </div>
 
-                  <div className="form-group">
-                    <label className="form-label">
-                      ពាក្យសម្ងាត់ <span>*</span>
-                    </label>
-                    <input
-                      type="password"
-                      required
-                      className="form-control"
-                      placeholder="បញ្ចូលពាក្យសម្ងាត់..."
-                      value={adminForm.password}
-                      onChange={(e) => setAdminForm({ ...adminForm, password: e.target.value })}
-                    />
+                  {/* Submit Buttons */}
+                  <div style={{ marginTop: 24, display: 'flex', gap: 12, justifyContent: 'flex-end', borderTop: '1px solid var(--border)', paddingTop: 16 }}>
+                    <Link
+                      href="/admin/saas?tab=users"
+                      className="btn btn-cancel"
+                      style={{ background: '#dc2626', color: '#ffffff', border: '1px solid #dc2626', fontWeight: 700 }}
+                    >
+                      បោះបង់
+                    </Link>
+                    <button
+                      type="submit"
+                      disabled={creating}
+                      className="btn btn-primary"
+                      style={{ background: '#2563eb', color: '#ffffff', border: '1px solid #2563eb', fontWeight: 700 }}
+                    >
+                      {creating ? 'កំពុងរក្សាទុក...' : 'រក្សាទុក'}
+                    </button>
                   </div>
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">
-                    តួនាទី <span>*</span>
-                  </label>
-                  <select
-                    className="form-control"
-                    value={adminForm.role}
-                    onChange={(e) => setAdminForm({ ...adminForm, role: e.target.value })}
-                  >
-                    <option value="super_admin">Super Admin</option>
-                    <option value="finance_admin">Finance Admin</option>
-                    <option value="support_admin">Support Admin</option>
-                  </select>
-                </div>
-
-                {/* Submit Buttons */}
-                <div style={{ marginTop: 24, display: 'flex', gap: 12, justifyContent: 'flex-end', borderTop: '1px solid var(--border)', paddingTop: 16 }}>
-                  <Link
-                    href="/admin/saas?tab=users"
-                    className="btn btn-cancel"
-                    style={{ background: '#dc2626', color: '#ffffff', border: '1px solid #dc2626', fontWeight: 700 }}
-                  >
-                    បោះបង់
-                  </Link>
-                  <button
-                    type="submit"
-                    disabled={creating}
-                    className="btn btn-primary"
-                    style={{ background: '#2563eb', color: '#ffffff', border: '1px solid #2563eb', fontWeight: 700 }}
-                  >
-                    {creating ? 'កំពុងរក្សាទុក...' : 'រក្សាទុក'}
-                  </button>
-                </div>
-              </form>
+                </form>
+              </div>
             </div>
-          </div>
         </main>
       </div>
     </div>

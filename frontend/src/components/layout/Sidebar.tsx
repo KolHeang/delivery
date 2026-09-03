@@ -46,6 +46,7 @@ export default function Sidebar() {
         { href: '/delivery/assigndeliveryby', label: t('processForAssign'), permission: 'parcels.update' },
         { href: '/delivery/complete', label: t('completePackage'), permission: 'parcels.update' },
         { href: '/delivery/tracking_delivery', label: t('tracking'), permission: 'parcels.read' },
+        { href: '/delivery/live-map', label: lang === 'km' ? 'ផែនទីតាមដាន' : 'Live Fleet Map', permission: 'parcels.read' },
       ],
     },
 

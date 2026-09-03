@@ -18,6 +18,7 @@ export default function EditVehiclePage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({ plate: '', type: 'motorbike', brand: '', model: '', year: new Date().getFullYear(), status: 'active' });
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (!isAuthenticated()) { router.push('/'); return; }
@@ -45,10 +46,36 @@ export default function EditVehiclePage() {
     load();
   }, [params.id, router]);
 
-  const f = (k: string) => (e: any) => setForm(p => ({ ...p, [k]: k === 'year' ? parseInt(e.target.value) : e.target.value }));
+  const f = (k: string) => (e: any) => {
+    setForm(p => ({ ...p, [k]: k === 'year' ? parseInt(e.target.value) : e.target.value }));
+    if (errors[k]) {
+      setErrors(prev => {
+        const next = { ...prev };
+        delete next[k];
+        return next;
+      });
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const errs: Record<string, string> = {};
+    if (!form.plate.trim()) {
+      errs.plate = 'សូមបំពេញស្លាកលេខយានយន្ត';
+    }
+    if (!form.brand.trim()) {
+      errs.brand = 'សូមបំពេញម៉ាកយានយន្ត';
+    }
+    if (!form.model.trim()) {
+      errs.model = 'សូមបំពេញម៉ូដែលយានយន្ត';
+    }
+
+    if (Object.keys(errs).length > 0) {
+      setErrors(errs);
+      return;
+    }
+
+    setErrors({});
     setSaving(true);
     try {
       await api.patch(`/vehicles/${params.id}`, form);
@@ -78,9 +105,18 @@ export default function EditVehiclePage() {
           <div className="card">
             <div className="card-header"><span className="card-title">{t('editVehicle')}</span></div>
             <div className="card-body">
-              <form onSubmit={handleSubmit}>
+              <form onSubmit={handleSubmit} noValidate>
                 <div className="form-row">
-                  <div className="form-group"><label className="form-label">{t('plateNumber')} <span style={{ color: '#ef4444' }}>*</span></label><input className="form-control" value={form.plate} onChange={f('plate')} placeholder="e.g. 2A-4532" required /></div>
+                  <div className="form-group">
+                    <label className="form-label">{t('plateNumber')} <span style={{ color: '#ef4444' }}>*</span></label>
+                    <input
+                      className={`form-control ${errors.plate ? 'is-invalid' : ''}`}
+                      value={form.plate}
+                      onChange={f('plate')}
+                      placeholder="e.g. 2A-4532"
+                    />
+                    {errors.plate && <div className="form-error-text">{errors.plate}</div>}
+                  </div>
                   <div className="form-group">
                     <label className="form-label">{t('vehicleType')} <span style={{ color: '#ef4444' }}>*</span></label>
                     <select className="form-control" value={form.type} onChange={f('type')}>
@@ -89,8 +125,26 @@ export default function EditVehiclePage() {
                   </div>
                 </div>
                 <div className="form-row">
-                  <div className="form-group"><label className="form-label">{t('brand')} <span style={{ color: '#ef4444' }}>*</span></label><input className="form-control" value={form.brand} onChange={f('brand')} required /></div>
-                  <div className="form-group"><label className="form-label">{t('model')} <span style={{ color: '#ef4444' }}>*</span></label><input className="form-control" value={form.model} onChange={f('model')} required /></div>
+                  <div className="form-group">
+                    <label className="form-label">{t('brand')} <span style={{ color: '#ef4444' }}>*</span></label>
+                    <input
+                      className={`form-control ${errors.brand ? 'is-invalid' : ''}`}
+                      value={form.brand}
+                      onChange={f('brand')}
+                      placeholder="e.g. Honda"
+                    />
+                    {errors.brand && <div className="form-error-text">{errors.brand}</div>}
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">{t('model')} <span style={{ color: '#ef4444' }}>*</span></label>
+                    <input
+                      className={`form-control ${errors.model ? 'is-invalid' : ''}`}
+                      value={form.model}
+                      onChange={f('model')}
+                      placeholder="e.g. Dream 125"
+                    />
+                    {errors.model && <div className="form-error-text">{errors.model}</div>}
+                  </div>
                 </div>
                 <div className="form-row">
                   <div className="form-group"><label className="form-label">{t('year')}</label><input type="number" min="2000" max="2030" className="form-control" value={form.year} onChange={f('year')} /></div>

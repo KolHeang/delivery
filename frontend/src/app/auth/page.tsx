@@ -15,8 +15,12 @@ const loginTranslations: Record<string, Record<string, string>> = {
     subtitle: 'Log in to manage your deliveries',
     emailLabel: 'Email',
     emailPlaceholder: 'Enter email',
+    emailRequired: 'Please enter your email',
+    emailInvalid: 'Please enter a valid email',
     passwordLabel: 'Password',
     passwordPlaceholder: '••••••••',
+    passwordRequired: 'Please enter your password',
+    passwordMin: 'Password must be at least 6 characters',
     forgotPassword: 'Forgot Password?',
     forgotPasswordAlert: 'Please contact the system administrator to reset your password.',
     signInBtn: 'Sign In',
@@ -26,8 +30,12 @@ const loginTranslations: Record<string, Record<string, string>> = {
     subtitle: 'ចូលគណនីដើម្បីគ្រប់គ្រងការដឹកជញ្ជូនរបស់អ្នក',
     emailLabel: 'អ៊ីមែល',
     emailPlaceholder: 'បញ្ចូលអ៊ីមែល',
+    emailRequired: 'សូមបំពេញអ៊ីម៉ែល',
+    emailInvalid: 'សូមបំពេញអ៊ីម៉ែលត្រឹមត្រូវ',
     passwordLabel: 'ពាក្យសម្ងាត់',
     passwordPlaceholder: '••••••••',
+    passwordRequired: 'សូមបំពេញពាក្យសម្ងាត់',
+    passwordMin: 'ពាក្យសម្ងាត់ត្រូវមានយ៉ាងហោចណាស់ ៦ តួអក្សរ',
     forgotPassword: 'ភ្លេចពាក្យសម្ងាត់?',
     forgotPasswordAlert: 'សូមទាក់ទងអ្នកគ្រប់គ្រងប្រព័ន្ធ ដើម្បីកំណត់ពាក្យសម្ងាត់របស់អ្នកឡើងវិញ។',
     signInBtn: 'ចូលប្រើប្រាស់',
@@ -41,6 +49,7 @@ export default function LoginPage() {
   const { tenant, subdomain: workspaceSubdomain, isTenant } = useTenant();
   const [currentSubdomain, setCurrentSubdomain] = useState<string | null>(null);
   const [form, setForm] = useState({ email: '', password: '' });
+  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -72,6 +81,26 @@ export default function LoginPage() {
     e.preventDefault();
     if (loading) return;
 
+    const newErrors: { email?: string; password?: string } = {};
+    const emailVal = form.email.trim();
+    if (!emailVal) {
+      newErrors.email = t.emailRequired;
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal)) {
+      newErrors.email = t.emailInvalid;
+    }
+
+    if (!form.password) {
+      newErrors.password = t.passwordRequired;
+    } else if (form.password.length < 6) {
+      newErrors.password = t.passwordMin;
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+
+    setErrors({});
     setLoading(true);
     setError('');
     try {
@@ -592,7 +621,7 @@ export default function LoginPage() {
         )}
 
         {/* Form Inputs */}
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} noValidate>
           {/* Email */}
           <div style={{ marginBottom: 18 }}>
             <label
@@ -609,23 +638,25 @@ export default function LoginPage() {
             <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
               <MdEmail
                 size={19}
-                color="#94a3b8"
+                color={errors.email ? '#ef4444' : '#94a3b8'}
                 style={{ position: 'absolute', left: 14, pointerEvents: 'none' }}
               />
               <input
                 id="email"
                 type="email"
-                required
                 autoComplete="email"
                 value={form.email}
-                onChange={e => setForm({ ...form, email: e.target.value })}
+                onChange={e => {
+                  setForm({ ...form, email: e.target.value });
+                  if (errors.email) setErrors(prev => ({ ...prev, email: undefined }));
+                }}
                 placeholder={t.emailPlaceholder}
                 style={{
                   width: '100%',
                   padding: '13px 16px 13px 44px',
                   borderRadius: 14,
-                  border: '1.5px solid #e2e8f0',
-                  background: '#f8fafc',
+                  border: errors.email ? '1.5px solid #ef4444' : '1.5px solid #e2e8f0',
+                  background: errors.email ? '#fff8f8' : '#f8fafc',
                   fontSize: 14.5,
                   fontWeight: 500,
                   color: '#0f172a',
@@ -633,16 +664,22 @@ export default function LoginPage() {
                   transition: 'all 0.2s ease',
                 }}
                 onFocus={(e) => {
-                  e.currentTarget.style.borderColor = '#2563eb';
+                  e.currentTarget.style.borderColor = errors.email ? '#ef4444' : '#2563eb';
                   e.currentTarget.style.background = '#ffffff';
-                  e.currentTarget.style.boxShadow = '0 0 0 4px rgba(37, 99, 235, 0.12)';
+                  e.currentTarget.style.boxShadow = errors.email ? '0 0 0 4px rgba(239, 68, 68, 0.15)' : '0 0 0 4px rgba(37, 99, 235, 0.12)';
                 }}
                 onBlur={(e) => {
-                  e.currentTarget.style.borderColor = '#e2e8f0';
-                  e.currentTarget.style.background = '#f8fafc';
+                  e.currentTarget.style.borderColor = errors.email ? '#ef4444' : '#e2e8f0';
+                  e.currentTarget.style.background = errors.email ? '#fff8f8' : '#f8fafc';
+                  e.currentTarget.style.boxShadow = 'none';
                 }}
               />
             </div>
+            {errors.email && (
+              <div style={{ color: '#dc2626', fontSize: '12.5px', fontWeight: 600, marginTop: '6px', lineHeight: '1.4' }}>
+                {errors.email}
+              </div>
+            )}
           </div>
 
           {/* Password */}
@@ -661,23 +698,25 @@ export default function LoginPage() {
             <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
               <MdLock
                 size={19}
-                color="#94a3b8"
+                color={errors.password ? '#ef4444' : '#94a3b8'}
                 style={{ position: 'absolute', left: 14, pointerEvents: 'none' }}
               />
               <input
                 id="password"
                 type={showPassword ? 'text' : 'password'}
-                required
                 autoComplete="current-password"
                 value={form.password}
-                onChange={e => setForm({ ...form, password: e.target.value })}
+                onChange={e => {
+                  setForm({ ...form, password: e.target.value });
+                  if (errors.password) setErrors(prev => ({ ...prev, password: undefined }));
+                }}
                 placeholder={t.passwordPlaceholder}
                 style={{
                   width: '100%',
                   padding: '13px 44px 13px 44px',
                   borderRadius: 14,
-                  border: '1.5px solid #e2e8f0',
-                  background: '#f8fafc',
+                  border: errors.password ? '1.5px solid #ef4444' : '1.5px solid #e2e8f0',
+                  background: errors.password ? '#fff8f8' : '#f8fafc',
                   fontSize: 14.5,
                   fontWeight: 500,
                   color: '#0f172a',
@@ -685,13 +724,14 @@ export default function LoginPage() {
                   transition: 'all 0.2s ease',
                 }}
                 onFocus={(e) => {
-                  e.currentTarget.style.borderColor = '#2563eb';
+                  e.currentTarget.style.borderColor = errors.password ? '#ef4444' : '#2563eb';
                   e.currentTarget.style.background = '#ffffff';
-                  e.currentTarget.style.boxShadow = '0 0 0 4px rgba(37, 99, 235, 0.12)';
+                  e.currentTarget.style.boxShadow = errors.password ? '0 0 0 4px rgba(239, 68, 68, 0.15)' : '0 0 0 4px rgba(37, 99, 235, 0.12)';
                 }}
                 onBlur={(e) => {
-                  e.currentTarget.style.borderColor = '#e2e8f0';
-                  e.currentTarget.style.background = '#f8fafc';
+                  e.currentTarget.style.borderColor = errors.password ? '#ef4444' : '#e2e8f0';
+                  e.currentTarget.style.background = errors.password ? '#fff8f8' : '#f8fafc';
+                  e.currentTarget.style.boxShadow = 'none';
                 }}
               />
               <button
@@ -712,6 +752,11 @@ export default function LoginPage() {
                 {showPassword ? <MdVisibilityOff size={20} /> : <MdVisibility size={20} />}
               </button>
             </div>
+            {errors.password && (
+              <div style={{ color: '#dc2626', fontSize: '12.5px', fontWeight: 600, marginTop: '6px', lineHeight: '1.4' }}>
+                {errors.password}
+              </div>
+            )}
           </div>
 
           {/* Forgot Password */}

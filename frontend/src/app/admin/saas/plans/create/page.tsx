@@ -62,6 +62,8 @@ export default function CreatePlanPage() {
     },
   });
 
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
+
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
@@ -102,7 +104,12 @@ export default function CreatePlanPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!planForm.name || !planForm.slug) {
+    const newErrors: { [key: string]: string } = {};
+    if (!planForm.name.trim()) newErrors.name = 'សូមបញ្ចូលឈ្មោះកញ្ចប់សេវា';
+    if (!planForm.slug.trim()) newErrors.slug = 'សូមបញ្ចូល Slug សម្គាល់';
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
       alert('សូមបំពេញឈ្មោះ និង Slug របស់ Plan');
       return;
     }
@@ -438,16 +445,15 @@ export default function CreatePlanPage() {
             </div>
 
             <div className="card-body">
-              <form onSubmit={handleSubmit}>
+              <form onSubmit={handleSubmit} autoComplete="off">
                 <div className="form-row">
                   <div className="form-group">
                     <label className="form-label">
-                      ឈ្មោះកញ្ចប់សេវា <span>*</span>
+                      ឈ្មោះកញ្ចប់សេវា <span style={{ color: '#ef4444' }}>*</span>
                     </label>
                     <input
                       type="text"
-                      required
-                      className="form-control"
+                      className={`form-control ${errors.name ? 'is-invalid' : ''}`}
                       placeholder="ឧ. Starter Express, Pro Plan"
                       value={planForm.name}
                       onChange={(e) => {
@@ -457,22 +463,28 @@ export default function CreatePlanPage() {
                           name: val,
                           slug: planForm.slug || val.toLowerCase().replace(/[^a-z0-9]/g, '-'),
                         });
+                        if (errors.name) setErrors(prev => { const n = { ...prev }; delete n.name; return n; });
+                        if (errors.slug) setErrors(prev => { const n = { ...prev }; delete n.slug; return n; });
                       }}
                     />
+                    {errors.name && <div className="form-error-text" style={{ color: '#ef4444', fontSize: 11.5, marginTop: 4, fontWeight: 600 }}>{errors.name}</div>}
                   </div>
 
                   <div className="form-group">
                     <label className="form-label">
-                      Slug សម្គាល់ <span>*</span>
+                      Slug សម្គាល់ <span style={{ color: '#ef4444' }}>*</span>
                     </label>
                     <input
                       type="text"
-                      required
-                      className="form-control"
+                      className={`form-control ${errors.slug ? 'is-invalid' : ''}`}
                       placeholder="starter-express"
                       value={planForm.slug}
-                      onChange={(e) => setPlanForm({ ...planForm, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') })}
+                      onChange={(e) => {
+                        setPlanForm({ ...planForm, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') });
+                        if (errors.slug) setErrors(prev => { const n = { ...prev }; delete n.slug; return n; });
+                      }}
                     />
+                    {errors.slug && <div className="form-error-text" style={{ color: '#ef4444', fontSize: 11.5, marginTop: 4, fontWeight: 600 }}>{errors.slug}</div>}
                   </div>
                 </div>
 
@@ -492,12 +504,11 @@ export default function CreatePlanPage() {
                 <div className="form-row">
                   <div className="form-group">
                     <label className="form-label">
-                      តម្លៃប្រចាំខែ ($) <span>*</span>
+                      តម្លៃប្រចាំខែ ($) <span style={{ color: '#ef4444' }}>*</span>
                     </label>
                     <input
                       type="number"
                       step="0.01"
-                      required
                       className="form-control"
                       value={planForm.priceMonthly}
                       onChange={(e) => setPlanForm({ ...planForm, priceMonthly: Number(e.target.value) })}
@@ -506,12 +517,11 @@ export default function CreatePlanPage() {
 
                   <div className="form-group">
                     <label className="form-label">
-                      តម្លៃប្រចាំឆ្នាំ ($) <span>*</span>
+                      តម្លៃប្រចាំឆ្នាំ ($) <span style={{ color: '#ef4444' }}>*</span>
                     </label>
                     <input
                       type="number"
                       step="0.01"
-                      required
                       className="form-control"
                       value={planForm.priceYearly}
                       onChange={(e) => setPlanForm({ ...planForm, priceYearly: Number(e.target.value) })}
@@ -522,11 +532,10 @@ export default function CreatePlanPage() {
                 <div className="form-row">
                   <div className="form-group">
                     <label className="form-label">
-                      ចំនួនអ្នកដឹកជញ្ជូន <span>*</span>
+                      ចំនួនអ្នកដឹកជញ្ជូន <span style={{ color: '#ef4444' }}>*</span>
                     </label>
                     <input
                       type="number"
-                      required
                       className="form-control"
                       value={planForm.maxDrivers}
                       onChange={(e) => setPlanForm({ ...planForm, maxDrivers: Number(e.target.value) })}
@@ -535,11 +544,10 @@ export default function CreatePlanPage() {
 
                   <div className="form-group">
                     <label className="form-label">
-                      ចំនួនហាងទំនិញ <span>*</span>
+                      ចំនួនហាងទំនិញ <span style={{ color: '#ef4444' }}>*</span>
                     </label>
                     <input
                       type="number"
-                      required
                       className="form-control"
                       value={planForm.maxMerchants}
                       onChange={(e) => setPlanForm({ ...planForm, maxMerchants: Number(e.target.value) })}
@@ -550,11 +558,10 @@ export default function CreatePlanPage() {
                 <div className="form-row">
                   <div className="form-group">
                     <label className="form-label">
-                      ចំនួនកញ្ចប់ឥវ៉ាន់ប្រចាំខែ <span>*</span>
+                      ចំនួនកញ្ចប់ឥវ៉ាន់ប្រចាំខែ <span style={{ color: '#ef4444' }}>*</span>
                     </label>
                     <input
                       type="number"
-                      required
                       className="form-control"
                       value={planForm.maxOrdersPerMonth}
                       onChange={(e) => setPlanForm({ ...planForm, maxOrdersPerMonth: Number(e.target.value) })}
@@ -563,11 +570,10 @@ export default function CreatePlanPage() {
 
                   <div className="form-group">
                     <label className="form-label">
-                      ចំនួនយានយន្ត <span>*</span>
+                      ចំនួនយានយន្ត <span style={{ color: '#ef4444' }}>*</span>
                     </label>
                     <input
                       type="number"
-                      required
                       className="form-control"
                       value={planForm.maxVehicles}
                       onChange={(e) => setPlanForm({ ...planForm, maxVehicles: Number(e.target.value) })}

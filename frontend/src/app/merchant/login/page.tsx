@@ -13,8 +13,12 @@ const merchantLoginTranslations = {
     subtitle: 'Sign in to manage your parcels and orders',
     idLabel: 'Phone or Email',
     idPlaceholder: 'Enter your phone number or email',
+    idRequired: 'Please enter your phone number or email',
+    idInvalid: 'Please enter a valid email',
     passwordLabel: 'Password',
     passwordPlaceholder: '••••••••',
+    passwordRequired: 'Please enter your password',
+    passwordMin: 'Password must be at least 6 characters',
     signInBtn: 'Sign In as Merchant',
     signingIn: 'Signing in...',
     errorMsg: 'Invalid credentials or you are not registered as a merchant.',
@@ -24,8 +28,12 @@ const merchantLoginTranslations = {
     subtitle: 'ចូលប្រព័ន្ធដើម្បីគ្រប់គ្រងកញ្ចប់អីវ៉ាន់ និងការបញ្ជាទិញ',
     idLabel: 'លេខទូរស័ព្ទ ឬ អ៊ីមែល',
     idPlaceholder: 'បញ្ចូលលេខទូរស័ព្ទ ឬ អ៊ីមែលរបស់អ្នក',
+    idRequired: 'សូមបំពេញលេខទូរស័ព្ទ ឬ អ៊ីមែល',
+    idInvalid: 'សូមបំពេញអ៊ីម៉ែលត្រឹមត្រូវ',
     passwordLabel: 'ពាក្យសម្ងាត់',
     passwordPlaceholder: '••••••••',
+    passwordRequired: 'សូមបំពេញពាក្យសម្ងាត់',
+    passwordMin: 'ពាក្យសម្ងាត់ត្រូវមានយ៉ាងហោចណាស់ ៦ តួអក្សរ',
     signInBtn: 'ចូលជាអាជីវករ',
     signingIn: 'កំពុងចូល...',
     errorMsg: 'អត្តសញ្ញាណខុស ឬអ្នកមិនទាន់បានចុះឈ្មោះជាអាជីវករឡើយ។',
@@ -36,6 +44,7 @@ export default function MerchantLoginPage() {
   const router = useRouter();
   const { lang, setLang } = useLanguage();
   const [form, setForm] = useState({ email: '', password: '' }); // we map the 'email' field to phoneOrEmail for the login endpoint
+  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -52,8 +61,30 @@ export default function MerchantLoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    if (loading) return;
+
+    const newErrors: { email?: string; password?: string } = {};
+    const idVal = form.email.trim();
+    if (!idVal) {
+      newErrors.email = t.idRequired;
+    } else if (idVal.includes('@') && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(idVal)) {
+      newErrors.email = t.idInvalid;
+    }
+
+    if (!form.password) {
+      newErrors.password = t.passwordRequired;
+    } else if (form.password.length < 6) {
+      newErrors.password = t.passwordMin;
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+
+    setErrors({});
     setError('');
+    setLoading(true);
     try {
       // Endpoint is mobile/auth/merchant/login
       const res = await api.post('/mobile/auth/merchant/login', form);
@@ -165,7 +196,7 @@ export default function MerchantLoginPage() {
         </p>
       </div>
 
-      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column' }}>
+      <form onSubmit={handleSubmit} noValidate style={{ display: 'flex', flexDirection: 'column' }}>
         {error && (
           <div style={{
             background: 'rgba(239, 68, 68, 0.05)',
@@ -192,29 +223,44 @@ export default function MerchantLoginPage() {
             <MdPerson style={{
               position: 'absolute',
               left: '16px',
-              color: '#64748b',
+              color: errors.email ? '#ef4444' : '#64748b',
               fontSize: '18px'
             }} />
             <input
               type="text"
               placeholder={t.idPlaceholder}
               value={form.email} // Send this as "email" property to match NestJS LoginDto
-              onChange={e => setForm({ ...form, email: e.target.value })}
-              required
+              onChange={e => {
+                setForm({ ...form, email: e.target.value });
+                if (errors.email) setErrors(prev => ({ ...prev, email: undefined }));
+              }}
               style={{
                 width: '100%',
-                background: '#ffffff',
-                border: '1.5px solid #cbd5e1',
+                background: errors.email ? '#fff8f8' : '#ffffff',
+                border: errors.email ? '1.5px solid #ef4444' : '1.5px solid #cbd5e1',
                 color: '#0f172a',
                 padding: '12px 16px 12px 46px',
                 borderRadius: '12px',
                 fontSize: '14px',
                 fontWeight: '500',
                 outline: 'none',
-                transition: 'border-color 0.2s'
+                transition: 'all 0.2s ease'
+              }}
+              onFocus={(e) => {
+                e.target.style.borderColor = errors.email ? '#ef4444' : '#2563eb';
+                e.target.style.boxShadow = errors.email ? '0 0 0 4px rgba(239, 68, 68, 0.15)' : '0 0 0 4px rgba(37, 99, 235, 0.12)';
+              }}
+              onBlur={(e) => {
+                e.target.style.borderColor = errors.email ? '#ef4444' : '#cbd5e1';
+                e.target.style.boxShadow = 'none';
               }}
             />
           </div>
+          {errors.email && (
+            <div style={{ color: '#dc2626', fontSize: '12.5px', fontWeight: 600, marginTop: '6px', lineHeight: '1.4' }}>
+              {errors.email}
+            </div>
+          )}
         </div>
 
         <div style={{ marginBottom: '28px', display: 'flex', flexDirection: 'column' }}>
@@ -228,26 +274,36 @@ export default function MerchantLoginPage() {
             <MdLock style={{
               position: 'absolute',
               left: '16px',
-              color: '#64748b',
+              color: errors.password ? '#ef4444' : '#64748b',
               fontSize: '18px'
             }} />
             <input
               type={showPassword ? 'text' : 'password'}
               placeholder={t.passwordPlaceholder}
               value={form.password}
-              onChange={e => setForm({ ...form, password: e.target.value })}
-              required
+              onChange={e => {
+                setForm({ ...form, password: e.target.value });
+                if (errors.password) setErrors(prev => ({ ...prev, password: undefined }));
+              }}
               style={{
                 width: '100%',
-                background: '#ffffff',
-                border: '1.5px solid #cbd5e1',
+                background: errors.password ? '#fff8f8' : '#ffffff',
+                border: errors.password ? '1.5px solid #ef4444' : '1.5px solid #cbd5e1',
                 color: '#0f172a',
                 padding: '12px 46px 12px 46px',
                 borderRadius: '12px',
                 fontSize: '14px',
                 fontWeight: '500',
                 outline: 'none',
-                transition: 'border-color 0.2s'
+                transition: 'all 0.2s ease'
+              }}
+              onFocus={(e) => {
+                e.target.style.borderColor = errors.password ? '#ef4444' : '#2563eb';
+                e.target.style.boxShadow = errors.password ? '0 0 0 4px rgba(239, 68, 68, 0.15)' : '0 0 0 4px rgba(37, 99, 235, 0.12)';
+              }}
+              onBlur={(e) => {
+                e.target.style.borderColor = errors.password ? '#ef4444' : '#cbd5e1';
+                e.target.style.boxShadow = 'none';
               }}
             />
             <button
@@ -270,6 +326,11 @@ export default function MerchantLoginPage() {
               {showPassword ? <MdVisibilityOff /> : <MdVisibility />}
             </button>
           </div>
+          {errors.password && (
+            <div style={{ color: '#dc2626', fontSize: '12.5px', fontWeight: 600, marginTop: '6px', lineHeight: '1.4' }}>
+              {errors.password}
+            </div>
+          )}
         </div>
 
         <button

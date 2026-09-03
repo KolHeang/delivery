@@ -333,6 +333,16 @@ export const saasApi = {
     return res.data;
   },
 
+  getTenantById: async (id: number) => {
+    const res = await api.get(`/saas/tenants/${id}`);
+    return res.data;
+  },
+
+  updateTenant: async (id: number, data: any) => {
+    const res = await api.patch(`/saas/tenants/${id}`, data);
+    return res.data;
+  },
+
   deleteTenant: async (id: number) => {
     const res = await api.delete(`/saas/tenants/${id}`);
     return res.data;

@@ -25,12 +25,14 @@ export default function ExpenseTypePage() {
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [name, setName] = useState('');
   const [desc, setDesc] = useState('');
+  const [nameError, setNameError] = useState('');
   const [saving, setSaving] = useState(false);
 
   // Edit Modal State
   const [editItem, setEditItem] = useState<any | null>(null);
   const [editName, setEditName] = useState('');
   const [editDesc, setEditDesc] = useState('');
+  const [editNameError, setEditNameError] = useState('');
   const [updating, setUpdating] = useState(false);
 
   const { t, lang } = useLanguage();
@@ -50,7 +52,11 @@ export default function ExpenseTypePage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return;
+    if (!name.trim()) {
+      setNameError('សូមបំពេញឈ្មោះប្រភេទចំណាយ');
+      return;
+    }
+    setNameError('');
     setSaving(true);
     try {
       await api.post('/expenses/types', { name: name.trim(), description: desc.trim() });
@@ -68,11 +74,17 @@ export default function ExpenseTypePage() {
     setEditItem(item);
     setEditName(item.name || '');
     setEditDesc(item.description || '');
+    setEditNameError('');
   };
 
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editName.trim() || !editItem) return;
+    if (!editName.trim()) {
+      setEditNameError('សូមបំពេញឈ្មោះប្រភេទចំណាយ');
+      return;
+    }
+    if (!editItem) return;
+    setEditNameError('');
     setUpdating(true);
     try {
       await api.patch(`/expenses/types/${editItem.id}`, {
@@ -191,18 +203,21 @@ export default function ExpenseTypePage() {
           title={`➕ ${t('addCategory') || 'Add Category'}`}
           size="md"
         >
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={handleSubmit} noValidate>
             <div className="form-group">
-              <label className="form-label">{t('categoryName') || 'Category Name'} <span>*</span></label>
+              <label className="form-label">{t('categoryName') || 'Category Name'} <span style={{ color: '#ef4444' }}>*</span></label>
               <input
                 type="text"
-                className="form-control"
+                className={`form-control ${nameError ? 'is-invalid' : ''}`}
                 placeholder={t('placeholderCategoryExpenseName') || 'e.g. Utilities, Marketing'}
                 value={name}
-                onChange={e => setName(e.target.value)}
-                required
+                onChange={e => {
+                  setName(e.target.value);
+                  if (nameError) setNameError('');
+                }}
                 autoFocus
               />
+              {nameError && <div className="form-error-text">{nameError}</div>}
             </div>
             <div className="form-group">
               <label className="form-label">{t('description') || 'Description'}</label>
@@ -244,17 +259,20 @@ export default function ExpenseTypePage() {
           title={lang === 'km' ? 'កែសម្រួលក្រុមចំណាយ' : 'Edit Category'}
           size="md"
         >
-          <form onSubmit={handleUpdate}>
+          <form onSubmit={handleUpdate} noValidate>
             <div className="form-group">
               <label className="form-label">{t('categoryName') || 'Category Name'} <span style={{ color: '#ef4444' }}>*</span></label>
               <input
                 type="text"
-                className="form-control"
+                className={`form-control ${editNameError ? 'is-invalid' : ''}`}
                 value={editName}
-                onChange={e => setEditName(e.target.value)}
-                required
+                onChange={e => {
+                  setEditName(e.target.value);
+                  if (editNameError) setEditNameError('');
+                }}
                 autoFocus
               />
+              {editNameError && <div className="form-error-text">{editNameError}</div>}
             </div>
             <div className="form-group">
               <label className="form-label">{t('description') || 'Description'}</label>

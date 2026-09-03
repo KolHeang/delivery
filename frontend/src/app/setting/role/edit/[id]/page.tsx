@@ -50,6 +50,7 @@ export default function EditRolePage() {
 
   const [roleName, setRoleName] = useState('');
   const [roleDescription, setRoleDescription] = useState('');
+  const [roleNameError, setRoleNameError] = useState('');
   const [selectedPermissionIds, setSelectedPermissionIds] = useState<number[]>([]);
   const [isSystemRole, setIsSystemRole] = useState(false);
 
@@ -60,21 +61,21 @@ export default function EditRolePage() {
     }
     const load = async () => {
       try {
-        const [pRes, rRes, subRes] = await Promise.allSettled([
+        const [permRes, subRes, roleRes] = await Promise.allSettled([
           api.get('/roles/permissions'),
-          api.get(`/roles/${params.id}`),
           api.get('/saas/subscriptions/me'),
+          api.get(`/roles/${params.id}`),
         ]);
         
-        if (pRes.status === 'fulfilled') {
-          setAllPermissions(pRes.value.data || []);
+        if (permRes.status === 'fulfilled') {
+          setAllPermissions(permRes.value.data || []);
         }
         if (subRes.status === 'fulfilled' && subRes.value.data?.plan?.features) {
           setPlanFeatures(subRes.value.data.plan.features);
         }
         
-        if (rRes.status === 'fulfilled') {
-          const roleData: Role = rRes.value.data;
+        if (roleRes.status === 'fulfilled') {
+          const roleData: Role = roleRes.value.data;
           if (roleData) {
             setRoleName(roleData.name);
             setRoleDescription(roleData.description || '');
@@ -120,9 +121,10 @@ export default function EditRolePage() {
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!roleName.trim()) {
-      alert(t('roleNameRequired'));
+      setRoleNameError(t('roleNameRequired') || 'សូមបំពេញឈ្មោះតួនាទី (Role Name)');
       return;
     }
+    setRoleNameError('');
 
     setSaving(true);
     try {
@@ -178,19 +180,22 @@ export default function EditRolePage() {
               <span className="card-title">{t('editRoleForm')}</span>
             </div>
             <div className="card-body">
-              <form onSubmit={handleSave}>
+              <form onSubmit={handleSave} noValidate>
                 <div className="form-row">
                   <div className="form-group">
                     <label className="form-label">{t('roleName')} <span style={{ color: '#ef4444' }}>*</span></label>
                     <input
-                      className="form-control"
+                      className={`form-control ${roleNameError ? 'is-invalid' : ''}`}
                       placeholder={t('roleNamePlaceholder')}
                       value={roleName}
-                      onChange={e => setRoleName(e.target.value)}
-                      required
+                      onChange={e => {
+                        setRoleName(e.target.value);
+                        if (roleNameError) setRoleNameError('');
+                      }}
                       disabled={isSystemRole}
                       style={{ textTransform: 'lowercase' }}
                     />
+                    {roleNameError && <div className="form-error-text">{roleNameError}</div>}
                   </div>
                   <div className="form-group">
                     <label className="form-label">{t('roleDescription')}</label>

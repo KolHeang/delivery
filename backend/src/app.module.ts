@@ -26,6 +26,7 @@ import { SelectModule } from './select/select.module';
 import { SaasModule } from './saas/saas.module';
 import { SeedModule } from './seed/seed.module';
 import { TelegramModule } from './telegram/telegram.module';
+import { TrackingModule } from './tracking/tracking.module';
 
 @Module({
   imports: [
@@ -57,6 +58,7 @@ import { TelegramModule } from './telegram/telegram.module';
     SaasModule,
     SeedModule,
     TelegramModule,
+    TrackingModule,
   ],
   providers: [
     {

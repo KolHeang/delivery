@@ -50,6 +50,7 @@ export default function CreateTenantPage() {
     phone: '',
     password: '',
   });
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const [createdCredentials, setCreatedCredentials] = useState<{
     companyName: string;
@@ -60,10 +61,17 @@ export default function CreateTenantPage() {
     password: string;
     planName: string;
   } | null>(null);
+  const [domainSuffix, setDomainSuffix] = useState('.ebsexpress.com');
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
+
+    if (window.location.host.includes('localhost')) {
+      setDomainSuffix(`.localhost:${window.location.port || '3000'}`);
+    } else {
+      setDomainSuffix('.ebsexpress.com');
+    }
 
     const token = localStorage.getItem('access_token');
     const saasAdminRaw = localStorage.getItem('saas_admin');
@@ -137,15 +145,48 @@ export default function CreateTenantPage() {
       companyName: val,
       subdomain: slug,
     }));
+    if (errors.companyName || errors.subdomain) {
+      setErrors(prev => {
+        const next = { ...prev };
+        delete next.companyName;
+        delete next.subdomain;
+        return next;
+      });
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!companyForm.companyName || !companyForm.subdomain || !companyForm.email || !companyForm.adminName || !companyForm.phone || !companyForm.password) {
-      alert('សូមបញ្ចូលព័ត៌មានចាំបាច់ឱ្យបានគ្រប់គ្រាន់');
+    const errs: Record<string, string> = {};
+    if (!companyForm.companyName.trim()) {
+      errs.companyName = 'សូមបំពេញឈ្មោះក្រុមហ៊ុន';
+    }
+    if (!companyForm.subdomain.trim()) {
+      errs.subdomain = 'សូមបំពេញឈ្មោះ Subdomain';
+    }
+    if (!companyForm.adminName.trim()) {
+      errs.adminName = 'សូមបំពេញឈ្មោះអ្នកគ្រប់គ្រង';
+    }
+    if (!companyForm.phone.trim()) {
+      errs.phone = 'សូមបំពេញលេខទូរស័ព្ទ';
+    }
+    if (!companyForm.email.trim()) {
+      errs.email = 'សូមបំពេញអ៊ីម៉ែល';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(companyForm.email.trim())) {
+      errs.email = 'សូមបំពេញអ៊ីម៉ែលត្រឹមត្រូវ';
+    }
+    if (!companyForm.password) {
+      errs.password = 'សូមបំពេញពាក្យសម្ងាត់';
+    } else if (companyForm.password.length < 6) {
+      errs.password = 'ពាក្យសម្ងាត់ត្រូវមានយ៉ាងហោចណាស់ ៦ តួអក្សរ';
+    }
+
+    if (Object.keys(errs).length > 0) {
+      setErrors(errs);
       return;
     }
 
+    setErrors({});
     try {
       setCreating(true);
       const selectedPlan = plans.find(p => p.id === Number(companyForm.planId));
@@ -641,7 +682,11 @@ export default function CreateTenantPage() {
               </div>
 
               <div className="card-body">
-                <form onSubmit={handleSubmit} autoComplete="off">
+                <form onSubmit={handleSubmit} autoComplete="off" noValidate>
+                  {/* Invisible fake inputs to prevent aggressive browser autofill */}
+                  <input type="text" style={{ display: 'none' }} tabIndex={-1} readOnly />
+                  <input type="password" style={{ display: 'none' }} tabIndex={-1} readOnly />
+
                   {/* Section 1: Company & Subdomain */}
                   <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 14, display: 'flex', alignItems: 'center' }}>
                     ១. ព័ត៌មានក្រុមហ៊ុន និង Workspace
@@ -650,51 +695,55 @@ export default function CreateTenantPage() {
                   <div className="form-row">
                     <div className="form-group">
                       <label className="form-label">
-                        ឈ្មោះក្រុមហ៊ុន <span>*</span>
+                        ឈ្មោះក្រុមហ៊ុន <span style={{ color: '#ef4444' }}>*</span>
                       </label>
                       <input
                         type="text"
-                        required
-                        className="form-control"
+                        className={`form-control ${errors.companyName ? 'is-invalid' : ''}`}
                         placeholder="ឧ. Angkor Express, Battambang Logistics"
                         value={companyForm.companyName}
                         onChange={handleCompanyNameChange}
                       />
+                      {errors.companyName && <div className="form-error-text">{errors.companyName}</div>}
                     </div>
 
                     <div className="form-group">
                       <label className="form-label">
-                        ឈ្មោះ Subdomain សម្រាប់ Workspace <span>*</span>
+                        ឈ្មោះ Subdomain សម្រាប់ Workspace <span style={{ color: '#ef4444' }}>*</span>
                       </label>
                       <div style={{ display: 'flex' }}>
                         <input
                           type="text"
-                          required
-                          className="form-control"
+                          className={`form-control ${errors.subdomain ? 'is-invalid' : ''}`}
                           style={{ borderTopRightRadius: 0, borderBottomRightRadius: 0 }}
                           placeholder="angkorexpress"
                           value={companyForm.subdomain}
-                          onChange={(e) => setCompanyForm({ ...companyForm, subdomain: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') })}
+                          onChange={(e) => {
+                            setCompanyForm({ ...companyForm, subdomain: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') });
+                            if (errors.subdomain) setErrors(prev => { const n = { ...prev }; delete n.subdomain; return n; });
+                          }}
                         />
-                        <span style={{
-                          padding: '0 12px',
-                          background: '#f8fafc',
-                          border: '1.5px solid var(--border)',
-                          borderLeft: 'none',
-                          borderTopRightRadius: 'var(--radius)',
-                          borderBottomRightRadius: 'var(--radius)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          color: 'var(--text-secondary)',
-                          fontSize: 12.5,
-                          fontWeight: 600,
-                          whiteSpace: 'nowrap',
-                        }}>
-                          {typeof window !== 'undefined' && window.location.host.includes('localhost')
-                            ? `.localhost:${window.location.port || '3000'}`
-                            : '.ebsexpress.com'}
+                        <span
+                          suppressHydrationWarning
+                          style={{
+                            padding: '0 12px',
+                            background: '#f8fafc',
+                            border: '1.5px solid var(--border)',
+                            borderLeft: 'none',
+                            borderTopRightRadius: 'var(--radius)',
+                            borderBottomRightRadius: 'var(--radius)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            color: 'var(--text-secondary)',
+                            fontSize: 12.5,
+                            fontWeight: 600,
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          {domainSuffix}
                         </span>
                       </div>
+                      {errors.subdomain && <div className="form-error-text">{errors.subdomain}</div>}
                     </div>
                   </div>
 
@@ -770,66 +819,78 @@ export default function CreateTenantPage() {
                   <div className="form-row">
                     <div className="form-group">
                       <label className="form-label">
-                        ឈ្មោះអ្នកគ្រប់គ្រង <span>*</span>
+                        ឈ្មោះអ្នកគ្រប់គ្រង <span style={{ color: '#ef4444' }}>*</span>
                       </label>
                       <input
                         type="text"
-                        required
-                        className="form-control"
+                        className={`form-control ${errors.adminName ? 'is-invalid' : ''}`}
                         placeholder="ឧ. Sok Dara"
                         value={companyForm.adminName}
-                        onChange={(e) => setCompanyForm({ ...companyForm, adminName: e.target.value })}
+                        onChange={(e) => {
+                          setCompanyForm({ ...companyForm, adminName: e.target.value });
+                          if (errors.adminName) setErrors(prev => { const n = { ...prev }; delete n.adminName; return n; });
+                        }}
                       />
+                      {errors.adminName && <div className="form-error-text">{errors.adminName}</div>}
                     </div>
 
                     <div className="form-group">
                       <label className="form-label">
-                        លេខទូរស័ព្ទ <span>*</span>
+                        លេខទូរស័ព្ទ <span style={{ color: '#ef4444' }}>*</span>
                       </label>
                       <input
                         type="text"
-                        required
-                        className="form-control"
+                        className={`form-control ${errors.phone ? 'is-invalid' : ''}`}
                         placeholder="012 345 678"
                         value={companyForm.phone}
-                        onChange={(e) => setCompanyForm({ ...companyForm, phone: e.target.value })}
+                        onChange={(e) => {
+                          setCompanyForm({ ...companyForm, phone: e.target.value });
+                          if (errors.phone) setErrors(prev => { const n = { ...prev }; delete n.phone; return n; });
+                        }}
                       />
+                      {errors.phone && <div className="form-error-text">{errors.phone}</div>}
                     </div>
                   </div>
 
                   <div className="form-row">
                     <div className="form-group">
                       <label className="form-label">
-                        អ៊ីមែលសម្រាប់ Login <span>*</span>
+                        អ៊ីមែលសម្រាប់ Login <span style={{ color: '#ef4444' }}>*</span>
                       </label>
                       <input
                         type="email"
                         name="tenant_admin_email_field"
                         id="tenant_admin_email_field"
                         autoComplete="off"
-                        required
-                        className="form-control"
+                        className={`form-control ${errors.email ? 'is-invalid' : ''}`}
                         placeholder="client@gmail.com"
                         value={companyForm.email}
-                        onChange={(e) => setCompanyForm({ ...companyForm, email: e.target.value })}
+                        onChange={(e) => {
+                          setCompanyForm({ ...companyForm, email: e.target.value });
+                          if (errors.email) setErrors(prev => { const n = { ...prev }; delete n.email; return n; });
+                        }}
                       />
+                      {errors.email && <div className="form-error-text">{errors.email}</div>}
                     </div>
 
                     <div className="form-group">
                       <label className="form-label">
-                        ពាក្យសម្ងាត់ <span>*</span>
+                        ពាក្យសម្ងាត់ <span style={{ color: '#ef4444' }}>*</span>
                       </label>
                       <input
                         type="password"
                         name="tenant_admin_password_field"
                         id="tenant_admin_password_field"
                         autoComplete="new-password"
-                        required
-                        className="form-control"
+                        className={`form-control ${errors.password ? 'is-invalid' : ''}`}
                         placeholder="បញ្ចូលពាក្យសម្ងាត់..."
                         value={companyForm.password}
-                        onChange={(e) => setCompanyForm({ ...companyForm, password: e.target.value })}
+                        onChange={(e) => {
+                          setCompanyForm({ ...companyForm, password: e.target.value });
+                          if (errors.password) setErrors(prev => { const n = { ...prev }; delete n.password; return n; });
+                        }}
                       />
+                      {errors.password && <div className="form-error-text">{errors.password}</div>}
                     </div>
                   </div>
 

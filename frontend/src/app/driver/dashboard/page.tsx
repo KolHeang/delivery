@@ -20,6 +20,7 @@ import {
   MdClose,
   MdChevronLeft
 } from 'react-icons/md';
+import LiveLocationTracker from '@/components/driver/LiveLocationTracker';
 
 const dashboardTranslations = {
   en: {
@@ -489,6 +490,9 @@ export default function DriverDashboardPage() {
         flexDirection: 'column',
         gap: '20px'
       }}>
+        {/* Real-time Driver GPS Live Location Broadcaster */}
+        <LiveLocationTracker />
+
         {/* Prime 3-Column Metrics Grid (6 Cards with 3D Icons) */}
         <div>
           <div style={{

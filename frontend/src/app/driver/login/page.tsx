@@ -14,8 +14,12 @@ const driverLoginTranslations = {
     subtitle: 'Sign in to access your delivery tasks',
     emailLabel: 'Email or Phone Number',
     emailPlaceholder: 'Enter your email or phone number',
+    emailRequired: 'Please enter your email or phone number',
+    emailInvalid: 'Please enter a valid email or phone number',
     passwordLabel: 'Password',
     passwordPlaceholder: 'Enter your password',
+    passwordRequired: 'Please enter your password',
+    passwordMin: 'Password must be at least 6 characters',
     signInBtn: 'Sign In as Driver',
     signingIn: 'Signing in...',
     errorMsg: 'Invalid credentials or you are not registered as a driver.',
@@ -26,8 +30,12 @@ const driverLoginTranslations = {
     subtitle: 'ចូលប្រព័ន្ធដើម្បីមើលភារកិច្ច និងគ្រប់គ្រងការដឹកជញ្ជូន',
     emailLabel: 'អ៊ីមែល ឬលេខទូរស័ព្ទ',
     emailPlaceholder: 'បញ្ចូលអ៊ីមែល ឬលេខទូរស័ព្ទរបស់អ្នក',
+    emailRequired: 'សូមបំពេញអ៊ីម៉ែល ឬលេខទូរស័ព្ទ',
+    emailInvalid: 'សូមបំពេញអ៊ីម៉ែលត្រឹមត្រូវ',
     passwordLabel: 'ពាក្យសម្ងាត់',
     passwordPlaceholder: 'បញ្ចូលពាក្យសម្ងាត់របស់អ្នក',
+    passwordRequired: 'សូមបំពេញពាក្យសម្ងាត់',
+    passwordMin: 'ពាក្យសម្ងាត់ត្រូវមានយ៉ាងហោចណាស់ ៦ តួអក្សរ',
     signInBtn: 'ចូលប្រព័ន្ធអ្នកដឹកជញ្ជូន',
     signingIn: 'កំពុងចូលប្រព័ន្ធ...',
     errorMsg: 'អត្តសញ្ញាណខុស ឬអ្នកមិនទាន់បានចុះឈ្មោះជាអ្នកបើកបរឡើយ។',
@@ -38,6 +46,7 @@ export default function DriverLoginPage() {
   const router = useRouter();
   const { lang, setLang } = useLanguage();
   const [form, setForm] = useState({ email: '', password: '' });
+  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -54,8 +63,30 @@ export default function DriverLoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    if (loading) return;
+
+    const newErrors: { email?: string; password?: string } = {};
+    const emailVal = form.email.trim();
+    if (!emailVal) {
+      newErrors.email = t.emailRequired;
+    } else if (emailVal.includes('@') && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal)) {
+      newErrors.email = t.emailInvalid;
+    }
+
+    if (!form.password) {
+      newErrors.password = t.passwordRequired;
+    } else if (form.password.length < 6) {
+      newErrors.password = t.passwordMin;
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+
+    setErrors({});
     setError('');
+    setLoading(true);
     try {
       const res = await api.post('/mobile/auth/driver/login', form);
       setAuth(res.data.access_token, res.data.user);
@@ -213,7 +244,7 @@ export default function DriverLoginPage() {
         </div>
 
         {/* Login Form */}
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+        <form onSubmit={handleSubmit} noValidate style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
           {error && (
             <div style={{
               background: '#fef2f2',
@@ -246,7 +277,7 @@ export default function DriverLoginPage() {
               <div style={{
                 position: 'absolute',
                 left: '14px',
-                color: '#2563eb',
+                color: errors.email ? '#ef4444' : '#2563eb',
                 display: 'flex',
                 alignItems: 'center'
               }}>
@@ -256,13 +287,15 @@ export default function DriverLoginPage() {
                 type="text"
                 placeholder={t.emailPlaceholder}
                 value={form.email}
-                onChange={(e) => setForm({ ...form, email: e.target.value })}
-                required
+                onChange={(e) => {
+                  setForm({ ...form, email: e.target.value });
+                  if (errors.email) setErrors(prev => ({ ...prev, email: undefined }));
+                }}
                 style={{
                   width: '100%',
                   padding: '14px 14px 14px 44px',
-                  backgroundColor: '#f8fafc',
-                  border: '1.5px solid #cbd5e1',
+                  backgroundColor: errors.email ? '#fff8f8' : '#f8fafc',
+                  border: errors.email ? '1.5px solid #ef4444' : '1.5px solid #cbd5e1',
                   borderRadius: '16px',
                   fontSize: '13.5px',
                   fontWeight: '600',
@@ -272,17 +305,22 @@ export default function DriverLoginPage() {
                   boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.02)'
                 }}
                 onFocus={(e) => {
-                  e.target.style.borderColor = '#2563eb';
+                  e.target.style.borderColor = errors.email ? '#ef4444' : '#2563eb';
                   e.target.style.backgroundColor = '#ffffff';
-                  e.target.style.boxShadow = '0 0 0 4px rgba(37, 99, 235, 0.12)';
+                  e.target.style.boxShadow = errors.email ? '0 0 0 4px rgba(239, 68, 68, 0.15)' : '0 0 0 4px rgba(37, 99, 235, 0.12)';
                 }}
                 onBlur={(e) => {
-                  e.target.style.borderColor = '#cbd5e1';
-                  e.target.style.backgroundColor = '#f8fafc';
+                  e.target.style.borderColor = errors.email ? '#ef4444' : '#cbd5e1';
+                  e.target.style.backgroundColor = errors.email ? '#fff8f8' : '#f8fafc';
                   e.target.style.boxShadow = 'inset 0 1px 2px rgba(0,0,0,0.02)';
                 }}
               />
             </div>
+            {errors.email && (
+              <div style={{ color: '#dc2626', fontSize: '12.5px', fontWeight: 600, marginTop: '2px', lineHeight: '1.4' }}>
+                {errors.email}
+              </div>
+            )}
           </div>
 
           {/* Password Field */}
@@ -298,7 +336,7 @@ export default function DriverLoginPage() {
               <div style={{
                 position: 'absolute',
                 left: '14px',
-                color: '#2563eb',
+                color: errors.password ? '#ef4444' : '#2563eb',
                 display: 'flex',
                 alignItems: 'center'
               }}>
@@ -308,13 +346,15 @@ export default function DriverLoginPage() {
                 type={showPassword ? 'text' : 'password'}
                 placeholder={t.passwordPlaceholder}
                 value={form.password}
-                onChange={(e) => setForm({ ...form, password: e.target.value })}
-                required
+                onChange={(e) => {
+                  setForm({ ...form, password: e.target.value });
+                  if (errors.password) setErrors(prev => ({ ...prev, password: undefined }));
+                }}
                 style={{
                   width: '100%',
                   padding: '14px 44px 14px 44px',
-                  backgroundColor: '#f8fafc',
-                  border: '1.5px solid #cbd5e1',
+                  backgroundColor: errors.password ? '#fff8f8' : '#f8fafc',
+                  border: errors.password ? '1.5px solid #ef4444' : '1.5px solid #cbd5e1',
                   borderRadius: '16px',
                   fontSize: '13.5px',
                   fontWeight: '600',
@@ -324,13 +364,13 @@ export default function DriverLoginPage() {
                   boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.02)'
                 }}
                 onFocus={(e) => {
-                  e.target.style.borderColor = '#2563eb';
+                  e.target.style.borderColor = errors.password ? '#ef4444' : '#2563eb';
                   e.target.style.backgroundColor = '#ffffff';
-                  e.target.style.boxShadow = '0 0 0 4px rgba(37, 99, 235, 0.12)';
+                  e.target.style.boxShadow = errors.password ? '0 0 0 4px rgba(239, 68, 68, 0.15)' : '0 0 0 4px rgba(37, 99, 235, 0.12)';
                 }}
                 onBlur={(e) => {
-                  e.target.style.borderColor = '#cbd5e1';
-                  e.target.style.backgroundColor = '#f8fafc';
+                  e.target.style.borderColor = errors.password ? '#ef4444' : '#cbd5e1';
+                  e.target.style.backgroundColor = errors.password ? '#fff8f8' : '#f8fafc';
                   e.target.style.boxShadow = 'inset 0 1px 2px rgba(0,0,0,0.02)';
                 }}
               />
@@ -352,6 +392,11 @@ export default function DriverLoginPage() {
                 {showPassword ? <MdVisibilityOff size={20} /> : <MdVisibility size={20} />}
               </button>
             </div>
+            {errors.password && (
+              <div style={{ color: '#dc2626', fontSize: '12.5px', fontWeight: 600, marginTop: '2px', lineHeight: '1.4' }}>
+                {errors.password}
+              </div>
+            )}
           </div>
 
           {/* Submit Button */}

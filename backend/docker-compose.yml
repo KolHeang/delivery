@@ -68,6 +68,16 @@ services:
       - app-network
     volumes:
       - minio_data:/data
+  redis:
+    image: redis:7-alpine
+    container_name: delivery-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    networks:
+      - app-network
+    volumes:
+      - redis_data:/data
 
 networks:
   app-network:
@@ -76,3 +86,4 @@ networks:
 volumes:
   delivery_db_data:
   minio_data:
+  redis_data:

@@ -452,15 +452,14 @@ export default function EditSaasAdminPage() {
               {loading ? (
                 <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>កំពុងទាញយកទិន្នន័យ...</div>
               ) : (
-                <form onSubmit={handleSubmit}>
+                <form onSubmit={handleSubmit} autoComplete="off">
                   <div className="form-row">
                     <div className="form-group">
                       <label className="form-label">
-                        ឈ្មោះអ្នកគ្រប់គ្រង <span>*</span>
+                        ឈ្មោះអ្នកគ្រប់គ្រង <span style={{ color: '#ef4444' }}>*</span>
                       </label>
                       <input
                         type="text"
-                        required
                         className="form-control"
                         placeholder="ឧ. John SuperAdmin"
                         value={adminForm.name}
@@ -485,11 +484,10 @@ export default function EditSaasAdminPage() {
                   <div className="form-row">
                     <div className="form-group">
                       <label className="form-label">
-                        អ៊ីមែលសម្រាប់ Login <span>*</span>
+                        អ៊ីមែលសម្រាប់ Login <span style={{ color: '#ef4444' }}>*</span>
                       </label>
                       <input
                         type="email"
-                        required
                         className="form-control"
                         placeholder="admin@ebsexpress.com"
                         value={adminForm.email}
@@ -513,7 +511,7 @@ export default function EditSaasAdminPage() {
 
                   <div className="form-group">
                     <label className="form-label">
-                      តួនាទី <span>*</span>
+                      តួនាទី <span style={{ color: '#ef4444' }}>*</span>
                     </label>
                     <select
                       className="form-control"

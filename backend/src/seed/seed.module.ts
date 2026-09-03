@@ -6,6 +6,9 @@ import { Coupon } from '../saas/coupons/coupon.entity';
 import { Partner } from '../saas/partners/partner.entity';
 import { Role } from '../roles/entities/role.entity';
 import { Permission } from '../roles/entities/permission.entity';
+import { Zone } from '../zones/entities/zone.entity';
+import { SubZone } from '../zones/entities/subzone.entity';
+import { Tenant } from '../saas/entities/tenant.entity';
 import { SeedService } from './seed.service';
 import { SeedController } from './seed.controller';
 
@@ -18,6 +21,9 @@ import { SeedController } from './seed.controller';
       Partner,
       Role,
       Permission,
+      Zone,
+      SubZone,
+      Tenant,
     ]),
   ],
   controllers: [SeedController],

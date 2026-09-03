@@ -1,17 +1,20 @@
 import { Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, IsNull } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 
 import { SaasAdmin } from '../saas/admins/saas-admin.entity';
 import { Plan } from '../saas/plans/plan.entity';
 import { Coupon } from '../saas/coupons/coupon.entity';
 import { Partner } from '../saas/partners/partner.entity';
+import { Zone } from '../zones/entities/zone.entity';
+import { SubZone } from '../zones/entities/subzone.entity';
 import { Role } from '../roles/entities/role.entity';
 import { Permission } from '../roles/entities/permission.entity';
+import { Tenant } from '../saas/entities/tenant.entity';
 
 @Injectable()
-export class SeedService implements OnApplicationBootstrap {
+export class SeedService {
   private readonly logger = new Logger(SeedService.name);
 
   constructor(
@@ -21,12 +24,16 @@ export class SeedService implements OnApplicationBootstrap {
     @InjectRepository(Partner) private readonly partnerRepo: Repository<Partner>,
     @InjectRepository(Role) private readonly roleRepo: Repository<Role>,
     @InjectRepository(Permission) private readonly permissionRepo: Repository<Permission>,
+    @InjectRepository(Zone) private readonly zoneRepo: Repository<Zone>,
+    @InjectRepository(SubZone) private readonly subZoneRepo: Repository<SubZone>,
+    @InjectRepository(Tenant) private readonly tenantRepo: Repository<Tenant>,
   ) { }
 
-  async onApplicationBootstrap() {
-    this.logger.log('🚀 Initializing Super Admin & Platform Seed Data...');
-    await this.seedSuperAdminData();
-  }
+  // async onApplicationBootstrap() {
+  //   this.logger.log('🚀 Initializing Super Admin & Platform Seed Data...');
+  //   await this.seedSuperAdminData();
+  //   await this.seedPhnomPenhZones();
+  // }
 
   /**
    * Master Super Admin Seed Function
@@ -36,6 +43,7 @@ export class SeedService implements OnApplicationBootstrap {
     const plans = await this.seedSaasPlans();
     const partners = await this.seedPartnersAndCoupons();
     const roles = await this.seedSystemRolesAndPermissions();
+    const zone = await this.seedPhnomPenhZones();
 
     this.logger.log('✅ Super Admin & SaaS Platform Seed Completed!');
     return {
@@ -45,6 +53,7 @@ export class SeedService implements OnApplicationBootstrap {
       plansCount: plans.length,
       partnersCount: partners.length,
       rolesCount: roles.length,
+      zoneCount: zone.length,
     };
   }
 
@@ -329,6 +338,205 @@ export class SeedService implements OnApplicationBootstrap {
       results.push(role);
     }
     this.logger.log(`👥 Seeded ${results.length} System Roles & Permissions`);
+    return results;
+  }
+
+  // ── 5. Phnom Penh Delivery Zones & Subzones (១៤ ខណ្ឌ នៅរាជធានីភ្នំពេញ) ──
+  async seedPhnomPenhZones() {
+    const phnomPenhZones = [
+      {
+        name: 'ទួលគោក',
+        code: 'ZON-PP-TK',
+        price: 1.00,
+        description: 'តំបន់ខណ្ឌទួលគោក រាជធានីភ្នំពេញ',
+        branch: 'EBS Express',
+        subZones: [
+          'បឹងកក់ ១', 'បឹងកក់ ២', 'ផ្សារដេប៉ូ ១', 'ផ្សារដេប៉ូ ២', 'ផ្សារដេប៉ូ ៣',
+          'ទឹកល្អក់ ១', 'ទឹកល្អក់ ២', 'ទឹកល្អក់ ៣', 'ផ្សារដើមគ', 'បឹងសាឡាង',
+        ],
+      },
+      {
+        name: 'ដូនពេញ',
+        code: 'ZON-PP-DP',
+        price: 1.00,
+        description: 'តំបន់ខណ្ឌដូនពេញ រាជធានីភ្នំពេញ (កណ្តាលក្រុង)',
+        branch: 'EBS Express',
+        subZones: [
+          'ផ្សារចាស់', 'ផ្សារកណ្តាល ១', 'ផ្សារកណ្តាល ២', 'ផ្សារថ្មី ១', 'ផ្សារថ្មី ២',
+          'ផ្សារថ្មី ៣', 'បឹងរាំង', 'ជ័យជំនះ', 'ចតុមុខ', 'ស្រះចក', 'វត្តភ្នំ',
+        ],
+      },
+      {
+        name: 'ចំការមន',
+        code: 'ZON-PP-CM',
+        price: 1.00,
+        description: 'តំបន់ខណ្ឌចំការមន រាជធានីភ្នំពេញ',
+        branch: 'EBS Express',
+        subZones: [
+          'ទន្លេបាសាក់', 'ទួលទំពូង ១', 'ទួលទំពូង ២', 'បឹងត្របែក', 'ផ្សារដើមថ្កូវ',
+        ],
+      },
+      {
+        name: '៧មករា',
+        code: 'ZON-PP-7M',
+        price: 1.00,
+        description: 'តំបន់ខណ្ឌ៧មករា រាជធានីភ្នំពេញ',
+        branch: 'EBS Express',
+        subZones: [
+          'អូរឫស្សី ១', 'អូរឫស្សី ២', 'អូរឫស្សី ៣', 'អូរឫស្សី ៤',
+          'មនោរម្យ', 'មិត្តភាព', 'វាលវង់', 'បឹងព្រលិត',
+        ],
+      },
+      {
+        name: 'បឹងកេងកង',
+        code: 'ZON-PP-BKK',
+        price: 1.00,
+        description: 'តំបន់ខណ្ឌបឹងកេងកង រាជធានីភ្នំពេញ',
+        branch: 'EBS Express',
+        subZones: [
+          'បឹងកេងកង ១', 'បឹងកេងកង ២', 'បឹងកេងកង ៣', 'អូឡាំពិក',
+          'ទំនប់ទឹក', 'ទួលស្វាយព្រៃ ១', 'ទួលស្វាយព្រៃ ២',
+        ],
+      },
+      {
+        name: 'សែនសុខ',
+        code: 'ZON-PP-SS',
+        price: 1.25,
+        description: 'តំបន់ខណ្ឌសែនសុខ រាជធានីភ្នំពេញ',
+        branch: 'EBS Express',
+        subZones: [
+          'ភ្នំពេញថ្មី', 'ទឹកថ្លា', 'ឃ្មួញ', 'ក្រាំងធ្នង់', 'អូរបែកក្អម', 'គោកឃ្លាង',
+        ],
+      },
+      {
+        name: 'មានជ័យ',
+        code: 'ZON-PP-MC',
+        price: 1.25,
+        description: 'តំបន់ខណ្ឌមានជ័យ រាជធានីភ្នំពេញ',
+        branch: 'EBS Express',
+        subZones: [
+          'ស្ទឹងមានជ័យ ១', 'ស្ទឹងមានជ័យ ២', 'ស្ទឹងមានជ័យ ៣',
+          'បឹងទំពុន ១', 'បឹងទំពុន ២', 'ចាក់អង្រែលើ', 'ចាក់អង្រែក្រោម',
+        ],
+      },
+      {
+        name: 'ឫស្សីកែវ',
+        code: 'ZON-PP-RK',
+        price: 1.25,
+        description: 'តំបន់ខណ្ឌឫស្សីកែវ រាជធានីភ្នំពេញ',
+        branch: 'EBS Express',
+        subZones: [
+          'ឫស្សីកែវ', 'ទួលសង្កែ ១', 'ទួលសង្កែ ២', 'គីឡូម៉ែត្រលេខ ៦',
+          'ស្វាយប៉ាក', 'ច្រាំងចំរេះ ១', 'ច្រាំងចំរេះ ២',
+        ],
+      },
+      {
+        name: 'ច្បារអំពៅ',
+        code: 'ZON-PP-CA',
+        price: 1.50,
+        description: 'តំបន់ខណ្ឌច្បារអំពៅ រាជធានីភ្នំពេញ',
+        branch: 'EBS Express',
+        subZones: [
+          'ច្បារអំពៅ ១', 'ច្បារអំពៅ ២', 'និរោធ', 'ព្រែកប្រា',
+          'ព្រែកថ្មី', 'ក្បាលកោះ', 'ព្រែកឯង', 'វាលស្បូវ',
+        ],
+      },
+      {
+        name: 'ជ្រោយចង្វារ',
+        code: 'ZON-PP-CC',
+        price: 1.50,
+        description: 'តំបន់ខណ្ឌជ្រោយចង្វារ រាជធានីភ្នំពេញ',
+        branch: 'EBS Express',
+        subZones: [
+          'ជ្រោយចង្វារ', 'ព្រែកលៀប', 'ព្រែកតាសេក', 'បាក់ខែង', 'កោះដាច់',
+        ],
+      },
+      {
+        name: 'ពោធិ៍សែនជ័យ',
+        code: 'ZON-PP-PS',
+        price: 1.50,
+        description: 'តំបន់ខណ្ឌពោធិ៍សែនជ័យ រាជធានីភ្នំពេញ',
+        branch: 'EBS Express',
+        subZones: [
+          'ចោមចៅ ១', 'ចោមចៅ ២', 'ចោមចៅ ៣', 'កាកាប ១',
+          'កាកាប ២', 'ត្រពាំងក្រសាំង', 'សំរោងក្រោម',
+        ],
+      },
+      {
+        name: 'ដង្កោ',
+        code: 'ZON-PP-DK',
+        price: 1.50,
+        description: 'តំបន់ខណ្ឌដង្កោ រាជធានីភ្នំពេញ',
+        branch: 'EBS Express',
+        subZones: [
+          'ដង្កោ', 'ពងទឹក', 'ព្រៃវែង', 'ព្រៃស', 'ក្រាំងពង្រ',
+          'ជើងឯក', 'ស្ពានថ្ម', 'ទៀន', 'គងនយ',
+        ],
+      },
+      {
+        name: 'ព្រែកព្នៅ',
+        code: 'ZON-PP-PN',
+        price: 2.00,
+        description: 'តំបន់ខណ្ឌព្រែកព្នៅ រាជធានីភ្នំពេញ',
+        branch: 'EBS Express',
+        subZones: [
+          'ព្រែកព្នៅ', 'ពញាពន់', 'សំរោង', 'គោកកណ្តាល', 'ពន្សាំង',
+        ],
+      },
+      {
+        name: 'កំបូល',
+        code: 'ZON-PP-KB',
+        price: 2.00,
+        description: 'តំបន់ខណ្ឌកំបូល រាជធានីភ្នំពេញ',
+        branch: 'EBS Express',
+        subZones: [
+          'កំបូល', 'កន្ទោក', 'ភ្លើងឆេះរទេះ', 'បឹងធំ', 'ស្នោ', 'ឳឡោក',
+        ],
+      },
+    ];
+
+    const results = [];
+    for (const z of phnomPenhZones) {
+      let zone = await this.zoneRepo.findOne({
+        where: [{ code: z.code }, { name: z.name }],
+      });
+
+      if (!zone) {
+        zone = this.zoneRepo.create({
+          name: z.name,
+          code: z.code,
+          price: z.price,
+          description: z.description,
+          branch: z.branch,
+          active: true,
+        });
+        zone = await this.zoneRepo.save(zone);
+      } else {
+        if (!zone.price || Number(zone.price) === 0) {
+          zone.price = z.price;
+        }
+        zone.branch = z.branch;
+        zone.code = z.code;
+        zone = await this.zoneRepo.save(zone);
+      }
+
+      for (const szName of z.subZones) {
+        const szExists = await this.subZoneRepo.findOne({
+          where: { name: szName, zoneId: zone.id },
+        });
+        if (!szExists) {
+          const newSubZone = this.subZoneRepo.create({
+            name: szName,
+            zoneId: zone.id,
+          });
+          await this.subZoneRepo.save(newSubZone);
+        }
+      }
+
+      results.push(zone);
+    }
+
+    this.logger.log(`📍 Seeded ${results.length} unique Phnom Penh Zones and their SubZones!`);
     return results;
   }
 }

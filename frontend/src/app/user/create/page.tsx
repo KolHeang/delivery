@@ -13,10 +13,9 @@ const emptyForm = {
   nameKh: '',
   phone: '',
   email: '',
-  role: 'staff',
+  role: 'driver',
   active: true,
   zoneId: '',
-  vehicleId: '',
   joinDate: '',
   salary: '',
   password: '',
@@ -26,10 +25,9 @@ const emptyForm = {
 
 export default function CreateStaffPage() {
   const router = useRouter();
-  const { t } = useLanguage();
+  const { lang, t } = useLanguage();
 
   const [zones, setZones] = useState<any[]>([]);
-  const [vehicles, setVehicles] = useState<any[]>([]);
   const [roles, setRoles] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -46,9 +44,8 @@ export default function CreateStaffPage() {
     }
     const load = async () => {
       try {
-        const [z, v, r] = await Promise.all([
+        const [z, r] = await Promise.all([
           api.get('/select/zones'),
-          api.get('/select/vehicles'),
           api.get('/select/roles')
         ]);
         setZones(Array.isArray(z.data) ? z.data : (z.data?.result || []));
@@ -88,24 +85,24 @@ export default function CreateStaffPage() {
   const save = async () => {
     const errs: Record<string, string> = {};
     if (!form.name.trim()) {
-      errs.name = 'សូមបំពេញឈ្មោះពេញ (Full Name)';
+      errs.name = lang === 'km' ? 'សូមបំពេញឈ្មោះជាភាសាអង់គ្លេស' : 'Full name is required';
     }
     if (!form.phone.trim()) {
-      errs.phone = 'សូមបំពេញលេខទូរស័ព្ទ';
+      errs.phone = lang === 'km' ? 'សូមបំពេញលេខទូរស័ព្ទ' : 'Phone is required';
     }
     if (form.role !== 'driver') {
       if (!form.email.trim()) {
-        errs.email = 'សូមបំពេញអ៊ីម៉ែល';
+        errs.email = lang === 'km' ? 'សូមបំពេញអ៊ីម៉ែល' : 'Email is required';
       } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
-        errs.email = 'សូមបំពេញអ៊ីម៉ែលត្រឹមត្រូវ';
+        errs.email = lang === 'km' ? 'សូមបំពេញអ៊ីម៉ែលឱ្យបានត្រឹមត្រូវ' : 'Invalid email';
       }
     } else if (form.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
-      errs.email = 'សូមបំពេញអ៊ីម៉ែលត្រឹមត្រូវ';
+      errs.email = lang === 'km' ? 'សូមបំពេញអ៊ីម៉ែលឱ្យបានត្រឹមត្រូវ' : 'Invalid email';
     }
     if (!form.password) {
-      errs.password = 'សូមបំពេញពាក្យសម្ងាត់';
+      errs.password = lang === 'km' ? 'សូមបំពេញពាក្យសម្ងាត់' : 'Password is required';
     } else if (form.password.length < 6) {
-      errs.password = 'ពាក្យសម្ងាត់ត្រូវមានយ៉ាងហោចណាស់ ៦ តួអក្សរ';
+      errs.password = lang === 'km' ? 'ពាក្យសម្ងាត់ត្រូវមានយ៉ាងហោចណាស់ ៦ តួអក្សរ' : 'Min 6 characters';
     }
 
     if (Object.keys(errs).length > 0) {
@@ -126,7 +123,6 @@ export default function CreateStaffPage() {
       if (selectedRole?.id) formData.append('roleId', selectedRole.id.toString());
       formData.append('active', form.active.toString());
       if (form.role === 'driver' && form.zoneId) formData.append('zoneId', form.zoneId);
-      if (form.role === 'driver' && form.vehicleId) formData.append('vehicleId', form.vehicleId);
       if (form.joinDate) formData.append('joinDate', form.joinDate);
       if (form.salary) formData.append('salary', form.salary);
       if (form.dob) formData.append('dob', form.dob);
@@ -143,7 +139,7 @@ export default function CreateStaffPage() {
       });
       router.push('/user');
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Error saving staff');
+      alert(err.response?.data?.message || 'Error saving user');
     }
     setSaving(false);
   };
@@ -162,48 +158,54 @@ export default function CreateStaffPage() {
     <div className="app-layout">
       <Sidebar />
       <div className="main-content">
-        <Topbar title={t('addStaff')} subtitle="បង្កើតគណនីបុគ្គលិក ឬអ្នកប្រើប្រាស់ថ្មី" />
+        <Topbar title={t('addStaff')} subtitle="បង្កើតគណនីបុគ្គលិក ឬអ្នកដឹកជញ្ជូនថ្មី" />
         <div className="page-content">
           <div className="card">
             <div className="card-header">
-              <span className="card-title">{t('addStaff')}</span>
+              <span className="card-title">👤 {t('addStaff')}</span>
             </div>
-            <div className="card-body">
+            <div className="card-body" style={{ padding: '24px 28px' }}>
               <form onSubmit={(e) => { e.preventDefault(); save(); }} noValidate>
-                <div className="form-row" style={{ alignItems: 'center', marginBottom: 20 }}>
-                  <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                    <div style={{
-                      width: 70,
-                      height: 70,
-                      borderRadius: '50%',
-                      border: '2px dashed var(--border)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      overflow: 'hidden',
-                      background: 'var(--card-bg)'
-                    }}>
-                      {photoPreview ? (
-                        <img src={photoPreview} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      ) : (
-                        <span style={{ fontSize: 28, color: 'var(--text-muted)' }}>👤</span>
-                      )}
-                    </div>
-                    <div>
-                      <label className="form-label" style={{ marginBottom: 4 }}>{t('profilePhoto')}</label>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handlePhotoChange}
-                        style={{ fontSize: 13 }}
-                      />
+                {/* Photo Upload Header */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 20, marginBottom: 24, paddingBottom: 20, borderBottom: '1px solid var(--border)' }}>
+                  <div style={{
+                    width: 76,
+                    height: 76,
+                    borderRadius: '50%',
+                    border: '2px dashed var(--accent, #2563eb)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    overflow: 'hidden',
+                    background: 'var(--bg-primary, #f8fafc)',
+                    flexShrink: 0
+                  }}>
+                    {photoPreview ? (
+                      <img src={photoPreview} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ) : (
+                      <span style={{ fontSize: 32, color: 'var(--text-muted)' }}>👤</span>
+                    )}
+                  </div>
+                  <div>
+                    <label className="form-label" style={{ fontWeight: 600, marginBottom: 6 }}>{t('profilePhoto') || 'រូបថតគណនី'}</label>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handlePhotoChange}
+                      style={{ fontSize: 13 }}
+                    />
+                    <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
+                      {lang === 'km' ? 'គាំទ្រទម្រង់ JPG, PNG (រូបភាពទំហំសមរម្យ)' : 'Supports JPG, PNG images'}
                     </div>
                   </div>
                 </div>
 
-                <div className="form-row">
+                {/* Row 1: Role & Zone */}
+                <div className="form-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '18px' }}>
                   <div className="form-group">
-                    <label className="form-label">{t('role') || 'តួនាទី'} <span style={{ color: '#ef4444' }}>*</span></label>
+                    <label className="form-label" style={{ fontWeight: 600 }}>
+                      {t('role') || 'តួនាទី'} <span style={{ color: '#ef4444' }}>*</span>
+                    </label>
                     <select className="form-control" value={form.role} onChange={f('role')}>
                       {roles.map((r: any) => {
                         const n = (r.name || '').toLowerCase();
@@ -216,8 +218,40 @@ export default function CreateStaffPage() {
                       })}
                     </select>
                   </div>
+
+                  {form.role === 'driver' ? (
+                    <div className="form-group">
+                      <label className="form-label">
+                        {lang === 'km' ? 'តំបន់ប្រចាំការ' : 'Delivery Zone'}
+                      </label>
+                      <select className="form-control" value={form.zoneId} onChange={f('zoneId')}>
+                        <option value="">{lang === 'km' ? '-- ជ្រើសរើសតំបន់ --' : '-- Select Zone --'}</option>
+                        {zones.map(z => (
+                          <option key={z.id} value={z.id}>
+                            {z.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  ) : (
+                    <div className="form-group">
+                      <label className="form-label" style={{ fontWeight: 600 }}>{t('joinDate') || 'កាលបរិច្ឆេទចូល'}</label>
+                      <input
+                        type="date"
+                        className="form-control"
+                        value={form.joinDate}
+                        onChange={f('joinDate')}
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {/* Row 2: English Name & Khmer Name */}
+                <div className="form-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '18px' }}>
                   <div className="form-group">
-                    <label className="form-label">{t('fullName')} <span style={{ color: '#ef4444' }}>*</span></label>
+                    <label className="form-label" style={{ fontWeight: 600 }}>
+                      {lang === 'km' ? 'ឈ្មោះជាភាសាអង់គ្លេស' : 'English Name'} <span style={{ color: '#ef4444' }}>*</span>
+                    </label>
                     <input
                       className={`form-control ${errors.name ? 'is-invalid' : ''}`}
                       value={form.name}
@@ -226,21 +260,24 @@ export default function CreateStaffPage() {
                     />
                     {errors.name && <div className="form-error-text">{errors.name}</div>}
                   </div>
-                </div>
-
-                <div className="form-row">
                   <div className="form-group">
-                    <label className="form-label">{t('nameKh')}</label>
+                    <label className="form-label" style={{ fontWeight: 600 }}>
+                      {lang === 'km' ? 'ឈ្មោះជាភាសាខ្មែរ' : 'Khmer Name'}
+                    </label>
                     <input
                       className="form-control"
                       value={form.nameKh}
                       onChange={f('nameKh')}
-                      placeholder="e.g. សុក ដារា"
+                      placeholder="e.g. សុក ដារ៉ា"
                     />
                   </div>
+                </div>
+
+                {/* Row 3: Phone & Email */}
+                <div className="form-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '18px' }}>
                   <div className="form-group">
-                    <label className="form-label">
-                      {t('phone')} <span style={{ color: '#ef4444' }}>*</span>
+                    <label className="form-label" style={{ fontWeight: 600 }}>
+                      {t('phone') || 'ទូរស័ព្ទ'} <span style={{ color: '#ef4444' }}>*</span>
                     </label>
                     <input
                       className={`form-control ${errors.phone ? 'is-invalid' : ''}`}
@@ -250,12 +287,9 @@ export default function CreateStaffPage() {
                     />
                     {errors.phone && <div className="form-error-text">{errors.phone}</div>}
                   </div>
-                </div>
-
-                <div className="form-row">
                   <div className="form-group">
-                    <label className="form-label">
-                      {t('email')} {form.role !== 'driver' && <span style={{ color: '#ef4444' }}>*</span>}
+                    <label className="form-label" style={{ fontWeight: 600 }}>
+                      {t('email') || 'អ៊ីមែល'} {form.role !== 'driver' && <span style={{ color: '#ef4444' }}>*</span>}
                     </label>
                     <input
                       type="email"
@@ -266,31 +300,25 @@ export default function CreateStaffPage() {
                     />
                     {errors.email && <div className="form-error-text">{errors.email}</div>}
                   </div>
+                </div>
+
+                {/* Row 4: Password & Salary */}
+                <div className="form-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '18px' }}>
                   <div className="form-group">
-                    <label className="form-label">{t('password')} <span style={{ color: '#ef4444' }}>*</span></label>
+                    <label className="form-label" style={{ fontWeight: 600 }}>
+                      {t('password') || 'ពាក្យសម្ងាត់'} <span style={{ color: '#ef4444' }}>*</span>
+                    </label>
                     <input
                       type="password"
                       className={`form-control ${errors.password ? 'is-invalid' : ''}`}
                       value={form.password}
                       onChange={f('password')}
-                      placeholder={t('passwordPlaceholder')}
+                      placeholder={t('passwordPlaceholder') || 'យ៉ាងហោចណាស់ ៦ តួអក្សរ'}
                     />
                     {errors.password && <div className="form-error-text">{errors.password}</div>}
                   </div>
-                </div>
-
-                <div className="form-row">
                   <div className="form-group">
-                    <label className="form-label">{t('joinDate')}</label>
-                    <input
-                      type="date"
-                      className="form-control"
-                      value={form.joinDate}
-                      onChange={f('joinDate')}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">{t('monthly_salary')}</label>
+                    <label className="form-label" style={{ fontWeight: 600 }}>{t('monthly_salary') || 'ប្រាក់ខែ'}</label>
                     <input
                       type="number"
                       step="0.01"
@@ -303,58 +331,85 @@ export default function CreateStaffPage() {
                   </div>
                 </div>
 
-                <div className="form-row">
+                {/* Row 5: Dates & Personal info */}
+                <div className="form-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '18px' }}>
+                  {form.role === 'driver' ? (
+                    <div className="form-group">
+                      <label className="form-label" style={{ fontWeight: 600 }}>{t('joinDate') || 'កាលបរិច្ឆេទចូល'}</label>
+                      <input
+                        type="date"
+                        className="form-control"
+                        value={form.joinDate}
+                        onChange={f('joinDate')}
+                      />
+                    </div>
+                  ) : (
+                    <div className="form-group">
+                      <label className="form-label" style={{ fontWeight: 600 }}>{t('dob') || 'ថ្ងៃខែឆ្នាំកំណើត'}</label>
+                      <input
+                        type="date"
+                        className="form-control"
+                        value={form.dob}
+                        onChange={f('dob')}
+                      />
+                    </div>
+                  )}
                   <div className="form-group">
-                    <label className="form-label">{t('dob')}</label>
-                    <input
-                      type="date"
-                      className="form-control"
-                      value={form.dob}
-                      onChange={f('dob')}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">{t('gender')}</label>
+                    <label className="form-label" style={{ fontWeight: 600 }}>{t('gender') || 'ភេទ'}</label>
                     <select className="form-control" value={form.gender} onChange={f('gender')}>
-                      <option value="">{t('selectGender')}</option>
-                      <option value="male">{t('male')}</option>
-                      <option value="female">{t('female')}</option>
-                      <option value="other">{t('otherGender')}</option>
+                      <option value="">{t('selectGender') || '-- ជ្រើសរើសភេទ --'}</option>
+                      <option value="male">{t('male') || 'ប្រុស'}</option>
+                      <option value="female">{t('female') || 'ស្រី'}</option>
+                      <option value="other">{t('otherGender') || 'ផ្សេងៗ'}</option>
                     </select>
                   </div>
                 </div>
 
-                <div className="form-row">
-                  <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12 }}>
+                {/* Row 6: DOB (for driver) & Active status */}
+                <div className="form-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '18px', alignItems: 'center' }}>
+                  {form.role === 'driver' ? (
+                    <div className="form-group">
+                      <label className="form-label" style={{ fontWeight: 600 }}>{t('dob') || 'ថ្ងៃខែឆ្នាំកំណើត'}</label>
+                      <input
+                        type="date"
+                        className="form-control"
+                        value={form.dob}
+                        onChange={f('dob')}
+                      />
+                    </div>
+                  ) : <div></div>}
+
+                  <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: form.role === 'driver' ? 24 : 8 }}>
                     <input
                       type="checkbox"
                       id="active-checkbox"
                       checked={form.active}
                       onChange={f('active')}
-                      style={{ width: 18, height: 18, cursor: 'pointer' }}
+                      style={{ width: 18, height: 18, cursor: 'pointer', accentColor: 'var(--accent, #2563eb)' }}
                     />
                     <label htmlFor="active-checkbox" style={{ fontWeight: 600, cursor: 'pointer', userSelect: 'none' }}>
-                      {t('active')}
+                      {t('active') || 'សកម្ម (Active)'}
                     </label>
                   </div>
                 </div>
 
-                <div style={{ marginTop: 24, display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
+                {/* Form Buttons */}
+                <div style={{ marginTop: 32, paddingTop: 20, borderTop: '1px solid var(--border)', display: 'flex', gap: 14, justifyContent: 'flex-end' }}>
                   <button
                     type="button"
                     className="btn btn-cancel"
-                    style={{ background: '#dc2626', color: '#ffffff', border: '1px solid #dc2626', fontWeight: 700 }}
+                    style={{ background: '#ef4444', color: '#ffffff', border: 'none', fontWeight: 700, padding: '10px 24px', borderRadius: 8, cursor: 'pointer' }}
                     onClick={() => router.push('/user')}
                   >
-                    {t('cancel')}
+                    {t('cancel') || 'បោះបង់'}
                   </button>
                   <button
                     type="submit"
                     className="btn btn-primary"
-                    style={{ background: '#2563eb', color: '#ffffff', border: '1px solid #2563eb', fontWeight: 700 }}
+                    style={{ background: '#2563eb', color: '#ffffff', border: 'none', fontWeight: 700, padding: '10px 28px', borderRadius: 8, cursor: 'pointer' }}
                     disabled={saving}
                   >
-                    {saving ? t('saving') : t('save')}
+                    {saving ? (t('saving') || 'កំពុងរក្សា...') : (t('save') || 'រក្សាទុក')}
                   </button>
                 </div>
               </form>

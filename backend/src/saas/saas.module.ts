@@ -9,6 +9,8 @@ import { TenantDomain } from './entities/tenant-domain.entity';
 import { User } from '../users/entities/users.entity';
 import { Role } from '../roles/entities/role.entity';
 import { Permission } from '../roles/entities/permission.entity';
+import { Zone } from '../zones/entities/zone.entity';
+import { SubZone } from '../zones/entities/subzone.entity';
 
 // SaaS Submodules Entities
 import { SaasAdmin } from './admins/saas-admin.entity';
@@ -60,6 +62,8 @@ import { DomainsController } from './domains/domains.controller';
       Commission,
       SaasInvoice,
       SaasPayment,
+      Zone,
+      SubZone,
     ]),
     JwtModule.registerAsync({
       imports: [ConfigModule],

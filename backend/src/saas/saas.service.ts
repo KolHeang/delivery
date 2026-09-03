@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, IsNull } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { Tenant } from './entities/tenant.entity';
@@ -11,6 +11,8 @@ import { SaasInvoice } from './invoices/saas-invoice.entity';
 import { User } from '../users/entities/users.entity';
 import { Role } from '../roles/entities/role.entity';
 import { Permission } from '../roles/entities/permission.entity';
+import { Zone } from '../zones/entities/zone.entity';
+import { SubZone } from '../zones/entities/subzone.entity';
 
 @Injectable()
 export class SaasService {
@@ -23,6 +25,8 @@ export class SaasService {
     @InjectRepository(User) private readonly userRepo: Repository<User>,
     @InjectRepository(Role) private readonly roleRepo: Repository<Role>,
     @InjectRepository(Permission) private readonly permissionRepo: Repository<Permission>,
+    @InjectRepository(Zone) private readonly zoneRepo: Repository<Zone>,
+    @InjectRepository(SubZone) private readonly subZoneRepo: Repository<SubZone>,
     private readonly jwtService: JwtService,
   ) {}
 
@@ -183,6 +187,9 @@ export class SaasService {
     });
     const savedInvoice = await this.invoiceRepo.save(invoice);
 
+    // 8.5 Auto-provision 14 Phnom Penh zones for new tenant
+    await this.provisionDefaultZonesForTenant(savedTenant.id, savedTenant.name);
+
     // 9. Generate JWT Token for Immediate Login
     const payload = {
       sub: savedUser.id,
@@ -217,8 +224,63 @@ export class SaasService {
     };
   }
 
+  async provisionDefaultZonesForTenant(tenantId: number, companyName: string) {
+    try {
+      const defaultZones = await this.zoneRepo.find({
+        where: { tenantId: IsNull() },
+        relations: { subZones: true },
+      });
+
+      if (!defaultZones || defaultZones.length === 0) return;
+
+      for (const dz of defaultZones) {
+        const codeSuffix = dz.code.replace(/^ZON-/, '').replace(/^PP-/, '');
+        const uniqueCode = `ZON-T${tenantId}-${codeSuffix}`;
+
+        let zone = await this.zoneRepo.findOne({
+          where: [{ code: uniqueCode }, { name: dz.name, tenantId }],
+        });
+
+        if (!zone) {
+          zone = this.zoneRepo.create({
+            name: dz.name,
+            code: uniqueCode,
+            price: dz.price,
+            description: dz.description,
+            branch: companyName,
+            tenantId,
+            active: true,
+          });
+          zone = await this.zoneRepo.save(zone);
+        }
+
+        if (dz.subZones && dz.subZones.length > 0) {
+          for (const sz of dz.subZones) {
+            const szExists = await this.subZoneRepo.findOne({
+              where: { name: sz.name, zoneId: zone.id },
+            });
+            if (!szExists) {
+              const newSz = this.subZoneRepo.create({
+                name: sz.name,
+                zoneId: zone.id,
+                tenantId,
+              });
+              await this.subZoneRepo.save(newSz);
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Error auto-provisioning zones for tenant:', err);
+    }
+  }
+
   async createTenant(dto: Partial<Tenant>) {
-    return this.tenantRepo.save(this.tenantRepo.create(dto));
+    const tenant = await this.tenantRepo.save(this.tenantRepo.create(dto));
+    if (tenant?.id) {
+      await this.provisionDefaultZonesForTenant(tenant.id, tenant.name);
+    }
+    return tenant;
   }
 
   async updateTenant(id: number, dto: any) {

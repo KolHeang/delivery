@@ -12,21 +12,17 @@ export default function CreateZonePage() {
   const router = useRouter();
   const { lang, t } = useLanguage();
   const [saving, setSaving] = useState(false);
-  const [drivers, setDrivers] = useState<any[]>([]);
-  const [form, setForm] = useState({ name: '', driverId: '', branch: 'EBS Express', active: true });
+  const [form, setForm] = useState({ name: '', price: '', branch: 'EBS Express', active: true });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (!isAuthenticated()) { router.push('/'); return; }
-    api.get('/select/drivers')
-      .then(res => setDrivers(Array.isArray(res.data) ? res.data : (res.data?.result || [])))
-      .catch(() => {});
   }, [router]);
 
   const f = (k: string) => (e: any) => {
     setForm(p => ({
       ...p,
-      [k]: k === 'driverId' ? (parseInt(e.target.value) || '') : e.target.value
+      [k]: e.target.value
     }));
     if (errors[k]) {
       setErrors(prev => {
@@ -47,8 +43,8 @@ export default function CreateZonePage() {
     setSaving(true);
     try {
       const payload = {
-        name: form.name,
-        driverId: form.driverId || null,
+        name: form.name.trim(),
+        price: form.price ? parseFloat(form.price) : 0,
         branch: form.branch,
         active: form.active
       };
@@ -67,7 +63,7 @@ export default function CreateZonePage() {
         <Topbar title={t('addZone') || 'Add Zone'} subtitle="Create a new delivery zone" />
         <div className="page-content">
           <div className="card">
-            <div className="card-header"><span className="card-title">🗺️ {t('addZone') || 'Add Zone'}</span></div>
+            <div className="card-header"><span className="card-title">📖 {t('addZone') || 'Add Zone'}</span></div>
             <div className="card-body">
               <form onSubmit={handleSubmit} noValidate>
                 <div className="form-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
@@ -85,30 +81,18 @@ export default function CreateZonePage() {
                   </div>
                   <div className="form-group">
                     <label className="form-label" style={{ fontWeight: 'bold' }}>
-                      {lang === 'km' ? 'ឈ្មោះភ្នាក់ងារដឹក' : 'Driver Name'}
+                      {lang === 'km' ? 'តម្លៃសេវាដឹក ($)' : 'Delivery Fee ($)'}
                     </label>
-                    <select className="form-control" value={form.driverId} onChange={f('driverId')}>
-                      <option value="">{lang === 'km' ? '-- ជ្រើសរើសអ្នកដឹក --' : '-- Select Driver --'}</option>
-                      {drivers.map(d => (
-                        <option key={d.id} value={d.id}>
-                          {d.nameKh || d.name}
-                        </option>
-                      ))}
-                    </select>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      className="form-control"
+                      value={form.price}
+                      onChange={f('price')}
+                      placeholder="e.g. 1.25"
+                    />
                   </div>
-                </div>
-                
-                <div className="form-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
-                  <div className="form-group">
-                    <label className="form-label" style={{ fontWeight: 'bold' }}>
-                      {lang === 'km' ? 'សាខា' : 'Branch'}
-                    </label>
-                    <select className="form-control" value={form.branch} onChange={f('branch')}>
-                      <option value="E Express">E Express</option>
-                      <option value="EBS Express">EBS Express</option>
-                    </select>
-                  </div>
-                  <div className="form-group"></div>
                 </div>
 
                 <div style={{ marginTop: 24, display: 'flex', gap: 12, justifyContent: 'flex-end' }}>

@@ -85,17 +85,32 @@ export class SelectService {
   }
 
   async getZones(tenantId?: number) {
-    const where: any = { active: true };
-    if (tenantId) where.tenantId = tenantId;
+    const qb = this.zoneRepo
+      .createQueryBuilder('zone')
+      .where('zone.active = :active', { active: true });
 
-    return this.zoneRepo.find({
-      where,
-      select: {
-        id: true,
-        name: true,
-      },
-      order: { name: 'ASC' },
-    });
+    if (tenantId) {
+      const tenantCount = await this.zoneRepo.count({ where: { tenantId, active: true } });
+      if (tenantCount > 0) {
+        qb.andWhere('zone.tenantId = :tenantId', { tenantId });
+      } else {
+        qb.andWhere('zone.tenantId IS NULL');
+      }
+    } else {
+      qb.andWhere('zone.tenantId IS NULL');
+    }
+
+    return qb
+      .select([
+        'zone.id',
+        'zone.name',
+        'zone.code',
+        'zone.price',
+        'zone.driverId',
+        'zone.tenantId',
+      ])
+      .orderBy('zone.name', 'ASC')
+      .getMany();
   }
 
   async getSubzones(zoneId?: number) {

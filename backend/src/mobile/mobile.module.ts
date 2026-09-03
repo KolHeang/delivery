@@ -11,6 +11,7 @@ import { PickupRequest } from '../parcels/entities/pickup-request.entity';
 import { DriverPayment } from '../payments/entities/driver-payment.entity';
 import { RefreshToken } from '../auth/entities/refresh-token.entity';
 import { DeviceToken } from '../auth/entities/device-token.entity';
+import { Zone } from '../zones/entities/zone.entity';
 
 import { AuthController } from './auth/auth.controller';
 import { AuthService } from './auth/auth.service';
@@ -30,6 +31,7 @@ import { MerchantService } from './merchant/merchant.service';
       DriverPayment,
       RefreshToken,
       DeviceToken,
+      Zone,
     ]),
     JwtModule.registerAsync({
       imports: [ConfigModule],

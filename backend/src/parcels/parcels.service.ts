@@ -25,6 +25,7 @@ export class ParcelsService {
     @InjectRepository(Parcel) private readonly repo: Repository<Parcel>,
     @InjectRepository(ParcelEvent) private readonly eventRepo: Repository<ParcelEvent>,
     @InjectRepository(PickupRequest) private readonly pickupRequestRepo: Repository<PickupRequest>,
+    @InjectRepository(Zone) private readonly zoneRepo: Repository<Zone>,
   ) { }
 
 
@@ -282,7 +283,14 @@ export class ParcelsService {
     if (dto.weight === undefined || dto.weight === null) dto.weight = 0;
     if (!dto.size) dto.size = 'small';
     if (dto.cod === undefined || dto.cod === null) dto.cod = 0;
-    if (dto.deliveryFee === undefined || dto.deliveryFee === null) dto.deliveryFee = 0;
+    if (dto.deliveryFee === undefined || dto.deliveryFee === null || Number(dto.deliveryFee) === 0) {
+      if (dto.zoneId) {
+        const zone = await this.zoneRepo.findOne({ where: { id: dto.zoneId } });
+        dto.deliveryFee = zone && zone.price ? Number(zone.price) : 0;
+      } else {
+        dto.deliveryFee = 0;
+      }
+    }
     const parcel = this.repo.create(dto as any) as any as Parcel;
     if (parcel.status === 'picked-up' && !parcel.pickedUpAt) {
       parcel.pickedUpAt = new Date();

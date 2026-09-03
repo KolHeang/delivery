@@ -13,7 +13,7 @@ import { User } from '../../users/entities/users.entity';
 import { Parcel } from './parcel.entity';
 import { Tenant } from '../../saas/entities/tenant.entity';
 
-export type PickupRequestStatus = 'pending' | 'picked-up' | 'in-warehouse' | 'completed';
+export type PickupRequestStatus = 'pending' | 'picked-up' | 'in-warehouse' | 'completed' | 'cancelled';
 
 @Entity('pickup_requests')
 export class PickupRequest {

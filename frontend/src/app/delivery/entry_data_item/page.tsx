@@ -13,7 +13,7 @@ import DateInput, { getLocalDateString } from '@/components/ui/DateInput';
 export default function BatchEntryPage() {
   const router = useRouter();
   const [merchants, setMerchants] = useState<any[]>([]);
-  const [, setZones] = useState<any[]>([]);
+  const [zones, setZones] = useState<any[]>([]);
   const [drivers, setDrivers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -152,7 +152,7 @@ export default function BatchEntryPage() {
           receiverAddress: r.receiverAddress,
           weight: 0.5,
           size: 'small',
-          zoneId: merchant?.zoneId ? parseInt(merchant.zoneId) : undefined,
+          zoneId: r.zoneId ? parseInt(r.zoneId) : (merchant?.zoneId ? parseInt(merchant.zoneId) : undefined),
           note: r.note,
           pickupDriverId: r.pickupId ? parseInt(r.pickupId) : undefined,
           driverId: r.driverId ? parseInt(r.driverId) : undefined,

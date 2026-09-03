@@ -1,21 +1,28 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Like } from 'typeorm';
+import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { Merchant } from '../../merchants/entities/merchant.entity';
 import { Parcel } from '../../parcels/entities/parcel.entity';
+import { ParcelEvent } from '../../parcels/entities/parcel-event.entity';
 import { CreateParcelDto } from '../../parcels/dto/parcel.dto';
 import { PickupRequest } from '../../parcels/entities/pickup-request.entity';
 import { CreatePickupRequestDto } from '../../parcels/dto/pickup-request.dto';
+import { Zone } from '../../zones/entities/zone.entity';
 
 @Injectable()
 export class MerchantService {
   constructor(
     @InjectRepository(Merchant)
     private readonly merchantRepo: Repository<Merchant>,
-    @InjectRepository(Parcel) private readonly parcelRepo: Repository<Parcel>,
+    @InjectRepository(Parcel)
+    private readonly parcelRepo: Repository<Parcel>,
+    @InjectRepository(ParcelEvent)
+    private readonly eventRepo: Repository<ParcelEvent>,
     @InjectRepository(PickupRequest)
     private readonly pickupRequestRepo: Repository<PickupRequest>,
+    @InjectRepository(Zone)
+    private readonly zoneRepo: Repository<Zone>,
   ) {}
 
   async getProfile(merchantId: number) {
@@ -63,16 +70,128 @@ export class MerchantService {
     return { success: true, message: 'ពាក្យសម្ងាត់ត្រូវបានផ្លាស់ប្តូរដោយជោគជ័យ' };
   }
 
-  async getParcels(merchantId: number, status?: string) {
-    const where: any = { merchantId };
-    if (status) {
-      where.status = status;
+  async getParcels(
+    merchantId: number,
+    options?: {
+      status?: string;
+      search?: string;
+      page?: number;
+      limit?: number;
+      startDate?: string;
+      endDate?: string;
+    },
+  ) {
+    const qb = this.parcelRepo
+      .createQueryBuilder('parcel')
+      .leftJoinAndSelect('parcel.customer', 'customer')
+      .leftJoinAndSelect('parcel.driver', 'driver')
+      .leftJoinAndSelect('parcel.pickupDriver', 'pickupDriver')
+      .leftJoinAndSelect('parcel.zone', 'zone')
+      .where('parcel.merchantId = :merchantId', { merchantId });
+
+    if (options?.status) {
+      qb.andWhere('parcel.status = :status', { status: options.status });
     }
-    return this.parcelRepo.find({
-      where,
-      relations: { customer: true, driver: true, zone: true },
-      order: { createdAt: 'DESC' },
+
+    if (options?.search) {
+      const s = `%${options.search.trim().toLowerCase()}%`;
+      qb.andWhere(
+        '(LOWER(parcel.trackingCode) LIKE :s OR parcel.receiverPhone LIKE :s OR LOWER(parcel.receiverName) LIKE :s)',
+        { s },
+      );
+    }
+
+    if (options?.startDate && options?.endDate) {
+      qb.andWhere('parcel.createdAt BETWEEN :startDate AND :endDate', {
+        startDate: new Date(options.startDate),
+        endDate: new Date(options.endDate),
+      });
+    } else if (options?.startDate) {
+      qb.andWhere('parcel.createdAt >= :startDate', {
+        startDate: new Date(options.startDate),
+      });
+    } else if (options?.endDate) {
+      qb.andWhere('parcel.createdAt <= :endDate', {
+        endDate: new Date(options.endDate),
+      });
+    }
+
+    qb.orderBy('parcel.createdAt', 'DESC');
+
+    // If page or limit is provided, return paginated payload
+    if (options?.page || options?.limit) {
+      const page = options.page ? Math.max(1, Number(options.page)) : 1;
+      const limit = options.limit ? Math.max(1, Number(options.limit)) : 20;
+      qb.skip((page - 1) * limit).take(limit);
+
+      const [data, total] = await qb.getManyAndCount();
+      return {
+        data,
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      };
+    }
+
+    // Default: return array directly (preserves 100% backwards compatibility)
+    return qb.getMany();
+  }
+
+  async getParcelById(merchantId: number, parcelId: number) {
+    const parcel = await this.parcelRepo.findOne({
+      where: { id: parcelId, merchantId },
+      relations: {
+        customer: true,
+        driver: true,
+        pickupDriver: true,
+        zone: true,
+        events: true,
+      },
+      order: {
+        events: {
+          createdAt: 'ASC',
+        },
+      },
     });
+
+    if (!parcel) {
+      throw new NotFoundException(`រកមិនឃើញកញ្ចប់ឥវ៉ាន់ #${parcelId} ឡើយ`);
+    }
+
+    return parcel;
+  }
+
+  async cancelParcel(merchantId: number, parcelId: number, reason?: string) {
+    const parcel = await this.parcelRepo.findOne({
+      where: { id: parcelId, merchantId },
+    });
+
+    if (!parcel) {
+      throw new NotFoundException(`រកមិនឃើញកញ្ចប់ឥវ៉ាន់ #${parcelId} ឡើយ`);
+    }
+
+    if (parcel.status !== 'pending') {
+      throw new BadRequestException(
+        `មិនអាចលុបចោលបានទេ ព្រោះកញ្ចប់ឥវ៉ាន់ស្ថិតក្នុងស្ថានភាព '${parcel.status}' រួចហើយ`,
+      );
+    }
+
+    parcel.status = 'cancelled';
+    await this.parcelRepo.save(parcel);
+
+    // Record timeline activity event
+    try {
+      const event = this.eventRepo.create({
+        parcelId: parcel.id,
+        status: 'cancelled',
+        note: reason || 'ហាងបានលុបចោលការផ្ញើ (Cancelled by merchant)',
+        tenantId: parcel.tenantId,
+      });
+      await this.eventRepo.save(event);
+    } catch (e) {}
+
+    return { success: true, message: 'កញ្ចប់ឥវ៉ាន់ត្រូវបានលុបចោលដោយជោគជ័យ', parcel };
   }
 
   async generateNextTrackingCode(): Promise<string> {
@@ -104,13 +223,72 @@ export class MerchantService {
     if (dto.weight === undefined || dto.weight === null) dto.weight = 0;
     if (!dto.size) dto.size = 'small';
     if (dto.cod === undefined || dto.cod === null) dto.cod = 0;
-    if (dto.deliveryFee === undefined || dto.deliveryFee === null) dto.deliveryFee = 0;
+    if (dto.deliveryFee === undefined || dto.deliveryFee === null || Number(dto.deliveryFee) === 0) {
+      if (dto.zoneId) {
+        const zone = await this.zoneRepo.findOne({ where: { id: dto.zoneId } });
+        dto.deliveryFee = zone && zone.price ? Number(zone.price) : 0;
+      } else {
+        dto.deliveryFee = 0;
+      }
+    }
+
+    const merchant = await this.merchantRepo.findOne({ where: { id: merchantId } });
+
     const parcel = this.parcelRepo.create({
       ...dto,
       merchantId,
+      tenantId: merchant?.tenantId,
       status: 'pending',
     } as any);
-    return this.parcelRepo.save(parcel);
+
+    const saved: Parcel = await this.parcelRepo.save(parcel as any);
+
+    // Record initial created event
+    try {
+      const event = this.eventRepo.create({
+        parcelId: saved.id,
+        status: 'pending',
+        note: 'ហាងបានបង្កើតការផ្ញើកញ្ចប់ឥវ៉ាន់ថ្មី',
+        tenantId: saved.tenantId,
+      });
+      await this.eventRepo.save(event);
+    } catch (e) {}
+
+    return saved;
+  }
+
+  async createBatchParcels(merchantId: number, dtos: CreateParcelDto[]) {
+    if (!Array.isArray(dtos) || dtos.length === 0) {
+      throw new BadRequestException('ត្រូវបញ្ចូលបញ្ជីកញ្ចប់ឥវ៉ាន់យ៉ាងហោចណាស់ ១');
+    }
+
+    const createdParcels: Parcel[] = [];
+
+    for (const dto of dtos) {
+      const parcel = await this.createParcel(merchantId, dto);
+      createdParcels.push(parcel);
+    }
+
+    return {
+      success: true,
+      count: createdParcels.length,
+      parcels: createdParcels,
+    };
+  }
+
+  async getZones(merchantId: number) {
+    const merchant = await this.merchantRepo.findOne({ where: { id: merchantId } });
+    const tenantId = merchant?.tenantId;
+
+    const qb = this.zoneRepo.createQueryBuilder('zone')
+      .where('zone.active = :active', { active: true });
+
+    if (tenantId) {
+      qb.andWhere('zone.tenantId = :tenantId', { tenantId });
+    }
+
+    qb.orderBy('zone.name', 'ASC');
+    return qb.getMany();
   }
 
   async getSummary(merchantId: number) {
@@ -222,6 +400,27 @@ export class MerchantService {
     return this.pickupRequestRepo.save(pickupRequest);
   }
 
+  async cancelPickupRequest(merchantId: number, id: number) {
+    const request = await this.pickupRequestRepo.findOne({
+      where: { id, merchantId },
+    });
+
+    if (!request) {
+      throw new NotFoundException(`រកមិនឃើញសំណើទៅយក #${id} ឡើយ`);
+    }
+
+    if (request.status !== 'pending') {
+      throw new BadRequestException(
+        `មិនអាចលុបចោលបានទេ ព្រោះសំណើស្ថិតក្នុងស្ថានភាព '${request.status}' រួចហើយ`,
+      );
+    }
+
+    request.status = 'cancelled';
+    await this.pickupRequestRepo.save(request);
+
+    return { success: true, message: 'សំណើទៅយកត្រូវបានលុបចោលដោយជោគជ័យ', request };
+  }
+
   async getPickupRequests(merchantId: number) {
     return this.pickupRequestRepo.find({
       where: { merchantId },
@@ -237,5 +436,51 @@ export class MerchantService {
     });
     if (!request) throw new NotFoundException(`Pickup request #${id} not found`);
     return request;
+  }
+
+  async getSettlements(
+    merchantId: number,
+    query?: { status?: 'paid' | 'unpaid'; page?: number; limit?: number },
+  ) {
+    const qb = this.parcelRepo
+      .createQueryBuilder('parcel')
+      .where('parcel.merchantId = :merchantId', { merchantId })
+      .andWhere('parcel.status = :status', { status: 'delivered' });
+
+    if (query?.status) {
+      qb.andWhere('parcel.merchantPaymentStatus = :pStatus', { pStatus: query.status });
+    }
+
+    qb.orderBy('parcel.deliveredAt', 'DESC');
+
+    // Totals calculations
+    const totals = await this.parcelRepo
+      .createQueryBuilder('parcel')
+      .select('SUM(CASE WHEN parcel.merchantPaymentStatus = :paid THEN parcel.cod ELSE 0 END)', 'settledUSD')
+      .addSelect('SUM(CASE WHEN parcel.merchantPaymentStatus = :unpaid THEN parcel.cod ELSE 0 END)', 'pendingUSD')
+      .addSelect('SUM(parcel.deliveryFee)', 'totalFee')
+      .where('parcel.merchantId = :merchantId', { merchantId })
+      .andWhere('parcel.status = :status', { status: 'delivered' })
+      .setParameters({ paid: 'paid', unpaid: 'unpaid' })
+      .getRawOne();
+
+    const page = query?.page ? Math.max(1, Number(query.page)) : 1;
+    const limit = query?.limit ? Math.max(1, Number(query.limit)) : 50;
+
+    qb.skip((page - 1) * limit).take(limit);
+    const [data, total] = await qb.getManyAndCount();
+
+    return {
+      summary: {
+        totalSettledUSD: parseFloat(totals?.settledUSD || '0'),
+        totalPendingUSD: parseFloat(totals?.pendingUSD || '0'),
+        totalFeeUSD: parseFloat(totals?.totalFee || '0'),
+      },
+      data,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 }

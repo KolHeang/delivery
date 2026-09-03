@@ -119,7 +119,7 @@ export default function ZonesPage() {
                   <tr>
                     <th style={{ width: '60px' }}>{lang === 'km' ? 'ល.រ' : 'No.'}</th>
                     <th>{lang === 'km' ? 'ឈ្មោះតំបន់' : 'Zone Name'}</th>
-                    <th>{lang === 'km' ? 'ឈ្មោះភ្នាក់ងារ' : 'Agent Name'}</th>
+                    <th style={{ width: '130px' }}>{lang === 'km' ? 'តម្លៃសេវាដឹក' : 'Delivery Fee'}</th>
                     <th>{lang === 'km' ? 'ប្រភេទតំបន់រង' : 'Subzone Types'}</th>
                     <th style={{ width: '100px', textAlign: 'center' }}>{lang === 'km' ? 'សកម្មភាព' : 'Actions'}</th>
                   </tr>
@@ -143,11 +143,9 @@ export default function ZonesPage() {
                           <td style={{ verticalAlign: 'top', paddingTop: '16px', color: '#1e293b', fontSize: 14 }}>{(currentPage - 1) * pageSize + i + 1}</td>
                           <td style={{ verticalAlign: 'top', paddingTop: '16px', fontWeight: 700 }}>{z.name}</td>
                           <td style={{ verticalAlign: 'top', paddingTop: '16px' }}>
-                            {z.driver ? (
-                              <span style={{ fontWeight: 600 }}>{z.driver.nameKh || z.driver.name}</span>
-                            ) : (
-                              ''
-                            )}
+                            <span style={{ fontWeight: 600, color: 'var(--accent, #2563eb)' }}>
+                              ${parseFloat(z.price || 0).toFixed(2)}
+                            </span>
                           </td>
                           <td style={{ verticalAlign: 'top', paddingTop: '12px', paddingBottom: '12px' }}>
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>

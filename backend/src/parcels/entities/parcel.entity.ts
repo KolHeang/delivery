@@ -25,7 +25,8 @@ export type ParcelStatus =
   | 'in-transit'
   | 'delivered'
   | 'failed'
-  | 'returned';
+  | 'returned'
+  | 'cancelled';
 export type ParcelSize = 'small' | 'medium' | 'large';
 export type PaymentStatus = 'pending' | 'paid';
 

@@ -23,7 +23,14 @@ export class ZonesService {
       .orderBy('zone.name', 'ASC');
 
     if (tenantId) {
-      qb.andWhere('zone.tenantId = :tenantId', { tenantId });
+      const tenantCount = await this.repo.count({ where: { tenantId } });
+      if (tenantCount > 0) {
+        qb.andWhere('zone.tenantId = :tenantId', { tenantId });
+      } else {
+        qb.andWhere('zone.tenantId IS NULL');
+      }
+    } else {
+      qb.andWhere('zone.tenantId IS NULL');
     }
 
     const page = query?.page ? Math.max(1, Number(query.page)) : 1;
@@ -57,7 +64,9 @@ export class ZonesService {
 
   create(dto: CreateZoneDto): Promise<Zone> {
     if (!dto.code) {
-      dto.code = `ZON-${dto.name.toUpperCase().replace(/\s+/g, '-')}-${Date.now().toString().slice(-4)}`;
+      const clean = dto.name.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 6);
+      const rand = Math.floor(1000 + Math.random() * 9000);
+      dto.code = clean ? `ZON-${clean}-${Date.now().toString().slice(-4)}${rand}` : `ZON-${Date.now().toString().slice(-6)}${rand}`;
     }
     if (dto.price === undefined) {
       dto.price = 0;

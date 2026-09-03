@@ -45,7 +45,7 @@ export class Zone {
   @Column({ name: 'driver_id', nullable: true })
   driverId: number;
 
-  @Column({ default: 'EBS Express' })
+  @Column({ nullable: true })
   branch: string;
 
   @OneToMany('SubZone', 'zone', { eager: true })

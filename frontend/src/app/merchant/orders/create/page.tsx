@@ -170,8 +170,8 @@ export default function MerchantCreateOrderPage() {
       }));
     }).catch(console.error);
 
-    api.get('/zones').then(res => {
-      const active = res.data.filter((z: any) => z.active);
+    api.get('/mobile/merchant/zones').catch(() => api.get('/zones')).then(res => {
+      const active = (Array.isArray(res.data) ? res.data : []).filter((z: any) => z.active !== false);
       setZones(active);
       // If no zone set from profile, auto-pick first active zone
       setForm(prev => {

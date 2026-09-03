@@ -75,6 +75,7 @@ export class CreateUserDto {
 
   @ApiProperty({ required: false })
   @IsOptional()
+  @IsString()
   joinDate?: string;
 
   @ApiProperty({ required: false })
@@ -197,6 +198,7 @@ export class UpdateUserDto {
   @IsOptional() @IsNumber() @Min(0) @Max(5) @Type(() => Number) rating?: number;
   @IsOptional() @IsNumber() @Type(() => Number) zoneId?: number;
   @IsOptional() @IsNumber() @Type(() => Number) vehicleId?: number;
+  @IsOptional() @IsString() joinDate?: string;
   @IsOptional() @IsNumber() @Type(() => Number) salary?: number;
   @IsOptional() @IsString() photo?: string;
   @IsOptional() @IsString() dob?: string;

@@ -151,6 +151,8 @@ export class UsersService implements OnModuleInit {
       isActive,
       isStaff,
       isDriver,
+      joinDate: dto.joinDate && dto.joinDate.trim() !== '' ? dto.joinDate : null,
+      dob: dto.dob && dto.dob.trim() !== '' ? dto.dob : null,
       zoneId: dto.zoneId ? Number(dto.zoneId) : null,
       vehicleId: dto.vehicleId ? Number(dto.vehicleId) : null,
       tenantId: dto.tenantId || tenantContext?.tenantId || 1,
@@ -172,6 +174,14 @@ export class UsersService implements OnModuleInit {
       payload.password = await bcrypt.hash(dto.password, 10);
     } else {
       delete payload.password;
+    }
+
+    if (dto.joinDate !== undefined) {
+      payload.joinDate = dto.joinDate && dto.joinDate.trim() !== '' ? dto.joinDate : null;
+    }
+
+    if (dto.dob !== undefined) {
+      payload.dob = dto.dob && dto.dob.trim() !== '' ? dto.dob : null;
     }
 
     if (dto.salary !== undefined) {

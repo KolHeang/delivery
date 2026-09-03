@@ -37,7 +37,7 @@ export class TrackingService implements OnModuleInit, OnModuleDestroy {
     private parcelRepo: Repository<Parcel>,
     @InjectRepository(User)
     private userRepo: Repository<User>,
-  ) {}
+  ) { }
 
   onModuleInit() {
     try {
@@ -64,7 +64,7 @@ export class TrackingService implements OnModuleInit, OnModuleDestroy {
         this.logger.warn(`Redis not available (${err.message}). Using In-Memory Fast Cache fallback.`);
       });
 
-      this.redisClient.connect().catch(() => {});
+      this.redisClient.connect().catch(() => { });
     } catch (e: any) {
       this.logger.warn('Failed to initialize Redis client, using In-Memory store.');
     }
@@ -74,7 +74,7 @@ export class TrackingService implements OnModuleInit, OnModuleDestroy {
     if (this.redisClient) {
       try {
         this.redisClient.disconnect();
-      } catch (e) {}
+      } catch (e) { }
     }
   }
 
@@ -142,8 +142,8 @@ export class TrackingService implements OnModuleInit, OnModuleDestroy {
         data.tenantId !== undefined
           ? data.tenantId
           : user && user.tenantId !== null && user.tenantId !== undefined
-          ? user.tenantId
-          : undefined;
+            ? user.tenantId
+            : undefined;
 
       driverInfo = {
         driverId: driverIdNum,
@@ -277,7 +277,7 @@ export class TrackingService implements OnModuleInit, OnModuleDestroy {
               take: 10,
             });
             activeCodes = parcels.map((p) => p.trackingCode);
-          } catch (pe) {}
+          } catch (pe) { }
 
           result.push({
             driverId: d.id,

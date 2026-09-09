@@ -97,7 +97,6 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
             subdomain: detectedSubdomain,
             status: 'active',
           });
-          document.title = `${fallbackName} | Workspace`;
         }
 
         setLoading(true);
@@ -119,7 +118,6 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
             plan: res.plan,
           });
           setIsNotFound(false);
-          document.title = `${res.tenant.name} | Workspace`;
         }
       } else {
         setIsTenant(false);

@@ -125,7 +125,7 @@ export class DriverService {
     const query = this.parcelRepo
       .createQueryBuilder('parcel')
       .leftJoin('parcel.merchant', 'merchant')
-      .addSelect([
+      .select([
         'parcel.id',
         'parcel.trackingCode',
         'parcel.receiverName',
@@ -137,7 +137,6 @@ export class DriverService {
         'parcel.status',
         'parcel.driverId',
         'parcel.pickupDriverId',
-        'parcel.itemType',
         'parcel.note',
         'parcel.createdAt',
         'parcel.deliveredAt',
@@ -178,13 +177,13 @@ export class DriverService {
       query.andWhere(
         new Brackets((qb) => {
           const searchTerm = `%${search}%`;
-          qb.where('parcel.trackingCode::text ILIKE :searchTerm', {
+          qb.where('parcel.tracking_code::text ILIKE :searchTerm', {
             searchTerm,
           })
-            .orWhere('parcel.receiverPhone::text ILIKE :searchTerm', {
+            .orWhere('parcel.receiver_phone::text ILIKE :searchTerm', {
               searchTerm,
             })
-            .orWhere('parcel.receiverAddress::text ILIKE :searchTerm', {
+            .orWhere('parcel.receiver_address::text ILIKE :searchTerm', {
               searchTerm,
             });
         }),
@@ -194,7 +193,7 @@ export class DriverService {
     // 3. Apply Date Filter Logic
     if (startDate && endDate) {
       query.andWhere(
-        'COALESCE(parcel.deliveredAt, parcel.assignedAt, parcel.updatedAt, parcel.createdAt) >= :startDate AND COALESCE(parcel.deliveredAt, parcel.assignedAt, parcel.updatedAt, parcel.createdAt) <= :endDate',
+        'COALESCE(parcel.delivered_at, parcel.assigned_at, parcel.updated_at, parcel.created_at) >= :startDate AND COALESCE(parcel.delivered_at, parcel.assigned_at, parcel.updated_at, parcel.created_at) <= :endDate',
         { startDate, endDate },
       );
     }
@@ -241,13 +240,13 @@ export class DriverService {
       query.andWhere(
         new Brackets((qb) => {
           const searchTerm = `%${search}%`;
-          qb.where('parcel.trackingCode::text ILIKE :searchTerm', {
+          qb.where('parcel.tracking_code::text ILIKE :searchTerm', {
             searchTerm,
           })
-            .orWhere('parcel.receiverPhone::text ILIKE :searchTerm', {
+            .orWhere('parcel.receiver_phone::text ILIKE :searchTerm', {
               searchTerm,
             })
-            .orWhere('parcel.receiverAddress::text ILIKE :searchTerm', {
+            .orWhere('parcel.receiver_address::text ILIKE :searchTerm', {
               searchTerm,
             });
         }),
@@ -256,7 +255,7 @@ export class DriverService {
 
     if (startDate && endDate) {
       query.andWhere(
-        'COALESCE(parcel.deliveredAt, parcel.assignedAt, parcel.updatedAt, parcel.createdAt) >= :startDate AND COALESCE(parcel.deliveredAt, parcel.assignedAt, parcel.updatedAt, parcel.createdAt) <= :endDate',
+        'COALESCE(parcel.delivered_at, parcel.assigned_at, parcel.updated_at, parcel.created_at) >= :startDate AND COALESCE(parcel.delivered_at, parcel.assigned_at, parcel.updated_at, parcel.created_at) <= :endDate',
         { startDate, endDate },
       );
     }
@@ -323,13 +322,9 @@ export class DriverService {
     if (!parcel) {
       const exists = await this.parcelRepo.findOne({ where: { id: taskId } });
       if (!exists) {
-        throw new NotFoundException(
-          `រកមិនឃើញកិច្ចការលេខ #${taskId} ទេ (Task #${taskId} not found)`,
-        );
+        throw new NotFoundException(`រកមិនឃើញកិច្ចការលេខ #${taskId} ទេ`);
       }
-      throw new BadRequestException(
-        'កិច្ចការនេះមិនត្រូវបានចាត់ចែងឱ្យអ្នកទេ (Task is not assigned to you)',
-      );
+      throw new BadRequestException('កិច្ចការនេះមិនត្រូវបានចាត់ចែងឱ្យអ្នកទេ');
     }
 
     const isDeliveryDriver = parcel.driverId === driverId;
@@ -981,34 +976,67 @@ export class DriverService {
     }
 
     let code = rawCode.trim();
-    if (code.includes('?')) {
-      const urlParams = new URLSearchParams(code.split('?')[1]);
-      if (urlParams.get('code')) {
-        code = urlParams.get('code')!.trim();
-      } else if (urlParams.get('tracking')) {
-        code = urlParams.get('tracking')!.trim();
+
+    // 1. If it's a full URL, parse it using standard URL parser safely
+    try {
+      if (code.startsWith('http://') || code.startsWith('https://')) {
+        const url = new URL(code);
+        const queryCode =
+          url.searchParams.get('code') ||
+          url.searchParams.get('tracking') ||
+          url.searchParams.get('trackingCode');
+
+        if (queryCode) {
+          code = queryCode.trim();
+        } else {
+          // Grab the last path segment (e.g., /parcels/CO00000032)
+          const segments = url.pathname.split('/').filter(Boolean);
+          if (segments.length > 0) {
+            code = segments[segments.length - 1].trim();
+          }
+        }
+      } else {
+        // Fallback manual query/path handling for non-standard QR payload
+        if (code.includes('?')) {
+          const [, query] = code.split('?');
+          const params = new URLSearchParams(query);
+          const extracted = params.get('code') || params.get('tracking');
+          if (extracted) {
+            code = extracted.trim();
+          }
+        } else if (code.includes('/')) {
+          const segments = code.split('/').filter(Boolean);
+          code = segments[segments.length - 1].trim();
+        }
       }
-    }
-    if (code.includes('/')) {
-      const segments = code.split('/').filter(Boolean);
-      code = segments[segments.length - 1].trim();
+    } catch {
+      // If URL parsing fails, keep code as trimmed string
     }
 
+    // 2. Query parcel using QueryBuilder to handle ILIKE (case-insensitivity) and trimmed matches
     const isNumericId = /^\d+$/.test(code);
+    const qb = this.parcelRepo
+      .createQueryBuilder('parcel')
+      .leftJoinAndSelect('parcel.customer', 'customer')
+      .leftJoinAndSelect('parcel.merchant', 'merchant')
+      .leftJoinAndSelect('parcel.zone', 'zone')
+      .leftJoinAndSelect('parcel.driver', 'driver')
+      .leftJoinAndSelect('parcel.pickupDriver', 'pickupDriver')
+      .leftJoinAndSelect('parcel.events', 'events');
 
-    const parcel = await this.parcelRepo.findOne({
-      where: isNumericId
-        ? [{ trackingCode: code }, { id: parseInt(code, 10) }]
-        : [{ trackingCode: code }],
-      relations: {
-        customer: true,
-        merchant: true,
-        zone: true,
-        driver: true,
-        pickupDriver: true,
-        events: true,
-      },
-    });
+    if (isNumericId) {
+      qb.where(
+        'parcel.id = :id OR UPPER(TRIM(parcel.trackingCode)) = UPPER(:code)',
+        {
+          id: parseInt(code, 10),
+          code,
+        },
+      );
+    } else {
+      qb.where('UPPER(TRIM(parcel.trackingCode)) = UPPER(:code)', { code });
+    }
+
+    const parcel = await qb.getOne();
 
     if (!parcel) {
       throw new NotFoundException(`រកមិនឃើញទំនិញដែលមានលេខកូដ "${rawCode}" ទេ`);
@@ -1023,6 +1051,7 @@ export class DriverService {
       | 'pickup_driver'
       | 'unassigned'
       | 'assigned_to_other' = 'unassigned';
+
     if (isDeliveryDriver) {
       driverRole = 'delivery_driver';
     } else if (isPickupDriver) {
@@ -1031,7 +1060,7 @@ export class DriverService {
       driverRole = 'assigned_to_other';
     }
 
-    // Determine possible actions driver can do right after scan
+    // Available actions
     const availableActions: string[] = [];
     if (
       !parcel.driverId &&

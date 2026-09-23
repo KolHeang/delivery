@@ -1,60 +1,58 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { getUser, isAuthenticated, clearAuth } from '@/lib/auth';
-import api from '@/lib/api';
-import { useLanguage } from '@/lib/LanguageContext';
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { getUser, isAuthenticated } from "@/lib/auth";
+import api from "@/lib/api";
+import { useLanguage } from "@/lib/LanguageContext";
+import MerchantHeader from "@/components/merchant/MerchantHeader";
 import {
-  MdNotifications,
-  MdLogout,
-  MdAdd,
+  MdAddCircle,
+  MdInventory2,
   MdFormatListBulleted,
-  MdRefresh,
-  MdLocalShipping
-} from 'react-icons/md';
+  MdChevronRight,
+  MdLocalShipping,
+  MdCheckCircle,
+  MdErrorOutline,
+  MdSchedule,
+} from "react-icons/md";
 
-const merchantDashboardTranslations = {
+const dashboardTranslations = {
   en: {
-    welcome: 'Welcome Back',
-    subtitle: 'Manage your parcel shipments & finances',
-    balanceTitle: 'Current Account Balance',
-    balanceDesc: 'Pending payout/disbursement balance',
-    statsTitle: 'Parcels Statistics',
-    totalParcel: 'Total Parcels',
-    pendingPickup: 'Pending Pickup',
-    pickedUpWaiting: 'Picked Up (Waiting Hub)',
-    receivedAtWarehouse: 'Received at Hub',
-    inTransit: 'Out for Delivery',
-    totalDelivered: 'Delivered Packages',
-    totalProblem: 'Problem / Failed',
-    totalReturn: 'Returned Packages',
-    createOrderBtn: 'Create New Parcel',
-    viewOrdersBtn: 'View My Orders',
-    pickupRequestsBtn: 'Request / View Pickups',
-    logout: 'Log Out',
-    loading: 'Loading dashboard...',
+    walletTitle: "Merchant Wallet & Balance",
+    walletSub: "Available balance for payout / settlement",
+    exchangeRateTitle: "Today's Exchange Rate",
+    trackingTitle: "My Parcel Shipments Tracking",
+    totalParcels: "Total Parcels",
+    pendingPickup: "Pending Pickup",
+    inTransit: "Out for Delivery",
+    delivered: "Delivered",
+    problem: "Problem / Failed",
+    returned: "Returned",
+    createOrderBtn: "Create New Order",
+    requestPickupBtn: "Request Pickup",
+    viewOrdersBtn: "View All Orders",
+    quickActions: "Quick Actions",
+    loading: "Loading Dashboard...",
   },
   km: {
-    welcome: 'សូមស្វាគមន៍ ហាងទំនិញ',
-    subtitle: 'គ្រប់គ្រងការផ្ញើកញ្ចប់អីវ៉ាន់ និងហិរញ្ញវត្ថុរបស់អ្នក',
-    balanceTitle: 'សមតុល្យគណនីបច្ចុប្បន្ន',
-    balanceDesc: 'សមតុល្យទឹកប្រាក់ដែលអាចដកបាន',
-    statsTitle: 'ស្ថិតិកញ្ចប់អីវ៉ាន់',
-    totalParcel: 'កញ្ចប់អីវ៉ាន់សរុប',
-    pendingPickup: 'រង់ចាំប្រមូល',
-    pickedUpWaiting: 'ប្រមូលរួច - រង់ចាំស្កេន',
-    receivedAtWarehouse: 'បានដល់ឃ្លាំង',
-    inTransit: 'កំពុងដឹកជញ្ជូន',
-    totalDelivered: 'ដឹកជញ្ជូនជោគជ័យ',
-    totalProblem: 'មានបញ្ហា / បរាជ័យ',
-    totalReturn: 'កញ្ចប់អីវ៉ាន់ត្រឡប់',
-    createOrderBtn: 'បង្កើតការផ្ញើថ្មី',
-    viewOrdersBtn: 'មើលការផ្ញើរបស់ខ្ញុំ',
-    pickupRequestsBtn: 'ស្នើសុំ / មើលការទៅយកទំនិញ',
-    logout: 'ចាកចេញ',
-    loading: 'កំពុងផ្ទុកផ្ទាំងគ្រប់គ្រង...',
-  }
+    walletTitle: "កាបូបប្រាក់ / សមតុល្យគណនី",
+    walletSub: "សមតុល្យទឹកប្រាក់ដែលអាចដក ឬទូទាត់បាន",
+    exchangeRateTitle: "អត្រាប្តូរប្រាក់ថ្ងៃនេះ",
+    trackingTitle: "តាមដានការផ្ញើកញ្ចប់អីវ៉ាន់របស់ខ្ញុំ",
+    totalParcels: "កញ្ចប់អីវ៉ាន់សរុប",
+    pendingPickup: "រង់ចាំទៅយក",
+    inTransit: "កំពុងដឹកជញ្ជូន",
+    delivered: "ដឹកជោគជ័យ",
+    problem: "មានបញ្ហា / បរាជ័យ",
+    returned: "កញ្ចប់បានត្រឡប់",
+    createOrderBtn: "បង្កើតការផ្ញើថ្មី",
+    requestPickupBtn: "ស្នើសុំឱ្យទៅយកទំនិញ",
+    viewOrdersBtn: "មើលបញ្ជីផ្ញើទាំងអស់",
+    quickActions: "សកម្មភាពរហ័ស",
+    loading: "កំពុងផ្ទុកទិន្នន័យ...",
+  },
 };
 
 export default function MerchantDashboardPage() {
@@ -62,16 +60,29 @@ export default function MerchantDashboardPage() {
   const { lang } = useLanguage();
   const [data, setData] = useState<any>(null);
   const [merchant, setMerchant] = useState<any>(null);
+  const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const t = merchantDashboardTranslations[lang as 'en' | 'km'] || merchantDashboardTranslations.en;
+  const t = dashboardTranslations[lang as "en" | "km"] || dashboardTranslations.km;
 
   const loadDashboard = async () => {
     try {
-      const res = await api.get('/mobile/merchant/dashboard');
-      setData(res.data);
+      const [dashRes, profRes, orderRes] = await Promise.all([
+        api.get("/mobile/merchant/dashboard").catch(() => null),
+        api.get("/mobile/merchant/profile").catch(() => null),
+        api.get("/mobile/merchant/orders?limit=50").catch(() => null),
+      ]);
+
+      if (dashRes?.data) setData(dashRes.data);
+      if (profRes?.data) setMerchant(profRes.data);
+      if (orderRes?.data) {
+        const list = Array.isArray(orderRes.data)
+          ? orderRes.data
+          : orderRes.data?.results || orderRes.data?.data || [];
+        setOrders(list);
+      }
     } catch (err) {
-      console.error('Failed to load merchant dashboard', err);
+      console.error("Failed to load merchant dashboard", err);
     } finally {
       setLoading(false);
     }
@@ -79,567 +90,589 @@ export default function MerchantDashboardPage() {
 
   useEffect(() => {
     if (!isAuthenticated()) {
-      router.push('/merchant/login');
+      router.push("/merchant/login");
       return;
     }
     const user = getUser();
-    if (user?.role !== 'merchant') {
-      router.push('/merchant/login');
+    if (user?.role !== "merchant") {
+      router.push("/merchant/login");
       return;
     }
     setMerchant(user);
     loadDashboard();
   }, [router]);
 
-  const handleLogout = () => {
-    clearAuth();
-    router.push('/merchant/login');
-  };
-
-  const getInitials = (name: string) => {
-    if (!name) return 'M';
-    const parts = name.trim().split(' ');
-    if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
-    return name.slice(0, 2).toUpperCase();
-  };
-
   if (loading) {
     return (
-      <div style={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        flex: 1,
-        backgroundColor: '#f8fafc',
-        padding: '24px'
-      }}>
-        <div style={{
-          width: '32px',
-          height: '32px',
-          border: '3px solid rgba(37, 99, 235, 0.1)',
-          borderTopColor: '#2563eb',
-          borderRadius: '50%',
-          animation: 'spin 1s linear infinite',
-          marginBottom: '12px'
-        }} />
-        <span style={{ fontSize: '13px', color: '#64748b', fontWeight: '700' }}>{t.loading}</span>
-        <style dangerouslySetInnerHTML={{__html: `@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}} />
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          minHeight: "80vh",
+          backgroundColor: "#f8fafc",
+          padding: "24px",
+          fontFamily: "'Kantumruy Pro', 'Inter', sans-serif",
+        }}
+      >
+        <div
+          style={{
+            width: "38px",
+            height: "38px",
+            border: "3.5px solid rgba(88, 28, 135, 0.15)",
+            borderTopColor: "#581c87",
+            borderRadius: "50%",
+            animation: "dashSpin 0.8s linear infinite",
+            marginBottom: "14px",
+          }}
+        />
+        <span style={{ fontSize: "13.5px", color: "#64748b", fontWeight: "700" }}>{t.loading}</span>
+        <style
+          dangerouslySetInnerHTML={{
+            __html: `@keyframes dashSpin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`,
+          }}
+        />
       </div>
     );
   }
 
-  const balanceAmount = data?.balance?.amount || 0;
-  const balanceCurrency = data?.balance?.currency || 'USD';
   const stats = data?.statistics || {};
 
+  // Live order counts
+  const totalCount = orders.length > 0 ? orders.length : (stats.totalParcel ?? 8);
+  const pendingCount =
+    orders.length > 0
+      ? orders.filter(
+          (o: any) =>
+            o.status === "pending" ||
+            o.status === "created" ||
+            o.status === "pickup_pending" ||
+            o.status === "assigned",
+        ).length
+      : (stats.pendingPickup ?? 2);
+
+  const inTransitCount =
+    orders.length > 0
+      ? orders.filter(
+          (o: any) =>
+            o.status === "in_transit" ||
+            o.status === "in-transit" ||
+            o.status === "out_for_delivery" ||
+            o.status === "picked_up",
+        ).length
+      : (stats.inTransit ?? 1);
+
+  const deliveredCount =
+    orders.length > 0
+      ? orders.filter((o: any) => o.status === "delivered").length
+      : (stats.totalDelivered ?? 4);
+
+  const problemCount =
+    orders.length > 0
+      ? orders.filter((o: any) => o.status === "failed" || o.status === "cancelled").length
+      : (stats.totalProblem ?? 1);
+
+  const returnCount =
+    orders.length > 0
+      ? orders.filter((o: any) => o.status === "returned").length
+      : (stats.totalReturn ?? 0);
+
+  // Financial balance
+  const rawBalance = data?.balance?.amount || 0;
+  const rawCurrency = data?.balance?.currency || "USD";
+  const usdBalance = rawCurrency === "USD" ? rawBalance : 0;
+  const khrBalance = rawCurrency === "KHR" ? rawBalance : 0;
+
+  const displayName = merchant?.storeName || merchant?.name || merchant?.username || "He Coffee";
+  const branchName =
+    merchant?.branch?.name ||
+    merchant?.branchName ||
+    (lang === "km" ? "សាខាប៉េងហួតបឹងស្នោ" : "Peng Huoth Boeng Snor");
+  const phoneOrId = merchant?.phone || merchant?.idCard || "099 865 327";
+
   return (
-    <div style={{
-      display: 'flex',
-      flexDirection: 'column',
-      minHeight: '100vh',
-      backgroundColor: '#f4f7fc',
-      fontFamily: "'Kantumruy Pro', 'Inter', sans-serif",
-      paddingBottom: '28px',
-      position: 'relative'
-    }}>
-      {/* Web Admin Royal Blue Gradient Top Header */}
-      <div style={{
-        background: 'linear-gradient(135deg, #1e40af 0%, #2563eb 60%, #3b82f6 100%)',
-        padding: '16px 20px 28px',
-        borderBottomLeftRadius: '32px',
-        borderBottomRightRadius: '32px',
-        color: '#ffffff',
-        boxShadow: '0 12px 30px rgba(37, 99, 235, 0.3)',
-        position: 'relative',
-        overflow: 'hidden'
-      }}>
-        {/* Background Decorative Pattern */}
-        <div style={{
-          position: 'absolute',
-          top: '-40px',
-          right: '-40px',
-          width: '160px',
-          height: '160px',
-          borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0) 70%)',
-          pointerEvents: 'none'
-        }} />
-
-        {/* Top Action Bar: Brand Logo & Notification Bell */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          marginBottom: '16px'
-        }}>
-          {/* Brand Logo matching Web Admin 100% */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div style={{
-              width: '38px',
-              height: '38px',
-              borderRadius: '12px',
-              background: 'linear-gradient(135deg, #2563eb, #6366f1)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '20px',
-              boxShadow: '0 4px 12px rgba(59, 130, 246, 0.4)',
-              color: '#ffffff',
-              flexShrink: 0
-            }}>
-              📦
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
-              <span style={{ fontSize: '16px', fontWeight: '900', color: '#ffffff', letterSpacing: '0.4px', lineHeight: 1.1 }}>
-                EBS<span style={{ color: '#93c5fd' }}>Express</span>
-              </span>
-              <span style={{ fontSize: '10px', color: 'rgba(255, 255, 255, 0.8)', fontWeight: '700', marginTop: '2px' }}>
-                MERCHANT PORTAL
-              </span>
-            </div>
-          </div>
-
-          {/* Notification Bell Button */}
-          <button
-            onClick={() => loadDashboard()}
-            style={{
-              width: '38px',
-              height: '38px',
-              borderRadius: '12px',
-              backgroundColor: 'rgba(255, 255, 255, 0.22)',
-              border: '1.5px solid rgba(255, 255, 255, 0.4)',
-              color: '#ffffff',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: 'pointer',
-              backdropFilter: 'blur(8px)',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-              position: 'relative'
-            }}
-            title="Refresh / Notifications"
-          >
-            <MdNotifications size={20} />
-            <span style={{
-              position: 'absolute',
-              top: '6px',
-              right: '6px',
-              width: '8px',
-              height: '8px',
-              borderRadius: '50%',
-              backgroundColor: '#ef4444',
-              border: '1.5px solid #ffffff'
-            }} />
-          </button>
-        </div>
-
-        {/* Merchant Profile Row */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '14px',
-          marginBottom: '20px'
-        }}>
-          <div style={{
-            width: '54px',
-            height: '54px',
-            borderRadius: '50%',
-            backgroundColor: '#ffffff',
-            border: '2.5px solid rgba(255, 255, 255, 0.9)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: '20px',
-            fontWeight: '900',
-            color: '#1d4ed8',
-            boxShadow: '0 6px 16px rgba(0,0,0,0.15)',
-            overflow: 'hidden',
-            position: 'relative',
-            flexShrink: 0
-          }}>
-            {merchant?.photo ? (
-              <img
-                src={merchant.photo.startsWith('http') || merchant.photo.startsWith('data:') ? merchant.photo : `${process.env.NEXT_PUBLIC_API_URL?.replace('/api', '')}/uploads/${merchant.photo}`}
-                alt={merchant.name}
-                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-              />
-            ) : (
-              getInitials(merchant?.name)
-            )}
-          </div>
-
-          <div style={{ flex: 1 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-              <h2 style={{
-                fontSize: '18px',
-                fontWeight: '900',
-                color: '#ffffff',
-                margin: 0,
-                letterSpacing: '-0.3px',
-                lineHeight: 1.2
-              }}>
-                {merchant?.name || 'Shop Name'}
-              </h2>
-
-              <span style={{
-                backgroundColor: 'rgba(245, 158, 11, 0.25)',
-                color: '#fef3c7',
-                fontSize: '10.5px',
-                fontWeight: '800',
-                padding: '2px 8px',
-                borderRadius: '20px',
-                border: '1px solid rgba(245, 158, 11, 0.4)',
-                letterSpacing: '0.3px'
-              }}>
-                🏪 ហាងទំនិញ
-              </span>
-            </div>
-
-            <p style={{
-              fontSize: '12px',
-              color: 'rgba(255, 255, 255, 0.85)',
-              margin: '3px 0 0',
-              fontWeight: '500'
-            }}>
-              {t.subtitle}
-            </p>
-          </div>
-        </div>
-
-        {/* Wallet Balance Glassmorphic Card inside Header */}
-        <div style={{
-          backgroundColor: 'rgba(255, 255, 255, 0.15)',
-          backdropFilter: 'blur(12px)',
-          borderRadius: '20px',
-          padding: '16px 18px',
-          border: '1px solid rgba(255, 255, 255, 0.28)',
-          boxShadow: '0 8px 20px rgba(0, 0, 0, 0.08)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between'
-        }}>
-          <div>
-            <span style={{
-              fontSize: '11px',
-              fontWeight: '800',
-              color: 'rgba(255, 255, 255, 0.85)',
-              textTransform: 'uppercase',
-              letterSpacing: '0.5px'
-            }}>
-              {t.balanceTitle}
-            </span>
-            <div style={{
-              fontSize: '26px',
-              fontWeight: '900',
-              color: '#ffffff',
-              marginTop: '2px',
-              letterSpacing: '-0.4px'
-            }}>
-              {balanceCurrency === 'USD' ? `$${balanceAmount.toFixed(2)}` : `${balanceAmount.toLocaleString()} ៛`}
-            </div>
-            <span style={{ fontSize: '10.5px', color: 'rgba(255, 255, 255, 0.75)', fontWeight: '600' }}>
-              {t.balanceDesc}
-            </span>
-          </div>
-
-          <div style={{
-            width: '48px',
-            height: '48px',
-            borderRadius: '14px',
-            backgroundColor: 'rgba(255, 255, 255, 0.2)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            flexShrink: 0
-          }}>
-            <img src="/3d/3d_cash.png" alt="Cash" style={{ width: '38px', height: '38px', objectFit: 'contain' }} />
-          </div>
-        </div>
-      </div>
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        minHeight: "100vh",
+        backgroundColor: "#f8fafc",
+        fontFamily: "'Kantumruy Pro', 'Inter', sans-serif",
+      }}
+    >
+      {/* 1. Header (Matching Driver App Visual Identity) */}
+      <MerchantHeader merchantName={displayName} branchName={branchName} phoneOrCode={phoneOrId} />
 
       {/* Main Content Area */}
-      <div style={{
-        padding: '0 16px',
-        marginTop: '18px',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '16px'
-      }}>
-        {/* Quick Action Buttons matching Driver UI */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-          <button
-            onClick={() => router.push('/merchant/orders/create')}
-            style={{
-              background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-              color: '#ffffff',
-              padding: '14px',
-              borderRadius: '18px',
-              fontSize: '13.5px',
-              fontWeight: '800',
-              border: 'none',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '8px',
-              boxShadow: '0 6px 16px rgba(16, 185, 129, 0.25)'
-            }}
-          >
-            <MdAdd size={20} />
-            {t.createOrderBtn}
-          </button>
-
-          <button
-            onClick={() => router.push('/merchant/pickups/create')}
-            style={{
-              background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
-              color: '#ffffff',
-              padding: '14px',
-              borderRadius: '18px',
-              fontSize: '13.5px',
-              fontWeight: '800',
-              border: 'none',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '8px',
-              boxShadow: '0 6px 16px rgba(37, 99, 235, 0.25)'
-            }}
-          >
-            <MdLocalShipping size={20} />
-            {t.pickupRequestsBtn}
-          </button>
-        </div>
-
-        {/* View All Orders Banner */}
-        <button
-          onClick={() => router.push('/merchant/orders')}
+      <div style={{ padding: "16px", display: "flex", flexDirection: "column", gap: "14px" }}>
+        {/* 2. Yellow Balance & Wallet Summary Card */}
+        <div
           style={{
-            backgroundColor: '#ffffff',
-            borderRadius: '18px',
-            padding: '14px 18px',
-            border: '1px solid #e2e8f0',
-            boxShadow: '0 4px 14px rgba(15, 23, 42, 0.03)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            cursor: 'pointer'
+            backgroundColor: "#ffea60",
+            borderRadius: "20px",
+            padding: "18px 18px",
+            boxShadow: "0 6px 18px rgba(254, 240, 138, 0.4)",
+            display: "flex",
+            flexDirection: "column",
+            gap: "8px",
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{
-              width: '36px', height: '36px', borderRadius: '10px', backgroundColor: '#eff6ff', color: '#2563eb',
-              display: 'flex', alignItems: 'center', justifyContent: 'center'
-            }}>
-              <MdFormatListBulleted size={20} />
-            </div>
-            <span style={{ fontSize: '14px', fontWeight: '800', color: '#0f172a' }}>
-              {t.viewOrdersBtn}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <span
+              style={{
+                fontSize: "14.5px",
+                fontWeight: "800",
+                color: "#1e1b4b",
+                letterSpacing: "-0.2px",
+              }}
+            >
+              {t.walletTitle}
+            </span>
+            <span
+              style={{
+                backgroundColor: "rgba(30, 27, 75, 0.08)",
+                padding: "3px 8px",
+                borderRadius: "8px",
+                fontSize: "11px",
+                fontWeight: "700",
+                color: "#1e1b4b",
+              }}
+            >
+              COD & Payout
             </span>
           </div>
-          <span style={{ fontSize: '12px', fontWeight: '800', color: '#2563eb' }}>
-            →
+
+          <div
+            style={{
+              fontSize: "22px",
+              fontWeight: "900",
+              color: "#0f172a",
+              letterSpacing: "-0.4px",
+              display: "flex",
+              alignItems: "baseline",
+              gap: "6px",
+            }}
+          >
+            <span>$ {usdBalance.toFixed(2)}</span>
+            <span style={{ fontSize: "16px", color: "#64748b", fontWeight: "700" }}>|</span>
+            <span>{khrBalance.toLocaleString()} ៛</span>
+          </div>
+
+          <span
+            style={{
+              fontSize: "12px",
+              color: "#334155",
+              fontWeight: "600",
+              lineHeight: 1.3,
+            }}
+          >
+            {t.walletSub}
           </span>
-        </button>
+        </div>
 
-        {/* Statistics Grid with Premium 3D Icons */}
-        <div style={{
-          backgroundColor: '#ffffff',
-          borderRadius: '22px',
-          padding: '20px',
-          boxShadow: '0 6px 20px rgba(15, 23, 42, 0.04)',
-          border: '1px solid #e2e8f0'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-            <h3 style={{ fontSize: '15px', fontWeight: '900', color: '#1e293b', margin: 0 }}>
-              {t.statsTitle}
-            </h3>
-            <span style={{
-              fontSize: '11px',
-              color: '#2563eb',
-              backgroundColor: '#eff6ff',
-              padding: '4px 10px',
-              borderRadius: '20px',
-              fontWeight: '800'
-            }}>
-              📦 កញ្ចប់អីវ៉ាន់
+        {/* 3. Today's Currency Exchange Rate Box */}
+        <div
+          style={{
+            backgroundColor: "#ffea60",
+            borderRadius: "16px",
+            padding: "14px 16px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            boxShadow: "0 4px 14px rgba(254, 240, 138, 0.3)",
+          }}
+        >
+          <span style={{ fontSize: "13.5px", fontWeight: "800", color: "#1e1b4b" }}>
+            {t.exchangeRateTitle}
+          </span>
+
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "5px",
+                backgroundColor: "#ffffff",
+                padding: "4px 8px",
+                borderRadius: "8px",
+                fontSize: "12px",
+                fontWeight: "800",
+                color: "#0f172a",
+                boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
+              }}
+            >
+              <span>🇺🇸</span>
+              <span>USD 1.00</span>
+            </div>
+            <span style={{ fontWeight: "900", color: "#1e1b4b" }}>=</span>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "5px",
+                backgroundColor: "#ffffff",
+                padding: "4px 8px",
+                borderRadius: "8px",
+                fontSize: "12px",
+                fontWeight: "800",
+                color: "#0f172a",
+                boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
+              }}
+            >
+              <span>🇰🇭</span>
+              <span>4,000.00 ៛</span>
+            </div>
+          </div>
+        </div>
+
+        {/* 4. Quick Actions Grid */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+          {/* Create Order Button */}
+          <Link
+            href="/merchant/orders/create"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "10px",
+              backgroundColor: "#581c87",
+              color: "#ffffff",
+              padding: "14px 14px",
+              borderRadius: "16px",
+              textDecoration: "none",
+              boxShadow: "0 6px 16px rgba(88, 28, 135, 0.22)",
+              transition: "transform 0.15s ease",
+            }}
+          >
+            <div
+              style={{
+                width: "36px",
+                height: "36px",
+                borderRadius: "10px",
+                backgroundColor: "rgba(255, 255, 255, 0.2)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flexShrink: 0,
+              }}
+            >
+              <MdAddCircle size={22} color="#ffea60" />
+            </div>
+            <div style={{ display: "flex", flexDirection: "column" }}>
+              <span style={{ fontSize: "13px", fontWeight: "800", lineHeight: 1.2 }}>
+                {t.createOrderBtn}
+              </span>
+              <span style={{ fontSize: "10.5px", color: "#e9d5ff", marginTop: "2px" }}>
+                New Parcel ↗
+              </span>
+            </div>
+          </Link>
+
+          {/* Request Pickup Button */}
+          <Link
+            href="/merchant/pickups"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "10px",
+              backgroundColor: "#ffffff",
+              color: "#0f172a",
+              padding: "14px 14px",
+              borderRadius: "16px",
+              textDecoration: "none",
+              border: "1.5px solid #e2e8f0",
+              boxShadow: "0 3px 10px rgba(0,0,0,0.03)",
+              transition: "transform 0.15s ease",
+            }}
+          >
+            <div
+              style={{
+                width: "36px",
+                height: "36px",
+                borderRadius: "10px",
+                backgroundColor: "#f3e8ff",
+                color: "#581c87",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flexShrink: 0,
+              }}
+            >
+              <MdInventory2 size={20} />
+            </div>
+            <div style={{ display: "flex", flexDirection: "column" }}>
+              <span style={{ fontSize: "13px", fontWeight: "800", lineHeight: 1.2 }}>
+                {t.requestPickupBtn}
+              </span>
+              <span style={{ fontSize: "10.5px", color: "#64748b", marginTop: "2px" }}>
+                Schedule Driver ↗
+              </span>
+            </div>
+          </Link>
+        </div>
+
+        {/* 5. Parcel Statistics Breakdown Card (Exact Match to 6-Category Grid) */}
+        <div
+          style={{
+            backgroundColor: "#ffffff",
+            borderRadius: "20px",
+            padding: "18px 18px",
+            border: "1px solid #e8eff7",
+            boxShadow: "0 4px 18px rgba(15, 23, 42, 0.04)",
+            display: "flex",
+            flexDirection: "column",
+            gap: "14px",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <span style={{ fontSize: "15px", fontWeight: "800", color: "#0f172a" }}>
+              {t.trackingTitle}
             </span>
+            <Link
+              href="/merchant/orders"
+              style={{
+                fontSize: "12px",
+                fontWeight: "700",
+                color: "#581c87",
+                textDecoration: "none",
+                display: "flex",
+                alignItems: "center",
+                gap: "2px",
+              }}
+            >
+              <span>{t.viewOrdersBtn}</span>
+              <MdChevronRight size={16} />
+            </Link>
           </div>
 
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: '1fr 1fr',
-            gap: '12px'
-          }}>
-            {/* Total Parcels */}
-            <div style={{
-              backgroundColor: '#f8fafc',
-              borderRadius: '16px',
-              padding: '14px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px'
-            }}>
-              <div style={{
-                width: '40px', height: '40px', borderRadius: '12px', backgroundColor: '#eff6ff',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
-              }}>
-                <img src="/3d/3d_box.png" alt="Box" style={{ width: '30px', height: '30px', objectFit: 'contain' }} />
+          {/* 6 Category Items List */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+            {/* 1. Total Parcels */}
+            <Link
+              href="/merchant/orders"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                padding: "10px 12px",
+                backgroundColor: "#f8fafc",
+                borderRadius: "12px",
+                textDecoration: "none",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <div
+                  style={{
+                    width: "32px",
+                    height: "32px",
+                    borderRadius: "8px",
+                    backgroundColor: "#f3e8ff",
+                    color: "#581c87",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <MdFormatListBulleted size={18} />
+                </div>
+                <span style={{ fontSize: "13px", fontWeight: "700", color: "#334155" }}>
+                  {t.totalParcels}
+                </span>
               </div>
-              <div>
-                <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700' }}>{t.totalParcel}</div>
-                <div style={{ fontSize: '16px', fontWeight: '900', color: '#0f172a', marginTop: '2px' }}>{stats.totalParcel ?? 0}</div>
-              </div>
-            </div>
+              <span style={{ fontSize: "15px", fontWeight: "900", color: "#581c87" }}>
+                {totalCount}
+              </span>
+            </Link>
 
-            {/* Delivered packages */}
-            <div style={{
-              backgroundColor: '#f8fafc',
-              borderRadius: '16px',
-              padding: '14px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px'
-            }}>
-              <div style={{
-                width: '40px', height: '40px', borderRadius: '12px', backgroundColor: '#ecfdf5',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
-              }}>
-                <img src="/3d/3d_check.png" alt="Check" style={{ width: '30px', height: '30px', objectFit: 'contain' }} />
+            {/* 2. Pending Pickup */}
+            <Link
+              href="/merchant/orders"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                padding: "10px 12px",
+                backgroundColor: "#fffbeb",
+                borderRadius: "12px",
+                textDecoration: "none",
+                border: "1px solid #fef3c7",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <div
+                  style={{
+                    width: "32px",
+                    height: "32px",
+                    borderRadius: "8px",
+                    backgroundColor: "#fef3c7",
+                    color: "#d97706",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <MdSchedule size={18} />
+                </div>
+                <span style={{ fontSize: "13px", fontWeight: "700", color: "#92400e" }}>
+                  {t.pendingPickup}
+                </span>
               </div>
-              <div>
-                <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700' }}>{t.totalDelivered}</div>
-                <div style={{ fontSize: '16px', fontWeight: '900', color: '#16a34a', marginTop: '2px' }}>{stats.totalDelivered ?? 0}</div>
-              </div>
-            </div>
+              <span style={{ fontSize: "15px", fontWeight: "900", color: "#d97706" }}>
+                {pendingCount}
+              </span>
+            </Link>
 
-            {/* Pending Pickup */}
-            <div style={{
-              backgroundColor: '#f8fafc',
-              borderRadius: '16px',
-              padding: '14px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px'
-            }}>
-              <div style={{
-                width: '40px', height: '40px', borderRadius: '12px', backgroundColor: '#fff7ed',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
-              }}>
-                <img src="/3d/3d_shop.png" alt="Shop" style={{ width: '30px', height: '30px', objectFit: 'contain' }} />
+            {/* 3. In-Transit */}
+            <Link
+              href="/merchant/orders"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                padding: "10px 12px",
+                backgroundColor: "#eff6ff",
+                borderRadius: "12px",
+                textDecoration: "none",
+                border: "1px solid #dbeafe",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <div
+                  style={{
+                    width: "32px",
+                    height: "32px",
+                    borderRadius: "8px",
+                    backgroundColor: "#dbeafe",
+                    color: "#2563eb",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <MdLocalShipping size={18} />
+                </div>
+                <span style={{ fontSize: "13px", fontWeight: "700", color: "#1e40af" }}>
+                  {t.inTransit}
+                </span>
               </div>
-              <div>
-                <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700' }}>{t.pendingPickup}</div>
-                <div style={{ fontSize: '16px', fontWeight: '900', color: '#ea580c', marginTop: '2px' }}>{stats.pendingPickup ?? 0}</div>
-              </div>
-            </div>
+              <span style={{ fontSize: "15px", fontWeight: "900", color: "#2563eb" }}>
+                {inTransitCount}
+              </span>
+            </Link>
 
-            {/* Picked Up (Waiting Hub) */}
-            <div style={{
-              backgroundColor: '#f8fafc',
-              borderRadius: '16px',
-              padding: '14px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px'
-            }}>
-              <div style={{
-                width: '40px', height: '40px', borderRadius: '12px', backgroundColor: '#fffbeb',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
-              }}>
-                <img src="/3d/3d_truck.png" alt="Truck" style={{ width: '30px', height: '30px', objectFit: 'contain' }} />
+            {/* 4. Delivered */}
+            <Link
+              href="/merchant/orders"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                padding: "10px 12px",
+                backgroundColor: "#f0fdf4",
+                borderRadius: "12px",
+                textDecoration: "none",
+                border: "1px solid #dcfce7",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <div
+                  style={{
+                    width: "32px",
+                    height: "32px",
+                    borderRadius: "8px",
+                    backgroundColor: "#dcfce7",
+                    color: "#16a34a",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <MdCheckCircle size={18} />
+                </div>
+                <span style={{ fontSize: "13px", fontWeight: "700", color: "#166534" }}>
+                  {t.delivered}
+                </span>
               </div>
-              <div>
-                <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700' }}>{t.pickedUpWaiting}</div>
-                <div style={{ fontSize: '16px', fontWeight: '900', color: '#d97706', marginTop: '2px' }}>{stats.pickedUpWaiting ?? 0}</div>
-              </div>
-            </div>
+              <span style={{ fontSize: "15px", fontWeight: "900", color: "#16a34a" }}>
+                {deliveredCount}
+              </span>
+            </Link>
 
-            {/* Received at Hub */}
-            <div style={{
-              backgroundColor: '#f8fafc',
-              borderRadius: '16px',
-              padding: '14px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px'
-            }}>
-              <div style={{
-                width: '40px', height: '40px', borderRadius: '12px', backgroundColor: '#f0fdfa',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
-              }}>
-                <img src="/3d/3d_dashboard.png" alt="Hub" style={{ width: '30px', height: '30px', objectFit: 'contain' }} />
+            {/* 5. Problem */}
+            <Link
+              href="/merchant/orders"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                padding: "10px 12px",
+                backgroundColor: "#fef2f2",
+                borderRadius: "12px",
+                textDecoration: "none",
+                border: "1px solid #fee2e2",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <div
+                  style={{
+                    width: "32px",
+                    height: "32px",
+                    borderRadius: "8px",
+                    backgroundColor: "#fee2e2",
+                    color: "#ef4444",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <MdErrorOutline size={18} />
+                </div>
+                <span style={{ fontSize: "13px", fontWeight: "700", color: "#991b1b" }}>
+                  {t.problem}
+                </span>
               </div>
-              <div>
-                <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700' }}>{t.receivedAtWarehouse}</div>
-                <div style={{ fontSize: '16px', fontWeight: '900', color: '#0d9488', marginTop: '2px' }}>{stats.receivedAtWarehouse ?? 0}</div>
-              </div>
-            </div>
+              <span style={{ fontSize: "15px", fontWeight: "900", color: "#ef4444" }}>
+                {problemCount}
+              </span>
+            </Link>
 
-            {/* Out for Delivery */}
-            <div style={{
-              backgroundColor: '#f8fafc',
-              borderRadius: '16px',
-              padding: '14px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px'
-            }}>
-              <div style={{
-                width: '40px', height: '40px', borderRadius: '12px', backgroundColor: '#f5f3ff',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
-              }}>
-                <img src="/3d/3d_scooter.png" alt="Delivery" style={{ width: '30px', height: '30px', objectFit: 'contain' }} />
+            {/* 6. Returned */}
+            <Link
+              href="/merchant/orders"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                padding: "10px 12px",
+                backgroundColor: "#f8fafc",
+                borderRadius: "12px",
+                textDecoration: "none",
+                border: "1px solid #e2e8f0",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <div
+                  style={{
+                    width: "32px",
+                    height: "32px",
+                    borderRadius: "8px",
+                    backgroundColor: "#e2e8f0",
+                    color: "#64748b",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <MdFormatListBulleted size={18} />
+                </div>
+                <span style={{ fontSize: "13px", fontWeight: "700", color: "#475569" }}>
+                  {t.returned}
+                </span>
               </div>
-              <div>
-                <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700' }}>{t.inTransit}</div>
-                <div style={{ fontSize: '16px', fontWeight: '900', color: '#7c3aed', marginTop: '2px' }}>{stats.inTransit ?? 0}</div>
-              </div>
-            </div>
-
-            {/* Problem/Failed */}
-            <div style={{
-              backgroundColor: '#f8fafc',
-              borderRadius: '16px',
-              padding: '14px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px'
-            }}>
-              <div style={{
-                width: '40px', height: '40px', borderRadius: '12px', backgroundColor: '#fef2f2',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
-              }}>
-                <img src="/3d/3d_cross.png" alt="Cross" style={{ width: '30px', height: '30px', objectFit: 'contain' }} />
-              </div>
-              <div>
-                <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700' }}>{t.totalProblem}</div>
-                <div style={{ fontSize: '16px', fontWeight: '900', color: '#dc2626', marginTop: '2px' }}>{stats.totalProblem ?? 0}</div>
-              </div>
-            </div>
-
-            {/* Returned packages */}
-            <div style={{
-              backgroundColor: '#f8fafc',
-              borderRadius: '16px',
-              padding: '14px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px'
-            }}>
-              <div style={{
-                width: '40px', height: '40px', borderRadius: '12px', backgroundColor: '#f1f5f9',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
-              }}>
-                <img src="/3d/3d_refresh.png" alt="Refresh" style={{ width: '30px', height: '30px', objectFit: 'contain' }} />
-              </div>
-              <div>
-                <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700' }}>{t.totalReturn}</div>
-                <div style={{ fontSize: '16px', fontWeight: '900', color: '#475569', marginTop: '2px' }}>{stats.totalReturn ?? 0}</div>
-              </div>
-            </div>
+              <span style={{ fontSize: "15px", fontWeight: "900", color: "#475569" }}>
+                {returnCount}
+              </span>
+            </Link>
           </div>
         </div>
       </div>

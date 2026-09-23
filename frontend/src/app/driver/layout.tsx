@@ -1,21 +1,14 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { getUser, isAuthenticated } from '@/lib/auth';
-import { useLanguage } from '@/lib/LanguageContext';
-import {
-  MdFormatListBulleted,
-  MdQrCodeScanner,
-  MdCreditCard,
-  MdGridView,
-  MdPersonOutline
-} from 'react-icons/md';
+import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
+import Link from "next/link";
+import { getUser, isAuthenticated } from "@/lib/auth";
+import { useLanguage } from "@/lib/LanguageContext";
+import { MdHome, MdCardGiftcard, MdQrCodeScanner, MdAttachMoney, MdPerson } from "react-icons/md";
 
 export default function DriverLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const router = useRouter();
   const { lang } = useLanguage();
   const [mounted, setMounted] = useState(false);
   const [isAuth, setIsAuth] = useState(false);
@@ -24,236 +17,221 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
     setMounted(true);
     const authStatus = isAuthenticated();
     const user = getUser();
-    setIsAuth(authStatus && user?.role === 'driver');
+    setIsAuth(authStatus && user?.role === "driver");
   }, [pathname]);
 
   const tabLabels = {
     en: {
-      dashboard: 'Home',
-      tasks: 'Tasks',
-      scanner: 'Scanner',
-      payments: 'Payments',
-      profile: 'Profile'
+      dashboard: "Home",
+      tasks: "Packages",
+      scan: "Scan",
+      payments: "Payments",
+      profile: "Account",
     },
     km: {
-      dashboard: 'ទំព័រដើម',
-      tasks: 'ភារកិច្ច',
-      scanner: 'ម៉ាស៊ីនស្កេន',
-      payments: 'ការទូទាត់',
-      profile: 'ប្រវត្តិរូប'
-    }
+      dashboard: "ទំព័រដើម",
+      tasks: "កញ្ចប់អីវ៉ាន់",
+      scan: "ស្កេន",
+      payments: "ការទូទាត់ប្រាក់",
+      profile: "គណនី",
+    },
   };
 
-  const labels = tabLabels[lang as 'en' | 'km'] || tabLabels.en;
+  const labels = tabLabels[lang as "en" | "km"] || tabLabels.km;
 
   if (!mounted) {
     return (
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        minHeight: '100vh',
-        backgroundColor: '#f8fafc'
-      }}>
-        <div style={{
-          width: '40px',
-          height: '40px',
-          border: '3px solid rgba(4, 120, 87, 0.15)',
-          borderTopColor: '#047857',
-          borderRadius: '50%',
-          animation: 'driverSpin 0.8s ease-in-out infinite'
-        }} />
-        <style dangerouslySetInnerHTML={{__html: `@keyframes driverSpin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}} />
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          minHeight: "100vh",
+          backgroundColor: "#f8fafc",
+        }}
+      >
+        <div
+          style={{
+            width: "40px",
+            height: "40px",
+            border: "3px solid rgba(88, 28, 135, 0.15)",
+            borderTopColor: "#581c87",
+            borderRadius: "50%",
+            animation: "driverSpin 0.8s ease-in-out infinite",
+          }}
+        />
+        <style
+          dangerouslySetInnerHTML={{
+            __html: `@keyframes driverSpin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`,
+          }}
+        />
       </div>
     );
   }
 
-  const isLoginPage = pathname === '/driver/login' || pathname === '/driver/auth';
+  const isLoginPage = pathname === "/driver/login" || pathname === "/driver/auth";
+  const showBottomNav = !isLoginPage && isAuth;
+
+  // Check active routes
+  const isHomeActive = pathname === "/driver/dashboard";
+  const isTasksActive = pathname.startsWith("/driver/tasks");
+  const isScanActive = pathname.startsWith("/driver/scan");
+  const isPaymentsActive =
+    pathname.startsWith("/driver/payments") || pathname.startsWith("/driver/reports");
+  const isProfileActive = pathname.startsWith("/driver/profile");
+
+  const ACTIVE_COLOR = "#581c87";
+  const INACTIVE_COLOR = "#94a3b8";
 
   return (
-    <div className="mobile-layout-container" style={{
-      display: 'flex',
-      justifyContent: 'center',
-      minHeight: '100vh',
-      backgroundColor: '#e2e8f0',
-      fontFamily: "'Kantumruy Pro', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
-      WebkitFontSmoothing: 'antialiased'
-    }}>
-      <div className="mobile-phone-frame" style={{
-        width: '100%',
-        maxWidth: '480px',
-        backgroundColor: '#f8fafc',
-        minHeight: '100vh',
-        display: 'flex',
-        flexDirection: 'column',
-        position: 'relative',
-        boxShadow: '0 20px 50px -10px rgba(15, 23, 42, 0.12)',
-        paddingBottom: (!isLoginPage && isAuth) ? '76px' : '0'
-      }}>
-        <main style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-          {children}
-        </main>
+    <div
+      className="mobile-layout-container"
+      style={{
+        display: "flex",
+        justifyContent: "center",
+        minHeight: "100vh",
+        backgroundColor: "#e2e8f0",
+        fontFamily: "'Kantumruy Pro', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+        WebkitFontSmoothing: "antialiased",
+      }}
+    >
+      <div
+        className="mobile-phone-frame"
+        style={{
+          width: "100%",
+          maxWidth: "480px",
+          backgroundColor: "#ffffff",
+          minHeight: "100vh",
+          display: "flex",
+          flexDirection: "column",
+          position: "relative",
+          boxShadow: "0 20px 50px -10px rgba(15, 23, 42, 0.12)",
+          paddingBottom: showBottomNav ? "68px" : "0",
+        }}
+      >
+        <main style={{ flex: 1, display: "flex", flexDirection: "column" }}>{children}</main>
 
-        {/* Floating Bottom Navigation Bar with Center Curved Notch */}
-        {!isLoginPage && isAuth && (
-          <div style={{
-            position: 'fixed',
-            bottom: 0,
-            left: '50%',
-            transform: 'translateX(-50%)',
-            width: '100%',
-            maxWidth: '480px',
-            zIndex: 100,
-            pointerEvents: 'none'
-          }}>
-            {/* SVG Center Curved Notch Background */}
-            <div style={{
-              position: 'relative',
-              width: '100%',
-              pointerEvents: 'auto'
-            }}>
-              <svg
-                viewBox="0 0 375 72"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-                preserveAspectRatio="none"
-                style={{
-                  position: 'absolute',
-                  bottom: 0,
-                  left: 0,
-                  width: '100%',
-                  height: '76px',
-                  filter: 'drop-shadow(0 -4px 16px rgba(0, 0, 0, 0.06))',
-                  zIndex: 1
-                }}
-              >
-                <path
-                  d="M0 16C0 7.16344 7.16344 0 16 0H138C148.5 0 154 6.5 159 13.5C164.5 21.2 173.5 26 187.5 26C201.5 26 210.5 21.2 216 13.5C221 6.5 226.5 0 237 0H359C367.837 0 375 7.16344 375 16V72H0V16Z"
-                  fill="#ffffff"
-                />
-              </svg>
+        {/* Clean Bottom Navigation Bar with Tab 3 as SCAN */}
+        {showBottomNav && (
+          <nav
+            style={{
+              position: "fixed",
+              bottom: 0,
+              left: "50%",
+              transform: "translateX(-50%)",
+              width: "100%",
+              maxWidth: "480px",
+              height: "66px",
+              backgroundColor: "#ffffff",
+              borderTop: "1px solid #e2e8f0",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-around",
+              padding: "0 8px",
+              zIndex: 100,
+              boxShadow: "0 -2px 10px rgba(0, 0, 0, 0.04)",
+            }}
+          >
+            {/* 1. Home (ទំព័រដើម) */}
+            <Link
+              href="/driver/dashboard"
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                textDecoration: "none",
+                color: isHomeActive ? ACTIVE_COLOR : INACTIVE_COLOR,
+                gap: "3px",
+                flex: 1,
+              }}
+            >
+              <MdHome size={24} />
+              <span style={{ fontSize: "11px", fontWeight: isHomeActive ? "700" : "500" }}>
+                {labels.dashboard}
+              </span>
+            </Link>
 
-              <nav style={{
-                position: 'relative',
-                zIndex: 2,
-                height: '72px',
-                display: 'flex',
-                alignItems: 'flex-end',
-                justifyContent: 'space-between',
-                padding: '0 8px 8px'
-              }}>
-                {/* 1. Home */}
-                <Link
-                  href="/driver/dashboard"
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    textDecoration: 'none',
-                    color: pathname === '/driver/dashboard' ? '#2563eb' : '#64748b',
-                    gap: '3px',
-                    flex: 1
-                  }}
-                >
-                  <MdGridView size={22} />
-                  <span style={{ fontSize: '11px', fontWeight: pathname === '/driver/dashboard' ? '800' : '600' }}>
-                    {labels.dashboard}
-                  </span>
-                </Link>
+            {/* 2. Tasks / Packages (កញ្ចប់អីវ៉ាន់) */}
+            <Link
+              href="/driver/tasks"
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                textDecoration: "none",
+                color: isTasksActive ? ACTIVE_COLOR : INACTIVE_COLOR,
+                gap: "3px",
+                flex: 1,
+              }}
+            >
+              <MdCardGiftcard size={23} />
+              <span style={{ fontSize: "11px", fontWeight: isTasksActive ? "700" : "500" }}>
+                {labels.tasks}
+              </span>
+            </Link>
 
-                {/* 2. Tasks */}
-                <Link
-                  href="/driver/tasks"
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    textDecoration: 'none',
-                    color: pathname.startsWith('/driver/tasks') ? '#2563eb' : '#64748b',
-                    gap: '3px',
-                    flex: 1
-                  }}
-                >
-                  <MdFormatListBulleted size={23} />
-                  <span style={{ fontSize: '11px', fontWeight: pathname.startsWith('/driver/tasks') ? '800' : '600' }}>
-                    {labels.tasks}
-                  </span>
-                </Link>
+            {/* 3. Scanner (ស្កេន) */}
+            <Link
+              href="/driver/scan"
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                textDecoration: "none",
+                color: isScanActive ? ACTIVE_COLOR : INACTIVE_COLOR,
+                gap: "3px",
+                flex: 1,
+              }}
+            >
+              <MdQrCodeScanner size={24} />
+              <span style={{ fontSize: "11px", fontWeight: isScanActive ? "700" : "500" }}>
+                {labels.scan}
+              </span>
+            </Link>
 
-                {/* 3. Scanner (Center Raised Button) */}
-                <Link
-                  href="/driver/tasks?scan=true"
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    textDecoration: 'none',
-                    color: '#64748b',
-                    gap: '2px',
-                    flex: 1,
-                    marginBottom: '10px'
-                  }}
-                >
-                  <div style={{
-                    width: '42px',
-                    height: '42px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: '#64748b'
-                  }}>
-                    <MdQrCodeScanner size={28} />
-                  </div>
-                  <span style={{ fontSize: '10.5px', fontWeight: '600', marginTop: '-4px' }}>
-                    {labels.scanner}
-                  </span>
-                </Link>
+            {/* 4. Payments (ការទូទាត់ប្រាក់) */}
+            <Link
+              href="/driver/payments"
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                textDecoration: "none",
+                color: isPaymentsActive ? ACTIVE_COLOR : INACTIVE_COLOR,
+                gap: "3px",
+                flex: 1,
+              }}
+            >
+              <MdAttachMoney size={24} />
+              <span style={{ fontSize: "11px", fontWeight: isPaymentsActive ? "700" : "500" }}>
+                {labels.payments}
+              </span>
+            </Link>
 
-                {/* 4. Payments */}
-                <Link
-                  href="/driver/payments"
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    textDecoration: 'none',
-                    color: pathname.startsWith('/driver/payments') ? '#2563eb' : '#64748b',
-                    gap: '3px',
-                    flex: 1
-                  }}
-                >
-                  <MdCreditCard size={23} />
-                  <span style={{ fontSize: '11px', fontWeight: pathname.startsWith('/driver/payments') ? '800' : '600' }}>
-                    {labels.payments}
-                  </span>
-                </Link>
-
-                {/* 5. Profile */}
-                <Link
-                  href="/driver/profile"
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    textDecoration: 'none',
-                    color: pathname === '/driver/profile' ? '#2563eb' : '#64748b',
-                    gap: '3px',
-                    flex: 1
-                  }}
-                >
-                  <MdPersonOutline size={23} />
-                  <span style={{ fontSize: '11px', fontWeight: pathname === '/driver/profile' ? '800' : '600' }}>
-                    {labels.profile}
-                  </span>
-                </Link>
-              </nav>
-            </div>
-          </div>
+            {/* 5. Account / Profile (គណនី) */}
+            <Link
+              href="/driver/profile"
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                textDecoration: "none",
+                color: isProfileActive ? ACTIVE_COLOR : INACTIVE_COLOR,
+                gap: "3px",
+                flex: 1,
+              }}
+            >
+              <MdPerson size={24} />
+              <span style={{ fontSize: "11px", fontWeight: isProfileActive ? "700" : "500" }}>
+                {labels.profile}
+              </span>
+            </Link>
+          </nav>
         )}
       </div>
     </div>

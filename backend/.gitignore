@@ -24,3 +24,7 @@ logs
 # OS
 .DS_Store
 Thumbs.db
+
+# Firebase Credentials
+*-firebase-adminsdk-*.json
+ebs-express-delivery-firebase-adminsdk-fbsvc-300916552e.json

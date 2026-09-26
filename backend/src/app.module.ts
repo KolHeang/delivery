@@ -22,6 +22,7 @@ import { InvoicesModule } from './invoices/invoices.module';
 import { RolesModule } from './roles/roles.module';
 import { ActivityLogsModule } from './activity-logs/activity-logs.module';
 import { ActivityLogInterceptor } from './activity-logs/activity-log.interceptor';
+import { NotificationsModule } from './notifications/notifications.module';
 
 @Module({
   imports: [
@@ -49,6 +50,7 @@ import { ActivityLogInterceptor } from './activity-logs/activity-log.interceptor
     InvoicesModule,
     RolesModule,
     ActivityLogsModule,
+    NotificationsModule,
   ],
   providers: [
     {

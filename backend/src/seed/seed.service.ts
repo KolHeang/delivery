@@ -7,6 +7,8 @@ import { ExpenseType } from '../expenses/expense-type.entity';
 import { IncomeType } from '../incomes/income-type.entity';
 import { Role } from '../roles/role.entity';
 import { Permission } from '../roles/permission.entity';
+import { NotificationTemplate } from '../notifications/entities/notification-template.entity';
+import { TelegramTopic } from '../notifications/entities/telegram-topic.entity';
 
 @Injectable()
 export class SeedService implements OnApplicationBootstrap {
@@ -20,6 +22,8 @@ export class SeedService implements OnApplicationBootstrap {
     private incomeTypeRepo: Repository<IncomeType>,
     @InjectRepository(Role) private roleRepo: Repository<Role>,
     @InjectRepository(Permission) private permissionRepo: Repository<Permission>,
+    @InjectRepository(NotificationTemplate) private templateRepo: Repository<NotificationTemplate>,
+    @InjectRepository(TelegramTopic) private telegramTopicRepo: Repository<TelegramTopic>,
   ) { }
 
   async onApplicationBootstrap() {
@@ -27,6 +31,8 @@ export class SeedService implements OnApplicationBootstrap {
     await this.seedUsers();
     await this.seedExpenseTypes();
     await this.seedIncomeTypes();
+    await this.seedNotificationTemplates();
+    await this.seedTelegramTopics();
   }
 
   private async seedRolesAndPermissions() {
@@ -224,5 +230,66 @@ export class SeedService implements OnApplicationBootstrap {
     ];
     await this.incomeTypeRepo.save(this.incomeTypeRepo.create(types));
     this.logger.log('✅ Income Types seeded');
+  }
+
+  private async seedNotificationTemplates() {
+    const count = await this.templateRepo.count();
+    if (count > 0) return;
+
+    const templates = [
+      {
+        code: 'DRIVER_ASSIGNED',
+        name: 'Driver assigned to order',
+        titleTemplate: 'New Order Assignment',
+        bodyTemplate: 'You have been assigned order #{trackingCode} to deliver.',
+        type: 'in_app_and_push',
+        active: true,
+      },
+      {
+        code: 'ORDER_STATUS_UPDATED',
+        name: 'Order delivery status updated',
+        titleTemplate: 'Order Update: #{status}',
+        bodyTemplate: 'Your order #{trackingCode} status has been updated to: #{status}.',
+        type: 'in_app_and_push',
+        active: true,
+      },
+    ];
+
+    await this.templateRepo.save(this.templateRepo.create(templates));
+    this.logger.log('✅ Notification Templates seeded');
+  }
+
+  private async seedTelegramTopics() {
+    const count = await this.telegramTopicRepo.count();
+    if (count > 0) return;
+
+    const defaultChatId = process.env.CHAT_ID || '-1004375084040';
+
+    const topics = [
+      {
+        topicName: 'Orders',
+        chatId: defaultChatId.trim(),
+        threadId: '1',
+      },
+
+      {
+        topicName: 'Shop Payments',
+        chatId: defaultChatId.trim(),
+        threadId: '2',
+      },
+      {
+        topicName: 'Driver Payments',
+        chatId: defaultChatId.trim(),
+        threadId: '3',
+      },
+      {
+        topicName: 'Login/Logout',
+        chatId: defaultChatId.trim(),
+        threadId: '4',
+      },
+    ];
+
+    await this.telegramTopicRepo.save(this.telegramTopicRepo.create(topics));
+    this.logger.log('✅ Telegram Topics seeded');
   }
 }

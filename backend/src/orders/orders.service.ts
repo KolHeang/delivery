@@ -19,7 +19,7 @@ import {
   AssignDeliveryDto,
 } from './dto/order.dto';
 import { paginateRepo } from '../config/pagination';
-
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class OrdersService {
@@ -27,6 +27,7 @@ export class OrdersService {
     @InjectRepository(Order) private readonly repo: Repository<Order>,
     @InjectRepository(OrderHistory) private readonly historyRepo: Repository<OrderHistory>,
     @InjectRepository(PickupRequest) private readonly pickupRequestRepo: Repository<PickupRequest>,
+    private readonly notificationsService: NotificationsService,
   ) { }
 
   private get relations(): any {
@@ -307,6 +308,16 @@ export class OrdersService {
     await this.repo.update(id, updates);
     if (dto.status !== order.status) {
       await this.addHistory(id, dto.status, dto.note);
+
+      // Notify the merchant of the status update
+      if (order.merchantId) {
+        this.notificationsService.sendFromTemplate(
+          'ORDER_STATUS_UPDATED',
+          order.merchantId,
+          'merchant',
+          { trackingCode: order.trackingCode, status: dto.status },
+        ).catch(err => console.error('Failed to send status update notification', err));
+      }
     }
     return this.findOne(id);
   }
@@ -329,6 +340,15 @@ export class OrdersService {
       pickedUpAt: new Date(),
     });
     await this.addHistory(id, 'picked-up');
+
+    // Notify driver of assignment
+    this.notificationsService.sendFromTemplate(
+      'DRIVER_ASSIGNED',
+      dto.driverId,
+      'user',
+      { trackingCode: order.trackingCode },
+    ).catch(err => console.error('Failed to send driver assignment notification', err));
+
     return this.findOne(id);
   }
 
@@ -348,6 +368,15 @@ export class OrdersService {
       pickupDriverId: dto.driverId,
     });
     await this.addHistory(id, 'pending', 'Pickup driver assigned');
+
+    // Notify pickup driver of assignment
+    this.notificationsService.sendFromTemplate(
+      'DRIVER_ASSIGNED',
+      dto.driverId,
+      'user',
+      { trackingCode: order.trackingCode },
+    ).catch(err => console.error('Failed to send pickup driver assignment notification', err));
+
     return this.findOne(id);
   }
 
@@ -377,6 +406,15 @@ export class OrdersService {
       assignedAt: new Date(),
     });
     await this.addHistory(id, 'assigned', isReassign ? `Reassigned to driver #${dto.driverId}` : undefined);
+
+    // Notify delivery driver of assignment
+    this.notificationsService.sendFromTemplate(
+      'DRIVER_ASSIGNED',
+      dto.driverId,
+      'user',
+      { trackingCode: order.trackingCode },
+    ).catch(err => console.error('Failed to send delivery driver assignment notification', err));
+
     return this.findOne(id);
   }
 

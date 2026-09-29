@@ -90,6 +90,14 @@ export class SeedService implements OnApplicationBootstrap {
       { name: 'payments.update', description: 'Update payments' },
       { name: 'payments.delete', description: 'Delete payments' },
 
+      // Inventory & WMS
+      { name: 'inventory.create', description: 'Create inventory products' },
+      { name: 'inventory.read', description: 'View inventory products and movements' },
+      { name: 'inventory.update', description: 'Update products and adjust stock' },
+      { name: 'inventory.delete', description: 'Delete inventory products' },
+      { name: 'inventory.pick_pack', description: 'Execute pick & pack barcode verification' },
+      { name: 'inventory.restock', description: 'Receive returned parcels and restock inventory' },
+
       // Reports
       { name: 'reports.view', description: 'View statistics and reports' },
 

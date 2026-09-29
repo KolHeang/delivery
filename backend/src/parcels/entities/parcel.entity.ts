@@ -15,6 +15,7 @@ import { User } from '../../users/entities/users.entity';
 import { Zone } from '../../zones/entities/zone.entity';
 import { ParcelEvent } from './parcel-event.entity';
 import { PickupRequest } from './pickup-request.entity';
+import { ParcelItem } from '../../inventory/entities/parcel-item.entity';
 
 export type ParcelStatus =
   | 'pending'
@@ -153,6 +154,9 @@ export class Parcel {
 
   @OneToMany(() => ParcelEvent, (event) => event.parcel)
   events: ParcelEvent[];
+
+  @OneToMany(() => ParcelItem, (item) => item.parcel, { cascade: true })
+  items: ParcelItem[];
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;

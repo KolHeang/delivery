@@ -88,6 +88,10 @@ export class CreateParcelDto {
   @IsNumber()
   @Type(() => Number)
   createdById?: number;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  items?: Array<{ productId: number; quantity: number; price?: number }>;
 }
 
 export class UpdateParcelDto {

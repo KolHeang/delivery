@@ -9,6 +9,7 @@ import {
   MdDashboard, MdStorefront, MdPeople, MdLocalShipping,
   MdAccountBalanceWallet, MdReceipt, MdSettings,
   MdKeyboardArrowDown, MdKeyboardArrowUp, MdBarChart,
+  MdInventory2,
 } from 'react-icons/md';
 
 export default function Sidebar() {
@@ -27,6 +28,18 @@ export default function Sidebar() {
         { href: '/summary/shop', label: t('shopSummary') },
         { href: '/summary/delivery', label: t('deliverySummary') },
         { href: '/summary/pickup', label: t('pickupSummary') },
+      ],
+    },
+    {
+      key: 'inventory',
+      label: t('inventoryMenu'),
+      icon: MdInventory2,
+      permission: 'inventory.read',
+      items: [
+        { href: '/inventory', label: t('inventoryList'), permission: 'inventory.read' },
+        { href: '/inventory/create', label: t('createProduct'), permission: 'inventory.create' },
+        { href: '/inventory/pick-pack', label: t('pickPackMenu'), permission: 'inventory.pick_pack' },
+        { href: '/inventory/returns', label: t('returnsMenu'), permission: 'inventory.restock' },
       ],
     },
     {
@@ -114,6 +127,7 @@ export default function Sidebar() {
 
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
     summary: false,
+    inventory: false,
     shops: false,
     delivery: false,
     staff: false,

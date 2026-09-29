@@ -23,6 +23,7 @@ import { RolesModule } from './roles/roles.module';
 import { ActivityLogsModule } from './activity-logs/activity-logs.module';
 import { ActivityLogInterceptor } from './activity-logs/activity-log.interceptor';
 import { SelectModule } from './select/select.module';
+import { InventoryModule } from './inventory/inventory.module';
 
 @Module({
   imports: [
@@ -51,6 +52,7 @@ import { SelectModule } from './select/select.module';
     RolesModule,
     ActivityLogsModule,
     SelectModule,
+    InventoryModule,
   ],
   providers: [
     {

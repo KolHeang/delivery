@@ -2,6 +2,8 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Like, ILike, Between, MoreThanOrEqual, LessThanOrEqual, In } from 'typeorm';
@@ -9,6 +11,7 @@ import { Parcel } from './entities/parcel.entity';
 import { ParcelEvent } from './entities/parcel-event.entity';
 import { PickupRequest } from './entities/pickup-request.entity';
 import { Zone } from '../zones/entities/zone.entity';
+import { InventoryService } from '../inventory/inventory.service';
 import {
   CreateParcelDto,
   UpdateParcelDto,
@@ -25,6 +28,8 @@ export class ParcelsService {
     @InjectRepository(Parcel) private readonly repo: Repository<Parcel>,
     @InjectRepository(ParcelEvent) private readonly eventRepo: Repository<ParcelEvent>,
     @InjectRepository(PickupRequest) private readonly pickupRequestRepo: Repository<PickupRequest>,
+    @Inject(forwardRef(() => InventoryService))
+    private readonly inventoryService: InventoryService,
   ) { }
 
   private get listRelations(): any {
@@ -47,6 +52,7 @@ export class ParcelsService {
       updater: true,
       zone: true,
       events: true,
+      items: { product: true },
     };
   }
 
@@ -246,6 +252,11 @@ export class ParcelsService {
     }
     const savedParcel = await this.repo.save(parcel) as any as Parcel;
     await this.addEvent(savedParcel.id, savedParcel.status, savedParcel.note);
+
+    if (dto.items && dto.items.length > 0) {
+      await this.inventoryService.reserveStockForParcel(savedParcel.id, dto.items, dto.createdById);
+    }
+
     return this.findOne(savedParcel.id);
   }
 
@@ -295,6 +306,14 @@ export class ParcelsService {
     if (finalStatus && finalStatus !== parcel.status) {
       const historyNote = dto.note || (updates.status === 'assigned' ? 'Driver assigned' : undefined);
       await this.addEvent(id, finalStatus, historyNote);
+
+      if (finalStatus === 'in-transit') {
+        try {
+          await this.inventoryService.deductStockOnDispatch(id);
+        } catch (err) {
+          console.error(`Inventory deduct error for parcel #${id}:`, err);
+        }
+      }
     }
     return this.findOne(id);
   }
@@ -317,6 +336,14 @@ export class ParcelsService {
     await this.repo.update(id, updates);
     if (dto.status !== parcel.status || finalNote) {
       await this.addEvent(id, dto.status, finalNote);
+
+      if (dto.status === 'in-transit') {
+        try {
+          await this.inventoryService.deductStockOnDispatch(id);
+        } catch (err) {
+          console.error(`Inventory deduct error for parcel #${id}:`, err);
+        }
+      }
     }
     return this.findOne(id);
   }

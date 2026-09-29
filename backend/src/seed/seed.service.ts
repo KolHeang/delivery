@@ -71,7 +71,15 @@ export class SeedService {
         email: 'superadmin@gmail.com',
         password: hashedPw,
         phone: '011 609 414',
-        role: 'superadmin' as const,
+        role: 'super_admin' as const,
+        isActive: true,
+      },
+      {
+        name: 'SaaS Admin',
+        email: 'saasadmin@gmail.com',
+        password: hashedPw,
+        phone: '011 609 415',
+        role: 'super_admin' as const,
         isActive: true,
       },
       {
@@ -79,7 +87,7 @@ export class SeedService {
         email: 'support@gmail.com',
         password: hashedPw,
         phone: '012 999 111',
-        role: 'admin' as const,
+        role: 'support_admin' as const,
         isActive: true,
       },
     ];

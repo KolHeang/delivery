@@ -138,6 +138,10 @@ export class DriverService {
         'parcel.driverId',
         'parcel.pickupDriverId',
         'parcel.note',
+        'parcel.proofPhotos',
+        'parcel.signature',
+        'parcel.failedPhoto',
+        'parcel.itemPhoto',
         'parcel.createdAt',
         'parcel.deliveredAt',
         'parcel.assignedAt',
@@ -150,17 +154,30 @@ export class DriverService {
       .orderBy('parcel.createdAt', 'DESC');
 
     // 1. Apply Status & Driver Logic
-    if (status) {
-      query
-        .andWhere(
-          new Brackets((qb) => {
-            qb.where('parcel.driverId = :driverId', { driverId }).orWhere(
-              'parcel.pickupDriverId = :driverId',
-              { driverId },
-            );
-          }),
-        )
-        .andWhere('parcel.status = :status', { status });
+    if (status && status !== 'all') {
+      query.andWhere(
+        new Brackets((qb) => {
+          qb.where('parcel.driverId = :driverId', { driverId }).orWhere(
+            'parcel.pickupDriverId = :driverId',
+            { driverId },
+          );
+        }),
+      );
+      if (status === 'pending') {
+        query.andWhere('parcel.status IN (:...pendingStatuses)', {
+          pendingStatuses: ['pending', 'assigned', 'in-warehouse', 'in-transit'],
+        });
+      } else if (status === 'failed') {
+        query.andWhere('parcel.status IN (:...failedStatuses)', {
+          failedStatuses: ['failed', 'problem'],
+        });
+      } else if (status === 'returned') {
+        query.andWhere('parcel.status IN (:...returnedStatuses)', {
+          returnedStatuses: ['returned', 'rejected'],
+        });
+      } else {
+        query.andWhere('parcel.status = :status', { status });
+      }
     } else {
       query.andWhere(
         new Brackets((qb) => {
@@ -379,7 +396,10 @@ export class DriverService {
     if (!parcel)
       throw new NotFoundException('Parcel not found or not assigned to you');
 
-    const finalNote = dto.remark !== undefined ? dto.remark : dto.note;
+    let finalNote = dto.remark !== undefined ? dto.remark : dto.note;
+    if (dto.reason) {
+      finalNote = finalNote ? `[Reason: ${dto.reason}] ${finalNote}` : `[Reason: ${dto.reason}]`;
+    }
     const updates: Partial<Parcel> = {
       status: dto.status as any,
       updatedById: dto.updatedById || driverId,
@@ -392,6 +412,10 @@ export class DriverService {
       }
     }
     if (dto.status === 'in-warehouse') updates.warehouseAt = new Date();
+    if (dto.paymentMethod) updates.paymentMethod = dto.paymentMethod;
+    if (dto.proofPhotos && dto.proofPhotos.length > 0) updates.proofPhotos = dto.proofPhotos;
+    if (dto.signature) updates.signature = dto.signature;
+    if (dto.failedPhoto || dto.photo) updates.failedPhoto = dto.failedPhoto || dto.photo;
     if (finalNote !== undefined) updates.note = finalNote;
 
     await this.parcelRepo.update(parcelId, updates);
@@ -691,6 +715,61 @@ export class DriverService {
       totalProblem +
       totalReturn;
 
+    // COD to collect (assigned, in-transit or pending packages for driver)
+    const toCollectQuery = this.parcelRepo
+      .createQueryBuilder('parcel')
+      .select('SUM(parcel.cod)', 'total')
+      .addSelect("UPPER(COALESCE(parcel.codCurrency, 'USD'))", 'currency')
+      .where('parcel.driverId = :driverId', { driverId })
+      .andWhere('parcel.status IN (:...toCollectStatuses)', {
+        toCollectStatuses: ['assigned', 'in-transit', 'pending'],
+      });
+
+    if (start && end) {
+      toCollectQuery.andWhere(
+        'COALESCE(parcel.assignedAt, parcel.updatedAt, parcel.createdAt) >= :start AND COALESCE(parcel.assignedAt, parcel.updatedAt, parcel.createdAt) <= :end',
+        { start, end },
+      );
+    }
+    const codToCollect = await toCollectQuery
+      .groupBy("UPPER(COALESCE(parcel.codCurrency, 'USD'))")
+      .getRawMany();
+
+    const amountToCollectUSD = parseFloat(
+      codToCollect.find((c) => (c.currency || '').toUpperCase() === 'USD')
+        ?.total || 0,
+    );
+    const amountToCollectKHR = parseFloat(
+      codToCollect.find((c) => (c.currency || '').toUpperCase() === 'KHR')
+        ?.total || 0,
+    );
+
+    // Recent tasks
+    const recentParcels = await this.parcelRepo
+      .createQueryBuilder('parcel')
+      .leftJoinAndSelect('parcel.merchant', 'merchant')
+      .where(
+        '(parcel.driverId = :driverId OR parcel.pickupDriverId = :driverId)',
+        { driverId },
+      )
+      .orderBy('parcel.createdAt', 'DESC')
+      .take(5)
+      .getMany();
+
+    const recentTasks = recentParcels.map((p) => ({
+      id: p.id,
+      trackingCode: p.trackingCode,
+      merchantName: p.merchant?.name || p.merchant?.nameKh || p.receiverName || 'Merchant Shop',
+      receiverName: p.receiverName,
+      receiverPhone: p.receiverPhone,
+      receiverAddress: p.receiverAddress,
+      status: p.status,
+      type: (p.status as string) === 'returned' || (p.status as string) === 'rejected' ? 'Return' : 'Delivery',
+      cod: p.cod,
+      codCurrency: p.codCurrency || 'USD',
+      createdAt: p.createdAt,
+    }));
+
     return {
       period,
       deliveryFeeTotal,
@@ -698,6 +777,21 @@ export class DriverService {
         { currency: 'KHR', balance: codPendingKHR },
         { currency: 'USD', balance: codPendingUSD },
       ],
+      amountToCollect: {
+        usd: amountToCollectUSD,
+        khr: amountToCollectKHR,
+      },
+      amountCollected: {
+        usd: codPendingUSD,
+        khr: codPendingKHR,
+      },
+      workStatistics: {
+        totalParcels: sumTotalPackage > 0 ? sumTotalPackage : totalPackage,
+        assigned: assignedParcels,
+        delivered: totalSuccessful,
+        problem: totalProblem,
+        returned: totalReturn,
+      },
       statistics: {
         pickupRequest: pickupRequestCount,
         pickedUpWaiting: pickedUpWaitingCount,
@@ -708,6 +802,7 @@ export class DriverService {
         totalProblem: totalProblem,
         totalReturn: totalReturn,
       },
+      recentTasks,
     };
   }
 
@@ -1444,6 +1539,89 @@ export class DriverService {
         createdAt: payment.createdAt,
       },
       parcels: formattedParcels,
+    };
+  }
+
+  async getDailyDeliveryInvoice(driverId: number, dateStr?: string) {
+    const driver = await this.userRepo.findOne({
+      where: { id: driverId },
+      relations: { zone: true, vehicle: true },
+    });
+    if (!driver) throw new NotFoundException('Driver not found');
+
+    const targetDate = dateStr ? new Date(dateStr) : new Date();
+    const start = new Date(targetDate);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(targetDate);
+    end.setHours(23, 59, 59, 999);
+
+    const query = this.parcelRepo
+      .createQueryBuilder('parcel')
+      .where(
+        '(parcel.driverId = :driverId OR parcel.pickupDriverId = :driverId)',
+        { driverId },
+      )
+      .andWhere(
+        'COALESCE(parcel.deliveredAt, parcel.assignedAt, parcel.updatedAt, parcel.createdAt) >= :start AND COALESCE(parcel.deliveredAt, parcel.assignedAt, parcel.updatedAt, parcel.createdAt) <= :end',
+        { start, end },
+      );
+
+    const parcels = await query.getMany();
+
+    const deliveredCount = parcels.filter((p) => p.status === 'delivered').length;
+    const failedCount = parcels.filter(
+      (p) => p.status === 'failed' || (p.status as any) === 'problem',
+    ).length;
+    const returnedCount = parcels.filter(
+      (p) => p.status === 'returned' || (p.status as any) === 'rejected',
+    ).length;
+    const totalParcels =
+      parcels.length > 0
+        ? parcels.length
+        : deliveredCount + failedCount + returnedCount;
+
+    const feePerParcel = 1.0;
+    const totalFeeSum = parcels.reduce(
+      (sum, p) => sum + (Number(p.deliveryFee) || feePerParcel),
+      0,
+    );
+    const totalDeliveryFee =
+      totalFeeSum > 0 ? totalFeeSum : totalParcels * feePerParcel;
+    const adjustment = failedCount > 0 ? -(failedCount * 0.5) : 0;
+    const totalAmount = Math.max(0, totalDeliveryFee + adjustment);
+
+    const formattedDate = dateStr || new Date().toISOString().split('T')[0];
+    const payment = await this.driverPaymentRepo.findOne({
+      where: {
+        driverId,
+        date: formattedDate as any,
+      },
+    });
+
+    const riderCode = `RDR${String(driver.id).padStart(3, '0')}`;
+
+    return {
+      date: formattedDate,
+      invoiceStatus: deliveredCount > 0 ? 'Completed' : 'Pending',
+      rider: {
+        name: driver.name || 'Sophal Rider',
+        riderId: riderCode,
+        phone: driver.phone,
+      },
+      parcels: {
+        total: totalParcels,
+        delivered: deliveredCount,
+        failed: failedCount,
+        returned: returnedCount,
+      },
+      financial: {
+        feePerParcel: feePerParcel,
+        totalDeliveryFee: totalDeliveryFee,
+        adjustment: adjustment,
+        totalAmount: totalAmount,
+        currency: 'USD',
+        paymentStatus: payment ? 'Paid' : 'Pending',
+      },
     };
   }
 }

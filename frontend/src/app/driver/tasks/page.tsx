@@ -1,148 +1,153 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect, useState, useRef } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { isAuthenticated, getUser } from '@/lib/auth';
 import api from '@/lib/api';
 import { useLanguage } from '@/lib/LanguageContext';
 import {
+  MdQrCodeScanner,
+  MdSearch,
+  MdInventory2,
+  MdChevronRight,
   MdCall,
   MdLocationOn,
   MdCheckCircle,
   MdError,
-  MdLocalShipping,
-  MdArrowBack,
-  MdInfoOutline,
-  MdRefresh,
-  MdSearch,
-  MdContentCopy,
+  MdReplay,
   MdDirections,
   MdClose,
-  MdStore,
-  MdPerson,
-  MdAttachMoney,
-  MdInventory2,
-  MdSchedule
+  MdRefresh,
+  MdLocalShipping,
+  MdSchedule,
 } from 'react-icons/md';
-import Badge from '@/components/ui/Badge';
 
 const taskTranslations = {
   en: {
-    title: 'My Tasks',
-    activeTab: 'Active Tasks',
-    completedTab: 'Completed',
-    noTasks: 'No Tasks Assigned Yet',
-    noTasksSub: 'You currently do not have any parcels assigned. New delivery tasks will appear here automatically.',
-    loading: 'Loading tasks...',
-    cod: 'COD to Collect',
-    fee: 'Delivery Fee',
-    note: 'Special Note',
-    btnPickup: 'Start Pick Up',
-    btnDeliver: 'Mark Delivered',
-    btnProblem: 'Report Issue / Return',
-    btnInTransit: 'Start Delivery',
-    updating: 'Updating...',
-    dialogTitle: 'Report Delivery Issue',
-    dialogDesc: 'Please select the issue reason for this parcel:',
-    remarkLabel: 'Reason / Remark',
-    remarkPlaceholder: 'Enter details (e.g. customer unreachable, wrong address, rejected)...',
-    btnFailed: 'Delivery Failed',
-    btnReturned: 'Return Package',
-    btnPostpone: 'Postpone to Tomorrow',
+    title: 'Task',
+    searchPlaceholder: 'Search parcel, order code, phone...',
+    all: 'All',
+    pending: 'Pending',
+    delivered: 'Delivered',
+    failed: 'Failed',
+    returned: 'Returned',
+    delivery: 'Delivery',
+    return: 'Return',
+    pickup: 'Pickup',
+    noTasks: 'No tasks found',
+    noTasksSub: 'No parcels matching current filter or search criteria.',
+    codToCollect: 'COD to Collect',
+    deliveryFee: 'Delivery Fee',
+    customer: 'Receiver',
+    merchant: 'Merchant',
+    address: 'Address',
+    call: 'Call',
+    directions: 'Map',
+    startDelivery: 'Start Delivery',
+    markDelivered: 'Mark Delivered',
+    reportIssue: 'Report Issue',
+    scanQrTitle: 'Scan QR Code',
+    scanQrDesc: 'Scan tracking QR to claim or update parcel',
+    scanCodePlaceholder: 'Enter or scan tracking code...',
+    btnScanClaim: 'Claim Parcel',
     btnCancel: 'Cancel',
-    customer: 'Customer',
-    merchant: 'Merchant / Shop',
-    waitingHubReceive: 'Collected - Waiting Hub Receive',
-    searchPlaceholder: 'Search tracking code, receiver, phone...',
-    filterAll: 'All',
-    filterAssigned: 'Assigned',
-    filterInTransit: 'In Transit',
-    filterDelivered: 'Delivered',
-    filterFailed: 'Failed',
-    filterReturned: 'Returned',
-    copied: 'Copied!',
-    callNow: 'Call',
-    itemsCount: 'tasks',
-    btnRefresh: 'Refresh List',
-    btnGoDashboard: 'Go to Dashboard',
-    btnGoPickup: 'Go to Pickups'
+    statusSuccess: 'Parcel updated successfully',
+    issueDialogTitle: 'Report Delivery Issue',
+    issueReasonPlaceholder: 'Enter reason (e.g. unreachable, wrong address)...',
+    btnConfirmFailed: 'Delivery Failed',
+    btnConfirmReturn: 'Return Parcel',
   },
   km: {
-    title: 'ភារកិច្ចដឹកជញ្ជូន',
-    activeTab: 'កំពុងដឹក & ចាត់តាំង',
-    completedTab: 'រួចរាល់',
-    noTasks: 'មិនទាន់មានកញ្ចប់អីវ៉ាន់ទេ',
-    noTasksSub: 'មិនទាន់មានកញ្ចប់អីវ៉ាន់ត្រូវបានចាត់តាំងនៅឡើយទេ។ កញ្ចប់អីវ៉ាន់ថ្មីនឹងបង្ហាញនៅទីនេះដោយស្វ័យប្រវត្តិ។',
-    loading: 'កំពុងផ្ទុកទិន្នន័យ...',
-    cod: 'ប្រាក់ត្រូវប្រមូល (COD)',
-    fee: 'ថ្លៃដឹក',
-    note: 'ចំណាំពិសេស',
-    btnPickup: 'ចាប់ផ្តើមទទួលអីវ៉ាន់',
-    btnDeliver: 'ប្រគល់ជោគជ័យ',
-    btnProblem: 'រាយការណ៍បញ្ហា / ត្រឡប់',
-    btnInTransit: 'ចាប់ផ្ដើមដឹកជញ្ជូន',
-    updating: 'កំពុងដំណើរការ...',
-    dialogTitle: 'រាយការណ៍បញ្ហាការដឹកជញ្ជូន',
-    dialogDesc: 'សូមជ្រើសរើសមូលហេតុបញ្ហាសម្រាប់កញ្ចប់អីវ៉ាន់នេះ៖',
-    remarkLabel: 'មូលហេតុ / ការបញ្ជាក់',
-    remarkPlaceholder: 'បញ្ជាក់មូលហេតុ (ឧ. ទាក់ទងមិនបាន, មិននៅផ្ទះ, បដិសេធទទួល)...',
-    btnFailed: 'ដឹកមិនបានសម្រេច',
-    btnReturned: 'ប្រគល់អីវ៉ាន់ត្រឡប់',
-    btnPostpone: 'លើកថ្ងៃដឹកទៅស្អែក',
-    btnCancel: 'បោះបង់',
-    customer: 'អតិថិជនទទួល',
+    title: 'ភារកិច្ច',
+    searchPlaceholder: 'ស្វែងរក Tracking, លេខកូដ ឬទូរស័ព្ទ...',
+    all: 'ទាំងអស់',
+    pending: 'រង់ចាំដឹក',
+    delivered: 'ជោគជ័យ',
+    failed: 'មិនបានសម្រេច',
+    returned: 'ត្រឡប់',
+    delivery: 'ដឹកជញ្ជូន',
+    return: 'ត្រឡប់',
+    pickup: 'ទទួលអីវ៉ាន់',
+    noTasks: 'មិនមានកញ្ចប់អីវ៉ាន់ទេ',
+    noTasksSub: 'មិនមានកញ្ចប់អីវ៉ាន់ដែលត្រូវនឹងការស្វែងរក ឬផ្ទាំងនេះឡើយ។',
+    codToCollect: 'ប្រាក់ត្រូវប្រមូល COD',
+    deliveryFee: 'ថ្លៃដឹកជញ្ជូន',
+    customer: 'អ្នកទទួល',
     merchant: 'ហាង / អ្នកផ្ញើ',
-    waitingHubReceive: 'បានប្រមូល - រង់ចាំទទួលចូលឃ្លាំង',
-    searchPlaceholder: 'ស្វែងរក Tracking, ឈ្មោះ ឬលេខទូរស័ព្ទ...',
-    filterAll: 'ទាំងអស់',
-    filterAssigned: 'ទើបចាត់តាំង',
-    filterInTransit: 'កំពុងដឹក',
-    filterDelivered: 'ជោគជ័យ',
-    filterFailed: 'មិនបានសម្រេច',
-    filterReturned: 'ត្រឡប់',
-    copied: 'បានចម្លង!',
-    callNow: 'ហៅទូរស័ព្ទ',
-    itemsCount: 'កញ្ចប់',
-    btnRefresh: 'ពិនិត្យមើលម្ដងទៀត',
-    btnGoDashboard: 'ទៅផ្ទាំងដើម',
-    btnGoPickup: 'ទៅទទួលអីវ៉ាន់'
-  }
+    address: 'អាសយដ្ឋាន',
+    call: 'ហៅទូរស័ព្ទ',
+    directions: 'ផែនទី',
+    startDelivery: 'ចាប់ផ្ដើមដឹក',
+    markDelivered: 'ប្រគល់ជោគជ័យ',
+    reportIssue: 'រាយការណ៍បញ្ហា',
+    scanQrTitle: 'ស្កេន QR កូដ',
+    scanQrDesc: 'ស្កេន QR កូដលើកញ្ចប់ដើម្បីទទួលយក ឬកែប្រែស្ថានភាព',
+    scanCodePlaceholder: 'បញ្ចូល ឬស្កេនលេខ Tracking...',
+    btnScanClaim: 'ទទួលយកកញ្ចប់អីវ៉ាន់',
+    btnCancel: 'បោះបង់',
+    statusSuccess: 'បានកែប្រែទិន្នន័យដោយជោគជ័យ',
+    issueDialogTitle: 'រាយការណ៍បញ្ហាការដឹកជញ្ជូន',
+    issueReasonPlaceholder: 'បញ្ជាក់មូលហេតុ (ឧ. ទាក់ទងមិនបាន, មិននៅផ្ទះ)...',
+    btnConfirmFailed: 'ដឹកមិនបានសម្រេច',
+    btnConfirmReturn: 'ប្រគល់អីវ៉ាន់ត្រឡប់',
+  },
 };
 
 export default function DriverTasksPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { lang } = useLanguage();
-  const [tasks, setTasks] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [updatingId, setUpdatingId] = useState<number | null>(null);
-  const [activeTab, setActiveTab] = useState<'active' | 'completed'>('active');
-  const [user, setUser] = useState<any>(null);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [copiedId, setCopiedId] = useState<string | null>(null);
 
-  // Problem Dialog state
-  const [problemDialogOpen, setProblemDialogOpen] = useState(false);
-  const [selectedTaskForProblem, setSelectedTaskForProblem] = useState<any>(null);
-  const [problemRemark, setProblemRemark] = useState('');
+  const [tasks, setTasks] = useState<any[]>([]);
+  const [counts, setCounts] = useState<Record<string, number>>({
+    all: 0,
+    pending: 0,
+    delivered: 0,
+    failed: 0,
+    returned: 0,
+  });
+  const [activeTab, setActiveTab] = useState<'all' | 'pending' | 'delivered' | 'failed' | 'returned'>('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [loading, setLoading] = useState(true);
+
+  // Modals
+  const [selectedTask, setSelectedTask] = useState<any>(null);
+  const [showScannerModal, setShowScannerModal] = useState(false);
+  const [manualScanCode, setManualScanCode] = useState('');
+  const [scanMessage, setScanMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  // Issue reporting modal
+  const [showIssueModal, setShowIssueModal] = useState(false);
+  const [issueRemark, setIssueRemark] = useState('');
+  const [actionLoading, setActionLoading] = useState(false);
 
   const t = taskTranslations[lang as 'en' | 'km'] || taskTranslations.en;
 
-  const loadTasks = async (isManual = false) => {
-    if (isManual) setRefreshing(true);
+  const loadTasksAndCounts = async (tab = activeTab, query = searchQuery) => {
     try {
-      const res = await api.get('/mobile/driver/tasks');
-      const list = Array.isArray(res.data) ? res.data : (res.data?.data || []);
-      setTasks(list);
+      const [tasksRes, countsRes] = await Promise.all([
+        api.get(`/mobile/driver/tasks?status=${tab}&search=${encodeURIComponent(query)}`),
+        api.get(`/mobile/driver/tasks/status-counts?search=${encodeURIComponent(query)}`),
+      ]);
+
+      const taskList = Array.isArray(tasksRes.data)
+        ? tasksRes.data
+        : tasksRes.data?.result || tasksRes.data?.data || [];
+      setTasks(taskList);
+
+      const rawCounts = countsRes.data || {};
+      setCounts({
+        all: rawCounts.all || 0,
+        pending: (rawCounts.pending || 0) + (rawCounts.assigned || 0) + (rawCounts.inTransit || 0),
+        delivered: rawCounts.delivered || 0,
+        failed: rawCounts.failed || 0,
+        returned: rawCounts.returned || 0,
+      });
     } catch (err) {
       console.error('Failed to load driver tasks', err);
       setTasks([]);
     } finally {
       setLoading(false);
-      if (isManual) {
-        setTimeout(() => setRefreshing(false), 400);
-      }
     }
   };
 
@@ -151,934 +156,815 @@ export default function DriverTasksPage() {
       router.push('/driver/login');
       return;
     }
-    const currentUser = getUser();
-    setUser(currentUser);
-    loadTasks();
-  }, [router]);
+    const user = getUser();
+    if (user?.role !== 'driver') {
+      router.push('/driver/login');
+      return;
+    }
 
-  const updateStatus = async (taskId: number, status: string, remark?: string) => {
-    setUpdatingId(taskId);
+    if (searchParams.get('scan') === 'true') {
+      setShowScannerModal(true);
+    }
+
+    loadTasksAndCounts(activeTab, searchQuery);
+  }, [router, activeTab]);
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setSearchQuery(val);
+    loadTasksAndCounts(activeTab, val);
+  };
+
+  const handleTabChange = (tab: 'all' | 'pending' | 'delivered' | 'failed' | 'returned') => {
+    setActiveTab(tab);
+    setLoading(true);
+    loadTasksAndCounts(tab, searchQuery);
+  };
+
+  const handleUpdateStatus = async (taskId: number, newStatus: string, note = '') => {
+    setActionLoading(true);
     try {
       await api.patch(`/mobile/driver/tasks/${taskId}/status`, {
-        status,
-        note: remark || undefined,
-        remark: remark || undefined,
+        status: newStatus,
+        note,
       });
-      await loadTasks();
-      if (problemDialogOpen) {
-        setProblemDialogOpen(false);
-        setSelectedTaskForProblem(null);
-        setProblemRemark('');
-      }
+      setSelectedTask(null);
+      setShowIssueModal(false);
+      setIssueRemark('');
+      loadTasksAndCounts(activeTab, searchQuery);
     } catch (err: any) {
-      console.error('Failed to update status', err);
-      alert(err.response?.data?.message || 'Failed to update task status');
+      alert(err.response?.data?.message || 'Failed to update status');
     } finally {
-      setUpdatingId(null);
+      setActionLoading(false);
     }
   };
 
-  const openProblemDialog = (task: any) => {
-    setSelectedTaskForProblem(task);
-    setProblemRemark('');
-    setProblemDialogOpen(true);
-  };
-
-  const handleCopy = (code: string) => {
-    navigator.clipboard.writeText(code);
-    setCopiedId(code);
-    setTimeout(() => setCopiedId(null), 2000);
-  };
-
-  const isActiveTask = (task: any) => {
-    return ['pending', 'assigned', 'in-transit', 'in-warehouse'].includes(task.status);
-  };
-
-  const isCompletedTask = (task: any) => {
-    return ['delivered', 'failed', 'returned'].includes(task.status);
-  };
-
-  const taskList = Array.isArray(tasks) ? tasks : [];
-
-  // Filter tasks based on activeTab, search query, and status chip
-  const filteredTasks = taskList.filter((task) => {
-    const tabMatch = activeTab === 'active' ? isActiveTask(task) : isCompletedTask(task);
-    if (!tabMatch) return false;
-
-    if (statusFilter !== 'all') {
-      if (task.status !== statusFilter) return false;
+  const handleClaimScanned = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!manualScanCode.trim()) return;
+    setActionLoading(true);
+    setScanMessage(null);
+    try {
+      const res = await api.post('/mobile/driver/scan/claim', { code: manualScanCode.trim() });
+      setScanMessage({
+        type: 'success',
+        text: res.data?.message || (lang === 'km' ? 'បានទទួលយកកញ្ចប់អីវ៉ាន់ដោយជោគជ័យ' : 'Parcel claimed successfully'),
+      });
+      setManualScanCode('');
+      loadTasksAndCounts(activeTab, searchQuery);
+    } catch (err: any) {
+      setScanMessage({
+        type: 'error',
+        text: err.response?.data?.message || (lang === 'km' ? 'រកមិនឃើញកញ្ចប់អីវ៉ាន់ ឬត្រូវចាត់តាំងរួចហើយ' : 'Parcel not found or already assigned'),
+      });
+    } finally {
+      setActionLoading(false);
     }
+  };
 
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      const matchTracking = task.trackingCode?.toLowerCase().includes(q);
-      const matchReceiver = task.receiverName?.toLowerCase().includes(q);
-      const matchPhone = task.receiverPhone?.toLowerCase().includes(q);
-      const matchMerchant = task.merchant?.name?.toLowerCase().includes(q);
-      const matchAddress = task.receiverAddress?.toLowerCase().includes(q);
-      return matchTracking || matchReceiver || matchPhone || matchMerchant || matchAddress;
+  const getStatusBadge = (status: string) => {
+    const s = (status || '').toLowerCase();
+    if (s === 'delivered') {
+      return { bg: '#ecfdf5', color: '#16a34a', text: lang === 'km' ? 'ជោគជ័យ' : 'Delivered' };
     }
+    if (s === 'failed' || s === 'problem') {
+      return { bg: '#fef2f2', color: '#dc2626', text: lang === 'km' ? 'បរាជ័យ' : 'Failed' };
+    }
+    if (s === 'returned' || s === 'rejected') {
+      return { bg: '#faf5ff', color: '#9333ea', text: lang === 'km' ? 'ត្រឡប់' : 'Returned' };
+    }
+    if (s === 'in-transit') {
+      return { bg: '#eff6ff', color: '#2563eb', text: lang === 'km' ? 'កំពុងដឹក' : 'In Transit' };
+    }
+    return { bg: '#fffbeb', color: '#d97706', text: lang === 'km' ? 'រង់ចាំ' : 'Pending' };
+  };
 
-    return true;
-  });
-
-  const activeTasksCount = taskList.filter(isActiveTask).length;
-  const completedTasksCount = taskList.filter(isCompletedTask).length;
-
-  const getStatusCount = (status: string) => {
-    if (status === 'all') return activeTab === 'active' ? activeTasksCount : completedTasksCount;
-    return taskList.filter(t => t.status === status).length;
+  const getTypeBadge = (status: string) => {
+    const s = (status || '').toLowerCase();
+    if (s === 'returned' || s === 'rejected') {
+      return { bg: '#eff6ff', color: '#2563eb', text: t.return };
+    }
+    return { bg: '#eff6ff', color: '#2563eb', text: t.delivery };
   };
 
   return (
     <div style={{
       display: 'flex',
       flexDirection: 'column',
-      minHeight: '100vh',
       backgroundColor: '#f8fafc',
+      minHeight: '100vh',
       fontFamily: "'Kantumruy Pro', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
-      paddingBottom: '84px',
-      position: 'relative'
     }}>
-      {/* ── 1. Top Header Bar (Clean White, High Legibility) ── */}
+      {/* 1. Header (Deep Blue) */}
       <div style={{
-        backgroundColor: '#ffffff',
-        padding: '14px 18px',
-        position: 'sticky',
-        top: 0,
-        zIndex: 30,
-        borderBottom: '1px solid #e2e8f0',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        boxShadow: '0 2px 8px rgba(15, 23, 42, 0.04)'
+        background: 'linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%)',
+        padding: '24px 20px 20px',
+        color: '#ffffff',
+        borderBottomLeftRadius: '28px',
+        borderBottomRightRadius: '28px',
+        boxShadow: '0 10px 25px rgba(29, 78, 216, 0.2)',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        {/* Title & QR Scan Button */}
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: '16px',
+        }}>
+          <h1 style={{
+            fontSize: '20px',
+            fontWeight: '900',
+            margin: 0,
+            letterSpacing: '-0.3px',
+          }}>
+            {t.title}
+          </h1>
+
           <button
-            onClick={() => router.push('/driver/dashboard')}
+            type="button"
+            onClick={() => setShowScannerModal(true)}
             style={{
               width: '38px',
               height: '38px',
-              backgroundColor: '#f1f5f9',
               borderRadius: '12px',
+              backgroundColor: 'rgba(255, 255, 255, 0.15)',
               border: 'none',
-              color: '#0f172a',
+              backdropFilter: 'blur(8px)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
+              color: '#ffffff',
               cursor: 'pointer',
-              transition: 'all 0.15s ease'
+              transition: 'transform 0.15s',
             }}
           >
-            <MdArrowBack size={20} />
+            <MdQrCodeScanner size={22} />
           </button>
-
-          <div>
-            <h1 style={{
-              fontSize: '18px',
-              fontWeight: '900',
-              color: '#0f172a',
-              margin: 0,
-              letterSpacing: '-0.3px',
-              lineHeight: 1.2
-            }}>
-              {t.title}
-            </h1>
-            <span style={{ fontSize: '11px', color: '#64748b', fontWeight: '700' }}>
-              {activeTab === 'active' ? `${activeTasksCount} ${t.itemsCount}` : `${completedTasksCount} ${t.itemsCount}`}
-            </span>
-          </div>
         </div>
 
-        {/* 1-Tap Refresh Button */}
-        <button
-          onClick={() => loadTasks(true)}
-          disabled={refreshing}
-          style={{
-            backgroundColor: '#eff6ff',
-            color: '#2563eb',
-            border: '1px solid #bfdbfe',
-            padding: '8px 12px',
-            borderRadius: '12px',
-            fontSize: '12px',
-            fontWeight: '800',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            transition: 'all 0.2s ease'
-          }}
-        >
-          <MdRefresh size={18} style={{ animation: refreshing ? 'spinRefresh 0.8s linear infinite' : 'none' }} />
-          <span>{lang === 'km' ? 'ផ្ទុកឡើងវិញ' : 'Refresh'}</span>
-        </button>
-      </div>
-
-      {/* ── 2. Sticky Tab & Filter Controls Header ── */}
-      <div style={{
-        backgroundColor: '#ffffff',
-        padding: '12px 16px 14px',
-        borderBottom: '1px solid #e2e8f0',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '10px'
-      }}>
-        {/* Dual Segmented Tabs */}
+        {/* Search Bar */}
         <div style={{
-          display: 'flex',
-          backgroundColor: '#f1f5f9',
+          backgroundColor: '#ffffff',
           borderRadius: '14px',
-          padding: '4px',
-          gap: '4px'
-        }}>
-          <button
-            onClick={() => { setActiveTab('active'); setStatusFilter('all'); }}
-            style={{
-              flex: 1,
-              padding: '9px 12px',
-              borderRadius: '10px',
-              border: 'none',
-              backgroundColor: activeTab === 'active' ? '#2563eb' : 'transparent',
-              color: activeTab === 'active' ? '#ffffff' : '#64748b',
-              fontWeight: activeTab === 'active' ? '800' : '700',
-              fontSize: '13px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '6px',
-              cursor: 'pointer',
-              transition: 'all 0.15s ease',
-              boxShadow: activeTab === 'active' ? '0 2px 8px rgba(37, 99, 235, 0.3)' : 'none'
-            }}
-          >
-            <span>{t.activeTab}</span>
-            <span style={{
-              fontSize: '11px',
-              padding: '2px 7px',
-              borderRadius: '20px',
-              backgroundColor: activeTab === 'active' ? 'rgba(255,255,255,0.25)' : '#e2e8f0',
-              color: activeTab === 'active' ? '#ffffff' : '#475569',
-              fontWeight: '900'
-            }}>
-              {activeTasksCount}
-            </span>
-          </button>
-
-          <button
-            onClick={() => { setActiveTab('completed'); setStatusFilter('all'); }}
-            style={{
-              flex: 1,
-              padding: '9px 12px',
-              borderRadius: '10px',
-              border: 'none',
-              backgroundColor: activeTab === 'completed' ? '#2563eb' : 'transparent',
-              color: activeTab === 'completed' ? '#ffffff' : '#64748b',
-              fontWeight: activeTab === 'completed' ? '800' : '700',
-              fontSize: '13px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '6px',
-              cursor: 'pointer',
-              transition: 'all 0.15s ease',
-              boxShadow: activeTab === 'completed' ? '0 2px 8px rgba(37, 99, 235, 0.3)' : 'none'
-            }}
-          >
-            <span>{t.completedTab}</span>
-            <span style={{
-              fontSize: '11px',
-              padding: '2px 7px',
-              borderRadius: '20px',
-              backgroundColor: activeTab === 'completed' ? 'rgba(255,255,255,0.25)' : '#e2e8f0',
-              color: activeTab === 'completed' ? '#ffffff' : '#475569',
-              fontWeight: '900'
-            }}>
-              {completedTasksCount}
-            </span>
-          </button>
-        </div>
-
-        {/* Clean Search Input */}
-        <div style={{
+          padding: '0 14px',
+          height: '46px',
           display: 'flex',
           alignItems: 'center',
-          backgroundColor: '#f8fafc',
-          borderRadius: '12px',
-          border: '1.5px solid #e2e8f0',
-          padding: '8px 12px',
-          gap: '8px'
+          gap: '10px',
+          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)',
         }}>
-          <MdSearch size={20} color="#94a3b8" />
+          <MdSearch size={22} color="#94a3b8" />
           <input
             type="text"
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={handleSearchChange}
             placeholder={t.searchPlaceholder}
             style={{
-              flex: 1,
               border: 'none',
               outline: 'none',
               backgroundColor: 'transparent',
-              fontSize: '13px',
-              fontWeight: '600',
+              width: '100%',
+              fontSize: '13.5px',
+              fontWeight: '500',
               color: '#0f172a',
-              fontFamily: 'inherit'
             }}
           />
-          {searchQuery && (
-            <button
-              onClick={() => setSearchQuery('')}
-              style={{
-                background: '#e2e8f0',
-                border: 'none',
-                color: '#64748b',
-                width: '20px',
-                height: '20px',
-                borderRadius: '50%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer'
-              }}
-            >
-              <MdClose size={14} />
-            </button>
-          )}
-        </div>
-
-        {/* Horizontally Scrollable Status Chips */}
-        <div style={{
-          display: 'flex',
-          gap: '6px',
-          overflowX: 'auto',
-          paddingBottom: '2px',
-          scrollbarWidth: 'none'
-        }}>
-          {(activeTab === 'active'
-            ? [
-                { key: 'all', label: t.filterAll },
-                { key: 'assigned', label: t.filterAssigned },
-                { key: 'in-transit', label: t.filterInTransit },
-                { key: 'pending', label: 'Pending' }
-              ]
-            : [
-                { key: 'all', label: t.filterAll },
-                { key: 'delivered', label: t.filterDelivered },
-                { key: 'failed', label: t.filterFailed },
-                { key: 'returned', label: t.filterReturned }
-              ]
-          ).map((chip) => {
-            const isSelected = statusFilter === chip.key;
-            const count = getStatusCount(chip.key);
-            return (
-              <button
-                key={chip.key}
-                onClick={() => setStatusFilter(chip.key)}
-                style={{
-                  flexShrink: 0,
-                  padding: '5px 12px',
-                  borderRadius: '20px',
-                  border: isSelected ? '1px solid #2563eb' : '1px solid #e2e8f0',
-                  backgroundColor: isSelected ? '#eff6ff' : '#ffffff',
-                  color: isSelected ? '#2563eb' : '#64748b',
-                  fontWeight: isSelected ? '800' : '600',
-                  fontSize: '12px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '5px',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease'
-                }}
-              >
-                <span>{chip.label}</span>
-                <span style={{
-                  fontSize: '10.5px',
-                  fontWeight: '900',
-                  color: isSelected ? '#2563eb' : '#94a3b8'
-                }}>
-                  ({count})
-                </span>
-              </button>
-            );
-          })}
+          <button
+            type="button"
+            onClick={() => setShowScannerModal(true)}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', padding: 0 }}
+          >
+            <MdQrCodeScanner size={18} />
+          </button>
         </div>
       </div>
 
-      {/* ── 3. Main Content / Task Cards Area ── */}
-      <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+      {/* 2. Filter Tabs (Horizontal Pills) */}
+      <div style={{
+        display: 'flex',
+        gap: '8px',
+        padding: '16px',
+        overflowX: 'auto',
+        scrollbarWidth: 'none',
+      }}>
+        {[
+          { key: 'all', label: t.all, count: counts.all },
+          { key: 'pending', label: t.pending, count: counts.pending },
+          { key: 'delivered', label: t.delivered, count: counts.delivered },
+          { key: 'failed', label: t.failed, count: counts.failed },
+          { key: 'returned', label: t.returned, count: counts.returned },
+        ].map((tab) => {
+          const isActive = activeTab === tab.key;
+          return (
+            <button
+              key={tab.key}
+              type="button"
+              onClick={() => handleTabChange(tab.key as any)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '8px 16px',
+                borderRadius: '20px',
+                border: 'none',
+                backgroundColor: isActive ? '#1e60ff' : '#f1f5f9',
+                color: isActive ? '#ffffff' : '#64748b',
+                fontSize: '13px',
+                fontWeight: isActive ? '700' : '600',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                boxShadow: isActive ? '0 4px 12px rgba(30, 96, 255, 0.25)' : 'none',
+                transition: 'all 0.2s',
+              }}
+            >
+              <span>{tab.label}</span>
+              <span style={{
+                fontSize: '11.5px',
+                opacity: 0.9,
+              }}>
+                ({tab.count})
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* 3. Parcel Tasks List */}
+      <div style={{ padding: '0 16px 24px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
         {loading ? (
-          <div style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '60px 0'
-          }}>
-            <div style={{
-              width: '36px',
-              height: '36px',
-              border: '3.5px solid rgba(37, 99, 235, 0.15)',
-              borderTopColor: '#2563eb',
-              borderRadius: '50%',
-              animation: 'spinRefresh 0.8s linear infinite',
-              marginBottom: '12px'
-            }} />
-            <span style={{ fontSize: '13px', color: '#64748b', fontWeight: '700' }}>
-              {t.loading}
-            </span>
+          <div style={{ padding: '40px 0', textAlign: 'center', color: '#94a3b8', fontSize: '13.5px' }}>
+            Loading tasks...
           </div>
-        ) : filteredTasks.length === 0 ? (
-          /* ── Improved, Friendly Empty State ── */
+        ) : tasks.length === 0 ? (
           <div style={{
             backgroundColor: '#ffffff',
-            borderRadius: '24px',
+            borderRadius: '20px',
             padding: '36px 20px',
             textAlign: 'center',
             border: '1px solid #e2e8f0',
-            boxShadow: '0 4px 16px rgba(15, 23, 42, 0.02)',
             display: 'flex',
             flexDirection: 'column',
-            alignItems: 'center'
+            alignItems: 'center',
+            gap: '8px',
           }}>
             <div style={{
-              width: '74px',
-              height: '74px',
-              borderRadius: '24px',
-              backgroundColor: '#eff6ff',
+              width: '48px',
+              height: '48px',
+              borderRadius: '50%',
+              backgroundColor: '#f1f5f9',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              fontSize: '36px',
-              marginBottom: '16px',
-              boxShadow: '0 8px 20px rgba(37, 99, 235, 0.12)'
+              color: '#94a3b8',
             }}>
-              📦
+              <MdInventory2 size={26} />
             </div>
-
-            <h3 style={{ fontSize: '17px', fontWeight: '900', color: '#0f172a', margin: '0 0 6px' }}>
-              {t.noTasks}
-            </h3>
-            <p style={{
-              fontSize: '13px',
-              color: '#64748b',
-              margin: '0 0 24px',
-              maxWidth: '300px',
-              lineHeight: 1.55,
-              fontWeight: '500'
-            }}>
-              {t.noTasksSub}
-            </p>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%', maxWidth: '280px' }}>
-              <button
-                onClick={() => loadTasks(true)}
-                style={{
-                  backgroundColor: '#2563eb',
-                  color: '#ffffff',
-                  border: 'none',
-                  padding: '12px 18px',
-                  borderRadius: '14px',
-                  fontSize: '13.5px',
-                  fontWeight: '800',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px',
-                  boxShadow: '0 4px 14px rgba(37, 99, 235, 0.25)'
-                }}
-              >
-                <MdRefresh size={18} /> {t.btnRefresh}
-              </button>
-
-              <button
-                onClick={() => router.push('/driver/pickups')}
-                style={{
-                  backgroundColor: '#f8fafc',
-                  color: '#475569',
-                  border: '1px solid #cbd5e1',
-                  padding: '11px 18px',
-                  borderRadius: '14px',
-                  fontSize: '13px',
-                  fontWeight: '700',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '6px'
-                }}
-              >
-                <MdInventory2 size={16} /> {t.btnGoPickup}
-              </button>
-            </div>
+            <div style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a' }}>{t.noTasks}</div>
+            <div style={{ fontSize: '12px', color: '#64748b', maxWidth: '260px' }}>{t.noTasksSub}</div>
           </div>
         ) : (
-          /* ── Task Delivery Cards (High Contrast & Ergonomic) ── */
-          filteredTasks.map((task) => {
-            const isPickupTask = task.pickupDriverId === user?.id;
-            const isDeliveryTask = task.driverId === user?.id;
-            const codNum = Number(task.cod) || 0;
-            const feeNum = Number(task.deliveryFee) || 0;
+          tasks.map((task: any) => {
+            const statusBadge = getStatusBadge(task.status);
+            const typeBadge = getTypeBadge(task.status);
+            const merchantName = task.merchant?.name || task.merchant?.nameKh || task.receiverName || 'Merchant Store';
+            const locationAddress = task.receiverAddress || 'Phnom Penh';
 
             return (
               <div
                 key={task.id}
+                onClick={() => router.push(`/driver/tasks/${task.id}`)}
                 style={{
                   backgroundColor: '#ffffff',
-                  borderRadius: '20px',
-                  border: '1.5px solid #e2e8f0',
-                  boxShadow: '0 4px 12px rgba(15, 23, 42, 0.03)',
-                  overflow: 'hidden',
-                  display: 'flex',
-                  flexDirection: 'column'
-                }}
-              >
-                {/* 1. Task Card Header */}
-                <div style={{
-                  padding: '12px 16px',
-                  backgroundColor: '#f8fafc',
-                  borderBottom: '1px solid #e2e8f0',
+                  borderRadius: '18px',
+                  padding: '14px 16px',
+                  border: '1px solid #e2e8f0',
+                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.03)',
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'space-between'
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{
-                      fontSize: '13.5px',
-                      fontWeight: '900',
-                      color: '#0f172a',
-                      fontFamily: 'monospace',
-                      letterSpacing: '-0.2px'
-                    }}>
-                      {task.trackingCode || `TASK-#${task.id}`}
-                    </span>
-                    <button
-                      onClick={() => handleCopy(task.trackingCode)}
-                      style={{
-                        background: 'transparent',
-                        border: 'none',
-                        color: copiedId === task.trackingCode ? '#16a34a' : '#64748b',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        padding: '2px'
-                      }}
-                      title="Copy Tracking"
-                    >
-                      {copiedId === task.trackingCode ? (
-                        <span style={{ fontSize: '11px', fontWeight: '800' }}>✓ {t.copied}</span>
-                      ) : (
-                        <MdContentCopy size={15} />
-                      )}
-                    </button>
-                  </div>
-
-                  <Badge status={task.status} />
-                </div>
-
-                {/* 2. Card Body: Customer & Destination Info */}
-                <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-
-                  {/* Customer Information with Instant Call Button */}
+                  justifyContent: 'space-between',
+                  cursor: 'pointer',
+                  transition: 'transform 0.15s ease, box-shadow 0.15s ease',
+                }}
+              >
+                {/* Left side: Icon + Information */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, minWidth: 0 }}>
+                  {/* Orange Warm Box Container */}
                   <div style={{
-                    display: 'flex',
-                    alignItems: 'flex-start',
-                    justifyContent: 'space-between',
-                    gap: '12px'
-                  }}>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700', textTransform: 'uppercase', marginBottom: '2px' }}>
-                        {t.customer}
-                      </div>
-                      {task.receiverName && task.receiverName !== '-' && task.receiverName !== '—' && (
-                        <div style={{ fontSize: '16px', fontWeight: '900', color: '#0f172a' }}>
-                          {task.receiverName}
-                        </div>
-                      )}
-                      {task.receiverAddress && (
-                        <div style={{
-                          display: 'flex',
-                          alignItems: 'flex-start',
-                          gap: '4px',
-                          color: '#475569',
-                          fontSize: '12.5px',
-                          marginTop: (task.receiverName && task.receiverName !== '-' && task.receiverName !== '—') ? '4px' : '0px',
-                          lineHeight: 1.4
-                        }}>
-                          <MdLocationOn size={16} color="#f97316" style={{ flexShrink: 0, marginTop: '2px' }} />
-                          <span>{task.receiverAddress} {task.zone?.name ? `(${task.zone.name})` : ''}</span>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Prominent One-Tap Call Button */}
-                    {task.receiverPhone && (
-                      <a
-                        href={`tel:${task.receiverPhone}`}
-                        style={{
-                          backgroundColor: '#ecfdf5',
-                          color: '#059669',
-                          border: '1.5px solid #a7f3d0',
-                          padding: '8px 14px',
-                          borderRadius: '14px',
-                          textDecoration: 'none',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                          fontSize: '13px',
-                          fontWeight: '900',
-                          flexShrink: 0,
-                          boxShadow: '0 2px 6px rgba(16, 185, 129, 0.15)'
-                        }}
-                      >
-                        <MdCall size={16} />
-                        <span>{t.callNow}</span>
-                      </a>
-                    )}
-                  </div>
-
-                  {/* Merchant / Shop Source Info (If available) */}
-                  {task.merchant && (
-                    <div style={{
-                      backgroundColor: '#f8fafc',
-                      borderRadius: '12px',
-                      padding: '8px 12px',
-                      border: '1px solid #f1f5f9',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      fontSize: '12px',
-                      color: '#64748b'
-                    }}>
-                      <MdStore size={16} color="#64748b" />
-                      <span style={{ fontWeight: '600' }}>{t.merchant}:</span>
-                      <strong style={{ color: '#0f172a' }}>{task.merchant.name}</strong>
-                      {task.merchant.phone && (
-                        <a href={`tel:${task.merchant.phone}`} style={{ color: '#2563eb', textDecoration: 'none', fontWeight: '700', marginLeft: 'auto' }}>
-                          📞 {task.merchant.phone}
-                        </a>
-                      )}
-                    </div>
-                  )}
-
-                  {/* 3. COD Money Collection Box (High Contrast) */}
-                  <div style={{
-                    backgroundColor: codNum > 0 ? '#fff7ed' : '#f8fafc',
-                    border: codNum > 0 ? '1.5px solid #ffedd5' : '1px solid #e2e8f0',
+                    width: '44px',
+                    height: '44px',
                     borderRadius: '14px',
-                    padding: '12px 14px',
+                    backgroundColor: '#ffedd5',
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'space-between'
+                    justifyContent: 'center',
+                    color: '#ea580c',
+                    flexShrink: 0,
                   }}>
-                    <div>
-                      <div style={{ fontSize: '11px', color: codNum > 0 ? '#c2410c' : '#64748b', fontWeight: '800' }}>
-                        💵 {t.cod}
-                      </div>
-                      <div style={{
-                        fontSize: '18px',
-                        fontWeight: '900',
-                        color: codNum > 0 ? '#ea580c' : '#0f172a',
-                        marginTop: '2px'
-                      }}>
-                        {task.codCurrency === 'KHR'
-                          ? `${codNum.toLocaleString()} ៛`
-                          : `$${codNum.toFixed(2)}`}
-                      </div>
-                    </div>
-
-                    <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700' }}>
-                        {t.fee}
-                      </div>
-                      <div style={{ fontSize: '14px', fontWeight: '800', color: '#0f172a', marginTop: '2px' }}>
-                        ${feeNum.toFixed(2)}
-                      </div>
-                    </div>
+                    <MdInventory2 size={24} />
                   </div>
 
-                  {/* Special Delivery Note or Failure Remark */}
-                  {task.note && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', overflow: 'hidden' }}>
                     <div style={{
-                      backgroundColor: (task.status === 'failed' || task.status === 'returned') ? '#fee2e2' : '#fef3c7',
-                      border: (task.status === 'failed' || task.status === 'returned') ? '1px solid #fca5a5' : '1px solid #fde68a',
-                      borderRadius: '10px',
-                      padding: '10px 12px',
-                      fontSize: '12.5px',
-                      color: (task.status === 'failed' || task.status === 'returned') ? '#991b1b' : '#92400e',
+                      fontSize: '13.5px',
+                      fontWeight: '800',
+                      color: '#0f172a',
+                    }}>
+                      #{task.trackingCode}
+                    </div>
+                    <div style={{
+                      fontSize: '12px',
+                      fontWeight: '600',
+                      color: '#475569',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                    }}>
+                      {merchantName}
+                    </div>
+                    <div style={{
+                      fontSize: '11.5px',
+                      color: '#94a3b8',
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '8px'
+                      gap: '4px',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
                     }}>
-                      <MdInfoOutline size={18} style={{ flexShrink: 0, color: (task.status === 'failed' || task.status === 'returned') ? '#dc2626' : '#d97706' }} />
-                      <span>
-                        <strong>{(task.status === 'failed' || task.status === 'returned') ? (lang === 'km' ? 'មូលហេតុមិនបានសម្រេច (Remark)' : 'Failure Reason / Remark') : t.note}:</strong> {task.note}
-                      </span>
+                      <MdLocationOn size={14} style={{ flexShrink: 0 }} />
+                      <span>{locationAddress}</span>
                     </div>
-                  )}
+                  </div>
                 </div>
 
-                {/* 4. Action Buttons Footer */}
-                {isActiveTask(task) && (
-                  <div style={{
-                    padding: '12px 16px',
-                    backgroundColor: '#ffffff',
-                    borderTop: '1px solid #f1f5f9',
-                    display: 'flex',
-                    gap: '10px'
+                {/* Right side: Status Badge + Type Tag + Chevron */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0, marginLeft: '8px' }}>
+                  {/* Status Tag */}
+                  <span style={{
+                    backgroundColor: statusBadge.bg,
+                    color: statusBadge.color,
+                    fontSize: '11px',
+                    fontWeight: '700',
+                    padding: '4px 8px',
+                    borderRadius: '14px',
                   }}>
-                    {/* Role: Pickup Driver */}
-                    {isPickupTask && task.status === 'pending' && (
-                      <button
-                        onClick={() => updateStatus(task.id, 'in-warehouse')}
-                        disabled={updatingId === task.id}
-                        style={{
-                          flex: 1,
-                          backgroundColor: '#059669',
-                          color: '#ffffff',
-                          border: 'none',
-                          padding: '13px',
-                          borderRadius: '14px',
-                          fontWeight: '800',
-                          fontSize: '14px',
-                          cursor: 'pointer',
-                          boxShadow: '0 4px 12px rgba(5, 150, 105, 0.25)'
-                        }}
-                      >
-                        {updatingId === task.id ? t.updating : t.btnPickup}
-                      </button>
-                    )}
+                    {statusBadge.text}
+                  </span>
 
-                    {/* Role: Delivery Driver */}
-                    {isDeliveryTask && (
-                      <>
-                        {(task.status === 'assigned' || task.status === 'pending' || task.status === 'in-warehouse') && (
-                          <button
-                            onClick={() => updateStatus(task.id, 'in-transit')}
-                            disabled={updatingId === task.id}
-                            style={{
-                              flex: 1,
-                              backgroundColor: '#2563eb',
-                              color: '#ffffff',
-                              border: 'none',
-                              padding: '13px',
-                              borderRadius: '14px',
-                              fontWeight: '800',
-                              fontSize: '14px',
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              gap: '8px',
-                              boxShadow: '0 4px 12px rgba(37, 99, 235, 0.25)'
-                            }}
-                          >
-                            <MdLocalShipping size={18} />
-                            <span>{updatingId === task.id ? t.updating : t.btnInTransit}</span>
-                          </button>
-                        )}
+                  {/* Delivery / Return Tag */}
+                  <span style={{
+                    backgroundColor: typeBadge.bg,
+                    color: typeBadge.color,
+                    fontSize: '11px',
+                    fontWeight: '700',
+                    padding: '4px 8px',
+                    borderRadius: '14px',
+                  }}>
+                    {typeBadge.text}
+                  </span>
 
-                        {task.status === 'in-transit' && (
-                          <>
-                            <button
-                              onClick={() => updateStatus(task.id, 'delivered')}
-                              disabled={updatingId === task.id}
-                              style={{
-                                flex: 2,
-                                backgroundColor: '#16a34a',
-                                color: '#ffffff',
-                                border: 'none',
-                                padding: '13px',
-                                borderRadius: '14px',
-                                fontWeight: '800',
-                                fontSize: '14px',
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                gap: '8px',
-                                boxShadow: '0 4px 12px rgba(22, 163, 74, 0.25)'
-                              }}
-                            >
-                              <MdCheckCircle size={18} />
-                              <span>{updatingId === task.id ? t.updating : t.btnDeliver}</span>
-                            </button>
-
-                            <button
-                              onClick={() => openProblemDialog(task)}
-                              disabled={updatingId === task.id}
-                              style={{
-                                flex: 1,
-                                backgroundColor: '#fff1f2',
-                                color: '#e11d48',
-                                border: '1.5px solid #fecdd3',
-                                padding: '13px 8px',
-                                borderRadius: '14px',
-                                fontWeight: '800',
-                                fontSize: '12.5px',
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                gap: '4px'
-                              }}
-                            >
-                              <MdError size={16} />
-                              <span>{t.btnProblem}</span>
-                            </button>
-                          </>
-                        )}
-                      </>
-                    )}
-                  </div>
-                )}
+                  <MdChevronRight size={18} color="#94a3b8" />
+                </div>
               </div>
             );
           })
         )}
       </div>
 
-      {/* ── 4. Problem & Remark Modal ── */}
-      {problemDialogOpen && selectedTaskForProblem && (
+      {/* Task Details Action Modal */}
+      {selectedTask && (
         <div style={{
           position: 'fixed',
-          top: 0, left: 0, right: 0, bottom: 0,
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(15, 23, 42, 0.6)',
+          backdropFilter: 'blur(4px)',
+          display: 'flex',
+          alignItems: 'flex-end',
+          justifyContent: 'center',
+          zIndex: 1000,
+        }}>
+          <div style={{
+            backgroundColor: '#ffffff',
+            borderTopLeftRadius: '28px',
+            borderTopRightRadius: '28px',
+            padding: '24px 20px 32px',
+            width: '100%',
+            maxWidth: '480px',
+            maxHeight: '85vh',
+            overflowY: 'auto',
+            boxShadow: '0 -10px 40px rgba(0, 0, 0, 0.2)',
+          }}>
+            {/* Header */}
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: '16px',
+            }}>
+              <div>
+                <div style={{ fontSize: '17px', fontWeight: '900', color: '#0f172a' }}>
+                  #{selectedTask.trackingCode}
+                </div>
+                <div style={{ fontSize: '12px', color: '#64748b' }}>
+                  {selectedTask.merchant?.name || 'Merchant Order'}
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setSelectedTask(null)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}
+              >
+                <MdClose size={24} />
+              </button>
+            </div>
+
+            {/* Info Cards */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '20px' }}>
+              {/* Receiver Info */}
+              <div style={{
+                backgroundColor: '#f8fafc',
+                borderRadius: '14px',
+                padding: '12px 14px',
+                border: '1px solid #e2e8f0',
+              }}>
+                <div style={{ fontSize: '11px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase' }}>
+                  {t.customer}
+                </div>
+                <div style={{ fontSize: '14px', fontWeight: '800', color: '#0f172a', marginTop: '2px' }}>
+                  {selectedTask.receiverName || 'Customer'} • {selectedTask.receiverPhone}
+                </div>
+                <div style={{ fontSize: '12px', color: '#475569', marginTop: '4px' }}>
+                  {selectedTask.receiverAddress}
+                </div>
+              </div>
+
+              {/* Financials (COD & Delivery Fee) */}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                gap: '10px',
+              }}>
+                <div style={{
+                  backgroundColor: '#fff7ed',
+                  borderRadius: '14px',
+                  padding: '12px',
+                  border: '1px solid #fed7aa',
+                }}>
+                  <div style={{ fontSize: '11px', fontWeight: '700', color: '#ea580c' }}>
+                    {t.codToCollect}
+                  </div>
+                  <div style={{ fontSize: '16px', fontWeight: '900', color: '#c2410c', marginTop: '2px' }}>
+                    ${Number(selectedTask.cod || 0).toFixed(2)} {selectedTask.codCurrency || 'USD'}
+                  </div>
+                </div>
+
+                <div style={{
+                  backgroundColor: '#f0fdf4',
+                  borderRadius: '14px',
+                  padding: '12px',
+                  border: '1px solid #bbf7d0',
+                }}>
+                  <div style={{ fontSize: '11px', fontWeight: '700', color: '#16a34a' }}>
+                    {t.deliveryFee}
+                  </div>
+                  <div style={{ fontSize: '16px', fontWeight: '900', color: '#15803d', marginTop: '2px' }}>
+                    ${Number(selectedTask.deliveryFee || 0).toFixed(2)}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Quick Actions (Call, Map) */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '16px' }}>
+              <a
+                href={`tel:${selectedTask.receiverPhone}`}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  padding: '12px',
+                  backgroundColor: '#eff6ff',
+                  color: '#1d4ed8',
+                  borderRadius: '14px',
+                  fontWeight: '700',
+                  fontSize: '13.5px',
+                  textDecoration: 'none',
+                  border: '1px solid #bfdbfe',
+                }}
+              >
+                <MdCall size={18} />
+                <span>{t.call}</span>
+              </a>
+
+              <a
+                href={`https://maps.google.com/?q=${encodeURIComponent(selectedTask.receiverAddress || 'Phnom Penh')}`}
+                target="_blank"
+                rel="noreferrer"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  padding: '12px',
+                  backgroundColor: '#f1f5f9',
+                  color: '#334155',
+                  borderRadius: '14px',
+                  fontWeight: '700',
+                  fontSize: '13.5px',
+                  textDecoration: 'none',
+                  border: '1px solid #cbd5e1',
+                }}
+              >
+                <MdDirections size={18} />
+                <span>{t.directions}</span>
+              </a>
+            </div>
+
+            {/* Status Transition Action Buttons */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {selectedTask.status !== 'delivered' && (
+                <>
+                  {selectedTask.status !== 'in-transit' && (
+                    <button
+                      type="button"
+                      disabled={actionLoading}
+                      onClick={() => handleUpdateStatus(selectedTask.id, 'in-transit')}
+                      style={{
+                        padding: '14px',
+                        backgroundColor: '#1e60ff',
+                        color: '#ffffff',
+                        border: 'none',
+                        borderRadius: '14px',
+                        fontSize: '14.5px',
+                        fontWeight: '800',
+                        cursor: 'pointer',
+                        boxShadow: '0 4px 14px rgba(30, 96, 255, 0.3)',
+                      }}
+                    >
+                      {t.startDelivery}
+                    </button>
+                  )}
+
+                  <button
+                    type="button"
+                    disabled={actionLoading}
+                    onClick={() => handleUpdateStatus(selectedTask.id, 'delivered')}
+                    style={{
+                      padding: '14px',
+                      backgroundColor: '#16a34a',
+                      color: '#ffffff',
+                      border: 'none',
+                      borderRadius: '14px',
+                      fontSize: '14.5px',
+                      fontWeight: '800',
+                      cursor: 'pointer',
+                      boxShadow: '0 4px 14px rgba(22, 163, 74, 0.3)',
+                    }}
+                  >
+                    {t.markDelivered}
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={actionLoading}
+                    onClick={() => setShowIssueModal(true)}
+                    style={{
+                      padding: '12px',
+                      backgroundColor: '#fef2f2',
+                      color: '#dc2626',
+                      border: '1px solid #fecaca',
+                      borderRadius: '14px',
+                      fontSize: '13.5px',
+                      fontWeight: '700',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {t.reportIssue}
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Report Issue / Failed / Return Modal */}
+      {showIssueModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
           backgroundColor: 'rgba(15, 23, 42, 0.65)',
-          backdropFilter: 'blur(6px)',
-          zIndex: 9999,
+          backdropFilter: 'blur(4px)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          padding: '16px'
+          zIndex: 1100,
+          padding: '20px',
         }}>
           <div style={{
             backgroundColor: '#ffffff',
             borderRadius: '24px',
-            width: '100%',
-            maxWidth: '390px',
             padding: '24px',
-            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.3)',
-            border: '1px solid #e2e8f0',
-            animation: 'popIn 0.2s cubic-bezier(0.16, 1, 0.3, 1)'
+            width: '100%',
+            maxWidth: '380px',
+            boxShadow: '0 20px 50px rgba(0,0,0,0.25)',
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <div style={{
-                  width: '36px', height: '36px', borderRadius: '12px', backgroundColor: '#fff1f2',
-                  color: '#e11d48', display: 'flex', alignItems: 'center', justifyContent: 'center'
-                }}>
-                  <MdError size={20} />
-                </div>
-                <h3 style={{ fontSize: '17px', fontWeight: '900', color: '#0f172a', margin: 0 }}>
-                  {t.dialogTitle}
-                </h3>
-              </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+              <span style={{ fontSize: '16px', fontWeight: '800', color: '#0f172a' }}>
+                {t.issueDialogTitle}
+              </span>
               <button
-                onClick={() => setProblemDialogOpen(false)}
-                style={{
-                  width: '32px', height: '32px', borderRadius: '50%', backgroundColor: '#f1f5f9',
-                  border: 'none', color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer'
-                }}
+                type="button"
+                onClick={() => setShowIssueModal(false)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}
               >
-                <MdClose size={18} />
+                <MdClose size={22} />
               </button>
             </div>
 
-            <p style={{ fontSize: '13px', color: '#64748b', margin: '0 0 16px', lineHeight: 1.5 }}>
-              {t.dialogDesc}
-            </p>
-
-            <div style={{ marginBottom: '16px' }}>
-              <label style={{ fontSize: '12px', fontWeight: '800', color: '#334155', display: 'block', marginBottom: '6px' }}>
-                {t.remarkLabel}
-              </label>
-              <textarea
-                value={problemRemark}
-                onChange={(e) => setProblemRemark(e.target.value)}
-                placeholder={t.remarkPlaceholder}
-                rows={3}
-                style={{
-                  width: '100%',
-                  padding: '12px',
-                  borderRadius: '12px',
-                  border: '1.5px solid #cbd5e1',
-                  fontSize: '13px',
-                  outline: 'none',
-                  backgroundColor: '#f8fafc',
-                  boxSizing: 'border-box',
-                  fontFamily: 'inherit',
-                  resize: 'none'
-                }}
-              />
-            </div>
+            <textarea
+              rows={3}
+              value={issueRemark}
+              onChange={(e) => setIssueRemark(e.target.value)}
+              placeholder={t.issueReasonPlaceholder}
+              style={{
+                width: '100%',
+                padding: '12px',
+                borderRadius: '12px',
+                border: '1.5px solid #e2e8f0',
+                fontSize: '13.5px',
+                outline: 'none',
+                marginBottom: '16px',
+                resize: 'none',
+              }}
+            />
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <button
-                onClick={() => updateStatus(selectedTaskForProblem.id, 'failed', problemRemark)}
-                disabled={updatingId === selectedTaskForProblem.id}
+                type="button"
+                disabled={actionLoading}
+                onClick={() => handleUpdateStatus(selectedTask.id, 'failed', issueRemark)}
                 style={{
+                  padding: '12px',
                   backgroundColor: '#dc2626',
                   color: '#ffffff',
                   border: 'none',
-                  padding: '12px',
                   borderRadius: '12px',
                   fontSize: '13.5px',
-                  fontWeight: '800',
-                  cursor: 'pointer'
+                  fontWeight: '700',
+                  cursor: 'pointer',
                 }}
               >
-                {t.btnFailed}
+                {t.btnConfirmFailed}
               </button>
 
               <button
-                onClick={() => updateStatus(selectedTaskForProblem.id, 'returned', problemRemark)}
-                disabled={updatingId === selectedTaskForProblem.id}
+                type="button"
+                disabled={actionLoading}
+                onClick={() => handleUpdateStatus(selectedTask.id, 'returned', issueRemark)}
                 style={{
-                  backgroundColor: '#ea580c',
+                  padding: '12px',
+                  backgroundColor: '#9333ea',
                   color: '#ffffff',
                   border: 'none',
-                  padding: '12px',
                   borderRadius: '12px',
                   fontSize: '13.5px',
-                  fontWeight: '800',
-                  cursor: 'pointer'
+                  fontWeight: '700',
+                  cursor: 'pointer',
                 }}
               >
-                {t.btnReturned}
-              </button>
-
-              <button
-                onClick={() => setProblemDialogOpen(false)}
-                style={{
-                  backgroundColor: '#f1f5f9',
-                  color: '#475569',
-                  border: 'none',
-                  padding: '12px',
-                  borderRadius: '12px',
-                  fontSize: '13.5px',
-                  fontWeight: '800',
-                  cursor: 'pointer'
-                }}
-              >
-                {t.btnCancel}
+                {t.btnConfirmReturn}
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Global CSS keyframes */}
-      <style dangerouslySetInnerHTML={{
-        __html: `
-        @keyframes spinRefresh {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
-        }
-        @keyframes popIn {
-          from { opacity: 0; transform: scale(0.95); }
-          to { opacity: 1; transform: scale(1); }
-        }
-      `}} />
+      {/* QR Scanner / Claim Modal */}
+      {showScannerModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(15, 23, 42, 0.7)',
+          backdropFilter: 'blur(4px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1100,
+          padding: '20px',
+        }}>
+          <div style={{
+            backgroundColor: '#ffffff',
+            borderRadius: '28px',
+            padding: '24px',
+            width: '100%',
+            maxWidth: '380px',
+            boxShadow: '0 25px 50px rgba(0,0,0,0.25)',
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+              <span style={{ fontSize: '17px', fontWeight: '900', color: '#0f172a' }}>
+                {t.scanQrTitle}
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowScannerModal(false);
+                  setScanMessage(null);
+                }}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}
+              >
+                <MdClose size={24} />
+              </button>
+            </div>
+
+            <p style={{ fontSize: '12.5px', color: '#64748b', marginTop: 0, marginBottom: '16px' }}>
+              {t.scanQrDesc}
+            </p>
+
+            {/* QR Viewfinder Target Simulation */}
+            <div style={{
+              height: '160px',
+              backgroundColor: '#0f172a',
+              borderRadius: '18px',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#38bdf8',
+              marginBottom: '16px',
+              position: 'relative',
+              overflow: 'hidden',
+            }}>
+              <MdQrCodeScanner size={64} />
+              <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '8px' }}>
+                Position QR code inside box
+              </div>
+            </div>
+
+            {scanMessage && (
+              <div style={{
+                padding: '10px 14px',
+                borderRadius: '12px',
+                fontSize: '12.5px',
+                fontWeight: '600',
+                marginBottom: '12px',
+                backgroundColor: scanMessage.type === 'success' ? '#ecfdf5' : '#fef2f2',
+                color: scanMessage.type === 'success' ? '#16a34a' : '#dc2626',
+              }}>
+                {scanMessage.text}
+              </div>
+            )}
+
+            <form onSubmit={handleClaimScanned}>
+              <input
+                type="text"
+                value={manualScanCode}
+                onChange={(e) => setManualScanCode(e.target.value)}
+                placeholder={t.scanCodePlaceholder}
+                style={{
+                  width: '100%',
+                  padding: '12px 14px',
+                  borderRadius: '12px',
+                  border: '1.5px solid #e2e8f0',
+                  fontSize: '14px',
+                  outline: 'none',
+                  marginBottom: '12px',
+                }}
+              />
+
+              <button
+                type="submit"
+                disabled={actionLoading}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  backgroundColor: '#1e60ff',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '12px',
+                  fontSize: '14px',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 12px rgba(30, 96, 255, 0.3)',
+                }}
+              >
+                {actionLoading ? 'Claiming...' : t.btnScanClaim}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

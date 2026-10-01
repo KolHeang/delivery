@@ -85,6 +85,16 @@ export class CreateParcelDto {
   createdAt?: string;
   @ApiProperty({ required: false })
   @IsOptional()
+  @IsString()
+  itemPhoto?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  qrCodeUrl?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
   @IsNumber()
   @Type(() => Number)
   createdById?: number;
@@ -108,6 +118,11 @@ export class UpdateParcelDto {
   @IsOptional() @IsString() paymentMethod?: string;
   @IsOptional() @IsNumber() @Type(() => Number) driverId?: number;
   @IsOptional() @IsNumber() @Type(() => Number) pickupDriverId?: number;
+  @IsOptional() @IsString() itemPhoto?: string;
+  @IsOptional() @IsString() qrCodeUrl?: string;
+  @IsOptional() proofPhotos?: string[];
+  @IsOptional() @IsString() signature?: string;
+  @IsOptional() @IsString() failedPhoto?: string;
   @IsOptional() @IsString() createdAt?: string;
   @IsOptional() @IsString() deliveredAt?: string;
   @IsOptional() @IsNumber() @Type(() => Number) createdById?: number;
@@ -148,6 +163,40 @@ export class UpdateParcelStatusDto {
   @IsOptional()
   @IsString()
   remark?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  reason?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  signature?: string;
+
+  @ApiProperty({ required: false, type: [String] })
+  @IsOptional()
+  proofPhotos?: string[];
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  failedPhoto?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  photo?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  paymentMethod?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  paymentStatus?: string;
 
   @ApiProperty({ required: false })
   @IsOptional()

@@ -19,16 +19,16 @@ export class AuthController {
 
   @Post('driver/login')
   @ApiOperation({ summary: 'Driver login' })
-  driverLogin(@Body() dto: LoginDto) {
-    // Drivers can login using email or phone, we map 'email' field from DTO to 'phoneOrEmail'
-    return this.authService.driverLogin(dto.email, dto.password);
+  driverLogin(@Body() dto: any) {
+    const identifier = dto.phone || dto.email || dto.username;
+    return this.authService.driverLogin(identifier, dto.password);
   }
 
   @Post('merchant/login')
   @ApiOperation({ summary: 'Merchant login' })
-  merchantLogin(@Body() dto: LoginDto) {
-    // Merchants can login using email or phone, we map 'email' field from DTO to 'phoneOrEmail'
-    return this.authService.merchantLogin(dto.email, dto.password);
+  merchantLogin(@Body() dto: any) {
+    const identifier = dto.phone || dto.email || dto.username;
+    return this.authService.merchantLogin(identifier, dto.password);
   }
 
   @Post('logout')

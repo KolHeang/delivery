@@ -385,7 +385,12 @@ export class DriverService {
       updatedById: dto.updatedById || driverId,
     };
     if (dto.status === 'picked-up') updates.pickedUpAt = new Date();
-    if (dto.status === 'delivered') updates.deliveredAt = new Date();
+    if (dto.status === 'delivered') {
+      updates.deliveredAt = new Date();
+      if (!parcel.driverPaymentStatus) {
+        updates.driverPaymentStatus = 'unpaid';
+      }
+    }
     if (dto.status === 'in-warehouse') updates.warehouseAt = new Date();
     if (finalNote !== undefined) updates.note = finalNote;
 
@@ -431,26 +436,43 @@ export class DriverService {
       .createQueryBuilder('parcel')
       .where('parcel.driverId = :driverId', { driverId })
       .andWhere('parcel.status = :status', { status: 'delivered' })
-      .andWhere('parcel.deliveredAt >= :start AND parcel.deliveredAt <= :end', {
-        start,
-        end,
-      })
+      .andWhere(
+        'COALESCE(parcel.deliveredAt, parcel.updatedAt, parcel.createdAt) >= :start AND COALESCE(parcel.deliveredAt, parcel.updatedAt, parcel.createdAt) <= :end',
+        {
+          start,
+          end,
+        },
+      )
       .getCount();
 
     const codCollected = await this.parcelRepo
       .createQueryBuilder('parcel')
       .select('SUM(parcel.cod)', 'total')
-      .addSelect('parcel.codCurrency', 'currency')
+      .addSelect("UPPER(COALESCE(parcel.codCurrency, 'USD'))", 'currency')
       .where('parcel.driverId = :driverId', { driverId })
       .andWhere('parcel.status = :status', { status: 'delivered' })
-      .andWhere('parcel.driverPaymentStatus = :payment', { payment: 'unpaid' })
-      .groupBy('parcel.codCurrency')
+      .andWhere(
+        '(parcel.driverPaymentStatus = :payment OR parcel.driverPaymentStatus IS NULL OR parcel.driverPaymentStatus != :paidStatus)',
+        { payment: 'unpaid', paidStatus: 'paid' },
+      )
+      .andWhere(
+        'COALESCE(parcel.deliveredAt, parcel.updatedAt, parcel.createdAt) >= :start AND COALESCE(parcel.deliveredAt, parcel.updatedAt, parcel.createdAt) <= :end',
+        {
+          start,
+          end,
+        },
+      )
+      .groupBy("UPPER(COALESCE(parcel.codCurrency, 'USD'))")
       .getRawMany();
 
-    const codPendingUSD =
-      codCollected.find((c) => c.currency === 'USD')?.total || 0;
-    const codPendingKHR =
-      codCollected.find((c) => c.currency === 'KHR')?.total || 0;
+    const codPendingUSD = parseFloat(
+      codCollected.find((c) => (c.currency || '').toUpperCase() === 'USD')
+        ?.total || 0,
+    );
+    const codPendingKHR = parseFloat(
+      codCollected.find((c) => (c.currency || '').toUpperCase() === 'KHR')
+        ?.total || 0,
+    );
 
     return {
       totalAssigned,
@@ -459,8 +481,8 @@ export class DriverService {
         {},
       ),
       todayDelivered,
-      codPendingUSD: parseFloat(codPendingUSD),
-      codPendingKHR: parseFloat(codPendingKHR),
+      codPendingUSD,
+      codPendingKHR,
     };
   }
 
@@ -614,26 +636,31 @@ export class DriverService {
     const codQuery = this.parcelRepo
       .createQueryBuilder('parcel')
       .select('SUM(parcel.cod)', 'total')
-      .addSelect('parcel.codCurrency', 'currency')
+      .addSelect("UPPER(COALESCE(parcel.codCurrency, 'USD'))", 'currency')
       .where('parcel.driverId = :driverId', { driverId })
       .andWhere('parcel.status = :status', { status: 'delivered' })
-      .andWhere('parcel.driverPaymentStatus = :payment', { payment: 'unpaid' });
+      .andWhere(
+        '(parcel.driverPaymentStatus = :payment OR parcel.driverPaymentStatus IS NULL OR parcel.driverPaymentStatus != :paidStatus)',
+        { payment: 'unpaid', paidStatus: 'paid' },
+      );
 
     if (start && end) {
       codQuery.andWhere(
-        'parcel.updatedAt >= :start AND parcel.updatedAt <= :end',
+        'COALESCE(parcel.deliveredAt, parcel.updatedAt, parcel.createdAt) >= :start AND COALESCE(parcel.deliveredAt, parcel.updatedAt, parcel.createdAt) <= :end',
         { start, end },
       );
     }
     const codCollected = await codQuery
-      .groupBy('parcel.codCurrency')
+      .groupBy("UPPER(COALESCE(parcel.codCurrency, 'USD'))")
       .getRawMany();
 
     const codPendingUSD = parseFloat(
-      codCollected.find((c) => c.currency === 'USD')?.total || 0,
+      codCollected.find((c) => (c.currency || '').toUpperCase() === 'USD')
+        ?.total || 0,
     );
     const codPendingKHR = parseFloat(
-      codCollected.find((c) => c.currency === 'KHR')?.total || 0,
+      codCollected.find((c) => (c.currency || '').toUpperCase() === 'KHR')
+        ?.total || 0,
     );
 
     // Delivery Fee earned (SUM of deliveryFee for delivered orders in period)
@@ -645,7 +672,7 @@ export class DriverService {
 
     if (start && end) {
       feeQuery.andWhere(
-        'parcel.deliveredAt >= :start AND parcel.deliveredAt <= :end',
+        'COALESCE(parcel.deliveredAt, parcel.updatedAt, parcel.createdAt) >= :start AND COALESCE(parcel.deliveredAt, parcel.updatedAt, parcel.createdAt) <= :end',
         { start, end },
       );
     }

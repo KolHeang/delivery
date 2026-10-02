@@ -848,6 +848,61 @@ select.form-control {
 }
 
 /* ============================================================
+   FORM VALIDATION & REQUIRED ERROR STYLES
+   ============================================================ */
+.form-group.has-error .form-control,
+.form-control.is-invalid,
+.form-control.error,
+.form-control:user-invalid {
+  border-color: #dc2626 !important;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.08) !important;
+}
+
+.input-error-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.input-error-wrapper .form-control {
+  width: 100%;
+}
+
+.input-error-icon {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #dc2626;
+  display: flex;
+  align-items: center;
+  justifyContent: center;
+  pointer-events: none;
+}
+
+select.form-control + .input-error-icon {
+  right: 32px;
+}
+
+.form-error-text,
+.form-error-message,
+.invalid-feedback,
+.field-error {
+  display: block;
+  color: #dc2626;
+  font-size: 12.5px;
+  margin-top: 5px;
+  font-weight: 500;
+  line-height: 1.4;
+  font-family: inherit;
+}
+
+.form-group.has-error .form-label {
+  color: #dc2626;
+}
+
+/* ============================================================
    MODAL
    ============================================================ */
 .modal-overlay {

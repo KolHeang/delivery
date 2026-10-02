@@ -8,13 +8,15 @@ import Topbar from '@/components/layout/Topbar';
 import api from '@/lib/api';
 import { useLanguage } from '@/lib/LanguageContext';
 import { useSettings } from '@/lib/SettingsContext';
+import FormField from '@/components/ui/FormField';
 
 export default function CreateShopPage() {
   const router = useRouter();
-  const { t } = useLanguage();
+  const { lang, t } = useLanguage();
   const { khrRate } = useSettings();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [form, setForm] = useState({
     name: '',
     nameKh: '',
@@ -75,8 +77,30 @@ export default function CreateShopPage() {
     }
   };
 
+  const handleFieldChange = (field: string, value: string) => {
+    setForm(prev => ({ ...prev, [field]: value }));
+    if (errors[field]) {
+      setErrors(prev => ({ ...prev, [field]: '' }));
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const newErrors: Record<string, string> = {};
+    if (!form.deliveryFee) newErrors.deliveryFee = lang === 'km' ? 'សូមបញ្ចូលថ្លៃដឹកជញ្ជូន' : 'Please enter delivery fee';
+    if (!form.exchangeRate) newErrors.exchangeRate = lang === 'km' ? 'សូមបញ្ចូលអត្រាប្តូរប្រាក់' : 'Please enter exchange rate';
+    if (!form.name.trim()) newErrors.name = lang === 'km' ? 'សូមបញ្ចូលឈ្មោះ' : 'Please enter name';
+    if (!form.phone.trim()) newErrors.phone = lang === 'km' ? 'សូមបញ្ចូលលេខទូរស័ព្ទ' : 'Please enter phone number';
+    if (!form.email.trim()) newErrors.email = lang === 'km' ? 'សូមបញ្ចូលអ៊ីមែល' : 'Please enter email';
+    if (!form.address.trim()) newErrors.address = lang === 'km' ? 'សូមបញ្ចូលអាសយដ្ឋាន' : 'Please enter address';
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+    setErrors({});
+
     setSaving(true);
     try {
       const formData = new FormData();
@@ -136,7 +160,7 @@ export default function CreateShopPage() {
           <div className="card">
             <div className="card-header"><span className="card-title">🏪 {t('createShop')}</span></div>
             <div className="card-body">
-              <form onSubmit={handleSubmit}>
+              <form noValidate onSubmit={handleSubmit}>
                 {/* Shop Photo Upload */}
                 <div className="form-row" style={{ alignItems: 'center', marginBottom: 20 }}>
                   <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
@@ -177,27 +201,23 @@ export default function CreateShopPage() {
 
                 {/* Row 1: Delivery Fee & Exchange Rate */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
-                  <div className="form-group">
-                    <label className="form-label">{t('deliveryFee')} <span>*</span></label>
+                  <FormField label={t('deliveryFee')} required error={errors.deliveryFee}>
                     <input
                       type="number"
                       step="0.01"
                       className="form-control"
                       value={form.deliveryFee}
-                      onChange={e => setForm({ ...form, deliveryFee: e.target.value })}
-                      required
+                      onChange={e => handleFieldChange('deliveryFee', e.target.value)}
                     />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">{t('exchangeRate')} <span>*</span></label>
+                  </FormField>
+                  <FormField label={t('exchangeRate')} required error={errors.exchangeRate}>
                     <input
                       type="number"
                       className="form-control"
                       value={form.exchangeRate}
-                      onChange={e => setForm({ ...form, exchangeRate: e.target.value })}
-                      required
+                      onChange={e => handleFieldChange('exchangeRate', e.target.value)}
                     />
-                  </div>
+                  </FormField>
                 </div>
 
                 {/* Section 2: Shop Info */}
@@ -207,53 +227,45 @@ export default function CreateShopPage() {
 
                 {/* Row 2: Name, Phone, Email, Address */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
-                  <div className="form-group">
-                    <label className="form-label">{t('name')} <span>*</span></label>
+                  <FormField label={t('name')} required error={errors.name}>
                     <input
                       type="text"
                       className="form-control"
                       placeholder="e.g. Zando Shop"
                       value={form.name}
-                      onChange={e => setForm({ ...form, name: e.target.value })}
-                      required
+                      onChange={e => handleFieldChange('name', e.target.value)}
                     />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">{t('phone')} <span>*</span></label>
+                  </FormField>
+                  <FormField label={t('phone')} required error={errors.phone}>
                     <input
                       type="text"
                       className="form-control"
                       placeholder="e.g. 012-100-200"
                       value={form.phone}
-                      onChange={e => setForm({ ...form, phone: e.target.value })}
-                      required
+                      onChange={e => handleFieldChange('phone', e.target.value)}
                     />
-                  </div>
+                  </FormField>
                 </div>
                 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
-                  <div className="form-group">
-                    <label className="form-label">{t('email')} <span>*</span></label>
+                  <FormField label={t('email')} required error={errors.email}>
                     <input
                       type="email"
                       className="form-control"
                       placeholder="e.g. zando@shop.com"
                       value={form.email}
-                      onChange={e => setForm({ ...form, email: e.target.value })}
-                      required
+                      onChange={e => handleFieldChange('email', e.target.value)}
                     />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">{t('address')} <span>*</span></label>
+                  </FormField>
+                  <FormField label={t('address')} required error={errors.address}>
                     <input
                       type="text"
                       className="form-control"
                       placeholder="Full address..."
                       value={form.address}
-                      onChange={e => setForm({ ...form, address: e.target.value })}
-                      required
+                      onChange={e => handleFieldChange('address', e.target.value)}
                     />
-                  </div>
+                  </FormField>
                 </div>
 
                 {/* Row 3: Note */}

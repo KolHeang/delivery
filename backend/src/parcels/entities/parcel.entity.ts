@@ -95,6 +95,21 @@ export class Parcel {
   @Column({ name: 'delivered_at', type: 'timestamp', nullable: true })
   deliveredAt: Date;
 
+  @Column({ name: 'proof_photos', type: 'json', nullable: true })
+  proofPhotos: string[];
+
+  @Column({ name: 'signature_url', type: 'text', nullable: true })
+  signature: string;
+
+  @Column({ name: 'failed_photo', type: 'text', nullable: true })
+  failedPhoto: string;
+
+  @Column({ name: 'item_photo', type: 'text', nullable: true })
+  itemPhoto: string;
+
+  @Column({ name: 'qr_code_url', type: 'text', nullable: true })
+  qrCodeUrl: string;
+
   @ManyToOne(() => Merchant, { nullable: true, eager: true })
   @JoinColumn({ name: 'merchant_id' })
   merchant: Merchant;

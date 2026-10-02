@@ -7,12 +7,14 @@ import Sidebar from '@/components/layout/Sidebar';
 import Topbar from '@/components/layout/Topbar';
 import api from '@/lib/api';
 import { useLanguage } from '@/lib/LanguageContext';
+import FormField from '@/components/ui/FormField';
 
 export default function CreateZonePage() {
   const router = useRouter();
   const { lang, t } = useLanguage();
   const [saving, setSaving] = useState(false);
   const [drivers, setDrivers] = useState<any[]>([]);
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [form, setForm] = useState({ name: '', driverId: '', branch: 'EBS Express', active: true });
 
   useEffect(() => {
@@ -22,13 +24,30 @@ export default function CreateZonePage() {
       .catch(() => {});
   }, [router]);
 
-  const f = (k: string) => (e: any) => setForm(p => ({
-    ...p,
-    [k]: k === 'driverId' ? (parseInt(e.target.value) || '') : e.target.value
-  }));
+  const f = (k: string) => (e: any) => {
+    setForm(p => ({
+      ...p,
+      [k]: k === 'driverId' ? (parseInt(e.target.value) || '') : e.target.value
+    }));
+    if (errors[k]) {
+      setErrors(prev => ({ ...prev, [k]: '' }));
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const newErrors: Record<string, string> = {};
+    if (!form.name.trim()) {
+      newErrors.name = lang === 'km' ? 'សូមបញ្ចូលឈ្មោះតំបន់' : 'Please enter zone name';
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+    setErrors({});
+
     setSaving(true);
     try {
       const payload = {
@@ -54,18 +73,12 @@ export default function CreateZonePage() {
           <div className="card">
             <div className="card-header"><span className="card-title">🗺️ {t('addZone') || 'Add Zone'}</span></div>
             <div className="card-body">
-              <form onSubmit={handleSubmit}>
+              <form noValidate onSubmit={handleSubmit}>
                 <div className="form-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
-                  <div className="form-group">
-                    <label className="form-label" style={{ fontWeight: 'bold' }}>
-                      {lang === 'km' ? 'ឈ្មោះតំបន់' : 'Zone Name'} <span style={{ color: 'red' }}>*</span>
-                    </label>
-                    <input className="form-control" value={form.name} onChange={f('name')} required />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label" style={{ fontWeight: 'bold' }}>
-                      {lang === 'km' ? 'ឈ្មោះភ្នាក់ងារដឹក' : 'Driver Name'}
-                    </label>
+                  <FormField label={lang === 'km' ? 'ឈ្មោះតំបន់' : 'Zone Name'} required error={errors.name}>
+                    <input className="form-control" value={form.name} onChange={f('name')} placeholder="Zone name..." />
+                  </FormField>
+                  <FormField label={lang === 'km' ? 'ឈ្មោះភ្នាក់ងារដឹក' : 'Driver Name'}>
                     <select className="form-control" value={form.driverId} onChange={f('driverId')}>
                       <option value="">{lang === 'km' ? '-- ជ្រើសរើសអ្នកដឹក --' : '-- Select Driver --'}</option>
                       {drivers.map(d => (
@@ -74,7 +87,7 @@ export default function CreateZonePage() {
                         </option>
                       ))}
                     </select>
-                  </div>
+                  </FormField>
                 </div>
                 
                 <div className="form-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>

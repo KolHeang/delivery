@@ -56,6 +56,16 @@ export class CreateMerchantDto {
 
   @ApiProperty({ required: false })
   @IsOptional()
+  @IsNumber()
+  @Type(() => Number)
+  balance?: number;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  active?: boolean;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
   @IsString()
   photo?: string;
 }

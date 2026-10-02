@@ -10,6 +10,7 @@ import Pagination from '@/components/ui/Pagination';
 import api from '@/lib/api';
 import { MdAdd, MdEdit, MdDelete } from 'react-icons/md';
 import { useLanguage } from '@/lib/LanguageContext';
+import FormField from '@/components/ui/FormField';
 
 export default function ExpenseTypePage() {
   const router = useRouter();
@@ -25,12 +26,14 @@ export default function ExpenseTypePage() {
   const [name, setName] = useState('');
   const [desc, setDesc] = useState('');
   const [saving, setSaving] = useState(false);
+  const [addErrors, setAddErrors] = useState<Record<string, string>>({});
 
   // Edit Modal State
   const [editItem, setEditItem] = useState<any | null>(null);
   const [editName, setEditName] = useState('');
   const [editDesc, setEditDesc] = useState('');
   const [updating, setUpdating] = useState(false);
+  const [editErrors, setEditErrors] = useState<Record<string, string>>({});
 
   const { t, lang } = useLanguage();
 
@@ -49,7 +52,15 @@ export default function ExpenseTypePage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return;
+    const errs: Record<string, string> = {};
+    if (!name.trim()) {
+      errs.name = lang === 'km' ? 'សូមបញ្ចូលឈ្មោះក្រុមចំណាយ' : 'Please enter category name';
+    }
+    if (Object.keys(errs).length > 0) {
+      setAddErrors(errs);
+      return;
+    }
+    setAddErrors({});
     setSaving(true);
     try {
       await api.post('/expenses/types', { name: name.trim(), description: desc.trim() });
@@ -67,11 +78,21 @@ export default function ExpenseTypePage() {
     setEditItem(item);
     setEditName(item.name || '');
     setEditDesc(item.description || '');
+    setEditErrors({});
   };
 
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editName.trim() || !editItem) return;
+    if (!editItem) return;
+    const errs: Record<string, string> = {};
+    if (!editName.trim()) {
+      errs.editName = lang === 'km' ? 'សូមបញ្ចូលឈ្មោះក្រុមចំណាយ' : 'Please enter category name';
+    }
+    if (Object.keys(errs).length > 0) {
+      setEditErrors(errs);
+      return;
+    }
+    setEditErrors({});
     setUpdating(true);
     try {
       await api.patch(`/expenses/types/${editItem.id}`, {
@@ -203,19 +224,24 @@ export default function ExpenseTypePage() {
           title={`➕ ${t('addCategory') || 'Add Category'}`}
           size="md"
         >
-          <form onSubmit={handleSubmit}>
-            <div className="form-group">
-              <label className="form-label">{t('categoryName') || 'Category Name'} <span>*</span></label>
+          <form noValidate onSubmit={handleSubmit}>
+            <FormField
+              label={t('categoryName') || 'Category Name'}
+              required
+              error={addErrors.name}
+            >
               <input
                 type="text"
-                className="form-control"
+                className={`form-control ${addErrors.name ? 'is-invalid' : ''}`}
                 placeholder={t('placeholderCategoryExpenseName') || 'e.g. Utilities, Marketing'}
                 value={name}
-                onChange={e => setName(e.target.value)}
-                required
+                onChange={e => {
+                  setName(e.target.value);
+                  if (addErrors.name) setAddErrors({ ...addErrors, name: '' });
+                }}
                 autoFocus
               />
-            </div>
+            </FormField>
             <div className="form-group">
               <label className="form-label">{t('description') || 'Description'}</label>
               <textarea
@@ -246,18 +272,23 @@ export default function ExpenseTypePage() {
           title={`✏️ ${lang === 'km' ? 'កែសម្រួលក្រុមចំណាយ' : 'Edit Category'}`}
           size="md"
         >
-          <form onSubmit={handleUpdate}>
-            <div className="form-group">
-              <label className="form-label">{t('categoryName') || 'Category Name'} <span>*</span></label>
+          <form noValidate onSubmit={handleUpdate}>
+            <FormField
+              label={t('categoryName') || 'Category Name'}
+              required
+              error={editErrors.editName}
+            >
               <input
                 type="text"
-                className="form-control"
+                className={`form-control ${editErrors.editName ? 'is-invalid' : ''}`}
                 value={editName}
-                onChange={e => setEditName(e.target.value)}
-                required
+                onChange={e => {
+                  setEditName(e.target.value);
+                  if (editErrors.editName) setEditErrors({ ...editErrors, editName: '' });
+                }}
                 autoFocus
               />
-            </div>
+            </FormField>
             <div className="form-group">
               <label className="form-label">{t('description') || 'Description'}</label>
               <textarea

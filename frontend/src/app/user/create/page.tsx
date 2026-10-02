@@ -7,6 +7,7 @@ import Sidebar from '@/components/layout/Sidebar';
 import Topbar from '@/components/layout/Topbar';
 import api from '@/lib/api';
 import { useLanguage } from '@/lib/LanguageContext';
+import FormField from '@/components/ui/FormField';
 
 const emptyForm = {
   name: '',
@@ -26,7 +27,7 @@ const emptyForm = {
 
 export default function CreateStaffPage() {
   const router = useRouter();
-  const { t } = useLanguage();
+  const { lang, t } = useLanguage();
 
   const [zones, setZones] = useState<any[]>([]);
   const [vehicles, setVehicles] = useState<any[]>([]);
@@ -34,6 +35,7 @@ export default function CreateStaffPage() {
   const [loading, setLoading] = useState(true);
 
   const [form, setForm] = useState(emptyForm);
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string>('');
@@ -64,6 +66,9 @@ export default function CreateStaffPage() {
   const f = (k: string) => (e: any) => {
     const val = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
     setForm(p => ({ ...p, [k]: val }));
+    if (errors[k]) {
+      setErrors(prev => ({ ...prev, [k]: '' }));
+    }
   };
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -75,18 +80,22 @@ export default function CreateStaffPage() {
   };
 
   const save = async () => {
+    const newErrors: Record<string, string> = {};
     if (!form.name.trim()) {
-      alert('Full Name is required');
-      return;
+      newErrors.name = lang === 'km' ? 'សូមបញ្ចូលឈ្មោះពេញ' : 'Full Name is required';
     }
     if (form.role !== 'driver' && !form.email.trim()) {
-      alert('Email is required for Admin/Staff');
-      return;
+      newErrors.email = lang === 'km' ? 'សូមបញ្ចូលអ៊ីមែល' : 'Email is required for Admin/Staff';
     }
     if (form.role === 'driver' && !form.phone.trim()) {
-      alert('Phone number is required for Driver');
+      newErrors.phone = lang === 'km' ? 'សូមបញ្ចូលលេខទូរស័ព្ទ' : 'Phone number is required for Driver';
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
       return;
     }
+    setErrors({});
 
     const selectedRole = roles.find(r => r.name === form.role);
     setSaving(true);
@@ -185,45 +194,45 @@ export default function CreateStaffPage() {
                     ))}
                   </select>
                 </div>
-                <div className="form-group">
-                  <label className="form-label">{t('fullName')} <span>*</span></label>
+                <FormField label={t('fullName')} required error={errors.name}>
                   <input
                     className="form-control"
                     value={form.name}
                     onChange={f('name')}
                     placeholder="e.g. Sok Dara"
                   />
-                </div>
+                </FormField>
               </div>
 
               <div className="form-row">
-                <div className="form-group">
-                  <label className="form-label">{t('nameKh')}</label>
+                <FormField label={t('nameKh')}>
                   <input
                     className="form-control"
                     value={form.nameKh}
                     onChange={f('nameKh')}
                     placeholder="e.g. សុក ដារា"
                   />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">
-                    {form.role === 'driver' ? `${t('phone')} *` : t('phone')}
-                  </label>
+                </FormField>
+                <FormField
+                  label={t('phone')}
+                  required={form.role === 'driver'}
+                  error={errors.phone}
+                >
                   <input
                     className="form-control"
                     value={form.phone}
                     onChange={f('phone')}
                     placeholder="e.g. 012-345-678"
                   />
-                </div>
+                </FormField>
               </div>
 
               <div className="form-row">
-                <div className="form-group">
-                  <label className="form-label">
-                    {form.role !== 'driver' ? 'Email *' : 'Email'}
-                  </label>
+                <FormField
+                  label="Email"
+                  required={form.role !== 'driver'}
+                  error={errors.email}
+                >
                   <input
                     type="email"
                     className="form-control"
@@ -231,9 +240,8 @@ export default function CreateStaffPage() {
                     onChange={f('email')}
                     placeholder="e.g. email@example.com"
                   />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">{t('password')}</label>
+                </FormField>
+                <FormField label={t('password')}>
                   <input
                     type="password"
                     className="form-control"
@@ -241,7 +249,7 @@ export default function CreateStaffPage() {
                     onChange={f('password')}
                     placeholder={t('passwordPlaceholder')}
                   />
-                </div>
+                </FormField>
               </div>
 
               <div className="form-row">

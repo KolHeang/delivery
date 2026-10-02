@@ -1549,11 +1549,7 @@ export class DriverService {
     });
     if (!driver) throw new NotFoundException('Driver not found');
 
-    const targetDate = dateStr ? new Date(dateStr) : new Date();
-    const start = new Date(targetDate);
-    start.setHours(0, 0, 0, 0);
-    const end = new Date(targetDate);
-    end.setHours(23, 59, 59, 999);
+    const formattedDate = dateStr || new Date().toISOString().split('T')[0];
 
     const query = this.parcelRepo
       .createQueryBuilder('parcel')
@@ -1562,35 +1558,44 @@ export class DriverService {
         { driverId },
       )
       .andWhere(
-        'COALESCE(parcel.deliveredAt, parcel.assignedAt, parcel.updatedAt, parcel.createdAt) >= :start AND COALESCE(parcel.deliveredAt, parcel.assignedAt, parcel.updatedAt, parcel.createdAt) <= :end',
-        { start, end },
+        'DATE(COALESCE(parcel.deliveredAt, parcel.assignedAt, parcel.updatedAt, parcel.createdAt)) = :formattedDate',
+        { formattedDate },
       );
 
     const parcels = await query.getMany();
 
-    const deliveredCount = parcels.filter((p) => p.status === 'delivered').length;
+    const deliveredParcels = parcels.filter((p) => p.status === 'delivered');
+    const deliveredCount = deliveredParcels.length;
     const failedCount = parcels.filter(
       (p) => p.status === 'failed' || (p.status as any) === 'problem',
     ).length;
     const returnedCount = parcels.filter(
       (p) => p.status === 'returned' || (p.status as any) === 'rejected',
     ).length;
-    const totalParcels =
-      parcels.length > 0
-        ? parcels.length
-        : deliveredCount + failedCount + returnedCount;
+    const totalParcels = parcels.length;
 
-    const feePerParcel = 1.0;
-    const totalFeeSum = parcels.reduce(
-      (sum, p) => sum + (Number(p.deliveryFee) || feePerParcel),
-      0,
-    );
-    const totalDeliveryFee =
-      totalFeeSum > 0 ? totalFeeSum : totalParcels * feePerParcel;
+    // Calculate delivery fee and COD from actual delivered parcels
+    let totalCodUsd = 0;
+    let totalCodKhr = 0;
+    let totalDeliveryFee = 0;
+
+    deliveredParcels.forEach((p) => {
+      totalDeliveryFee += parseFloat(p.deliveryFee as any) || 0;
+      const codVal = parseFloat(p.cod as any) || 0;
+      if (p.codCurrency === 'KHR') {
+        totalCodKhr += codVal;
+      } else {
+        totalCodUsd += codVal;
+      }
+    });
+
+    const feePerParcel =
+      deliveredCount > 0
+        ? Math.round((totalDeliveryFee / deliveredCount) * 100) / 100
+        : 0;
     const adjustment = failedCount > 0 ? -(failedCount * 0.5) : 0;
     const totalAmount = Math.max(0, totalDeliveryFee + adjustment);
 
-    const formattedDate = dateStr || new Date().toISOString().split('T')[0];
     const payment = await this.driverPaymentRepo.findOne({
       where: {
         driverId,
@@ -1617,6 +1622,9 @@ export class DriverService {
       financial: {
         feePerParcel: feePerParcel,
         totalDeliveryFee: totalDeliveryFee,
+        totalCodUsd: Math.round(totalCodUsd * 100) / 100,
+        totalCodKhr: Math.round(totalCodKhr),
+        totalCod: Math.round(totalCodUsd * 100) / 100,
         adjustment: adjustment,
         totalAmount: totalAmount,
         currency: 'USD',

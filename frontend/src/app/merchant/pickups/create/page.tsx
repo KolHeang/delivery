@@ -5,9 +5,11 @@ import { useRouter } from 'next/navigation';
 import { isAuthenticated } from '@/lib/auth';
 import api from '@/lib/api';
 import { MdArrowBack, MdInventory2, MdCheckCircle } from 'react-icons/md';
+import { useLanguage } from '@/lib/LanguageContext';
 
 export default function MerchantCreatePickupPage() {
   const router = useRouter();
+  const { t, lang } = useLanguage();
 
   const [profile, setProfile] = useState<any>(null);
   const [form, setForm] = useState({
@@ -37,11 +39,25 @@ export default function MerchantCreatePickupPage() {
     setForm(f => ({ ...f, pickupTime: iso }));
   }, [router]);
 
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const newErrors: Record<string, string> = {};
     const qty = parseInt(form.declaredQuantity);
-    if (isNaN(qty) || qty < 1) { setError('Please enter a valid quantity (min 1)'); return; }
-    if (!form.pickupTime) { setError('Please select a pickup time'); return; }
+    if (isNaN(qty) || qty < 1) {
+      newErrors.declaredQuantity = lang === 'km' ? 'សូមបញ្ចូលចំនួនកញ្ចប់អីវ៉ាន់យ៉ាងតិច ១' : 'Please enter a valid quantity (min 1)';
+    }
+    if (!form.pickupTime) {
+      newErrors.pickupTime = lang === 'km' ? 'សូមជ្រើសរើសពេលវេលាទៅទទួល' : 'Please select a pickup time';
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+    setErrors({});
+
     setError('');
     setSubmitting(true);
     try {
@@ -102,7 +118,7 @@ export default function MerchantCreatePickupPage() {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+          <form noValidate onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
             {/* Quantity */}
             <div>
@@ -110,18 +126,37 @@ export default function MerchantCreatePickupPage() {
                 📦 Number of Parcels *
               </label>
               <div style={{ fontSize: 12, color: '#64748b', marginBottom: 10, lineHeight: 1.5 }}>
-                How many parcels are you handing over? (You don't need to enter individual recipient details yet.)
+                How many parcels are you handing over?
               </div>
               <input
                 type="number" min="1" inputMode="numeric"
                 value={form.declaredQuantity}
-                onChange={e => setForm(f => ({ ...f, declaredQuantity: e.target.value }))}
+                onChange={e => {
+                  setForm(f => ({ ...f, declaredQuantity: e.target.value }));
+                  if (errors.declaredQuantity) setErrors(prev => ({ ...prev, declaredQuantity: '' }));
+                }}
                 placeholder="e.g. 10"
-                required
-                style={{ width: '100%', padding: '14px 16px', border: '2px solid #e2e8f0', borderRadius: 12, fontSize: 24, fontWeight: 800, textAlign: 'center', outline: 'none', boxSizing: 'border-box', color: '#1e293b', background: '#f8fafc', transition: 'border-color 0.2s' }}
-                onFocus={e => (e.currentTarget.style.borderColor = '#2f55a5')}
-                onBlur={e => (e.currentTarget.style.borderColor = '#e2e8f0')}
+                style={{
+                  width: '100%',
+                  padding: '14px 16px',
+                  border: `2px solid ${errors.declaredQuantity ? '#dc2626' : '#e2e8f0'}`,
+                  borderRadius: 12,
+                  fontSize: 24,
+                  fontWeight: 800,
+                  textAlign: 'center',
+                  outline: 'none',
+                  boxSizing: 'border-box',
+                  color: '#1e293b',
+                  background: '#f8fafc',
+                  transition: 'border-color 0.2s',
+                  boxShadow: errors.declaredQuantity ? '0 0 0 3px rgba(220,38,38,0.08)' : 'none',
+                }}
               />
+              {errors.declaredQuantity && (
+                <div style={{ color: '#dc2626', fontSize: 12, marginTop: 4, fontWeight: 600, textAlign: 'center' }}>
+                  {errors.declaredQuantity}
+                </div>
+              )}
             </div>
 
             {/* Pickup Address */}
@@ -135,8 +170,6 @@ export default function MerchantCreatePickupPage() {
                 placeholder="Your shop address (pre-filled from profile)"
                 rows={3}
                 style={{ width: '100%', padding: '12px 16px', border: '2px solid #e2e8f0', borderRadius: 12, fontSize: 14, outline: 'none', boxSizing: 'border-box', color: '#1e293b', background: '#f8fafc', resize: 'none', lineHeight: 1.5, transition: 'border-color 0.2s', fontFamily: 'inherit' }}
-                onFocus={e => (e.currentTarget.style.borderColor = '#2f55a5')}
-                onBlur={e => (e.currentTarget.style.borderColor = '#e2e8f0')}
               />
             </div>
 
@@ -148,12 +181,29 @@ export default function MerchantCreatePickupPage() {
               <input
                 type="datetime-local"
                 value={form.pickupTime}
-                onChange={e => setForm(f => ({ ...f, pickupTime: e.target.value }))}
-                required
-                style={{ width: '100%', padding: '12px 16px', border: '2px solid #e2e8f0', borderRadius: 12, fontSize: 14, outline: 'none', boxSizing: 'border-box', color: '#1e293b', background: '#f8fafc', transition: 'border-color 0.2s' }}
-                onFocus={e => (e.currentTarget.style.borderColor = '#2f55a5')}
-                onBlur={e => (e.currentTarget.style.borderColor = '#e2e8f0')}
+                onChange={e => {
+                  setForm(f => ({ ...f, pickupTime: e.target.value }));
+                  if (errors.pickupTime) setErrors(prev => ({ ...prev, pickupTime: '' }));
+                }}
+                style={{
+                  width: '100%',
+                  padding: '12px 16px',
+                  border: `2px solid ${errors.pickupTime ? '#dc2626' : '#e2e8f0'}`,
+                  borderRadius: 12,
+                  fontSize: 14,
+                  outline: 'none',
+                  boxSizing: 'border-box',
+                  color: '#1e293b',
+                  background: '#f8fafc',
+                  transition: 'border-color 0.2s',
+                  boxShadow: errors.pickupTime ? '0 0 0 3px rgba(220,38,38,0.08)' : 'none',
+                }}
               />
+              {errors.pickupTime && (
+                <div style={{ color: '#dc2626', fontSize: 12, marginTop: 4, fontWeight: 600 }}>
+                  {errors.pickupTime}
+                </div>
+              )}
             </div>
 
             {/* Info note */}

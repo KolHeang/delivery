@@ -7,6 +7,7 @@ import Sidebar from '@/components/layout/Sidebar';
 import Topbar from '@/components/layout/Topbar';
 import api from '@/lib/api';
 import { useLanguage } from '@/lib/LanguageContext';
+import FormField from '@/components/ui/FormField';
 
 interface Permission {
   id: number;
@@ -16,11 +17,12 @@ interface Permission {
 
 export default function CreateRolePage() {
   const router = useRouter();
-  const { t } = useLanguage();
+  const { lang, t } = useLanguage();
 
   const [allPermissions, setAllPermissions] = useState<Permission[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const [roleName, setRoleName] = useState('');
   const [roleDescription, setRoleDescription] = useState('');
@@ -64,9 +66,10 @@ export default function CreateRolePage() {
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!roleName.trim()) {
-      alert(t('roleNameRequired'));
+      setErrors({ roleName: lang === 'km' ? 'សូមបញ្ចូលឈ្មោះតួនាទី' : 'Role name is required' });
       return;
     }
+    setErrors({});
 
     setSaving(true);
     try {
@@ -121,28 +124,28 @@ export default function CreateRolePage() {
               <span className="card-title">🛡️ {t('createRoleForm')}</span>
             </div>
             <div className="card-body">
-              <form onSubmit={handleSave}>
+              <form noValidate onSubmit={handleSave}>
                 <div className="form-row">
-                  <div className="form-group">
-                    <label className="form-label">{t('roleName')} <span>*</span></label>
+                  <FormField label={t('roleName')} required error={errors.roleName}>
                     <input
                       className="form-control"
                       placeholder={t('roleNamePlaceholder')}
                       value={roleName}
-                      onChange={e => setRoleName(e.target.value)}
-                      required
+                      onChange={e => {
+                        setRoleName(e.target.value);
+                        if (errors.roleName) setErrors({});
+                      }}
                       style={{ textTransform: 'lowercase' }}
                     />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">{t('roleDescription')}</label>
+                  </FormField>
+                  <FormField label={t('roleDescription')}>
                     <input
                       className="form-control"
                       placeholder={t('roleDescriptionPlaceholder')}
                       value={roleDescription}
                       onChange={e => setRoleDescription(e.target.value)}
                     />
-                  </div>
+                  </FormField>
                 </div>
 
                 <div style={{ marginTop: 24 }}>

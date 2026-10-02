@@ -26,6 +26,7 @@ const paymentTranslations = {
     returned: 'Returned',
     feePerParcel: 'Delivery Fee per Parcel',
     totalDeliveryFee: 'Total Delivery Fee',
+    totalCod: 'Total COD Collected',
     adjustment: 'Adjustment / Deduction',
     totalAmount: 'Total Amount',
     paymentStatus: 'Payment Status',
@@ -48,6 +49,7 @@ const paymentTranslations = {
     returned: 'ត្រឡប់មកវិញ',
     feePerParcel: 'ថ្លៃដឹកជញ្ជូនក្នុងមួយកញ្ចប់',
     totalDeliveryFee: 'ថ្លៃដឹកជញ្ជូនសរុប',
+    totalCod: 'ប្រាក់ COD សរុប',
     adjustment: 'ការកាត់កង / កែតម្រូវ',
     totalAmount: 'ទឹកប្រាក់សរុប',
     paymentStatus: 'ស្ថានភាពទូទាត់ប្រាក់',
@@ -124,10 +126,12 @@ export default function DriverPaymentsPage() {
   const failed = invoice?.parcels?.failed || 0;
   const returned = invoice?.parcels?.returned || 0;
 
-  const feePerParcel = invoice?.financial?.feePerParcel || 1.0;
-  const totalDeliveryFee = invoice?.financial?.totalDeliveryFee || (totalParcels * feePerParcel);
-  const adjustment = invoice?.financial?.adjustment || 0;
-  const totalAmount = invoice?.financial?.totalAmount || Math.max(0, totalDeliveryFee + adjustment);
+  const feePerParcel = invoice?.financial?.feePerParcel ?? 0;
+  const totalDeliveryFee = invoice?.financial?.totalDeliveryFee ?? 0;
+  const totalCodUsd = invoice?.financial?.totalCodUsd ?? invoice?.financial?.totalCod ?? 0;
+  const totalCodKhr = invoice?.financial?.totalCodKhr ?? 0;
+  const adjustment = invoice?.financial?.adjustment ?? 0;
+  const totalAmount = invoice?.financial?.totalAmount ?? Math.max(0, totalDeliveryFee + adjustment);
   const isPaid = invoice?.financial?.paymentStatus === 'Paid';
   const isCompleted = invoice?.invoiceStatus === 'Completed';
 
@@ -296,6 +300,13 @@ export default function DriverPaymentsPage() {
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13.5px' }}>
                 <span style={{ color: '#64748b' }}>{t.totalDeliveryFee}</span>
                 <span style={{ fontWeight: '700', color: '#0f172a' }}>${totalDeliveryFee.toFixed(2)}</span>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13.5px' }}>
+                <span style={{ color: '#64748b' }}>{t.totalCod}</span>
+                <span style={{ fontWeight: '700', color: '#ea580c' }}>
+                  ${totalCodUsd.toFixed(2)} USD{totalCodKhr > 0 ? ` + ${totalCodKhr.toLocaleString()} ៛` : ''}
+                </span>
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13.5px' }}>

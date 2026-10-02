@@ -8,23 +8,43 @@ import Topbar from '@/components/layout/Topbar';
 import api from '@/lib/api';
 import { useLanguage } from '@/lib/LanguageContext';
 
+import FormField from '@/components/ui/FormField';
+
 const TYPES = ['motorbike', 'car', 'van', 'truck', 'tuk-tuk'];
 const TYPE_ICONS: Record<string, string> = { motorbike: '🏍️', car: '🚗', van: '🚐', truck: '🚚', 'tuk-tuk': '🛺' };
 
 export default function CreateVehiclePage() {
   const router = useRouter();
-  const { t } = useLanguage();
+  const { lang, t } = useLanguage();
   const [saving, setSaving] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [form, setForm] = useState({ plate: '', type: 'motorbike', brand: '', model: '', year: new Date().getFullYear(), status: 'active' });
 
   useEffect(() => {
     if (!isAuthenticated()) { router.push('/'); }
   }, [router]);
 
-  const f = (k: string) => (e: any) => setForm(p => ({ ...p, [k]: k === 'year' ? parseInt(e.target.value) : e.target.value }));
+  const f = (k: string) => (e: any) => {
+    setForm(p => ({ ...p, [k]: k === 'year' ? parseInt(e.target.value) : e.target.value }));
+    if (errors[k]) {
+      setErrors(prev => ({ ...prev, [k]: '' }));
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const newErrors: Record<string, string> = {};
+    if (!form.plate.trim()) newErrors.plate = lang === 'km' ? 'សូមបញ្ចូលស្លាកលេខយានយន្ត' : 'Please enter plate number';
+    if (!form.brand.trim()) newErrors.brand = lang === 'km' ? 'សូមបញ្ចូលម៉ាកយានយន្ត' : 'Please enter vehicle brand';
+    if (!form.model.trim()) newErrors.model = lang === 'km' ? 'សូមបញ្ចូលម៉ូដែលយានយន្ត' : 'Please enter vehicle model';
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+    setErrors({});
+
     setSaving(true);
     try {
       await api.post('/vehicles', form);
@@ -44,30 +64,36 @@ export default function CreateVehiclePage() {
           <div className="card">
             <div className="card-header"><span className="card-title">🚗 {t('addVehicle')}</span></div>
             <div className="card-body">
-              <form onSubmit={handleSubmit}>
+              <form noValidate onSubmit={handleSubmit}>
                 <div className="form-row">
-                  <div className="form-group"><label className="form-label">{t('plateNumber')} <span>*</span></label><input className="form-control" value={form.plate} onChange={f('plate')} placeholder="e.g. 2A-4532" required /></div>
-                  <div className="form-group">
-                    <label className="form-label">{t('vehicleType')} <span>*</span></label>
+                  <FormField label={t('plateNumber')} required error={errors.plate}>
+                    <input className="form-control" value={form.plate} onChange={f('plate')} placeholder="e.g. 2A-4532" />
+                  </FormField>
+                  <FormField label={t('vehicleType')} required>
                     <select className="form-control" value={form.type} onChange={f('type')}>
                       {TYPES.map(t => <option key={t} value={t}>{TYPE_ICONS[t]} {t}</option>)}
                     </select>
-                  </div>
+                  </FormField>
                 </div>
                 <div className="form-row">
-                  <div className="form-group"><label className="form-label">{t('brand')} <span>*</span></label><input className="form-control" value={form.brand} onChange={f('brand')} required /></div>
-                  <div className="form-group"><label className="form-label">{t('model')} <span>*</span></label><input className="form-control" value={form.model} onChange={f('model')} required /></div>
+                  <FormField label={t('brand')} required error={errors.brand}>
+                    <input className="form-control" value={form.brand} onChange={f('brand')} placeholder="e.g. Honda" />
+                  </FormField>
+                  <FormField label={t('model')} required error={errors.model}>
+                    <input className="form-control" value={form.model} onChange={f('model')} placeholder="e.g. Wave 110" />
+                  </FormField>
                 </div>
                 <div className="form-row">
-                  <div className="form-group"><label className="form-label">{t('year')}</label><input type="number" min="2000" max="2030" className="form-control" value={form.year} onChange={f('year')} /></div>
-                  <div className="form-group">
-                    <label className="form-label">{t('status')}</label>
+                  <FormField label={t('year')}>
+                    <input type="number" min="2000" max="2030" className="form-control" value={form.year} onChange={f('year')} />
+                  </FormField>
+                  <FormField label={t('status')}>
                     <select className="form-control" value={form.status} onChange={f('status')}>
                       <option value="active">Active</option>
                       <option value="maintenance">Maintenance</option>
                       <option value="inactive">Inactive</option>
                     </select>
-                  </div>
+                  </FormField>
                 </div>
                 
                 <div style={{ marginTop: 20, display: 'flex', gap: 12, justifyContent: 'flex-end' }}>

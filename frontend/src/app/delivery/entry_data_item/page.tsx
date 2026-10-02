@@ -314,93 +314,82 @@ export default function BatchEntryPage() {
                           </div>
                           {rowErr.receiverPhone && <div className="form-error-text" style={{ fontSize: 11, marginTop: 3 }}>{rowErr.receiverPhone}</div>}
                         </td>
-                      <td style={{ padding: '8px 6px' }}>
-                        <input
-                          type="text"
-                          className="form-control"
-                          placeholder={lang === 'km' ? 'ឧ. 012345678' : 'e.g. 012345678'}
-                          value={row.receiverPhone}
-                          onChange={e => handleRowChange(idx, 'receiverPhone', e.target.value)}
-                          required
-                          style={{ height: 38, fontSize: 13 }}
-                        />
-                      </td>
-                      <td style={{ padding: '8px 6px' }}>
-                        <input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          className="form-control"
-                          value={row.deliveryFee}
-                          onChange={e => handleRowChange(idx, 'deliveryFee', e.target.value)}
-                          required
-                          style={{ height: 38, fontSize: 13, textAlign: 'right' }}
-                        />
-                      </td>
-                      <td style={{ padding: '8px 6px' }}>
-                        <input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          className="form-control"
-                          value={row.codUSD}
-                          onChange={e => handleRowChange(idx, 'codUSD', e.target.value)}
-                          required
-                          style={{ height: 38, fontSize: 13, textAlign: 'right' }}
-                        />
-                      </td>
-                      <td style={{ padding: '8px 6px' }}>
-                        <input
-                          type="number"
-                          step="100"
-                          min="0"
-                          className="form-control"
-                          value={row.codKHR}
-                          onChange={e => handleRowChange(idx, 'codKHR', e.target.value)}
-                          required
-                          style={{ height: 38, fontSize: 13, textAlign: 'right' }}
-                        />
-                      </td>
-                      <td style={{ padding: '8px 6px' }}>
-                        <select
-                          className="form-control"
-                          value={row.pickupId}
-                          onChange={e => handleRowChange(idx, 'pickupId', e.target.value)}
-                          style={{ height: 38, fontSize: 12.5 }}
-                        >
-                          <option value="">{lang === 'km' ? '— ជ្រើសរើសអ្នកដឹក —' : '— Select Driver —'}</option>
-                          {drivers.map(d => (
-                            <option key={d.id} value={d.id}>
-                              {lang === 'km' ? (d.nameKh || d.name) : (d.name || d.nameKh)}
-                            </option>
-                          ))}
-                        </select>
-                      </td>
-                      <td style={{ padding: '8px 6px' }}>
-                        <select
-                          className="form-control"
-                          value={row.driverId}
-                          onChange={e => handleRowChange(idx, 'driverId', e.target.value)}
-                          style={{ height: 38, fontSize: 12.5 }}
-                        >
-                          <option value="">{lang === 'km' ? '— ជ្រើសរើសអ្នកដឹក —' : '— Select Driver —'}</option>
-                          {drivers.map(d => (
-                            <option key={d.id} value={d.id}>
-                              {lang === 'km' ? (d.nameKh || d.name) : (d.name || d.nameKh)}
-                            </option>
-                          ))}
-                        </select>
-                      </td>
-                      <td style={{ padding: '8px 6px' }}>
-                        <input
-                          type="text"
-                          className="form-control"
-                          placeholder={lang === 'km' ? 'ចំណាំ...' : 'Note...'}
-                          value={row.note}
-                          onChange={e => handleRowChange(idx, 'note', e.target.value)}
-                          style={{ height: 38, fontSize: 13 }}
-                        />
-                      </td>
+                        <td style={{ padding: '8px 6px' }}>
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            className="form-control"
+                            value={row.deliveryFee}
+                            onChange={e => handleRowChange(idx, 'deliveryFee', e.target.value)}
+                            required
+                            style={{ height: 38, fontSize: 13, textAlign: 'right' }}
+                          />
+                        </td>
+                        <td style={{ padding: '8px 6px' }}>
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            className="form-control"
+                            value={row.codUSD}
+                            onChange={e => handleRowChange(idx, 'codUSD', e.target.value)}
+                            required
+                            style={{ height: 38, fontSize: 13, textAlign: 'right' }}
+                          />
+                        </td>
+                        <td style={{ padding: '8px 6px' }}>
+                          <input
+                            type="number"
+                            step="100"
+                            min="0"
+                            className="form-control"
+                            value={row.codKHR}
+                            onChange={e => handleRowChange(idx, 'codKHR', e.target.value)}
+                            required
+                            style={{ height: 38, fontSize: 13, textAlign: 'right' }}
+                          />
+                        </td>
+                        <td style={{ padding: '8px 6px' }}>
+                          <select
+                            className="form-control"
+                            value={row.pickupId}
+                            onChange={e => handleRowChange(idx, 'pickupId', e.target.value)}
+                            style={{ height: 38, fontSize: 12.5 }}
+                          >
+                            <option value="">{lang === 'km' ? '— ជ្រើសរើសអ្នកដឹក —' : '— Select Driver —'}</option>
+                            {drivers.map(d => (
+                              <option key={d.id} value={d.id}>
+                                {lang === 'km' ? (d.nameKh || d.name) : (d.name || d.nameKh)}
+                              </option>
+                            ))}
+                          </select>
+                        </td>
+                        <td style={{ padding: '8px 6px' }}>
+                          <select
+                            className="form-control"
+                            value={row.driverId}
+                            onChange={e => handleRowChange(idx, 'driverId', e.target.value)}
+                            style={{ height: 38, fontSize: 12.5 }}
+                          >
+                            <option value="">{lang === 'km' ? '— ជ្រើសរើសអ្នកដឹក —' : '— Select Driver —'}</option>
+                            {drivers.map(d => (
+                              <option key={d.id} value={d.id}>
+                                {lang === 'km' ? (d.nameKh || d.name) : (d.name || d.nameKh)}
+                              </option>
+                            ))}
+                          </select>
+                        </td>
+                        <td style={{ padding: '8px 6px' }}>
+                          <input
+                            type="text"
+                            className="form-control"
+                            placeholder={lang === 'km' ? 'ចំណាំ...' : 'Note...'}
+                            value={row.note}
+                            onChange={e => handleRowChange(idx, 'note', e.target.value)}
+                            style={{ height: 38, fontSize: 13 }}
+                          />
+                        </td>
                       <td style={{ padding: '8px 6px', textAlign: 'center' }}>
                         <button
                           type="button"

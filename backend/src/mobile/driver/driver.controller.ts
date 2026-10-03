@@ -136,23 +136,27 @@ export class DriverController {
   })
   @ApiQuery({ name: 'status', required: false, type: String })
   @ApiQuery({ name: 'search', required: false, type: String })
+  @ApiQuery({ name: 'date', required: false, type: String })
   @ApiQuery({ name: 'startDate', required: false, type: String })
   @ApiQuery({ name: 'endDate', required: false, type: String })
   getTasks(
     @Request() req: any,
     @Query('status') status?: string,
     @Query('search') search?: string,
+    @Query('date') date?: string,
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
     @Query('page') page?: number,
     @Query('limit') limit?: number,
   ) {
+    const start = date || startDate;
+    const end = date || endDate;
     return this.driverService.getTasks(
       req.user.id,
       status,
       search,
-      startDate,
-      endDate,
+      start,
+      end,
       page,
       limit,
     );
@@ -163,19 +167,23 @@ export class DriverController {
     summary: 'Get task counts grouped by status for driver mobile app',
   })
   @ApiQuery({ name: 'search', required: false, type: String })
+  @ApiQuery({ name: 'date', required: false, type: String })
   @ApiQuery({ name: 'startDate', required: false, type: String })
   @ApiQuery({ name: 'endDate', required: false, type: String })
   getTaskStatusCounts(
     @Request() req: any,
     @Query('search') search?: string,
+    @Query('date') date?: string,
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
   ) {
+    const start = date || startDate;
+    const end = date || endDate;
     return this.driverService.getTaskStatusCounts(
       req.user.id,
       search,
-      startDate,
-      endDate,
+      start,
+      end,
     );
   }
 
@@ -203,17 +211,25 @@ export class DriverController {
 
   @Get('dashboard')
   @ApiOperation({ summary: 'Get driver dashboard data' })
+  @ApiQuery({ name: 'date', required: false, type: String })
+  @ApiQuery({ name: 'period', required: false, type: String })
+  @ApiQuery({ name: 'startDate', required: false, type: String })
+  @ApiQuery({ name: 'endDate', required: false, type: String })
   getDashboard(
     @Request() req: any,
+    @Query('date') date?: string,
     @Query('period') period?: string,
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
   ) {
+    const start = date || startDate;
+    const end = date || endDate;
+    const p = date ? 'custom' : period;
     return this.driverService.getDashboard(
       req.user.id,
-      period,
-      startDate,
-      endDate,
+      p,
+      start,
+      end,
     );
   }
 
@@ -304,9 +320,17 @@ export class DriverController {
     return this.driverService.getPaymentSummary(req.user.id);
   }
 
-  @Get('payments/:id')
-  @ApiOperation({ summary: 'Get details of a specific payment record' })
-  getPaymentDetail(@Request() req: any, @Param('id', ParseIntPipe) id: number) {
-    return this.driverService.getPaymentDetail(req.user.id, id);
+  @Get('invoices/daily')
+  @ApiOperation({ summary: 'Get daily delivery invoice for rider' })
+  @ApiQuery({ name: 'date', required: false, type: String })
+  getDailyInvoice(@Request() req: any, @Query('date') date?: string) {
+    return this.driverService.getDailyDeliveryInvoice(req.user.id, date);
+  }
+
+  @Get('payments/daily')
+  @ApiOperation({ summary: 'Alias for daily delivery invoice for rider' })
+  @ApiQuery({ name: 'date', required: false, type: String })
+  getDailyPayment(@Request() req: any, @Query('date') date?: string) {
+    return this.driverService.getDailyDeliveryInvoice(req.user.id, date);
   }
 }

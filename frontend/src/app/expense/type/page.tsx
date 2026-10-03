@@ -11,6 +11,7 @@ import Pagination from '@/components/ui/Pagination';
 import { FaRegEdit, FaTrashAlt } from 'react-icons/fa';
 import { FiPlusCircle } from 'react-icons/fi';
 import { useLanguage } from '@/lib/LanguageContext';
+import FormField from '@/components/ui/FormField';
 
 export default function ExpenseTypePage() {
   const router = useRouter();
@@ -25,15 +26,15 @@ export default function ExpenseTypePage() {
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [name, setName] = useState('');
   const [desc, setDesc] = useState('');
-  const [nameError, setNameError] = useState('');
   const [saving, setSaving] = useState(false);
+  const [addErrors, setAddErrors] = useState<Record<string, string>>({});
 
   // Edit Modal State
   const [editItem, setEditItem] = useState<any | null>(null);
   const [editName, setEditName] = useState('');
   const [editDesc, setEditDesc] = useState('');
-  const [editNameError, setEditNameError] = useState('');
   const [updating, setUpdating] = useState(false);
+  const [editErrors, setEditErrors] = useState<Record<string, string>>({});
 
   const { t, lang } = useLanguage();
 
@@ -52,11 +53,16 @@ export default function ExpenseTypePage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const errs: Record<string, string> = {};
     if (!name.trim()) {
-      setNameError('សូមបំពេញឈ្មោះប្រភេទចំណាយ');
+      errs.name = lang === 'km' ? 'សូមបញ្ចូលឈ្មោះក្រុមចំណាយ' : 'Please enter category name';
+    }
+    if (Object.keys(errs).length > 0) {
+      setAddErrors(errs);
       return;
     }
-    setNameError('');
+    setAddErrors({});
+
     setSaving(true);
     try {
       await api.post('/expenses/types', { name: name.trim(), description: desc.trim() });
@@ -74,95 +80,103 @@ export default function ExpenseTypePage() {
     setEditItem(item);
     setEditName(item.name || '');
     setEditDesc(item.description || '');
-    setEditNameError('');
+    setEditErrors({});
   };
 
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!editItem) return;
+    const errs: Record<string, string> = {};
     if (!editName.trim()) {
-      setEditNameError('សូមបំពេញឈ្មោះប្រភេទចំណាយ');
+      errs.editName = lang === 'km' ? 'សូមបញ្ចូលឈ្មោះក្រុមចំណាយ' : 'Please enter category name';
+    }
+    if (Object.keys(errs).length > 0) {
+      setEditErrors(errs);
       return;
     }
-    if (!editItem) return;
-    setEditNameError('');
+    setEditErrors({});
+
     setUpdating(true);
     try {
-      await api.patch(`/expenses/types/${editItem.id}`, {
-        name: editName.trim(),
-        description: editDesc.trim(),
-      });
+      await api.patch(`/expenses/types/${editItem.id}`, { name: editName.trim(), description: editDesc.trim() });
       setEditItem(null);
       await load();
     } catch {
-      alert(lang === 'km' ? 'មិនអាចកែសម្រួលក្រុមចំណាយបានទេ' : 'Failed to update category');
+      alert(t('failedToUpdateCategory') || 'Failed to update category');
     }
     setUpdating(false);
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm(t('deleteCategoryConfirm') || 'Delete this category? Related expenses will be updated.')) return;
+    if (!confirm(t('confirmDeleteCategory') || 'Are you sure you want to delete this category?')) return;
     try {
       await api.delete(`/expenses/types/${id}`);
       await load();
-    } catch {
-      alert(t('failedToDeleteCategory') || 'Failed to delete category');
+    } catch (err: any) {
+      alert(err.response?.data?.message || t('failedToDeleteCategory') || 'Failed to delete category');
     }
   };
 
+  // Pagination logic
   const totalItems = types.length;
-  const paginatedTypes = types.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  const startIndex = (currentPage - 1) * pageSize;
+  const paginatedTypes = types.slice(startIndex, startIndex + pageSize);
+
+  if (loading) return (
+    <div className="app-layout">
+      <Sidebar />
+      <div className="main-content">
+        <div className="loading-wrapper"><div className="spinner" /></div>
+      </div>
+    </div>
+  );
 
   return (
     <div className="app-layout">
       <Sidebar />
       <div className="main-content">
-        <Topbar title={t('typeOfExpense') || 'Type Of Expense'} subtitle={t('expenseTypeSubtitle') || 'Manage expense categories and accounts'} />
+        <Topbar title={t('expenseCategoriesTitle') || 'Expense Categories'} subtitle={t('expenseCategoriesSubtitle') || 'Manage and classify operating expenses'} />
         <div className="page-content">
           <div className="card">
-            <div className="card-header">
-              <span className="card-title">📋 {t('expenseCategories') || 'Expense Categories'}</span>
-              <button className="btn btn-primary btn-sm" onClick={() => setAddModalOpen(true)}>
-                <FiPlusCircle size={14} /> {t('addCategory') || 'Add Category'}
+            <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span className="card-title">{t('categoryList') || 'Category List'}</span>
+              <button
+                className="btn btn-primary btn-sm"
+                onClick={() => setAddModalOpen(true)}
+                style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700 }}
+              >
+                <FiPlusCircle size={16} /> {t('addCategory') || 'Add Category'}
               </button>
             </div>
-            <div className="table-wrapper" style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%' }}>
+            <div className="card-body" style={{ padding: 0 }}>
+              <table className="table">
                 <thead>
                   <tr>
-                    <th style={{ width: 60, textAlign: 'center' }}>{t('colNo') || 'No.'}</th>
-                    <th style={{ width: 280 }}>{t('categoryName') || 'Category Name'}</th>
+                    <th style={{ width: 80 }}>{t('no') || '#'}</th>
+                    <th>{t('categoryName') || 'Category Name'}</th>
                     <th>{t('description') || 'Description'}</th>
-                    <th style={{ width: 100, textAlign: 'center' }}>{t('reportAction') || 'Action'}</th>
+                    <th style={{ width: 120, textAlign: 'center' }}>{t('actions') || 'Actions'}</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {loading ? (
+                  {paginatedTypes.length === 0 ? (
                     <tr>
-                      <td colSpan={4} style={{ textAlign: 'center', padding: '40px 0' }}>
-                        <div className="loading-wrapper"><div className="spinner" /></div>
-                      </td>
-                    </tr>
-                  ) : paginatedTypes.length === 0 ? (
-                    <tr>
-                      <td colSpan={4} style={{ textAlign: 'center', padding: '36px 20px', color: 'var(--text-muted)', fontSize: 13 }}>
-                        {t('noDataFound') || 'គ្មានទិន្នន័យ'}
+                      <td colSpan={4} style={{ textAlign: 'center', padding: '32px', color: 'var(--text-muted)' }}>
+                        {t('noCategoriesFound') || 'No expense categories found. Click "Add Category" to create one.'}
                       </td>
                     </tr>
                   ) : (
                     paginatedTypes.map((tItem, idx) => (
                       <tr key={tItem.id}>
-                        <td style={{ color: 'var(--text-muted)', fontSize: 12, textAlign: 'center' }}>
-                          {(currentPage - 1) * pageSize + idx + 1}
-                        </td>
-                        <td style={{ fontWeight: 700 }}>{tItem.name}</td>
-                        <td style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{tItem.description || '—'}</td>
-                        <td>
-                          <div style={{ display: 'flex', justifyContent: 'center', gap: 6 }}>
+                        <td>{startIndex + idx + 1}</td>
+                        <td style={{ fontWeight: 600, color: 'var(--accent)' }}>{tItem.name}</td>
+                        <td>{tItem.description || '-'}</td>
+                        <td style={{ textAlign: 'center' }}>
+                          <div style={{ display: 'inline-flex', gap: 6 }}>
                             <button
                               className="btn btn-ghost btn-icon btn-sm"
-                              style={{ color: '#2563eb' }}
                               onClick={() => openEdit(tItem)}
-                              title={lang === 'km' ? 'កែសម្រួល' : 'Edit'}
+                              title={lang === 'km' ? 'កែប្រែ' : 'Edit'}
                             >
                               <FaRegEdit size={14} />
                             </button>
@@ -203,22 +217,24 @@ export default function ExpenseTypePage() {
           title={`➕ ${t('addCategory') || 'Add Category'}`}
           size="md"
         >
-          <form onSubmit={handleSubmit} noValidate>
-            <div className="form-group">
-              <label className="form-label">{t('categoryName') || 'Category Name'} <span style={{ color: '#ef4444' }}>*</span></label>
+          <form noValidate onSubmit={handleSubmit}>
+            <FormField
+              label={t('categoryName') || 'Category Name'}
+              required
+              error={addErrors.name}
+            >
               <input
                 type="text"
-                className={`form-control ${nameError ? 'is-invalid' : ''}`}
+                className={`form-control ${addErrors.name ? 'is-invalid' : ''}`}
                 placeholder={t('placeholderCategoryExpenseName') || 'e.g. Utilities, Marketing'}
                 value={name}
                 onChange={e => {
                   setName(e.target.value);
-                  if (nameError) setNameError('');
+                  if (addErrors.name) setAddErrors({ ...addErrors, name: '' });
                 }}
                 autoFocus
               />
-              {nameError && <div className="form-error-text">{nameError}</div>}
-            </div>
+            </FormField>
             <div className="form-group">
               <label className="form-label">{t('description') || 'Description'}</label>
               <textarea
@@ -259,21 +275,23 @@ export default function ExpenseTypePage() {
           title={lang === 'km' ? 'កែសម្រួលក្រុមចំណាយ' : 'Edit Category'}
           size="md"
         >
-          <form onSubmit={handleUpdate} noValidate>
-            <div className="form-group">
-              <label className="form-label">{t('categoryName') || 'Category Name'} <span style={{ color: '#ef4444' }}>*</span></label>
+          <form noValidate onSubmit={handleUpdate}>
+            <FormField
+              label={t('categoryName') || 'Category Name'}
+              required
+              error={editErrors.editName}
+            >
               <input
                 type="text"
-                className={`form-control ${editNameError ? 'is-invalid' : ''}`}
+                className={`form-control ${editErrors.editName ? 'is-invalid' : ''}`}
                 value={editName}
                 onChange={e => {
                   setEditName(e.target.value);
-                  if (editNameError) setEditNameError('');
+                  if (editErrors.editName) setEditErrors({ ...editErrors, editName: '' });
                 }}
                 autoFocus
               />
-              {editNameError && <div className="form-error-text">{editNameError}</div>}
-            </div>
+            </FormField>
             <div className="form-group">
               <label className="form-label">{t('description') || 'Description'}</label>
               <textarea

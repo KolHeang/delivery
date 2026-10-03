@@ -7,6 +7,7 @@ import Sidebar from '@/components/layout/Sidebar';
 import Topbar from '@/components/layout/Topbar';
 import api from '@/lib/api';
 import { useLanguage } from '@/lib/LanguageContext';
+import FormField from '@/components/ui/FormField';
 
 export default function CreateZonePage() {
   const router = useRouter();
@@ -40,6 +41,7 @@ export default function CreateZonePage() {
       return;
     }
     setErrors({});
+
     setSaving(true);
     try {
       const payload = {
@@ -67,22 +69,15 @@ export default function CreateZonePage() {
             <div className="card-body">
               <form onSubmit={handleSubmit} noValidate>
                 <div className="form-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
-                  <div className="form-group">
-                    <label className="form-label" style={{ fontWeight: 'bold' }}>
-                      {lang === 'km' ? 'ឈ្មោះតំបន់' : 'Zone Name'} <span style={{ color: '#ef4444' }}>*</span>
-                    </label>
+                  <FormField label={lang === 'km' ? 'ឈ្មោះតំបន់' : 'Zone Name'} required error={errors.name}>
                     <input
-                      className={`form-control ${errors.name ? 'is-invalid' : ''}`}
+                      className="form-control"
                       value={form.name}
                       onChange={f('name')}
                       placeholder="e.g. Phnom Penh Center"
                     />
-                    {errors.name && <div className="form-error-text">{errors.name}</div>}
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label" style={{ fontWeight: 'bold' }}>
-                      {lang === 'km' ? 'តម្លៃសេវាដឹក ($)' : 'Delivery Fee ($)'}
-                    </label>
+                  </FormField>
+                  <FormField label={lang === 'km' ? 'តម្លៃសេវាដឹក ($)' : 'Delivery Fee ($)'}>
                     <input
                       type="number"
                       step="0.01"
@@ -92,7 +87,7 @@ export default function CreateZonePage() {
                       onChange={f('price')}
                       placeholder="e.g. 1.25"
                     />
-                  </div>
+                  </FormField>
                 </div>
 
                 <div style={{ marginTop: 24, display: 'flex', gap: 12, justifyContent: 'flex-end' }}>

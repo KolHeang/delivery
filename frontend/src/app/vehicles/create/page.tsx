@@ -7,13 +7,14 @@ import Sidebar from '@/components/layout/Sidebar';
 import Topbar from '@/components/layout/Topbar';
 import api from '@/lib/api';
 import { useLanguage } from '@/lib/LanguageContext';
+import FormField from '@/components/ui/FormField';
 
 const TYPES = ['motorbike', 'car', 'van', 'truck', 'tuk-tuk'];
 const TYPE_ICONS: Record<string, string> = { motorbike: '🏍️', car: '🚗', van: '🚐', truck: '🚚', 'tuk-tuk': '🛺' };
 
 export default function CreateVehiclePage() {
   const router = useRouter();
-  const { t } = useLanguage();
+  const { lang, t } = useLanguage();
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({ plate: '', type: 'motorbike', brand: '', model: '', year: new Date().getFullYear(), status: 'active' });
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -35,23 +36,18 @@ export default function CreateVehiclePage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const errs: Record<string, string> = {};
-    if (!form.plate.trim()) {
-      errs.plate = 'សូមបំពេញស្លាកលេខយានយន្ត';
-    }
-    if (!form.brand.trim()) {
-      errs.brand = 'សូមបំពេញម៉ាកយានយន្ត';
-    }
-    if (!form.model.trim()) {
-      errs.model = 'សូមបំពេញម៉ូដែលយានយន្ត';
-    }
 
-    if (Object.keys(errs).length > 0) {
-      setErrors(errs);
+    const newErrors: Record<string, string> = {};
+    if (!form.plate.trim()) newErrors.plate = lang === 'km' ? 'សូមបញ្ចូលស្លាកលេខយានយន្ត' : 'Please enter plate number';
+    if (!form.brand.trim()) newErrors.brand = lang === 'km' ? 'សូមបញ្ចូលម៉ាកយានយន្ត' : 'Please enter vehicle brand';
+    if (!form.model.trim()) newErrors.model = lang === 'km' ? 'សូមបញ្ចូលម៉ូដែលយានយន្ត' : 'Please enter vehicle model';
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
       return;
     }
-
     setErrors({});
+
     setSaving(true);
     try {
       await api.post('/vehicles', form);
@@ -71,57 +67,36 @@ export default function CreateVehiclePage() {
           <div className="card">
             <div className="card-header"><span className="card-title">{t('addVehicle')}</span></div>
             <div className="card-body">
-              <form onSubmit={handleSubmit} noValidate>
+              <form noValidate onSubmit={handleSubmit}>
                 <div className="form-row">
-                  <div className="form-group">
-                    <label className="form-label">{t('plateNumber')} <span style={{ color: '#ef4444' }}>*</span></label>
-                    <input
-                      className={`form-control ${errors.plate ? 'is-invalid' : ''}`}
-                      value={form.plate}
-                      onChange={f('plate')}
-                      placeholder="e.g. 2A-4532"
-                    />
-                    {errors.plate && <div className="form-error-text">{errors.plate}</div>}
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">{t('vehicleType')} <span style={{ color: '#ef4444' }}>*</span></label>
+                  <FormField label={t('plateNumber')} required error={errors.plate}>
+                    <input className="form-control" value={form.plate} onChange={f('plate')} placeholder="e.g. 2A-4532" />
+                  </FormField>
+                  <FormField label={t('vehicleType')} required>
                     <select className="form-control" value={form.type} onChange={f('type')}>
                       {TYPES.map(t => <option key={t} value={t}>{t}</option>)}
                     </select>
-                  </div>
+                  </FormField>
                 </div>
                 <div className="form-row">
-                  <div className="form-group">
-                    <label className="form-label">{t('brand')} <span style={{ color: '#ef4444' }}>*</span></label>
-                    <input
-                      className={`form-control ${errors.brand ? 'is-invalid' : ''}`}
-                      value={form.brand}
-                      onChange={f('brand')}
-                      placeholder="e.g. Honda"
-                    />
-                    {errors.brand && <div className="form-error-text">{errors.brand}</div>}
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">{t('model')} <span style={{ color: '#ef4444' }}>*</span></label>
-                    <input
-                      className={`form-control ${errors.model ? 'is-invalid' : ''}`}
-                      value={form.model}
-                      onChange={f('model')}
-                      placeholder="e.g. Dream 125"
-                    />
-                    {errors.model && <div className="form-error-text">{errors.model}</div>}
-                  </div>
+                  <FormField label={t('brand')} required error={errors.brand}>
+                    <input className="form-control" value={form.brand} onChange={f('brand')} placeholder="e.g. Honda" />
+                  </FormField>
+                  <FormField label={t('model')} required error={errors.model}>
+                    <input className="form-control" value={form.model} onChange={f('model')} placeholder="e.g. Dream 125" />
+                  </FormField>
                 </div>
                 <div className="form-row">
-                  <div className="form-group"><label className="form-label">{t('year')}</label><input type="number" min="2000" max="2030" className="form-control" value={form.year} onChange={f('year')} /></div>
-                  <div className="form-group">
-                    <label className="form-label">{t('status')}</label>
+                  <FormField label={t('year')}>
+                    <input type="number" min="2000" max="2030" className="form-control" value={form.year} onChange={f('year')} />
+                  </FormField>
+                  <FormField label={t('status')}>
                     <select className="form-control" value={form.status} onChange={f('status')}>
                       <option value="active">Active</option>
                       <option value="maintenance">Maintenance</option>
                       <option value="inactive">Inactive</option>
                     </select>
-                  </div>
+                  </FormField>
                 </div>
                 
                 <div style={{ marginTop: 20, display: 'flex', gap: 12, justifyContent: 'flex-end' }}>

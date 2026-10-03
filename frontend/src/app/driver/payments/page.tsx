@@ -13,6 +13,8 @@ export default function DriverPaymentsPage() {
   const [payments, setPayments] = useState<any[]>([]);
   const [wallets, setWallets] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedDate, setSelectedDate] = useState<string>(() => new Date().toISOString().split('T')[0]);
+  const [showCalendarModal, setShowCalendarModal] = useState(false);
 
   const loadData = async () => {
     setLoading(true);
@@ -411,6 +413,85 @@ export default function DriverPaymentsPage() {
           )}
         </div>
       </div>
+
+      {/* Date Picker Modal */}
+      {showCalendarModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(15, 23, 42, 0.6)',
+          backdropFilter: 'blur(4px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          padding: '20px',
+        }}>
+          <div style={{
+            backgroundColor: '#ffffff',
+            borderRadius: '24px',
+            padding: '24px',
+            width: '100%',
+            maxWidth: '360px',
+            boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
+          }}>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: '16px',
+            }}>
+              <span style={{ fontSize: '16px', fontWeight: '800', color: '#0f172a' }}>
+                {t.selectDate}
+              </span>
+              <button
+                type="button"
+                onClick={() => setShowCalendarModal(false)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}
+              >
+                <MdClose size={22} />
+              </button>
+            </div>
+
+            <input
+              type="date"
+              value={selectedDate}
+              onChange={(e) => handleSelectDate(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '12px 14px',
+                borderRadius: '12px',
+                border: '1.5px solid #e2e8f0',
+                fontSize: '14px',
+                fontWeight: '600',
+                outline: 'none',
+                marginBottom: '16px',
+              }}
+            />
+
+            <button
+              type="button"
+              onClick={() => handleSelectDate(new Date().toISOString().split('T')[0])}
+              style={{
+                width: '100%',
+                padding: '12px',
+                backgroundColor: '#eff6ff',
+                color: '#1e60ff',
+                border: '1px solid #bfdbfe',
+                borderRadius: '12px',
+                fontSize: '13.5px',
+                fontWeight: '700',
+                cursor: 'pointer',
+              }}
+            >
+              {t.today}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

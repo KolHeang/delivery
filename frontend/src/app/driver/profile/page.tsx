@@ -240,7 +240,7 @@ export default function DriverProfilePage() {
       router.push("/driver/login");
       return;
     }
-    loadProfileData();
+    loadProfile();
   }, [router]);
 
   const handleLogout = () => {
@@ -1049,7 +1049,6 @@ export default function DriverProfilePage() {
               >
                 ⚠️ {passwordError}
               </div>
-            )}
 
             {passwordSuccess && (
               <div
@@ -1166,6 +1165,7 @@ export default function DriverProfilePage() {
                   }}
                 />
               </div>
+            </div>
 
               <button
                 type="submit"
@@ -1501,25 +1501,43 @@ export default function DriverProfilePage() {
                 />
               </div>
 
+            <div style={{ display: 'flex', gap: '10px' }}>
               <button
-                type="submit"
-                disabled={editSubmitting}
+                type="button"
+                onClick={() => setShowLogoutModal(false)}
                 style={{
-                  marginTop: "6px",
-                  width: "100%",
-                  background: "#581c87",
-                  color: "#ffffff",
-                  border: "none",
-                  borderRadius: "14px",
-                  padding: "12px",
-                  fontSize: "14px",
-                  fontWeight: "700",
-                  cursor: editSubmitting ? "not-allowed" : "pointer",
+                  flex: 1,
+                  padding: '12px',
+                  backgroundColor: '#f1f5f9',
+                  color: '#475569',
+                  border: 'none',
+                  borderRadius: '12px',
+                  fontSize: '13.5px',
+                  fontWeight: '700',
+                  cursor: 'pointer',
                 }}
               >
-                {editSubmitting ? "..." : t.saveBtn}
+                {t.closeBtn || 'បោះបង់'}
               </button>
-            </form>
+
+              <button
+                type="button"
+                onClick={handleLogout}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  backgroundColor: '#dc2626',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '12px',
+                  fontSize: '13.5px',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                }}
+              >
+                {t.confirmLogoutBtn}
+              </button>
+            </div>
           </div>
         </div>
       )}

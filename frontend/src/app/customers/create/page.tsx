@@ -8,10 +8,13 @@ import Topbar from '@/components/layout/Topbar';
 import api from '@/lib/api';
 import { useLanguage } from '@/lib/LanguageContext';
 
+import FormField from '@/components/ui/FormField';
+
 export default function CreateCustomerPage() {
   const router = useRouter();
-  const { t } = useLanguage();
+  const { lang, t } = useLanguage();
   const [saving, setSaving] = useState(false);
+  //const [errors, setErrors] = useState<Record<string, string>>({});
   const [form, setForm] = useState({ name: '', phone: '', email: '', address: '' });
   const [errors, setErrors] = useState<Record<string, string>>({});
 

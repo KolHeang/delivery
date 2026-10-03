@@ -108,6 +108,7 @@ export default function MerchantCreateOrderPage() {
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const [form, setForm] = useState({
     receiverName: "",
@@ -170,6 +171,21 @@ export default function MerchantCreateOrderPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const newErrors: Record<string, string> = {};
+    if (!form.receiverPhone.trim()) {
+      newErrors.receiverPhone = lang === 'km' ? 'សូមបញ្ចូលលេខទូរស័ព្ទ' : 'Please enter phone number';
+    }
+    if (!form.receiverAddress.trim()) {
+      newErrors.receiverAddress = lang === 'km' ? 'សូមបញ្ចូលអាសយដ្ឋានដឹកជញ្ជូន' : 'Please enter delivery address';
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+    setErrors({});
+
     setSubmitting(true);
     setError("");
     setSuccess(false);
@@ -322,6 +338,7 @@ export default function MerchantCreateOrderPage() {
         )}
 
         <form
+          noValidate
           onSubmit={handleSubmit}
           style={{ display: "flex", flexDirection: "column", gap: "14px" }}
         >
@@ -353,19 +370,34 @@ export default function MerchantCreateOrderPage() {
                     type="tel"
                     placeholder={lang === "km" ? "ឧទាហរណ៍៖ 012 345 678" : "e.g. 012 345 678"}
                     value={form.receiverPhone}
-                    onChange={(e) => setForm({ ...form, receiverPhone: e.target.value })}
-                    required
-                    style={inputStyle}
+                    onChange={(e) => {
+                      setForm({ ...form, receiverPhone: e.target.value });
+                      if (errors.receiverPhone) setErrors((prev) => ({ ...prev, receiverPhone: "" }));
+                    }}
+                    style={{
+                      ...inputStyle,
+                      borderColor: errors.receiverPhone ? "#dc2626" : "#e2e8f0",
+                      boxShadow: errors.receiverPhone ? "0 0 0 3px rgba(220,38,38,0.08)" : "none",
+                    }}
                     onFocus={(e) => {
-                      e.target.style.borderColor = "#7e22ce";
-                      e.target.style.backgroundColor = "#fff";
+                      if (!errors.receiverPhone) {
+                        e.target.style.borderColor = "#7e22ce";
+                        e.target.style.backgroundColor = "#fff";
+                      }
                     }}
                     onBlur={(e) => {
-                      e.target.style.borderColor = "#e2e8f0";
-                      e.target.style.backgroundColor = "#f8fafc";
+                      if (!errors.receiverPhone) {
+                        e.target.style.borderColor = "#e2e8f0";
+                        e.target.style.backgroundColor = "#f8fafc";
+                      }
                     }}
                   />
                 </div>
+                {errors.receiverPhone && (
+                  <div style={{ color: "#dc2626", fontSize: "12px", marginTop: "4px", fontWeight: "600" }}>
+                    {errors.receiverPhone}
+                  </div>
+                )}
               </div>
 
               {/* Delivery Address */}
@@ -380,24 +412,37 @@ export default function MerchantCreateOrderPage() {
                   <textarea
                     placeholder={t.addressPlaceholder}
                     value={form.receiverAddress}
-                    onChange={(e) => setForm({ ...form, receiverAddress: e.target.value })}
-                    required
+                    onChange={(e) => {
+                      setForm({ ...form, receiverAddress: e.target.value });
+                      if (errors.receiverAddress) setErrors((prev) => ({ ...prev, receiverAddress: "" }));
+                    }}
                     rows={2}
                     style={{
                       ...inputStyle,
                       paddingTop: "12px",
                       resize: "none",
+                      borderColor: errors.receiverAddress ? "#dc2626" : "#e2e8f0",
+                      boxShadow: errors.receiverAddress ? "0 0 0 3px rgba(220,38,38,0.08)" : "none",
                     }}
                     onFocus={(e) => {
-                      e.target.style.borderColor = "#7e22ce";
-                      e.target.style.backgroundColor = "#fff";
+                      if (!errors.receiverAddress) {
+                        e.target.style.borderColor = "#7e22ce";
+                        e.target.style.backgroundColor = "#fff";
+                      }
                     }}
                     onBlur={(e) => {
-                      e.target.style.borderColor = "#e2e8f0";
-                      e.target.style.backgroundColor = "#f8fafc";
+                      if (!errors.receiverAddress) {
+                        e.target.style.borderColor = "#e2e8f0";
+                        e.target.style.backgroundColor = "#f8fafc";
+                      }
                     }}
                   />
                 </div>
+                {errors.receiverAddress && (
+                  <div style={{ color: "#dc2626", fontSize: "12px", marginTop: "4px", fontWeight: "600" }}>
+                    {errors.receiverAddress}
+                  </div>
+                )}
               </div>
             </div>
           </div>

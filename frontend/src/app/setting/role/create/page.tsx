@@ -7,6 +7,7 @@ import Sidebar from '@/components/layout/Sidebar';
 import Topbar from '@/components/layout/Topbar';
 import api from '@/lib/api';
 import { useLanguage } from '@/lib/LanguageContext';
+import FormField from '@/components/ui/FormField';
 
 interface Permission {
   id: number;
@@ -32,16 +33,16 @@ const PERM_GROUP_TO_PLAN_FEATURE: Record<string, string> = {
 
 export default function CreateRolePage() {
   const router = useRouter();
-  const { t } = useLanguage();
+  const { lang, t } = useLanguage();
 
   const [allPermissions, setAllPermissions] = useState<Permission[]>([]);
   const [planFeatures, setPlanFeatures] = useState<Record<string, boolean> | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const [roleName, setRoleName] = useState('');
   const [roleDescription, setRoleDescription] = useState('');
-  const [roleNameError, setRoleNameError] = useState('');
   const [selectedPermissionIds, setSelectedPermissionIds] = useState<number[]>([]);
 
   useEffect(() => {
@@ -98,10 +99,10 @@ export default function CreateRolePage() {
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!roleName.trim()) {
-      setRoleNameError(t('roleNameRequired') || 'សូមបំពេញឈ្មោះតួនាទី (Role Name)');
+      setErrors({ roleName: t('roleNameRequired') || (lang === 'km' ? 'សូមបំពេញឈ្មោះតួនាទី (Role Name)' : 'Role name is required') });
       return;
     }
-    setRoleNameError('');
+    setErrors({});
 
     setSaving(true);
     try {
@@ -157,31 +158,28 @@ export default function CreateRolePage() {
               <span className="card-title">{t('createRoleForm')}</span>
             </div>
             <div className="card-body">
-              <form onSubmit={handleSave} noValidate>
+              <form noValidate onSubmit={handleSave}>
                 <div className="form-row">
-                  <div className="form-group">
-                    <label className="form-label">{t('roleName')} <span style={{ color: '#ef4444' }}>*</span></label>
+                  <FormField label={t('roleName')} required error={errors.roleName}>
                     <input
-                      className={`form-control ${roleNameError ? 'is-invalid' : ''}`}
+                      className={`form-control ${errors.roleName ? 'is-invalid' : ''}`}
                       placeholder={t('roleNamePlaceholder')}
                       value={roleName}
                       onChange={e => {
                         setRoleName(e.target.value);
-                        if (roleNameError) setRoleNameError('');
+                        if (errors.roleName) setErrors({});
                       }}
                       style={{ textTransform: 'lowercase' }}
                     />
-                    {roleNameError && <div className="form-error-text">{roleNameError}</div>}
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">{t('roleDescription')}</label>
+                  </FormField>
+                  <FormField label={t('roleDescription')}>
                     <input
                       className="form-control"
                       placeholder={t('roleDescriptionPlaceholder')}
                       value={roleDescription}
                       onChange={e => setRoleDescription(e.target.value)}
                     />
-                  </div>
+                  </FormField>
                 </div>
 
                 <div style={{ marginTop: 24 }}>

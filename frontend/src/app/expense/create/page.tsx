@@ -7,14 +7,15 @@ import Sidebar from '@/components/layout/Sidebar';
 import Topbar from '@/components/layout/Topbar';
 import api from '@/lib/api';
 import { useLanguage } from '@/lib/LanguageContext';
+import FormField from '@/components/ui/FormField';
 
 export default function AddExpensePage() {
   const router = useRouter();
+  const { lang, t } = useLanguage();
   const [types, setTypes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const { t } = useLanguage();
   const [form, setForm] = useState({
     description: '',
     amount: '',
@@ -48,26 +49,27 @@ export default function AddExpensePage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const errs: Record<string, string> = {};
+
+    const newErrors: Record<string, string> = {};
     if (!form.description.trim()) {
-      errs.description = 'សូមបំពេញបរិយាយ ឬមុខទំនិញចំណាយ';
+      newErrors.description = lang === 'km' ? 'សូមបញ្ចូលការពិពណ៌នា' : 'Please enter description';
     }
     if (!form.typeId) {
-      errs.typeId = 'សូមជ្រើសរើសប្រភេទចំណាយ';
+      newErrors.typeId = lang === 'km' ? 'សូមជ្រើសរើសប្រភេទចំណាយ' : 'Please select expense category';
     }
     if (!form.amount || parseFloat(form.amount) <= 0) {
-      errs.amount = 'សូមបំពេញចំនួនទឹកប្រាក់';
+      newErrors.amount = lang === 'km' ? 'សូមបញ្ចូលចំនួនទឹកប្រាក់' : 'Please enter valid amount';
     }
     if (!form.date) {
-      errs.date = 'សូមជ្រើសរើសកាលបរិច្ឆេទ';
+      newErrors.date = lang === 'km' ? 'សូមជ្រើសរើសកាលបរិច្ឆេទ' : 'Please select date';
     }
 
-    if (Object.keys(errs).length > 0) {
-      setErrors(errs);
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
       return;
     }
-
     setErrors({});
+
     setSaving(true);
     try {
       const payload = {
@@ -102,9 +104,8 @@ export default function AddExpensePage() {
           <div className="card">
             <div className="card-header"><span className="card-title">{t('expenseDetails') || 'Expense Details'}</span></div>
             <div className="card-body">
-              <form onSubmit={handleSubmit} noValidate>
-                <div className="form-group">
-                  <label className="form-label">{t('descOrItem') || 'Description / Item'} <span style={{ color: '#ef4444' }}>*</span></label>
+              <form noValidate onSubmit={handleSubmit}>
+                <FormField label={t('descOrItem') || 'Description / Item'} required error={errors.description}>
                   <input
                     type="text"
                     className={`form-control ${errors.description ? 'is-invalid' : ''}`}
@@ -112,26 +113,23 @@ export default function AddExpensePage() {
                     value={form.description}
                     onChange={e => handleFieldChange('description', e.target.value)}
                   />
-                  {errors.description && <div className="form-error-text">{errors.description}</div>}
-                </div>
+                </FormField>
 
-                <div className="form-group">
-                  <label className="form-label">{t('expenseCategory') || 'Expense Category / Type'} <span style={{ color: '#ef4444' }}>*</span></label>
+                <FormField label={t('expenseCategory') || 'Expense Category / Type'} required error={errors.typeId}>
                   <select
                     className={`form-control ${errors.typeId ? 'is-invalid' : ''}`}
                     value={form.typeId}
                     onChange={e => handleFieldChange('typeId', e.target.value)}
                   >
+                    <option value="">{lang === 'km' ? '-- ជ្រើសរើសប្រភេទចំណាយ --' : '-- Select Expense Category --'}</option>
                     {types.map(t => (
                       <option key={t.id} value={t.id}>{t.name}</option>
                     ))}
                   </select>
-                  {errors.typeId && <div className="form-error-text">{errors.typeId}</div>}
-                </div>
+                </FormField>
 
                 <div className="form-row">
-                  <div className="form-group">
-                    <label className="form-label">{t('amountUSD') || 'Amount ($)'} <span style={{ color: '#ef4444' }}>*</span></label>
+                  <FormField label={t('amountUSD') || 'Amount ($)'} required error={errors.amount}>
                     <input
                       type="number"
                       step="0.01"
@@ -141,18 +139,15 @@ export default function AddExpensePage() {
                       value={form.amount}
                       onChange={e => handleFieldChange('amount', e.target.value)}
                     />
-                    {errors.amount && <div className="form-error-text">{errors.amount}</div>}
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">{t('date') || 'កាលបរិច្ឆេទ'} <span style={{ color: '#ef4444' }}>*</span></label>
+                  </FormField>
+                  <FormField label={t('dateLabel') || 'Date'} required error={errors.date}>
                     <input
                       type="date"
                       className={`form-control ${errors.date ? 'is-invalid' : ''}`}
                       value={form.date}
                       onChange={e => handleFieldChange('date', e.target.value)}
                     />
-                    {errors.date && <div className="form-error-text">{errors.date}</div>}
-                  </div>
+                  </FormField>
                 </div>
 
                 <div style={{ marginTop: 20, display: 'flex', gap: 12, justifyContent: 'flex-end' }}>

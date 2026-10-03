@@ -23,6 +23,7 @@ import {
 
 export default function DriverTasksPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { lang } = useLanguage();
   const [tasks, setTasks] = useState<any[]>([]);
   const [driver, setDriver] = useState<any>(null);
@@ -73,13 +74,31 @@ export default function DriverTasksPage() {
     loadTasks();
   }, [router]);
 
-  const updateStatus = async (taskId: number, status: string, remark?: string) => {
-    setUpdatingId(taskId);
+    if (searchParams.get('scan') === 'true') {
+      setShowScannerModal(true);
+    }
+
+    loadTasksAndCounts(activeTab, searchQuery);
+  }, [router, activeTab]);
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setSearchQuery(val);
+    loadTasksAndCounts(activeTab, val);
+  };
+
+  const handleTabChange = (tab: 'all' | 'pending' | 'delivered' | 'failed' | 'returned') => {
+    setActiveTab(tab);
+    setLoading(true);
+    loadTasksAndCounts(tab, searchQuery);
+  };
+
+  const handleUpdateStatus = async (taskId: number, newStatus: string, note = '') => {
+    setActionLoading(true);
     try {
       await api.patch(`/mobile/driver/tasks/${taskId}/status`, {
-        status,
-        note: remark || undefined,
-        remark: remark || undefined,
+        status: newStatus,
+        note,
       });
       await loadTasks();
       setSelectedTask(null);
@@ -89,7 +108,7 @@ export default function DriverTasksPage() {
       console.error("Failed to update status", err);
       alert(err.response?.data?.message || "Failed to update task status");
     } finally {
-      setUpdatingId(null);
+      setActionLoading(false);
     }
   };
 
@@ -386,6 +405,7 @@ export default function DriverTasksPage() {
             return (
               <div
                 key={task.id}
+                onClick={() => router.push(`/driver/tasks/${task.id}`)}
                 style={{
                   backgroundColor: "#ffffff",
                   borderRadius: "20px",
@@ -523,7 +543,7 @@ export default function DriverTasksPage() {
                         {task.receiverAddress} {task.zone?.name ? `(${task.zone.name})` : ""}
                       </span>
                     </div>
-                  )}
+                  </div>
                 </div>
 
                 {/* Divider */}

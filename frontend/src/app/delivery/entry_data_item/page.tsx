@@ -19,6 +19,8 @@ export default function BatchEntryPage() {
   const [saving, setSaving] = useState(false);
   const { t, lang } = useLanguage();
   const [selectedMerchantId, setSelectedMerchantId] = useState('');
+  const [merchantError, setMerchantError] = useState('');
+  const [rowErrors, setRowErrors] = useState<Record<number, { receiverAddress?: string; receiverPhone?: string }>>({});
   const [parcelDate, setParcelDate] = useState(() => getLocalDateString());
   const [deliveryFee, setDeliveryFee] = useState('1.25');
 
@@ -102,7 +104,15 @@ export default function BatchEntryPage() {
   };
 
   const handleSaveBatch = async () => {
-    if (!selectedMerchantId) return alert(lang === 'km' ? 'សូមជ្រើសរើសហាង/អតិថិជន' : 'Please select a Shop/Merchant');
+    let hasError = false;
+    const newRowErrors: Record<number, { receiverAddress?: string; receiverPhone?: string }> = {};
+
+    if (!selectedMerchantId) {
+      setMerchantError(lang === 'km' ? 'សូមជ្រើសរើសហាង' : 'Please select a shop');
+      hasError = true;
+    } else {
+      setMerchantError('');
+    }
     
     // Validation
     const errs: Record<number, { receiverAddress?: string; receiverPhone?: string }> = {};
@@ -220,21 +230,30 @@ export default function BatchEntryPage() {
         <div className="page-content" style={{ maxWidth: '100%' }}>
           {/* Top Panel Controls */}
           <div className="card" style={{ marginBottom: 20, padding: 20 }}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 16, alignItems: 'end' }}>
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label" style={{ fontWeight: 600 }}>{t('shopCustomerLabel')} <span style={{ color: 'var(--danger)' }}>*</span></label>
-                <select
-                  className="form-control"
-                  value={selectedMerchantId}
-                  onChange={e => setSelectedMerchantId(e.target.value)}
-                  style={{ height: 42, fontSize: 13.5 }}
-                >
-                  {merchants.map(m => (
-                    <option key={m.id} value={m.id}>
-                      {m.id}-{m.nameKh ? `${m.nameKh} (${m.name})` : m.name}
-                    </option>
-                  ))}
-                </select>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 16, alignItems: 'start' }}>
+              <div className={`form-group ${merchantError ? 'has-error' : ''}`} style={{ marginBottom: 0 }}>
+                <label className="form-label" style={{ fontWeight: 600 }}>
+                  {t('shopCustomerLabel')} <span style={{ color: 'var(--danger)' }}>*</span>
+                </label>
+                <div className="input-error-wrapper">
+                  <select
+                    className={`form-control ${merchantError ? 'is-invalid' : ''}`}
+                    value={selectedMerchantId}
+                    onChange={e => {
+                      setSelectedMerchantId(e.target.value);
+                      if (merchantError) setMerchantError('');
+                    }}
+                    style={{ height: 42, fontSize: 13.5 }}
+                  >
+                    <option value="">{lang === 'km' ? '-- ជ្រើសរើសហាង --' : '-- Select Shop --'}</option>
+                    {merchants.map(m => (
+                      <option key={m.id} value={m.id}>
+                        {m.id}-{m.nameKh ? `${m.nameKh} (${m.name})` : m.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                {merchantError && <div className="form-error-text">{merchantError}</div>}
               </div>
 
               <DateInput
@@ -253,7 +272,7 @@ export default function BatchEntryPage() {
                 <thead>
                   <tr style={{ background: '#2f55a5' }}>
                     <th style={{ width: 45, padding: '12px 8px', textAlign: 'center', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'ល.រ' : 'No.'}</th>
-                    <th style={{ width: 180, padding: '12px 8px', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('receiverAddressCol')} *</th>
+                    <th style={{ width: 180, padding: '12px 8px', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('receiverAddressCol')}</th>
                     <th style={{ width: 130, padding: '12px 8px', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('receiverPhoneColRequired')}</th>
                     <th style={{ width: 85, padding: '12px 8px', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('deliveryFee')}</th>
                     <th style={{ width: 95, padding: '12px 8px', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('amountUSD')}</th>
@@ -398,7 +417,8 @@ export default function BatchEntryPage() {
                         </button>
                       </td>
                     </tr>
-                  ))}
+                  );
+                })}
                 </tbody>
               </table>
             </div>

@@ -109,8 +109,8 @@ export default function CreateStaffPage() {
       setErrors(errs);
       return;
     }
-
     setErrors({});
+
     const selectedRole = roles.find(r => r.name === form.role);
     setSaving(true);
     try {

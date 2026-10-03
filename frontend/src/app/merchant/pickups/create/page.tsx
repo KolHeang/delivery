@@ -4,10 +4,12 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { isAuthenticated } from "@/lib/auth";
 import api from "@/lib/api";
-import { MdArrowBack, MdInventory2, MdCheckCircle, MdSchedule, MdLocationOn } from "react-icons/md";
+import { MdArrowBack, MdInventory2, MdCheckCircle } from "react-icons/md";
+import { useLanguage } from "@/lib/LanguageContext";
 
 export default function MerchantCreatePickupPage() {
   const router = useRouter();
+  const { t, lang } = useLanguage();
 
   const [profile, setProfile] = useState<any>(null);
   const [form, setForm] = useState({
@@ -17,6 +19,7 @@ export default function MerchantCreatePickupPage() {
   });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [success, setSuccess] = useState(false);
 
   useEffect(() => {
@@ -43,16 +46,22 @@ export default function MerchantCreatePickupPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const newErrors: Record<string, string> = {};
     const qty = parseInt(form.declaredQuantity);
     if (isNaN(qty) || qty < 1) {
-      setError("សូមបញ្ចូលចំនួនកញ្ចប់ត្រឹមត្រូវ (យ៉ាងតិច ១)");
-      return;
+      newErrors.declaredQuantity = lang === 'km' ? 'សូមបញ្ចូលចំនួនកញ្ចប់អីវ៉ាន់យ៉ាងតិច ១' : 'Please enter a valid quantity (min 1)';
     }
     if (!form.pickupTime) {
-      setError("សូមជ្រើសរើសម៉ោងទទួលទំនិញ");
+      newErrors.pickupTime = lang === 'km' ? 'សូមជ្រើសរើសពេលវេលាទៅទទួល' : 'Please select a pickup time';
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
       return;
     }
+    setErrors({});
     setError("");
+
     setSubmitting(true);
     try {
       await api.post("/mobile/merchant/pickup-requests", {
@@ -209,10 +218,7 @@ export default function MerchantCreatePickupPage() {
             </div>
           )}
 
-          <form
-            onSubmit={handleSubmit}
-            style={{ display: "flex", flexDirection: "column", gap: 18 }}
-          >
+          <form noValidate onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 18 }}>
             {/* Declared Quantity */}
             <div>
               <label
@@ -234,13 +240,15 @@ export default function MerchantCreatePickupPage() {
                 min="1"
                 inputMode="numeric"
                 value={form.declaredQuantity}
-                onChange={(e) => setForm((f) => ({ ...f, declaredQuantity: e.target.value }))}
+                onChange={(e) => {
+                  setForm((f) => ({ ...f, declaredQuantity: e.target.value }));
+                  if (errors.declaredQuantity) setErrors((prev) => ({ ...prev, declaredQuantity: "" }));
+                }}
                 placeholder="ឧ. 10"
-                required
                 style={{
                   width: "100%",
                   padding: "14px 16px",
-                  border: "2px solid #e2e8f0",
+                  border: `2px solid ${errors.declaredQuantity ? "#dc2626" : "#e2e8f0"}`,
                   borderRadius: 14,
                   fontSize: 22,
                   fontWeight: 900,
@@ -253,8 +261,13 @@ export default function MerchantCreatePickupPage() {
                   transition: "border-color 0.2s",
                 }}
                 onFocus={(e) => (e.currentTarget.style.borderColor = "#7e22ce")}
-                onBlur={(e) => (e.currentTarget.style.borderColor = "#e2e8f0")}
+                onBlur={(e) => (e.currentTarget.style.borderColor = errors.declaredQuantity ? "#dc2626" : "#e2e8f0")}
               />
+              {errors.declaredQuantity && (
+                <div style={{ color: "#dc2626", fontSize: 12, marginTop: 4, fontWeight: 600, textAlign: "center" }}>
+                  {errors.declaredQuantity}
+                </div>
+              )}
             </div>
 
             {/* Pickup Address */}
@@ -311,12 +324,14 @@ export default function MerchantCreatePickupPage() {
               <input
                 type="datetime-local"
                 value={form.pickupTime}
-                onChange={(e) => setForm((f) => ({ ...f, pickupTime: e.target.value }))}
-                required
+                onChange={(e) => {
+                  setForm((f) => ({ ...f, pickupTime: e.target.value }));
+                  if (errors.pickupTime) setErrors((prev) => ({ ...prev, pickupTime: "" }));
+                }}
                 style={{
                   width: "100%",
                   padding: "12px 14px",
-                  border: "1.5px solid #e2e8f0",
+                  border: `1.5px solid ${errors.pickupTime ? "#dc2626" : "#e2e8f0"}`,
                   borderRadius: 12,
                   fontSize: 13.5,
                   outline: "none",
@@ -327,8 +342,13 @@ export default function MerchantCreatePickupPage() {
                   fontFamily: "inherit",
                 }}
                 onFocus={(e) => (e.currentTarget.style.borderColor = "#7e22ce")}
-                onBlur={(e) => (e.currentTarget.style.borderColor = "#e2e8f0")}
+                onBlur={(e) => (e.currentTarget.style.borderColor = errors.pickupTime ? "#dc2626" : "#e2e8f0")}
               />
+              {errors.pickupTime && (
+                <div style={{ color: "#dc2626", fontSize: 12, marginTop: 4, fontWeight: 600 }}>
+                  {errors.pickupTime}
+                </div>
+              )}
             </div>
 
             {/* Process Info Guide */}

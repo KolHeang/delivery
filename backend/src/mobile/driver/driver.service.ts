@@ -309,13 +309,9 @@ export class DriverService {
     if (!parcel) {
       const exists = await this.parcelRepo.findOne({ where: { id: taskId } });
       if (!exists) {
-        throw new NotFoundException(
-          `រកមិនឃើញកិច្ចការលេខ #${taskId} ទេ (Task #${taskId} not found)`,
-        );
+        throw new NotFoundException(`រកមិនឃើញកិច្ចការលេខ #${taskId} ទេ`);
       }
-      throw new BadRequestException(
-        'កិច្ចការនេះមិនត្រូវបានចាត់ចែងឱ្យអ្នកទេ (Task is not assigned to you)',
-      );
+      throw new BadRequestException('កិច្ចការនេះមិនត្រូវបានចាត់ចែងឱ្យអ្នកទេ');
     }
 
     const isDeliveryDriver = parcel.driverId === driverId;
@@ -370,14 +366,26 @@ export class DriverService {
     if (!parcel)
       throw new NotFoundException('Parcel not found or not assigned to you');
 
-    const finalNote = dto.remark !== undefined ? dto.remark : dto.note;
+    let finalNote = dto.remark !== undefined ? dto.remark : dto.note;
+    if (dto.reason) {
+      finalNote = finalNote ? `[Reason: ${dto.reason}] ${finalNote}` : `[Reason: ${dto.reason}]`;
+    }
     const updates: Partial<Parcel> = {
       status: dto.status as any,
       updatedById: dto.updatedById || driverId,
     };
     if (dto.status === 'picked-up') updates.pickedUpAt = new Date();
-    if (dto.status === 'delivered') updates.deliveredAt = new Date();
+    if (dto.status === 'delivered') {
+      updates.deliveredAt = new Date();
+      if (!parcel.driverPaymentStatus) {
+        updates.driverPaymentStatus = 'unpaid';
+      }
+    }
     if (dto.status === 'in-warehouse') updates.warehouseAt = new Date();
+    if (dto.paymentMethod) updates.paymentMethod = dto.paymentMethod;
+    if (dto.proofPhotos && dto.proofPhotos.length > 0) updates.proofPhotos = dto.proofPhotos;
+    if (dto.signature) updates.signature = dto.signature;
+    if (dto.failedPhoto || dto.photo) updates.failedPhoto = dto.failedPhoto || dto.photo;
     if (finalNote !== undefined) updates.note = finalNote;
 
     await this.parcelRepo.update(parcelId, updates);
@@ -443,10 +451,14 @@ export class DriverService {
       .groupBy('parcel.cod_currency')
       .getRawMany();
 
-    const codPendingUSD =
-      codCollected.find((c) => c.currency === 'USD')?.total || 0;
-    const codPendingKHR =
-      codCollected.find((c) => c.currency === 'KHR')?.total || 0;
+    const codPendingUSD = parseFloat(
+      codCollected.find((c) => (c.currency || '').toUpperCase() === 'USD')
+        ?.total || 0,
+    );
+    const codPendingKHR = parseFloat(
+      codCollected.find((c) => (c.currency || '').toUpperCase() === 'KHR')
+        ?.total || 0,
+    );
 
     return {
       totalAssigned,
@@ -455,8 +467,8 @@ export class DriverService {
         {},
       ),
       todayDelivered,
-      codPendingUSD: parseFloat(codPendingUSD),
-      codPendingKHR: parseFloat(codPendingKHR),
+      codPendingUSD,
+      codPendingKHR,
     };
   }
 
@@ -628,10 +640,12 @@ export class DriverService {
       .getRawMany();
 
     const codPendingUSD = parseFloat(
-      codCollected.find((c) => c.currency === 'USD')?.total || 0,
+      codCollected.find((c) => (c.currency || '').toUpperCase() === 'USD')
+        ?.total || 0,
     );
     const codPendingKHR = parseFloat(
-      codCollected.find((c) => c.currency === 'KHR')?.total || 0,
+      codCollected.find((c) => (c.currency || '').toUpperCase() === 'KHR')
+        ?.total || 0,
     );
 
     // Delivery Fee earned (SUM of deliveryFee for delivered orders in period)
@@ -662,6 +676,61 @@ export class DriverService {
       totalProblem +
       totalReturn;
 
+    // COD to collect (assigned, in-transit or pending packages for driver)
+    const toCollectQuery = this.parcelRepo
+      .createQueryBuilder('parcel')
+      .select('SUM(parcel.cod)', 'total')
+      .addSelect("UPPER(COALESCE(parcel.codCurrency, 'USD'))", 'currency')
+      .where('parcel.driverId = :driverId', { driverId })
+      .andWhere('parcel.status IN (:...toCollectStatuses)', {
+        toCollectStatuses: ['assigned', 'in-transit', 'pending'],
+      });
+
+    if (start && end) {
+      toCollectQuery.andWhere(
+        'COALESCE(parcel.assignedAt, parcel.updatedAt, parcel.createdAt) >= :start AND COALESCE(parcel.assignedAt, parcel.updatedAt, parcel.createdAt) <= :end',
+        { start, end },
+      );
+    }
+    const codToCollect = await toCollectQuery
+      .groupBy("UPPER(COALESCE(parcel.codCurrency, 'USD'))")
+      .getRawMany();
+
+    const amountToCollectUSD = parseFloat(
+      codToCollect.find((c) => (c.currency || '').toUpperCase() === 'USD')
+        ?.total || 0,
+    );
+    const amountToCollectKHR = parseFloat(
+      codToCollect.find((c) => (c.currency || '').toUpperCase() === 'KHR')
+        ?.total || 0,
+    );
+
+    // Recent tasks
+    const recentParcels = await this.parcelRepo
+      .createQueryBuilder('parcel')
+      .leftJoinAndSelect('parcel.merchant', 'merchant')
+      .where(
+        '(parcel.driverId = :driverId OR parcel.pickupDriverId = :driverId)',
+        { driverId },
+      )
+      .orderBy('parcel.createdAt', 'DESC')
+      .take(5)
+      .getMany();
+
+    const recentTasks = recentParcels.map((p) => ({
+      id: p.id,
+      trackingCode: p.trackingCode,
+      merchantName: p.merchant?.name || p.merchant?.nameKh || p.receiverName || 'Merchant Shop',
+      receiverName: p.receiverName,
+      receiverPhone: p.receiverPhone,
+      receiverAddress: p.receiverAddress,
+      status: p.status,
+      type: (p.status as string) === 'returned' || (p.status as string) === 'rejected' ? 'Return' : 'Delivery',
+      cod: p.cod,
+      codCurrency: p.codCurrency || 'USD',
+      createdAt: p.createdAt,
+    }));
+
     return {
       period,
       deliveryFeeTotal,
@@ -669,6 +738,21 @@ export class DriverService {
         { currency: 'KHR', balance: codPendingKHR },
         { currency: 'USD', balance: codPendingUSD },
       ],
+      amountToCollect: {
+        usd: amountToCollectUSD,
+        khr: amountToCollectKHR,
+      },
+      amountCollected: {
+        usd: codPendingUSD,
+        khr: codPendingKHR,
+      },
+      workStatistics: {
+        totalParcels: sumTotalPackage > 0 ? sumTotalPackage : totalPackage,
+        assigned: assignedParcels,
+        delivered: totalSuccessful,
+        problem: totalProblem,
+        returned: totalReturn,
+      },
       statistics: {
         pickupRequest: pickupRequestCount,
         pickedUpWaiting: pickedUpWaitingCount,
@@ -679,6 +763,7 @@ export class DriverService {
         totalProblem: totalProblem,
         totalReturn: totalReturn,
       },
+      recentTasks,
     };
   }
 
@@ -974,34 +1059,67 @@ export class DriverService {
     }
 
     let code = rawCode.trim();
-    if (code.includes('?')) {
-      const urlParams = new URLSearchParams(code.split('?')[1]);
-      if (urlParams.get('code')) {
-        code = urlParams.get('code')!.trim();
-      } else if (urlParams.get('tracking')) {
-        code = urlParams.get('tracking')!.trim();
+
+    // 1. If it's a full URL, parse it using standard URL parser safely
+    try {
+      if (code.startsWith('http://') || code.startsWith('https://')) {
+        const url = new URL(code);
+        const queryCode =
+          url.searchParams.get('code') ||
+          url.searchParams.get('tracking') ||
+          url.searchParams.get('trackingCode');
+
+        if (queryCode) {
+          code = queryCode.trim();
+        } else {
+          // Grab the last path segment (e.g., /parcels/CO00000032)
+          const segments = url.pathname.split('/').filter(Boolean);
+          if (segments.length > 0) {
+            code = segments[segments.length - 1].trim();
+          }
+        }
+      } else {
+        // Fallback manual query/path handling for non-standard QR payload
+        if (code.includes('?')) {
+          const [, query] = code.split('?');
+          const params = new URLSearchParams(query);
+          const extracted = params.get('code') || params.get('tracking');
+          if (extracted) {
+            code = extracted.trim();
+          }
+        } else if (code.includes('/')) {
+          const segments = code.split('/').filter(Boolean);
+          code = segments[segments.length - 1].trim();
+        }
       }
-    }
-    if (code.includes('/')) {
-      const segments = code.split('/').filter(Boolean);
-      code = segments[segments.length - 1].trim();
+    } catch {
+      // If URL parsing fails, keep code as trimmed string
     }
 
+    // 2. Query parcel using QueryBuilder to handle ILIKE (case-insensitivity) and trimmed matches
     const isNumericId = /^\d+$/.test(code);
+    const qb = this.parcelRepo
+      .createQueryBuilder('parcel')
+      .leftJoinAndSelect('parcel.customer', 'customer')
+      .leftJoinAndSelect('parcel.merchant', 'merchant')
+      .leftJoinAndSelect('parcel.zone', 'zone')
+      .leftJoinAndSelect('parcel.driver', 'driver')
+      .leftJoinAndSelect('parcel.pickupDriver', 'pickupDriver')
+      .leftJoinAndSelect('parcel.events', 'events');
 
-    const parcel = await this.parcelRepo.findOne({
-      where: isNumericId
-        ? [{ trackingCode: code }, { id: parseInt(code, 10) }]
-        : [{ trackingCode: code }],
-      relations: {
-        customer: true,
-        merchant: true,
-        zone: true,
-        driver: true,
-        pickupDriver: true,
-        events: true,
-      },
-    });
+    if (isNumericId) {
+      qb.where(
+        'parcel.id = :id OR UPPER(TRIM(parcel.trackingCode)) = UPPER(:code)',
+        {
+          id: parseInt(code, 10),
+          code,
+        },
+      );
+    } else {
+      qb.where('UPPER(TRIM(parcel.trackingCode)) = UPPER(:code)', { code });
+    }
+
+    const parcel = await qb.getOne();
 
     if (!parcel) {
       throw new NotFoundException(`រកមិនឃើញទំនិញដែលមានលេខកូដ "${rawCode}" ទេ`);
@@ -1016,6 +1134,7 @@ export class DriverService {
       | 'pickup_driver'
       | 'unassigned'
       | 'assigned_to_other' = 'unassigned';
+
     if (isDeliveryDriver) {
       driverRole = 'delivery_driver';
     } else if (isPickupDriver) {
@@ -1024,7 +1143,7 @@ export class DriverService {
       driverRole = 'assigned_to_other';
     }
 
-    // Determine possible actions driver can do right after scan
+    // Available actions
     const availableActions: string[] = [];
     if (
       !parcel.driverId &&
@@ -1381,6 +1500,97 @@ export class DriverService {
         createdAt: payment.createdAt,
       },
       parcels: formattedParcels,
+    };
+  }
+
+  async getDailyDeliveryInvoice(driverId: number, dateStr?: string) {
+    const driver = await this.userRepo.findOne({
+      where: { id: driverId },
+      relations: { zone: true, vehicle: true },
+    });
+    if (!driver) throw new NotFoundException('Driver not found');
+
+    const formattedDate = dateStr || new Date().toISOString().split('T')[0];
+
+    const query = this.parcelRepo
+      .createQueryBuilder('parcel')
+      .where(
+        '(parcel.driverId = :driverId OR parcel.pickupDriverId = :driverId)',
+        { driverId },
+      )
+      .andWhere(
+        'DATE(COALESCE(parcel.deliveredAt, parcel.assignedAt, parcel.updatedAt, parcel.createdAt)) = :formattedDate',
+        { formattedDate },
+      );
+
+    const parcels = await query.getMany();
+
+    const deliveredParcels = parcels.filter((p) => p.status === 'delivered');
+    const deliveredCount = deliveredParcels.length;
+    const failedCount = parcels.filter(
+      (p) => p.status === 'failed' || (p.status as any) === 'problem',
+    ).length;
+    const returnedCount = parcels.filter(
+      (p) => p.status === 'returned' || (p.status as any) === 'rejected',
+    ).length;
+    const totalParcels = parcels.length;
+
+    // Calculate delivery fee and COD from actual delivered parcels
+    let totalCodUsd = 0;
+    let totalCodKhr = 0;
+    let totalDeliveryFee = 0;
+
+    deliveredParcels.forEach((p) => {
+      totalDeliveryFee += parseFloat(p.deliveryFee as any) || 0;
+      const codVal = parseFloat(p.cod as any) || 0;
+      if (p.codCurrency === 'KHR') {
+        totalCodKhr += codVal;
+      } else {
+        totalCodUsd += codVal;
+      }
+    });
+
+    const feePerParcel =
+      deliveredCount > 0
+        ? Math.round((totalDeliveryFee / deliveredCount) * 100) / 100
+        : 0;
+    const adjustment = failedCount > 0 ? -(failedCount * 0.5) : 0;
+    const totalAmount = Math.max(0, totalDeliveryFee + adjustment);
+
+    const payment = await this.driverPaymentRepo.findOne({
+      where: {
+        driverId,
+        date: formattedDate as any,
+      },
+    });
+
+    const riderCode = `RDR${String(driver.id).padStart(3, '0')}`;
+
+    return {
+      date: formattedDate,
+      invoiceStatus: deliveredCount > 0 ? 'Completed' : 'Pending',
+      rider: {
+        name: driver.name || 'Sophal Rider',
+        riderId: riderCode,
+        phone: driver.phone,
+      },
+      parcels: {
+        total: totalParcels,
+        delivered: deliveredCount,
+        failed: failedCount,
+        returned: returnedCount,
+      },
+      financial: {
+        feePerParcel: feePerParcel,
+        totalDeliveryFee: totalDeliveryFee,
+        totalCodUsd: Math.round(totalCodUsd * 100) / 100,
+        totalCodKhr: Math.round(totalCodKhr),
+        totalCod: Math.round(totalCodUsd * 100) / 100,
+        adjustment: adjustment,
+        totalAmount: totalAmount,
+        currency: 'USD',
+        paymentStatus: payment ? 'Paid' : 'Pending',
+      },
     };
   }
 }

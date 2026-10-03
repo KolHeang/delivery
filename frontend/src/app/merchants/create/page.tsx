@@ -8,10 +8,11 @@ import Topbar from '@/components/layout/Topbar';
 import api from '@/lib/api';
 import { useLanguage } from '@/lib/LanguageContext';
 import { useSettings } from '@/lib/SettingsContext';
+import FormField from '@/components/ui/FormField';
 
 export default function CreateShopPage() {
   const router = useRouter();
-  const { t } = useLanguage();
+  const { lang, t } = useLanguage();
   const { khrRate } = useSettings();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -91,24 +92,24 @@ export default function CreateShopPage() {
     e.preventDefault();
     const errs: Record<string, string> = {};
     if (!form.name.trim()) {
-      errs.name = 'សូមបំពេញឈ្មោះហាង (Shop Name)';
+      errs.name = lang === 'km' ? 'សូមបញ្ចូលឈ្មោះ' : 'Please enter name';
     }
     if (!form.phone.trim()) {
-      errs.phone = 'សូមបំពេញលេខទូរស័ព្ទ';
+      errs.phone = lang === 'km' ? 'សូមបញ្ចូលលេខទូរស័ព្ទ' : 'Please enter phone number';
     }
     if (!form.email.trim()) {
-      errs.email = 'សូមបំពេញអ៊ីម៉ែល';
+      errs.email = lang === 'km' ? 'សូមបញ្ចូលអ៊ីមែល' : 'Please enter email';
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
-      errs.email = 'សូមបំពេញអ៊ីម៉ែលត្រឹមត្រូវ';
+      errs.email = lang === 'km' ? 'សូមបំពេញអ៊ីម៉ែលត្រឹមត្រូវ' : 'Invalid email';
     }
     if (!form.address.trim()) {
-      errs.address = 'សូមបំពេញអាសយដ្ឋាន';
+      errs.address = lang === 'km' ? 'សូមបញ្ចូលអាសយដ្ឋាន' : 'Please enter address';
     }
     if (!form.deliveryFee) {
-      errs.deliveryFee = 'សូមបំពេញតម្លៃសេវាដឹក';
+      errs.deliveryFee = lang === 'km' ? 'សូមបញ្ចូលថ្លៃដឹកជញ្ជូន' : 'Please enter delivery fee';
     }
     if (!form.exchangeRate) {
-      errs.exchangeRate = 'សូមបំពេញអត្រាប្តូរប្រាក់';
+      errs.exchangeRate = lang === 'km' ? 'សូមបញ្ចូលអត្រាប្តូរប្រាក់' : 'Please enter exchange rate';
     }
 
     if (Object.keys(errs).length > 0) {
@@ -176,7 +177,7 @@ export default function CreateShopPage() {
           <div className="card">
             <div className="card-header"><span className="card-title">{t('createShop')}</span></div>
             <div className="card-body">
-              <form onSubmit={handleSubmit} noValidate>
+              <form noValidate onSubmit={handleSubmit}>
                 {/* Shop Photo Upload */}
                 <div className="form-row" style={{ alignItems: 'center', marginBottom: 20 }}>
                   <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
@@ -217,8 +218,7 @@ export default function CreateShopPage() {
 
                 {/* Row 1: Delivery Fee & Exchange Rate */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
-                  <div className="form-group">
-                    <label className="form-label">{t('deliveryFee')} <span style={{ color: '#ef4444' }}>*</span></label>
+                  <FormField label={t('deliveryFee')} required error={errors.deliveryFee}>
                     <input
                       type="number"
                       step="0.01"
@@ -226,18 +226,15 @@ export default function CreateShopPage() {
                       value={form.deliveryFee}
                       onChange={e => handleFieldChange('deliveryFee', e.target.value)}
                     />
-                    {errors.deliveryFee && <div className="form-error-text">{errors.deliveryFee}</div>}
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">{t('exchangeRate')} <span style={{ color: '#ef4444' }}>*</span></label>
+                  </FormField>
+                  <FormField label={t('exchangeRate')} required error={errors.exchangeRate}>
                     <input
                       type="number"
                       className={`form-control ${errors.exchangeRate ? 'is-invalid' : ''}`}
                       value={form.exchangeRate}
                       onChange={e => handleFieldChange('exchangeRate', e.target.value)}
                     />
-                    {errors.exchangeRate && <div className="form-error-text">{errors.exchangeRate}</div>}
-                  </div>
+                  </FormField>
                 </div>
 
                 {/* Section 2: Shop Info */}
@@ -245,10 +242,9 @@ export default function CreateShopPage() {
                   {t('shopInfo')}
                 </div>
 
-                {/* Row 2: Name, Phone, Email, Address */}
+                {/* Row 2: Name, Phone */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
-                  <div className="form-group">
-                    <label className="form-label">{t('name')} <span style={{ color: '#ef4444' }}>*</span></label>
+                  <FormField label={t('name')} required error={errors.name}>
                     <input
                       type="text"
                       className={`form-control ${errors.name ? 'is-invalid' : ''}`}
@@ -256,10 +252,8 @@ export default function CreateShopPage() {
                       value={form.name}
                       onChange={e => handleFieldChange('name', e.target.value)}
                     />
-                    {errors.name && <div className="form-error-text">{errors.name}</div>}
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">{t('phone')} <span style={{ color: '#ef4444' }}>*</span></label>
+                  </FormField>
+                  <FormField label={t('phone')} required error={errors.phone}>
                     <input
                       type="text"
                       className={`form-control ${errors.phone ? 'is-invalid' : ''}`}
@@ -267,13 +261,12 @@ export default function CreateShopPage() {
                       value={form.phone}
                       onChange={e => handleFieldChange('phone', e.target.value)}
                     />
-                    {errors.phone && <div className="form-error-text">{errors.phone}</div>}
-                  </div>
+                  </FormField>
                 </div>
                 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
-                  <div className="form-group">
-                    <label className="form-label">{t('email')} <span style={{ color: '#ef4444' }}>*</span></label>
+                {/* Row 3: Email, Address */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginTop: 16 }}>
+                  <FormField label={t('email')} required error={errors.email}>
                     <input
                       type="email"
                       className={`form-control ${errors.email ? 'is-invalid' : ''}`}
@@ -281,10 +274,8 @@ export default function CreateShopPage() {
                       value={form.email}
                       onChange={e => handleFieldChange('email', e.target.value)}
                     />
-                    {errors.email && <div className="form-error-text">{errors.email}</div>}
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">{t('address')} <span style={{ color: '#ef4444' }}>*</span></label>
+                  </FormField>
+                  <FormField label={t('address')} required error={errors.address}>
                     <input
                       type="text"
                       className={`form-control ${errors.address ? 'is-invalid' : ''}`}
@@ -292,12 +283,11 @@ export default function CreateShopPage() {
                       value={form.address}
                       onChange={e => handleFieldChange('address', e.target.value)}
                     />
-                    {errors.address && <div className="form-error-text">{errors.address}</div>}
-                  </div>
+                  </FormField>
                 </div>
 
-                {/* Row 3: Note */}
-                <div className="form-group">
+                {/* Row 4: Note */}
+                <div className="form-group" style={{ marginTop: 16 }}>
                   <label className="form-label">{t('note')}</label>
                   <textarea
                     className="form-control"
@@ -313,7 +303,7 @@ export default function CreateShopPage() {
                   {t('bankInfo')}
                 </div>
 
-                {/* Row 4: Telegram, Link QR KHR, Link QR USD */}
+                {/* Row 5: Telegram, Link QR KHR, Link QR USD */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 20 }}>
                   <div className="form-group">
                     <label className="form-label">{t('telegramLabel')}</label>
@@ -347,8 +337,8 @@ export default function CreateShopPage() {
                   </div>
                 </div>
 
-                {/* Row 5: QR KHR and USD file uploads */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+                {/* Row 6: QR KHR and USD file uploads */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginTop: 16 }}>
                   <div className="form-group">
                     <label className="form-label">{t('qrFileKhr')}</label>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>

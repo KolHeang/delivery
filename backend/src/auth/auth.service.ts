@@ -23,8 +23,11 @@ export class AuthService {
     if (!user.isActive) throw new UnauthorizedException('Account is disabled');
 
     // Fetch user with permissions
-    const userWithPerms = await this.usersService.findOneWithPermissions(user.id);
-    const permissions = userWithPerms?.roleRelation?.permissions?.map(p => p.name) || [];
+    const userWithPerms = await this.usersService.findOneWithPermissions(
+      user.id,
+    );
+    const permissions =
+      userWithPerms?.roleRelation?.permissions?.map((p) => p.name) || [];
 
     const { password: _, ...userWithoutPassword } = user;
     const payload = {
@@ -67,12 +70,12 @@ export class AuthService {
   async refresh(refreshToken: string) {
     try {
       const payload = this.jwtService.verify(refreshToken);
-      
+
       // Find and validate token in database
       const tokenDoc = await this.refreshTokenRepository.findOne({
         where: { token: refreshToken, isRevoked: false },
       });
-      
+
       if (!tokenDoc || tokenDoc.expiresAt < new Date()) {
         throw new UnauthorizedException('Invalid or expired refresh token');
       }
@@ -82,7 +85,9 @@ export class AuthService {
 
       const { iat, exp, ...cleanPayload } = payload;
       const newAccessToken = this.jwtService.sign(cleanPayload);
-      const newRefreshToken = this.jwtService.sign(cleanPayload, { expiresIn: '30d' });
+      const newRefreshToken = this.jwtService.sign(cleanPayload, {
+        expiresIn: '30d',
+      });
 
       // Save the new refresh token
       const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);

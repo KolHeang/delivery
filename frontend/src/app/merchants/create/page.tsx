@@ -65,6 +65,17 @@ export default function CreateShopPage() {
     load();
   }, [router]);
 
+  const handleFieldChange = (field: string, val: string) => {
+    setForm(prev => ({ ...prev, [field]: val }));
+    if (errors[field]) {
+      setErrors(prev => {
+        const next = { ...prev };
+        delete next[field];
+        return next;
+      });
+    }
+  };
+
   const handleFileChange = (field: 'qrImageKhr' | 'qrImageUsd') => (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -77,30 +88,36 @@ export default function CreateShopPage() {
     }
   };
 
-  const handleFieldChange = (field: string, value: string) => {
-    setForm(prev => ({ ...prev, [field]: value }));
-    if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: '' }));
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const errs: Record<string, string> = {};
+    if (!form.name.trim()) {
+      errs.name = lang === 'km' ? 'សូមបញ្ចូលឈ្មោះ' : 'Please enter name';
+    }
+    if (!form.phone.trim()) {
+      errs.phone = lang === 'km' ? 'សូមបញ្ចូលលេខទូរស័ព្ទ' : 'Please enter phone number';
+    }
+    if (!form.email.trim()) {
+      errs.email = lang === 'km' ? 'សូមបញ្ចូលអ៊ីមែល' : 'Please enter email';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
+      errs.email = lang === 'km' ? 'សូមបំពេញអ៊ីម៉ែលត្រឹមត្រូវ' : 'Invalid email';
+    }
+    if (!form.address.trim()) {
+      errs.address = lang === 'km' ? 'សូមបញ្ចូលអាសយដ្ឋាន' : 'Please enter address';
+    }
+    if (!form.deliveryFee) {
+      errs.deliveryFee = lang === 'km' ? 'សូមបញ្ចូលថ្លៃដឹកជញ្ជូន' : 'Please enter delivery fee';
+    }
+    if (!form.exchangeRate) {
+      errs.exchangeRate = lang === 'km' ? 'សូមបញ្ចូលអត្រាប្តូរប្រាក់' : 'Please enter exchange rate';
+    }
 
-    const newErrors: Record<string, string> = {};
-    if (!form.deliveryFee) newErrors.deliveryFee = lang === 'km' ? 'សូមបញ្ចូលថ្លៃដឹកជញ្ជូន' : 'Please enter delivery fee';
-    if (!form.exchangeRate) newErrors.exchangeRate = lang === 'km' ? 'សូមបញ្ចូលអត្រាប្តូរប្រាក់' : 'Please enter exchange rate';
-    if (!form.name.trim()) newErrors.name = lang === 'km' ? 'សូមបញ្ចូលឈ្មោះ' : 'Please enter name';
-    if (!form.phone.trim()) newErrors.phone = lang === 'km' ? 'សូមបញ្ចូលលេខទូរស័ព្ទ' : 'Please enter phone number';
-    if (!form.email.trim()) newErrors.email = lang === 'km' ? 'សូមបញ្ចូលអ៊ីមែល' : 'Please enter email';
-    if (!form.address.trim()) newErrors.address = lang === 'km' ? 'សូមបញ្ចូលអាសយដ្ឋាន' : 'Please enter address';
-
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
+    if (Object.keys(errs).length > 0) {
+      setErrors(errs);
       return;
     }
-    setErrors({});
 
+    setErrors({});
     setSaving(true);
     try {
       const formData = new FormData();
@@ -155,10 +172,10 @@ export default function CreateShopPage() {
     <div className="app-layout">
       <Sidebar />
       <div className="main-content">
-        <Topbar title={t('createShop')} subtitle="Add new merchant account to the platform" />
+        <Topbar title={t('createShop')} subtitle="បន្ថែម និងបង្កើតព័ត៌មានហាងទំនិញថ្មី" />
         <div className="page-content">
           <div className="card">
-            <div className="card-header"><span className="card-title">🏪 {t('createShop')}</span></div>
+            <div className="card-header"><span className="card-title">{t('createShop')}</span></div>
             <div className="card-body">
               <form noValidate onSubmit={handleSubmit}>
                 {/* Shop Photo Upload */}
@@ -205,7 +222,7 @@ export default function CreateShopPage() {
                     <input
                       type="number"
                       step="0.01"
-                      className="form-control"
+                      className={`form-control ${errors.deliveryFee ? 'is-invalid' : ''}`}
                       value={form.deliveryFee}
                       onChange={e => handleFieldChange('deliveryFee', e.target.value)}
                     />
@@ -213,7 +230,7 @@ export default function CreateShopPage() {
                   <FormField label={t('exchangeRate')} required error={errors.exchangeRate}>
                     <input
                       type="number"
-                      className="form-control"
+                      className={`form-control ${errors.exchangeRate ? 'is-invalid' : ''}`}
                       value={form.exchangeRate}
                       onChange={e => handleFieldChange('exchangeRate', e.target.value)}
                     />
@@ -221,16 +238,16 @@ export default function CreateShopPage() {
                 </div>
 
                 {/* Section 2: Shop Info */}
-                <div style={{ background: '#eeeeee', padding: '10px 16px', fontWeight: 'bold', fontSize: 13, color: '#334155', margin: '20px 0 16px', borderRadius: 4 }}>
+                <div style={{ background: '#f8fafc', border: '1px solid var(--border)', padding: '10px 16px', fontWeight: 'bold', fontSize: 13, color: '#334155', margin: '20px 0 16px', borderRadius: 6 }}>
                   {t('shopInfo')}
                 </div>
 
-                {/* Row 2: Name, Phone, Email, Address */}
+                {/* Row 2: Name, Phone */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
                   <FormField label={t('name')} required error={errors.name}>
                     <input
                       type="text"
-                      className="form-control"
+                      className={`form-control ${errors.name ? 'is-invalid' : ''}`}
                       placeholder="e.g. Zando Shop"
                       value={form.name}
                       onChange={e => handleFieldChange('name', e.target.value)}
@@ -239,7 +256,7 @@ export default function CreateShopPage() {
                   <FormField label={t('phone')} required error={errors.phone}>
                     <input
                       type="text"
-                      className="form-control"
+                      className={`form-control ${errors.phone ? 'is-invalid' : ''}`}
                       placeholder="e.g. 012-100-200"
                       value={form.phone}
                       onChange={e => handleFieldChange('phone', e.target.value)}
@@ -247,11 +264,12 @@ export default function CreateShopPage() {
                   </FormField>
                 </div>
                 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+                {/* Row 3: Email, Address */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginTop: 16 }}>
                   <FormField label={t('email')} required error={errors.email}>
                     <input
                       type="email"
-                      className="form-control"
+                      className={`form-control ${errors.email ? 'is-invalid' : ''}`}
                       placeholder="e.g. zando@shop.com"
                       value={form.email}
                       onChange={e => handleFieldChange('email', e.target.value)}
@@ -260,7 +278,7 @@ export default function CreateShopPage() {
                   <FormField label={t('address')} required error={errors.address}>
                     <input
                       type="text"
-                      className="form-control"
+                      className={`form-control ${errors.address ? 'is-invalid' : ''}`}
                       placeholder="Full address..."
                       value={form.address}
                       onChange={e => handleFieldChange('address', e.target.value)}
@@ -268,8 +286,8 @@ export default function CreateShopPage() {
                   </FormField>
                 </div>
 
-                {/* Row 3: Note */}
-                <div className="form-group">
+                {/* Row 4: Note */}
+                <div className="form-group" style={{ marginTop: 16 }}>
                   <label className="form-label">{t('note')}</label>
                   <textarea
                     className="form-control"
@@ -281,11 +299,11 @@ export default function CreateShopPage() {
                 </div>
 
                 {/* Section 3: Bank Info */}
-                <div style={{ background: '#eeeeee', padding: '10px 16px', fontWeight: 'bold', fontSize: 13, color: '#334155', margin: '20px 0 16px', borderRadius: 4 }}>
+                <div style={{ background: '#f8fafc', border: '1px solid var(--border)', padding: '10px 16px', fontWeight: 'bold', fontSize: 13, color: '#334155', margin: '20px 0 16px', borderRadius: 6 }}>
                   {t('bankInfo')}
                 </div>
 
-                {/* Row 4: Telegram, Link QR KHR, Link QR USD */}
+                {/* Row 5: Telegram, Link QR KHR, Link QR USD */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 20 }}>
                   <div className="form-group">
                     <label className="form-label">{t('telegramLabel')}</label>
@@ -319,8 +337,8 @@ export default function CreateShopPage() {
                   </div>
                 </div>
 
-                {/* Row 5: QR KHR and USD file uploads */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+                {/* Row 6: QR KHR and USD file uploads */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginTop: 16 }}>
                   <div className="form-group">
                     <label className="form-label">{t('qrFileKhr')}</label>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -353,10 +371,20 @@ export default function CreateShopPage() {
 
                 {/* Bottom Buttons */}
                 <div style={{ marginTop: 24, display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
-                  <button type="button" className="btn btn-outline" onClick={() => router.push('/merchants')}>
+                  <button
+                    type="button"
+                    className="btn btn-cancel"
+                    style={{ background: '#dc2626', color: '#ffffff', border: '1px solid #dc2626', fontWeight: 700 }}
+                    onClick={() => router.push('/merchants')}
+                  >
                     {t('cancel')}
                   </button>
-                  <button type="submit" style={{ background: 'var(--accent)', color: '#fff', padding: '10px 24px', border: 'none', borderRadius: 6, fontWeight: 'bold', cursor: 'pointer', transition: 'opacity 0.2s' }} disabled={saving}>
+                  <button
+                    type="submit"
+                    className="btn btn-primary"
+                    style={{ background: '#2563eb', color: '#ffffff', border: '1px solid #2563eb', fontWeight: 700, padding: '10px 24px' }}
+                    disabled={saving}
+                  >
                     {saving ? t('saving') : t('save')}
                   </button>
                 </div>

@@ -50,9 +50,12 @@ export default function CompletePackagePage() {
 
   const loadActiveOrders = async () => {
     try {
-      const res = await api.get('/parcels');
+      const res = await api.get('/parcels', { params: { limit: 1000 } });
+      const rawList = Array.isArray(res.data)
+        ? res.data
+        : (res.data?.results || res.data?.result || []);
       // Show all active & unfinalized orders (pending, in-warehouse, assigned, picked-up, in-transit, failed)
-      const activeOrders = (res.data || []).filter((o: any) =>
+      const activeOrders = rawList.filter((o: any) =>
         ['pending', 'in-warehouse', 'assigned', 'picked-up', 'in-transit', 'failed'].includes(o.status)
       );
 
@@ -88,7 +91,7 @@ export default function CompletePackagePage() {
   const loadDrivers = async () => {
     try {
       const res = await api.get('/select/drivers');
-      setDrivers(Array.isArray(res.data) ? res.data : (res.data?.result || []));
+      setDrivers(Array.isArray(res.data) ? res.data : (res.data?.results || res.data?.result || []));
     } catch (err) {
       console.error('Error fetching drivers:', err);
     }

@@ -7,7 +7,6 @@ import Sidebar from '@/components/layout/Sidebar';
 import Topbar from '@/components/layout/Topbar';
 import api from '@/lib/api';
 import { useLanguage } from '@/lib/LanguageContext';
-
 import FormField from '@/components/ui/FormField';
 
 const TYPES = ['motorbike', 'car', 'van', 'truck', 'tuk-tuk'];
@@ -17,8 +16,8 @@ export default function CreateVehiclePage() {
   const router = useRouter();
   const { lang, t } = useLanguage();
   const [saving, setSaving] = useState(false);
-  const [errors, setErrors] = useState<Record<string, string>>({});
   const [form, setForm] = useState({ plate: '', type: 'motorbike', brand: '', model: '', year: new Date().getFullYear(), status: 'active' });
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (!isAuthenticated()) { router.push('/'); }
@@ -27,7 +26,11 @@ export default function CreateVehiclePage() {
   const f = (k: string) => (e: any) => {
     setForm(p => ({ ...p, [k]: k === 'year' ? parseInt(e.target.value) : e.target.value }));
     if (errors[k]) {
-      setErrors(prev => ({ ...prev, [k]: '' }));
+      setErrors(prev => {
+        const next = { ...prev };
+        delete next[k];
+        return next;
+      });
     }
   };
 
@@ -59,10 +62,10 @@ export default function CreateVehiclePage() {
     <div className="app-layout">
       <Sidebar />
       <div className="main-content">
-        <Topbar title={t('addVehicle')} subtitle={t('addVehicle')} />
+        <Topbar title={t('addVehicle')} subtitle="បន្ថែម និងចុះបញ្ជីយានយន្តថ្មី" />
         <div className="page-content">
           <div className="card">
-            <div className="card-header"><span className="card-title">🚗 {t('addVehicle')}</span></div>
+            <div className="card-header"><span className="card-title">{t('addVehicle')}</span></div>
             <div className="card-body">
               <form noValidate onSubmit={handleSubmit}>
                 <div className="form-row">
@@ -71,7 +74,7 @@ export default function CreateVehiclePage() {
                   </FormField>
                   <FormField label={t('vehicleType')} required>
                     <select className="form-control" value={form.type} onChange={f('type')}>
-                      {TYPES.map(t => <option key={t} value={t}>{TYPE_ICONS[t]} {t}</option>)}
+                      {TYPES.map(t => <option key={t} value={t}>{t}</option>)}
                     </select>
                   </FormField>
                 </div>
@@ -80,7 +83,7 @@ export default function CreateVehiclePage() {
                     <input className="form-control" value={form.brand} onChange={f('brand')} placeholder="e.g. Honda" />
                   </FormField>
                   <FormField label={t('model')} required error={errors.model}>
-                    <input className="form-control" value={form.model} onChange={f('model')} placeholder="e.g. Wave 110" />
+                    <input className="form-control" value={form.model} onChange={f('model')} placeholder="e.g. Dream 125" />
                   </FormField>
                 </div>
                 <div className="form-row">
@@ -97,10 +100,20 @@ export default function CreateVehiclePage() {
                 </div>
                 
                 <div style={{ marginTop: 20, display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
-                  <button type="button" className="btn btn-outline" onClick={() => router.push('/vehicles')}>
+                  <button
+                    type="button"
+                    className="btn btn-cancel"
+                    style={{ background: '#dc2626', color: '#ffffff', border: '1px solid #dc2626', fontWeight: 700 }}
+                    onClick={() => router.push('/vehicles')}
+                  >
                     {t('cancel')}
                   </button>
-                  <button type="submit" className="btn btn-primary" disabled={saving}>
+                  <button
+                    type="submit"
+                    className="btn btn-primary"
+                    style={{ background: '#2563eb', color: '#ffffff', border: '1px solid #2563eb', fontWeight: 700 }}
+                    disabled={saving}
+                  >
                     {saving ? t('saving') : t('save')}
                   </button>
                 </div>

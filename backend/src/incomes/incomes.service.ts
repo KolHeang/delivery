@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Income } from './entities/income.entity';
 import { IncomeType } from './entities/income-type.entity';
-import { paginateRepo } from '../config/pagination';
+import { PaginatedResult } from '../interface/pagination.interface';
 
 @Injectable()
 export class IncomesService {
@@ -41,28 +41,52 @@ export class IncomesService {
     amount: number,
     date: Date,
     typeId?: number,
+    tenantId?: number,
   ) {
     const income = this.incomeRepo.create({
       description,
       amount,
       date,
       typeId,
+      tenantId,
     });
     return this.incomeRepo.save(income);
   }
 
-  async findAll(query?: { page?: number; limit?: number }) {
-    return paginateRepo(this.incomeRepo, query || {}, {
-      relations: { type: true },
-      order: { date: 'DESC', createdAt: 'DESC' },
-    });
+  async findAll(query?: { page?: number; limit?: number }, tenantId?: number): Promise<PaginatedResult<Income>> {
+    const qb = this.incomeRepo
+      .createQueryBuilder('income')
+      .leftJoinAndSelect('income.type', 'type')
+      .orderBy('income.date', 'DESC')
+      .addOrderBy('income.createdAt', 'DESC');
+
+    if (tenantId) {
+      qb.andWhere('income.tenantId = :tenantId', { tenantId });
+    }
+
+    const page = query?.page ? Math.max(1, Number(query.page)) : 1;
+    const limit = query?.limit ? Math.max(1, Number(query.limit)) : 10;
+    const skip = (page - 1) * limit;
+
+    qb.skip(skip).take(limit);
+
+    const [results, total] = await qb.getManyAndCount();
+
+    return {
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+      results,
+    };
   }
 
   async findOne(id: number) {
-    const income = await this.incomeRepo.findOne({
-      where: { id },
-      relations: { type: true },
-    });
+    const income = await this.incomeRepo
+      .createQueryBuilder('income')
+      .leftJoinAndSelect('income.type', 'type')
+      .where('income.id = :id', { id })
+      .getOne();
     if (!income) throw new NotFoundException('Income not found');
     return income;
   }

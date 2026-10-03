@@ -1,22 +1,33 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { User } from '../users/entities/users.entity';
-import { ExpenseType } from '../expenses/entities/expense-type.entity';
-import { IncomeType } from '../incomes/entities/income-type.entity';
+import { SaasAdmin } from '../saas/admins/saas-admin.entity';
+import { Plan } from '../saas/plans/plan.entity';
+import { Coupon } from '../saas/coupons/coupon.entity';
+import { Partner } from '../saas/partners/partner.entity';
 import { Role } from '../roles/entities/role.entity';
 import { Permission } from '../roles/entities/permission.entity';
+import { Zone } from '../zones/entities/zone.entity';
+import { SubZone } from '../zones/entities/subzone.entity';
+import { Tenant } from '../saas/entities/tenant.entity';
 import { SeedService } from './seed.service';
+import { SeedController } from './seed.controller';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([
-      User,
-      ExpenseType,
-      IncomeType,
+      SaasAdmin,
+      Plan,
+      Coupon,
+      Partner,
       Role,
       Permission,
+      Zone,
+      SubZone,
+      Tenant,
     ]),
   ],
+  controllers: [SeedController],
   providers: [SeedService],
+  exports: [SeedService],
 })
-export class SeedModule { }
+export class SeedModule {}

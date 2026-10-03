@@ -6,9 +6,10 @@ import { isAuthenticated } from '@/lib/auth';
 import Sidebar from '@/components/layout/Sidebar';
 import Topbar from '@/components/layout/Topbar';
 import api from '@/lib/api';
-import { MdAdd } from 'react-icons/md';
+import { FiPlusCircle } from 'react-icons/fi';
 import { useLanguage } from '@/lib/LanguageContext';
 import Pagination from '@/components/ui/Pagination';
+import { formatDate } from '@/lib/date-utils';
 
 export default function IncomeListPage() {
   const router = useRouter();
@@ -25,8 +26,8 @@ export default function IncomeListPage() {
       const res = await api.get('/incomes', {
         params: { page: currentPage, limit: pageSize }
       });
-      if (res.data && res.data.result !== undefined) {
-        setIncomes(res.data.result || []);
+      if (res.data && (res.data.results !== undefined || res.data.result !== undefined)) {
+        setIncomes(res.data.results || res.data.result || []);
         setTotalItems(res.data.total || 0);
       } else {
         setIncomes(Array.isArray(res.data) ? res.data : []);
@@ -53,21 +54,8 @@ export default function IncomeListPage() {
           <div className="card">
             <div className="card-header">
               <span className="card-title">💵 {t('revenuesTitle') || 'Revenues & Collections'}</span>
-              <button
-                className="btn btn-primary"
-                style={{
-                  padding: '8px 18px',
-                  fontSize: '13.5px',
-                  fontWeight: 600,
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 6,
-                  borderRadius: 8,
-                  cursor: 'pointer',
-                }}
-                onClick={() => router.push('/income/create')}
-              >
-                <MdAdd size={18} /> {t('addIncome') || 'Add Income'}
+              <button className="btn btn-primary btn-sm" onClick={() => router.push('/income/create')}>
+                <FiPlusCircle size={14} /> {t('addIncome') || 'Add Income'}
               </button>
             </div>
             <div style={{ overflowX: 'auto' }}>
@@ -105,7 +93,7 @@ export default function IncomeListPage() {
                           </span>
                         </td>
                         <td style={{ fontWeight: 600, color: 'var(--success)', textAlign: 'right' }}>+${parseFloat(inc.amount).toFixed(2)}</td>
-                        <td style={{ fontSize: 12 }}>{new Date(inc.date).toLocaleDateString()}</td>
+                        <td style={{ fontSize: 12 }}>{formatDate(inc.date)}</td>
                       </tr>
                     ))
                   )}

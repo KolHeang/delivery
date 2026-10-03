@@ -8,11 +8,19 @@ import {
   JoinColumn,
 } from 'typeorm';
 import { User } from '../../users/entities/users.entity';
+import { Tenant } from '../../saas/entities/tenant.entity';
 
 @Entity('driver_payments')
 export class DriverPayment {
   @PrimaryGeneratedColumn()
   id: number;
+
+  @ManyToOne(() => Tenant, { nullable: true, onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'tenant_id' })
+  tenant: Tenant;
+
+  @Column({ name: 'tenant_id', nullable: true })
+  tenantId: number;
 
   @ManyToOne(() => User, { eager: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'driver_id' })

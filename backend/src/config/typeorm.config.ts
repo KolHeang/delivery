@@ -11,5 +11,5 @@ export const typeOrmConfig = (config: ConfigService): TypeOrmModuleOptions => ({
   entities: [__dirname + '/../**/*.entity{.ts,.js}'],
   migrations: [__dirname + '/../**/*.migration{.ts,.js}'],
   synchronize: config.get<string>('DATABASE_SYNCHRONIZE', 'true') === 'true',
-  logging: config.get<string>('DATABASE_LOGGING', 'true') === 'true',
+  logging: config.get<string>('DATABASE_LOGGING', 'false') === 'true',
 });

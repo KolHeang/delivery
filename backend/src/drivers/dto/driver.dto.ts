@@ -14,6 +14,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import { Type, Transform } from 'class-transformer';
 
 export class CreateDriverDto {
+  @ApiProperty({ required: false }) @IsOptional() @IsString() code?: string;
   @ApiProperty() @IsNotEmpty() @IsString() name: string;
   @ApiProperty({ required: false }) @IsOptional() @IsString() nameKh?: string;
   @ApiProperty() @IsNotEmpty() @IsString() phone: string;
@@ -48,6 +49,7 @@ export class CreateDriverDto {
 }
 
 export class UpdateDriverDto {
+  @IsOptional() @IsString() code?: string;
   @IsOptional() @IsString() name?: string;
   @IsOptional() @IsString() nameKh?: string;
   @IsOptional() @IsString() phone?: string;

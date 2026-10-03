@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   ConflictException,
+  OnModuleInit,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, ILike } from 'typeorm';
@@ -9,38 +10,87 @@ import * as bcrypt from 'bcrypt';
 import { User } from './entities/users.entity';
 import { Role } from '../roles/entities/role.entity';
 import { CreateUserDto, UpdateUserDto } from './dto/user.dto';
-import { paginateRepo } from '../config/pagination';
+import { PaginatedResult } from '../interface/pagination.interface';
 
 @Injectable()
-export class UsersService {
+export class UsersService implements OnModuleInit {
   constructor(
     @InjectRepository(User) private readonly repo: Repository<User>,
     @InjectRepository(Role) private readonly roleRepo: Repository<Role>,
   ) { }
 
-  async findAll(query?: { page?: number; limit?: number; search?: string }): Promise<any> {
-    let where: any = {};
-    if (query?.search) {
-      const term = `%${query.search}%`;
-      where = [
-        { name: ILike(term) },
-        { nameKh: ILike(term) },
-        { phone: ILike(term) },
-        { email: ILike(term) },
-      ];
+  async onModuleInit() {
+    try {
+      await this.repo.query(`
+        UPDATE users u 
+        SET tenant_id = s.id, tenant_subdomain = s.subdomain 
+        FROM saas_subscriptions s 
+        WHERE u.id = s.user_id AND (u.tenant_id IS NULL OR u.tenant_subdomain IS NULL);
+      `);
+      await this.repo.query(`
+        UPDATE users 
+        SET code = CASE WHEN is_driver = true THEN 'DRV-' || LPAD(id::text, 4, '0') ELSE 'STF-' || LPAD(id::text, 4, '0') END 
+        WHERE code IS NULL OR code = '';
+      `);
+    } catch (e) {
+      // ignore
     }
-    return paginateRepo(this.repo, query || {}, {
-      where,
-      relations: { zone: true, vehicle: true, roleRelation: true },
-      order: { createdAt: 'DESC' },
-    });
+  }
+
+  async findAll(query?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    tenantId?: number;
+    tenantSubdomain?: string;
+  }): Promise<PaginatedResult<User>> {
+    const qb = this.repo
+      .createQueryBuilder('user')
+      .leftJoinAndSelect('user.zone', 'zone')
+      .leftJoinAndSelect('user.vehicle', 'vehicle')
+      .leftJoinAndSelect('user.roleRelation', 'roleRelation')
+      .orderBy('user.createdAt', 'DESC');
+
+    if (query?.tenantId) {
+      qb.andWhere('user.tenantId = :tenantId', { tenantId: query.tenantId });
+    } else if (query?.tenantSubdomain) {
+      qb.andWhere('user.tenantSubdomain = :tenantSubdomain', { tenantSubdomain: query.tenantSubdomain });
+    }
+
+    if (query?.search) {
+      const term = `%${query.search.trim()}%`;
+      qb.andWhere(
+        '(user.code ILIKE :term OR user.name ILIKE :term OR user.nameKh ILIKE :term OR user.phone ILIKE :term OR user.email ILIKE :term)',
+        { term },
+      );
+    }
+
+    const page = query?.page ? Math.max(1, Number(query.page)) : 1;
+    const limit = query?.limit ? Math.max(1, Number(query.limit)) : 10;
+    const skip = (page - 1) * limit;
+
+    qb.skip(skip).take(limit);
+
+    const [results, total] = await qb.getManyAndCount();
+
+    return {
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+      results,
+    };
   }
 
   async findOne(id: number): Promise<User> {
-    const user = await this.repo.findOne({
-      where: { id },
-      relations: { zone: true, vehicle: true, roleRelation: true },
-    });
+    const user = await this.repo
+      .createQueryBuilder('user')
+      .leftJoinAndSelect('user.zone', 'zone')
+      .leftJoinAndSelect('user.vehicle', 'vehicle')
+      .leftJoinAndSelect('user.roleRelation', 'roleRelation')
+      .where('user.id = :id', { id })
+      .getOne();
+
     if (!user) throw new NotFoundException('User not found');
     return user;
   }
@@ -56,17 +106,18 @@ export class UsersService {
   }
 
   async findOneWithPermissions(id: number): Promise<User | null> {
-    return this.repo.findOne({
-      where: { id },
-      relations: {
-        roleRelation: {
-          permissions: true,
-        },
-      },
-    });
+    return this.repo
+      .createQueryBuilder('user')
+      .leftJoinAndSelect('user.roleRelation', 'roleRelation')
+      .leftJoinAndSelect('roleRelation.permissions', 'permissions')
+      .where('user.id = :id', { id })
+      .getOne();
   }
 
-  async create(dto: CreateUserDto): Promise<Omit<User, 'password'>> {
+  async create(
+    dto: CreateUserDto,
+    tenantContext?: { tenantId?: number; tenantSubdomain?: string },
+  ): Promise<Omit<User, 'password'>> {
     if (dto.email && dto.email.trim() !== '') {
       const exists = await this.repo.findOne({ where: { email: dto.email } });
       if (exists) throw new ConflictException('Email already exists');
@@ -98,16 +149,31 @@ export class UsersService {
 
     const isActive = dto.isActive !== undefined ? dto.isActive : (dto.active !== undefined ? dto.active : true);
 
+    let code = dto.code?.trim();
+    if (!code) {
+      const prefix = isDriver ? 'DRV' : 'STF';
+      const maxUser = await this.repo
+        .createQueryBuilder('u')
+        .select('MAX(u.id)', 'maxId')
+        .getRawOne();
+      const nextId = (Number(maxUser?.maxId) || 0) + 1;
+      code = `${prefix}-${String(nextId).padStart(4, '0')}`;
+    }
+
     const payload: any = {
       ...dto,
+      code,
       password: hashed,
       roleId,
       isActive,
       isStaff,
       isDriver,
-      salary: dto.salary ? parseFloat(dto.salary as any) : 0.0,
+      joinDate: dto.joinDate && dto.joinDate.trim() !== '' ? dto.joinDate : null,
+      dob: dto.dob && dto.dob.trim() !== '' ? dto.dob : null,
       zoneId: dto.zoneId ? Number(dto.zoneId) : null,
       vehicleId: dto.vehicleId ? Number(dto.vehicleId) : null,
+      tenantId: dto.tenantId || tenantContext?.tenantId || 1,
+      tenantSubdomain: dto.tenantSubdomain || tenantContext?.tenantSubdomain || null,
     };
     delete payload.role;
     delete payload.active;
@@ -125,6 +191,14 @@ export class UsersService {
       payload.password = await bcrypt.hash(dto.password, 10);
     } else {
       delete payload.password;
+    }
+
+    if (dto.joinDate !== undefined) {
+      payload.joinDate = dto.joinDate && dto.joinDate.trim() !== '' ? dto.joinDate : null;
+    }
+
+    if (dto.dob !== undefined) {
+      payload.dob = dto.dob && dto.dob.trim() !== '' ? dto.dob : null;
     }
 
     if (dto.salary !== undefined) {

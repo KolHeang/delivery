@@ -9,10 +9,19 @@ import {
   OneToMany,
 } from 'typeorm';
 
+import { Tenant } from '../../saas/entities/tenant.entity';
+
 @Entity('zones')
 export class Zone {
   @PrimaryGeneratedColumn()
   id: number;
+
+  @ManyToOne(() => Tenant, { nullable: true, onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'tenant_id' })
+  tenant: Tenant;
+
+  @Column({ name: 'tenant_id', nullable: true })
+  tenantId: number;
 
   @Column()
   name: string;
@@ -36,7 +45,7 @@ export class Zone {
   @Column({ name: 'driver_id', nullable: true })
   driverId: number;
 
-  @Column({ default: 'EBS Express' })
+  @Column({ nullable: true })
   branch: string;
 
   @OneToMany('SubZone', 'zone', { eager: true })

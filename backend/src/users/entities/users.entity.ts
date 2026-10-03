@@ -12,11 +12,15 @@ import {
 import { Zone } from '../../zones/entities/zone.entity';
 import { Vehicle } from '../../vehicles/entities/vehicle.entity';
 import { Role } from '../../roles/entities/role.entity';
+import { Tenant } from '../../saas/entities/tenant.entity';
 
 @Entity('users')
 export class User {
   @PrimaryGeneratedColumn()
   id: number;
+
+  @Column({ nullable: true })
+  code: string;
 
   @Column()
   name: string;
@@ -90,6 +94,16 @@ export class User {
 
   @Column({ nullable: true })
   photo: string;
+
+  @ManyToOne(() => Tenant, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'tenant_id' })
+  tenant: Tenant;
+
+  @Column({ name: 'tenant_id', nullable: true })
+  tenantId: number | null;
+
+  @Column({ name: 'tenant_subdomain', nullable: true })
+  tenantSubdomain: string;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;

@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, ILike } from 'typeorm';
 import { Customer } from './entities/customer.entity';
 import { CreateCustomerDto, UpdateCustomerDto } from './dto/customer.dto';
-import { paginateRepo } from '../config/pagination';
+import { PaginatedResult } from '../interface/pagination.interface';
 
 @Injectable()
 export class CustomersService {
@@ -11,20 +11,35 @@ export class CustomersService {
     @InjectRepository(Customer) private readonly repo: Repository<Customer>,
   ) {}
 
-  async findAll(query?: { page?: number; limit?: number; search?: string }): Promise<any> {
-    let where: any = {};
-    if (query?.search) {
-      const term = `%${query.search}%`;
-      where = [
-        { name: ILike(term) },
-        { phone: ILike(term) },
-        { email: ILike(term) },
-      ];
+  async findAll(query?: { page?: number; limit?: number; search?: string }, tenantId?: number): Promise<PaginatedResult<Customer>> {
+    const qb = this.repo
+      .createQueryBuilder('customer')
+      .orderBy('customer.name', 'ASC');
+
+    if (tenantId) {
+      qb.andWhere('customer.tenantId = :tenantId', { tenantId });
     }
-    return paginateRepo(this.repo, query || {}, {
-      where,
-      order: { name: 'ASC' },
-    });
+
+    if (query?.search) {
+      const term = `%${query.search.trim()}%`;
+      qb.andWhere('(customer.name ILIKE :term OR customer.phone ILIKE :term OR customer.email ILIKE :term)', { term });
+    }
+
+    const page = query?.page ? Math.max(1, Number(query.page)) : 1;
+    const limit = query?.limit ? Math.max(1, Number(query.limit)) : 10;
+    const skip = (page - 1) * limit;
+
+    qb.skip(skip).take(limit);
+
+    const [results, total] = await qb.getManyAndCount();
+
+    return {
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+      results,
+    };
   }
 
   async findOne(id: number): Promise<Customer> {

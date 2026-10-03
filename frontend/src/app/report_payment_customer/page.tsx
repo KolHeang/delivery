@@ -212,12 +212,9 @@ export default function ReportPaymentCustomerPage() {
               }}>
                 📦
               </div>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <span style={{ fontSize: 18, fontWeight: 800, color: '#1e3a8a', letterSpacing: '0.5px', lineHeight: 1.1, WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
-                  EBS<span style={{ color: '#2563eb' }}>Express</span>
-                </span>
-                <span style={{ fontSize: 9, color: '#64748b', fontWeight: 500, letterSpacing: '0.2px' }}>
-                  Delivery System
+                  {orgInfo.name || 'Delivery Express'}
                 </span>
               </div>
             </div>
@@ -417,11 +414,11 @@ export default function ReportPaymentCustomerPage() {
         {/* Signatures Section */}
         <div className="receipt-signatures" style={{ marginTop: 40, display: 'flex', justifyContent: 'space-between', paddingLeft: 20, paddingRight: 20 }}>
           <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: 11, fontWeight: 'bold', marginBottom: 50 }}>តំណាងហាង (Merchant)</div>
+            <div style={{ fontSize: 11, fontWeight: 'bold', marginBottom: 50 }}>តំណាងហាង</div>
             <div style={{ fontSize: 11, color: '#000' }}>..........................................</div>
           </div>
           <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: 11, fontWeight: 'bold', marginBottom: 50 }}>គណនេយ្យករ (Accountant)</div>
+            <div style={{ fontSize: 11, fontWeight: 'bold', marginBottom: 50 }}>គណនេយ្យករ</div>
             <div style={{ fontSize: 11, color: '#000' }}>..........................................</div>
           </div>
         </div>

@@ -15,11 +15,28 @@ interface Permission {
   description: string;
 }
 
+const PERM_GROUP_TO_PLAN_FEATURE: Record<string, string> = {
+  parcels: 'delivery',
+  orders: 'delivery',
+  zones: 'delivery',
+  merchants: 'shops',
+  users: 'staff',
+  drivers: 'staff',
+  vehicles: 'staff',
+  payments: 'payment',
+  expenses: 'accounting',
+  incomes: 'accounting',
+  reports: 'reports',
+  settings: 'settings',
+  roles: 'settings',
+};
+
 export default function CreateRolePage() {
   const router = useRouter();
   const { lang, t } = useLanguage();
 
   const [allPermissions, setAllPermissions] = useState<Permission[]>([]);
+  const [planFeatures, setPlanFeatures] = useState<Record<string, boolean> | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -35,8 +52,17 @@ export default function CreateRolePage() {
     }
     const load = async () => {
       try {
-        const res = await api.get('/roles/permissions');
-        setAllPermissions(res.data);
+        const [permRes, subRes] = await Promise.allSettled([
+          api.get('/roles/permissions'),
+          api.get('/saas/subscriptions/me'),
+        ]);
+
+        if (permRes.status === 'fulfilled') {
+          setAllPermissions(permRes.value.data || []);
+        }
+        if (subRes.status === 'fulfilled' && subRes.value.data?.plan?.features) {
+          setPlanFeatures(subRes.value.data.plan.features);
+        }
       } catch (err) {
         console.error('Failed to load permissions', err);
       }
@@ -44,6 +70,13 @@ export default function CreateRolePage() {
     };
     load();
   }, [router]);
+
+  const isCategoryAllowed = (category: string) => {
+    if (!planFeatures) return true;
+    const requiredFeature = PERM_GROUP_TO_PLAN_FEATURE[category];
+    if (!requiredFeature) return true;
+    return planFeatures[requiredFeature] !== false;
+  };
 
   const handleTogglePermission = (id: number) => {
     setSelectedPermissionIds(prev =>
@@ -66,7 +99,7 @@ export default function CreateRolePage() {
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!roleName.trim()) {
-      setErrors({ roleName: lang === 'km' ? 'សូមបញ្ចូលឈ្មោះតួនាទី' : 'Role name is required' });
+      setErrors({ roleName: t('roleNameRequired') || (lang === 'km' ? 'សូមបំពេញឈ្មោះតួនាទី (Role Name)' : 'Role name is required') });
       return;
     }
     setErrors({});
@@ -93,6 +126,7 @@ export default function CreateRolePage() {
     const groups: Record<string, Permission[]> = {};
     allPermissions.forEach(p => {
       const category = p.name.split('.')[0] || 'general';
+      if (!isCategoryAllowed(category)) return;
       if (!groups[category]) {
         groups[category] = [];
       }
@@ -121,14 +155,14 @@ export default function CreateRolePage() {
         <div className="page-content">
           <div className="card">
             <div className="card-header">
-              <span className="card-title">🛡️ {t('createRoleForm')}</span>
+              <span className="card-title">{t('createRoleForm')}</span>
             </div>
             <div className="card-body">
               <form noValidate onSubmit={handleSave}>
                 <div className="form-row">
                   <FormField label={t('roleName')} required error={errors.roleName}>
                     <input
-                      className="form-control"
+                      className={`form-control ${errors.roleName ? 'is-invalid' : ''}`}
                       placeholder={t('roleNamePlaceholder')}
                       value={roleName}
                       onChange={e => {
@@ -158,8 +192,8 @@ export default function CreateRolePage() {
                       return (
                         <div key={groupName} style={{ border: '1px solid var(--border)', borderRadius: '8px', padding: '16px' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border)', paddingBottom: '8px', marginBottom: '12px' }}>
-                            <span style={{ textTransform: 'uppercase', fontWeight: 800, fontSize: '12px', color: 'var(--accent)', letterSpacing: '0.5px' }}>
-                              🔑 {t(('permGroup_' + groupName) as any) || groupName} {t('permissionsLabel')}
+                            <span style={{ textTransform: 'uppercase', fontWeight: 800, fontSize: '13px', color: 'var(--accent)', letterSpacing: '0.5px' }}>
+                              {t(('permGroup_' + groupName) as any) || groupName}
                             </span>
                             <div style={{ display: 'flex', gap: 8 }}>
                               <button
@@ -223,10 +257,20 @@ export default function CreateRolePage() {
                 </div>
 
                 <div style={{ marginTop: 32, display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
-                  <button type="button" className="btn btn-outline" onClick={() => router.push('/setting/role')}>
+                  <button
+                    type="button"
+                    className="btn btn-cancel"
+                    style={{ background: '#dc2626', color: '#ffffff', border: '1px solid #dc2626', fontWeight: 700 }}
+                    onClick={() => router.push('/setting/role')}
+                  >
                     {t('cancel')}
                   </button>
-                  <button type="submit" className="btn btn-primary" disabled={saving}>
+                  <button
+                    type="submit"
+                    className="btn btn-primary"
+                    style={{ background: '#2563eb', color: '#ffffff', border: '1px solid #2563eb', fontWeight: 700 }}
+                    disabled={saving}
+                  >
                     {saving ? t('creatingRole') : t('createRoleTitle')}
                   </button>
                 </div>

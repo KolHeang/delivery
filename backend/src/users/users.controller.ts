@@ -11,6 +11,7 @@ import {
   UseInterceptors,
   UploadedFile,
   Query,
+  Request,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiConsumes } from '@nestjs/swagger';
 import { UsersService } from './users.service';
@@ -37,14 +38,24 @@ export class UsersController {
   @RequirePermissions('users.read')
   @ApiOperation({ summary: 'Get all users' })
   findAll(
+    @Request() req: any,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
     @Query('search') search?: string,
+    @Query('tenantId') tenantId?: string,
+    @Query('tenantSubdomain') tenantSubdomain?: string,
   ) {
+    const effectiveTenantId =
+      tenantId ? +tenantId : req.headers['x-tenant-id'] ? +req.headers['x-tenant-id'] : req.user?.tenantId;
+    const effectiveSubdomain =
+      tenantSubdomain || (req.headers['x-tenant-subdomain'] as string) || req.user?.tenantSubdomain;
+
     return this.usersService.findAll({
       page: page ? +page : undefined,
       limit: limit ? +limit : undefined,
       search,
+      tenantId: effectiveTenantId ? +effectiveTenantId : undefined,
+      tenantSubdomain: effectiveSubdomain || undefined,
     });
   }
 
@@ -66,11 +77,15 @@ export class UsersController {
   )
   @ApiConsumes('multipart/form-data')
   @ApiOperation({ summary: 'Create user' })
-  async create(@Body() dto: CreateUserDto, @UploadedFile() file?: any) {
+  async create(@Request() req: any, @Body() dto: CreateUserDto, @UploadedFile() file?: any) {
     if (file) {
       dto.photo = await this.minioService.uploadFile(file, 'users');
     }
-    return this.usersService.create(dto);
+    const tenantContext = {
+      tenantId: req.headers['x-tenant-id'] ? +req.headers['x-tenant-id'] : req.user?.tenantId,
+      tenantSubdomain: (req.headers['x-tenant-subdomain'] as string) || req.user?.tenantSubdomain,
+    };
+    return this.usersService.create(dto, tenantContext);
   }
 
   @Patch(':id')

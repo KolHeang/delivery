@@ -13,7 +13,7 @@ import DateInput, { getLocalDateString } from '@/components/ui/DateInput';
 export default function BatchEntryPage() {
   const router = useRouter();
   const [merchants, setMerchants] = useState<any[]>([]);
-  const [, setZones] = useState<any[]>([]);
+  const [zones, setZones] = useState<any[]>([]);
   const [drivers, setDrivers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -77,9 +77,9 @@ export default function BatchEntryPage() {
     if (rows.length === 1) return;
     setRows(prev => prev.filter((_, i) => i !== index));
     setRowErrors(prev => {
-      const copy = { ...prev };
-      delete copy[index];
-      return copy;
+      const next = { ...prev };
+      delete next[index];
+      return next;
     });
   };
 
@@ -90,21 +90,19 @@ export default function BatchEntryPage() {
       }
       return row;
     }));
-
-    if (rowErrors[index]?.[key as 'receiverAddress' | 'receiverPhone']) {
+    if (rowErrors[index] && (rowErrors[index] as any)[key]) {
       setRowErrors(prev => ({
         ...prev,
         [index]: {
           ...prev[index],
-          [key]: undefined,
-        },
+          [key]: undefined
+        }
       }));
     }
   };
 
   const handleSaveBatch = async () => {
     let hasError = false;
-    const newRowErrors: Record<number, { receiverAddress?: string; receiverPhone?: string }> = {};
 
     if (!selectedMerchantId) {
       setMerchantError(lang === 'km' ? 'សូមជ្រើសរើសហាង' : 'Please select a shop');
@@ -113,31 +111,30 @@ export default function BatchEntryPage() {
       setMerchantError('');
     }
     
-    // Validation for each row
+    // Validation
+    const errs: Record<number, { receiverAddress?: string; receiverPhone?: string }> = {};
     for (let i = 0; i < rows.length; i++) {
       const r = rows[i];
-      const errs: { receiverAddress?: string; receiverPhone?: string } = {};
-
-      if (!r.receiverAddress || !r.receiverAddress.trim()) {
-        errs.receiverAddress = lang === 'km' ? 'សូមបញ្ចូលអាសយដ្ឋាន' : 'Please enter address';
+      const rowErr: { receiverAddress?: string; receiverPhone?: string } = {};
+      if (!r.receiverAddress?.trim()) {
+        rowErr.receiverAddress = 'សូមបំពេញអាសយដ្ឋាន';
         hasError = true;
       }
-      if (!r.receiverPhone || !r.receiverPhone.trim()) {
-        errs.receiverPhone = lang === 'km' ? 'សូមបញ្ចូលលេខទូរស័ព្ទ' : 'Please enter phone';
+      if (!r.receiverPhone?.trim()) {
+        rowErr.receiverPhone = 'សូមបំពេញលេខទូរស័ព្ទ';
         hasError = true;
       }
-
-      if (Object.keys(errs).length > 0) {
-        newRowErrors[i] = errs;
+      if (Object.keys(rowErr).length > 0) {
+        errs[i] = rowErr;
       }
     }
 
     if (hasError) {
-      setRowErrors(newRowErrors);
+      setRowErrors(errs);
       return;
     }
-    setRowErrors({});
 
+    setRowErrors({});
     setSaving(true);
     try {
       const merchant = merchants.find(m => m.id.toString() === selectedMerchantId);
@@ -161,7 +158,7 @@ export default function BatchEntryPage() {
           receiverAddress: r.receiverAddress,
           weight: 0.5,
           size: 'small',
-          zoneId: merchant?.zoneId ? parseInt(merchant.zoneId) : undefined,
+          zoneId: r.zoneId ? parseInt(r.zoneId) : (merchant?.zoneId ? parseInt(merchant.zoneId) : undefined),
           note: r.note,
           pickupDriverId: r.pickupId ? parseInt(r.pickupId) : undefined,
           driverId: r.driverId ? parseInt(r.driverId) : undefined,
@@ -283,47 +280,38 @@ export default function BatchEntryPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {rows.map((row, idx) => {
-                    const rowErr = rowErrors[idx] || {};
-                    return (
-                      <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                        <td style={{ padding: '8px 6px', textAlign: 'center', fontSize: 13, fontWeight: 700, color: 'var(--text-muted)' }}>{idx + 1}</td>
-                        <td style={{ padding: '8px 6px' }}>
-                          <div className="input-error-wrapper">
-                            <input
-                              type="text"
-                              className={`form-control ${rowErr.receiverAddress ? 'is-invalid' : ''}`}
-                              placeholder={lang === 'km' ? 'ទីតាំង / អាសយដ្ឋាន' : 'Address location'}
-                              value={row.receiverAddress}
-                              onChange={e => handleRowChange(idx, 'receiverAddress', e.target.value)}
-                              style={{ height: 38, fontSize: 13 }}
-                            />
-                          </div>
-                          {rowErr.receiverAddress && <div className="form-error-text" style={{ fontSize: 11, marginTop: 3 }}>{rowErr.receiverAddress}</div>}
-                        </td>
-                        <td style={{ padding: '8px 6px' }}>
-                          <div className="input-error-wrapper">
-                            <input
-                              type="text"
-                              className={`form-control ${rowErr.receiverPhone ? 'is-invalid' : ''}`}
-                              placeholder={lang === 'km' ? 'ឧ. 012345678' : 'e.g. 012345678'}
-                              value={row.receiverPhone}
-                              onChange={e => handleRowChange(idx, 'receiverPhone', e.target.value)}
-                              style={{ height: 38, fontSize: 13 }}
-                            />
-                          </div>
-                          {rowErr.receiverPhone && <div className="form-error-text" style={{ fontSize: 11, marginTop: 3 }}>{rowErr.receiverPhone}</div>}
-                        </td>
+                  {rows.map((row, idx) => (
+                    <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                      <td style={{ padding: '8px 6px', textAlign: 'center', fontSize: 13, fontWeight: 700, color: 'var(--text-muted)' }}>{idx + 1}</td>
                       <td style={{ padding: '8px 6px' }}>
                         <input
                           type="text"
-                          className="form-control"
+                          className={`form-control ${rowErrors[idx]?.receiverAddress ? 'is-invalid' : ''}`}
+                          placeholder={lang === 'km' ? 'ទីតាំង / អាសយដ្ឋាន' : 'Address location'}
+                          value={row.receiverAddress}
+                          onChange={e => handleRowChange(idx, 'receiverAddress', e.target.value)}
+                          style={{ height: 38, fontSize: 13 }}
+                        />
+                        {rowErrors[idx]?.receiverAddress && (
+                          <div className="form-error-text" style={{ fontSize: '11px', marginTop: '2px' }}>
+                            {rowErrors[idx].receiverAddress}
+                          </div>
+                        )}
+                      </td>
+                      <td style={{ padding: '8px 6px' }}>
+                        <input
+                          type="text"
+                          className={`form-control ${rowErrors[idx]?.receiverPhone ? 'is-invalid' : ''}`}
                           placeholder={lang === 'km' ? 'ឧ. 012345678' : 'e.g. 012345678'}
                           value={row.receiverPhone}
                           onChange={e => handleRowChange(idx, 'receiverPhone', e.target.value)}
-                          required
                           style={{ height: 38, fontSize: 13 }}
                         />
+                        {rowErrors[idx]?.receiverPhone && (
+                          <div className="form-error-text" style={{ fontSize: '11px', marginTop: '2px' }}>
+                            {rowErrors[idx].receiverPhone}
+                          </div>
+                        )}
                       </td>
                       <td style={{ padding: '8px 6px' }}>
                         <input
@@ -425,8 +413,7 @@ export default function BatchEntryPage() {
                         </button>
                       </td>
                     </tr>
-                  );
-                })}
+                  ))}
                 </tbody>
               </table>
             </div>

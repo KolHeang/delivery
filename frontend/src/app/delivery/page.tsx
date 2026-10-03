@@ -8,7 +8,9 @@ import Topbar from '@/components/layout/Topbar';
 import Badge from '@/components/ui/Badge';
 import Modal from '@/components/ui/Modal';
 import api from '@/lib/api';
-import { MdAdd, MdSearch, MdEdit, MdDelete, MdVisibility, MdFilterList, MdPrint } from 'react-icons/md';
+import { MdSearch, MdVisibility, MdFilterList, MdPrint } from 'react-icons/md';
+import { FaRegEdit, FaTrashAlt } from 'react-icons/fa';
+import { FiPlusCircle } from 'react-icons/fi';
 import { useLanguage } from '@/lib/LanguageContext';
 import DateInput, { formatDateToDDMMYYYY, getLocalDateString } from '@/components/ui/DateInput';
 import Pagination from '@/components/ui/Pagination';
@@ -199,9 +201,9 @@ export default function DeliveriesPage() {
           endDate: endDate || undefined,
         }
       });
-      if (res.data && res.data.result !== undefined) {
-        setOrders(res.data.result);
-        setTotalItems(res.data.total);
+      if (res.data && (res.data.results !== undefined || res.data.result !== undefined)) {
+        setOrders(res.data.results || res.data.result || []);
+        setTotalItems(res.data.total ?? 0);
       } else {
         setOrders(Array.isArray(res.data) ? res.data : []);
         setTotalItems(Array.isArray(res.data) ? res.data.length : 0);
@@ -356,7 +358,7 @@ export default function DeliveriesPage() {
                 >
                   <MdPrint size={17} /> {lang === 'km' ? 'បោះពុម្ពវិក្កយបត្រ (QR)' : 'Print Invoice (QR)'}{selectedIds.length > 0 ? ` (${selectedIds.length})` : ''}
                 </button>
-                <button id="create-order-btn" className="btn btn-primary btn-sm" onClick={openCreate}><MdAdd size={17} /> {t('batchEntryData')}</button>
+                <button id="create-order-btn" className="btn btn-primary btn-sm" onClick={openCreate}><FiPlusCircle size={15} /> {t('batchEntryData')}</button>
               </div>
             </div>
             <div className="table-responsive" style={{ overflowX: 'auto' }}>
@@ -428,10 +430,10 @@ export default function DeliveriesPage() {
                           <td style={{ fontSize: 11, whiteSpace: 'nowrap' }}>{formatDateTime(o.createdAt)}</td>
                           <td>
                             <span style={{ color: '#2563eb', cursor: 'pointer', textDecoration: 'underline' }} onClick={() => router.push(`/merchants?search=${o.merchant?.name || ''}`)}>
-                              {o.merchant?.nameKh || o.merchant?.name || '—'}
+                              {o.merchant?.nameKh || o.merchant?.name || ''}
                             </span>
                           </td>
-                          <td style={{ fontSize: 12 }}>{o.receiverAddress || '—'}</td>
+                          <td style={{ fontSize: 12 }}>{o.receiverAddress || ''}</td>
                           <td style={{ fontWeight: 600 }}>{o.receiverPhone}</td>
                           <td>
                             <span style={{ color: 'var(--danger, #ef4444)', textDecoration: 'underline', fontWeight: 600 }}>
@@ -558,7 +560,7 @@ export default function DeliveriesPage() {
                                 ?.slice()
                                 .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
                                 .find((h: any) => h.note)?.note || o.note || '';
-                              if (!latestNote) return <span style={{ color: 'var(--text-muted)' }}>—</span>;
+                              if (!latestNote) return null;
                               const isLong = latestNote.length > 40;
                               return (
                                 <span
@@ -590,13 +592,13 @@ export default function DeliveriesPage() {
                           <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>
                             {o.updater?.nameKh || o.updater?.name || (['delivered', 'failed', 'returned'].includes(o.status) 
                               ? (o.driver?.nameKh || o.driver?.name || 'admin') 
-                              : '—')}
+                              : '')}
                           </td>
                           <td>
                             <div style={{ display: 'flex', gap: 4 }}>
                               <button className="btn btn-ghost btn-icon btn-sm" onClick={() => setViewModal(o)} title="View"><MdVisibility size={15} /></button>
-                              <button className="btn btn-ghost btn-icon btn-sm" onClick={() => openEdit(o)} title="Edit"><MdEdit size={15} /></button>
-                              <button className="btn btn-ghost btn-icon btn-sm" style={{ color: 'var(--danger)' }} onClick={() => handleDelete(o.id)} title="Delete"><MdDelete size={15} /></button>
+                              <button className="btn btn-ghost btn-icon btn-sm" onClick={() => openEdit(o)} title="Edit"><FaRegEdit size={14} /></button>
+                              <button className="btn btn-ghost btn-icon btn-sm" style={{ color: 'var(--danger)' }} onClick={() => handleDelete(o.id)} title="Delete"><FaTrashAlt size={13} /></button>
                             </div>
                           </td>
                         </tr>
@@ -836,13 +838,15 @@ export default function DeliveriesPage() {
 
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
               <button
-                className="btn btn-outline btn-sm"
+                className="btn btn-cancel btn-sm"
+                style={{ background: '#dc2626', color: '#ffffff', border: '1px solid #dc2626', fontWeight: 700 }}
                 onClick={() => { setRemarkModal(null); setRemarkText(''); }}
               >
                 {lang === 'km' ? 'បោះបង់' : 'Cancel'}
               </button>
               <button
                 className="btn btn-primary btn-sm"
+                style={{ background: '#2563eb', color: '#ffffff', border: '1px solid #2563eb', fontWeight: 700 }}
                 onClick={submitStatusWithRemark}
                 disabled={
                   (remarkModal.newStatus === 'failed' || remarkModal.newStatus === 'returned')

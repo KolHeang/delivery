@@ -8,6 +8,7 @@ import {
   JoinColumn,
 } from 'typeorm';
 import { Zone } from '../../zones/entities/zone.entity';
+import { Tenant } from '../../saas/entities/tenant.entity';
 
 export type PricingTier = 'basic' | 'standard' | 'premium';
 
@@ -15,6 +16,13 @@ export type PricingTier = 'basic' | 'standard' | 'premium';
 export class Merchant {
   @PrimaryGeneratedColumn()
   id: number;
+
+  @ManyToOne(() => Tenant, { nullable: true, onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'tenant_id' })
+  tenant: Tenant;
+
+  @Column({ name: 'tenant_id', nullable: true })
+  tenantId: number;
 
   @Column()
   name: string;

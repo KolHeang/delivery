@@ -48,6 +48,10 @@ export default function OrganisationSettingsPage() {
     setSuccessMsg('');
     try {
       await api.post('/settings/organisation', form);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('app-org-settings', JSON.stringify(form));
+        window.dispatchEvent(new Event('org-settings-updated'));
+      }
       setSuccessMsg(t('orgSavedSuccess'));
       setTimeout(() => setSuccessMsg(''), 3000);
     } catch {

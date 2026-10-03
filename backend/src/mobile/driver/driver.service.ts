@@ -35,6 +35,7 @@ export class DriverService {
     if (!driver) throw new NotFoundException('Driver not found');
     return {
       id: driver.id,
+      code: driver.code,
       name: driver.name,
       nameKh: driver.nameKh,
       phone: driver.phone,
@@ -44,6 +45,10 @@ export class DriverService {
       totalDeliveries: driver.totalDeliveries,
       rating: driver.rating,
       photo: driver.photo,
+      salary: driver.salary,
+      gender: driver.gender,
+      dob: driver.dob,
+      joinDate: driver.joinDate,
       zone: driver.zone ? { id: driver.zone.id, name: driver.zone.name } : null,
       vehicle: driver.vehicle
         ? {
@@ -59,6 +64,7 @@ export class DriverService {
     driverId: number,
     dto: {
       name?: string;
+      nameKh?: string;
       phone?: string;
       email?: string;
       photo?: string;
@@ -69,6 +75,7 @@ export class DriverService {
   ) {
     const updateData: any = {};
     if (dto.name !== undefined) updateData.name = dto.name;
+    if (dto.nameKh !== undefined) updateData.nameKh = dto.nameKh;
     if (dto.phone !== undefined) updateData.phone = dto.phone;
     if (dto.email !== undefined) updateData.email = dto.email;
     if (dto.photo !== undefined) updateData.photo = dto.photo;
@@ -124,65 +131,28 @@ export class DriverService {
   ) {
     const query = this.parcelRepo
       .createQueryBuilder('parcel')
-      .leftJoin('parcel.merchant', 'merchant')
-      .select([
-        'parcel.id',
-        'parcel.trackingCode',
-        'parcel.receiverName',
-        'parcel.receiverPhone',
-        'parcel.receiverAddress',
-        'parcel.cod',
-        'parcel.codCurrency',
-        'parcel.deliveryFee',
-        'parcel.status',
-        'parcel.driverId',
-        'parcel.pickupDriverId',
-        'parcel.note',
-        'parcel.proofPhotos',
-        'parcel.signature',
-        'parcel.failedPhoto',
-        'parcel.itemPhoto',
-        'parcel.createdAt',
-        'parcel.deliveredAt',
-        'parcel.assignedAt',
-        'merchant.id',
-        'merchant.name',
-        'merchant.nameKh',
-        'merchant.phone',
-        'merchant.address',
-      ])
+      .leftJoinAndSelect('parcel.merchant', 'merchant')
+      .leftJoinAndSelect('parcel.customer', 'customer')
+      .leftJoinAndSelect('parcel.zone', 'zone')
       .orderBy('parcel.createdAt', 'DESC');
 
     // 1. Apply Status & Driver Logic
-    if (status && status !== 'all') {
-      query.andWhere(
-        new Brackets((qb) => {
-          qb.where('parcel.driverId = :driverId', { driverId }).orWhere(
-            'parcel.pickupDriverId = :driverId',
-            { driverId },
-          );
-        }),
-      );
-      if (status === 'pending') {
-        query.andWhere('parcel.status IN (:...pendingStatuses)', {
-          pendingStatuses: ['pending', 'assigned', 'in-warehouse', 'in-transit'],
-        });
-      } else if (status === 'failed') {
-        query.andWhere('parcel.status IN (:...failedStatuses)', {
-          failedStatuses: ['failed', 'problem'],
-        });
-      } else if (status === 'returned') {
-        query.andWhere('parcel.status IN (:...returnedStatuses)', {
-          returnedStatuses: ['returned', 'rejected'],
-        });
-      } else {
-        query.andWhere('parcel.status = :status', { status });
-      }
+    if (status) {
+      query
+        .andWhere(
+          new Brackets((qb) => {
+            qb.where('parcel.driver_id = :driverId', { driverId }).orWhere(
+              'parcel.pickup_driver_id = :driverId',
+              { driverId },
+            );
+          }),
+        )
+        .andWhere('parcel.status = :status', { status });
     } else {
       query.andWhere(
         new Brackets((qb) => {
-          qb.where('parcel.driverId = :driverId', { driverId }).orWhere(
-            'parcel.pickupDriverId = :driverId',
+          qb.where('parcel.driver_id = :driverId', { driverId }).orWhere(
+            'parcel.pickup_driver_id = :driverId',
             { driverId },
           );
         }),
@@ -194,13 +164,13 @@ export class DriverService {
       query.andWhere(
         new Brackets((qb) => {
           const searchTerm = `%${search}%`;
-          qb.where('parcel.tracking_code::text ILIKE :searchTerm', {
+          qb.where('parcel.tracking_code ILIKE :searchTerm', {
             searchTerm,
           })
-            .orWhere('parcel.receiver_phone::text ILIKE :searchTerm', {
+            .orWhere('parcel.receiver_phone ILIKE :searchTerm', {
               searchTerm,
             })
-            .orWhere('parcel.receiver_address::text ILIKE :searchTerm', {
+            .orWhere('parcel.receiver_address ILIKE :searchTerm', {
               searchTerm,
             });
         }),
@@ -210,8 +180,8 @@ export class DriverService {
     // 3. Apply Date Filter Logic
     if (startDate && endDate) {
       query.andWhere(
-        'COALESCE(parcel.delivered_at, parcel.assigned_at, parcel.updated_at, parcel.created_at) >= :startDate AND COALESCE(parcel.delivered_at, parcel.assigned_at, parcel.updated_at, parcel.created_at) <= :endDate',
-        { startDate, endDate },
+        'COALESCE(parcel.delivered_at, parcel.assigned_at, parcel.created_at) >= :startDate AND COALESCE(parcel.delivered_at, parcel.assigned_at, parcel.created_at) <= :endDate',
+        { startDate: new Date(startDate), endDate: new Date(endDate) },
       );
     }
 
@@ -226,6 +196,7 @@ export class DriverService {
       .getManyAndCount();
 
     return {
+      results: result,
       result,
       total,
       page: pageNum,
@@ -257,13 +228,13 @@ export class DriverService {
       query.andWhere(
         new Brackets((qb) => {
           const searchTerm = `%${search}%`;
-          qb.where('parcel.tracking_code::text ILIKE :searchTerm', {
+          qb.where('parcel.trackingCode ILIKE :searchTerm', {
             searchTerm,
           })
-            .orWhere('parcel.receiver_phone::text ILIKE :searchTerm', {
+            .orWhere('parcel.receiverPhone ILIKE :searchTerm', {
               searchTerm,
             })
-            .orWhere('parcel.receiver_address::text ILIKE :searchTerm', {
+            .orWhere('parcel.receiverAddress ILIKE :searchTerm', {
               searchTerm,
             });
         }),
@@ -272,8 +243,8 @@ export class DriverService {
 
     if (startDate && endDate) {
       query.andWhere(
-        'COALESCE(parcel.delivered_at, parcel.assigned_at, parcel.updated_at, parcel.created_at) >= :startDate AND COALESCE(parcel.delivered_at, parcel.assigned_at, parcel.updated_at, parcel.created_at) <= :endDate',
-        { startDate, endDate },
+        'COALESCE(parcel.deliveredAt, parcel.assignedAt, parcel.createdAt) >= :startDate AND COALESCE(parcel.deliveredAt, parcel.assignedAt, parcel.createdAt) <= :endDate',
+        { startDate: new Date(startDate), endDate: new Date(endDate) },
       );
     }
 
@@ -452,16 +423,16 @@ export class DriverService {
       .createQueryBuilder('parcel')
       .select('parcel.status', 'status')
       .addSelect('COUNT(*)', 'count')
-      .where('parcel.driverId = :driverId', { driverId })
+      .where('parcel.driver_id = :driverId', { driverId })
       .groupBy('parcel.status')
       .getRawMany();
 
     const todayDelivered = await this.parcelRepo
       .createQueryBuilder('parcel')
-      .where('parcel.driverId = :driverId', { driverId })
+      .where('parcel.driver_id = :driverId', { driverId })
       .andWhere('parcel.status = :status', { status: 'delivered' })
       .andWhere(
-        'COALESCE(parcel.deliveredAt, parcel.updatedAt, parcel.createdAt) >= :start AND COALESCE(parcel.deliveredAt, parcel.updatedAt, parcel.createdAt) <= :end',
+        'parcel.delivered_at >= :start AND parcel.delivered_at <= :end',
         {
           start,
           end,
@@ -472,21 +443,13 @@ export class DriverService {
     const codCollected = await this.parcelRepo
       .createQueryBuilder('parcel')
       .select('SUM(parcel.cod)', 'total')
-      .addSelect("UPPER(COALESCE(parcel.codCurrency, 'USD'))", 'currency')
-      .where('parcel.driverId = :driverId', { driverId })
+      .addSelect('parcel.cod_currency', 'currency')
+      .where('parcel.driver_id = :driverId', { driverId })
       .andWhere('parcel.status = :status', { status: 'delivered' })
-      .andWhere(
-        '(parcel.driverPaymentStatus = :payment OR parcel.driverPaymentStatus IS NULL OR parcel.driverPaymentStatus != :paidStatus)',
-        { payment: 'unpaid', paidStatus: 'paid' },
-      )
-      .andWhere(
-        'COALESCE(parcel.deliveredAt, parcel.updatedAt, parcel.createdAt) >= :start AND COALESCE(parcel.deliveredAt, parcel.updatedAt, parcel.createdAt) <= :end',
-        {
-          start,
-          end,
-        },
-      )
-      .groupBy("UPPER(COALESCE(parcel.codCurrency, 'USD'))")
+      .andWhere('parcel.driver_payment_status = :payment', {
+        payment: 'unpaid',
+      })
+      .groupBy('parcel.cod_currency')
       .getRawMany();
 
     const codPendingUSD = parseFloat(
@@ -558,13 +521,13 @@ export class DriverService {
     const pkgQuery = this.parcelRepo
       .createQueryBuilder('parcel')
       .where(
-        '(parcel.driverId = :driverId OR parcel.pickupDriverId = :driverId)',
+        '(parcel.driver_id = :driverId OR parcel.pickup_driver_id = :driverId)',
         { driverId },
       );
 
     if (start && end) {
       pkgQuery.andWhere(
-        'COALESCE(parcel.deliveredAt, parcel.assignedAt, parcel.updatedAt, parcel.createdAt) >= :start AND COALESCE(parcel.deliveredAt, parcel.assignedAt, parcel.updatedAt, parcel.createdAt) <= :end',
+        'COALESCE(parcel.delivered_at, parcel.assigned_at, parcel.updated_at, parcel.created_at) >= :start AND COALESCE(parcel.delivered_at, parcel.assigned_at, parcel.updated_at, parcel.created_at) <= :end',
         { start, end },
       );
     }
@@ -576,13 +539,13 @@ export class DriverService {
       .select('parcel.status', 'status')
       .addSelect('COUNT(*)', 'count')
       .where(
-        '(parcel.driverId = :driverId OR parcel.pickupDriverId = :driverId)',
+        '(parcel.driver_id = :driverId OR parcel.pickup_driver_id = :driverId)',
         { driverId },
       );
 
     if (start && end) {
       statusQuery.andWhere(
-        'COALESCE(parcel.deliveredAt, parcel.assignedAt, parcel.updatedAt, parcel.createdAt) >= :start AND COALESCE(parcel.deliveredAt, parcel.assignedAt, parcel.updatedAt, parcel.createdAt) <= :end',
+        'COALESCE(parcel.delivered_at, parcel.assigned_at, parcel.updated_at, parcel.created_at) >= :start AND COALESCE(parcel.delivered_at, parcel.assigned_at, parcel.updated_at, parcel.created_at) <= :end',
         { start, end },
       );
     }
@@ -598,12 +561,12 @@ export class DriverService {
     // Pickup requests count
     const pickupReqQuery = this.pickupRequestRepo
       .createQueryBuilder('req')
-      .where('req.pickupDriverId = :driverId', { driverId })
+      .where('req.pickup_driver_id = :driverId', { driverId })
       .andWhere('req.status = :status', { status: 'pending' });
 
     if (start && end) {
       pickupReqQuery.andWhere(
-        'req.createdAt >= :start AND req.createdAt <= :end',
+        'req.created_at >= :start AND req.created_at <= :end',
         { start, end },
       );
     }
@@ -611,11 +574,11 @@ export class DriverService {
 
     const pendingParcelsQuery = this.parcelRepo
       .createQueryBuilder('parcel')
-      .where('parcel.pickupDriverId = :driverId', { driverId })
+      .where('parcel.pickup_driver_id = :driverId', { driverId })
       .andWhere('parcel.status = :status', { status: 'pending' });
     if (start && end) {
       pendingParcelsQuery.andWhere(
-        'COALESCE(parcel.assignedAt, parcel.createdAt) >= :start AND COALESCE(parcel.assignedAt, parcel.createdAt) <= :end',
+        'COALESCE(parcel.assigned_at, parcel.created_at) >= :start AND COALESCE(parcel.assigned_at, parcel.created_at) <= :end',
         { start, end },
       );
     }
@@ -623,12 +586,12 @@ export class DriverService {
 
     const pickedUpWaitQuery = this.pickupRequestRepo
       .createQueryBuilder('req')
-      .where('req.pickupDriverId = :driverId', { driverId })
+      .where('req.pickup_driver_id = :driverId', { driverId })
       .andWhere('req.status = :status', { status: 'picked-up' });
 
     if (start && end) {
       pickedUpWaitQuery.andWhere(
-        'req.createdAt >= :start AND req.createdAt <= :end',
+        'req.created_at >= :start AND req.created_at <= :end',
         { start, end },
       );
     }
@@ -636,7 +599,7 @@ export class DriverService {
 
     const broughtToHubQuery = this.parcelRepo
       .createQueryBuilder('parcel')
-      .where('parcel.pickupDriverId = :driverId', { driverId })
+      .where('parcel.pickup_driver_id = :driverId', { driverId })
       .andWhere('parcel.status IN (:...statuses)', {
         statuses: [
           'in-warehouse',
@@ -650,7 +613,7 @@ export class DriverService {
 
     if (start && end) {
       broughtToHubQuery.andWhere(
-        'COALESCE(parcel.warehouseAt, parcel.updatedAt, parcel.createdAt) >= :start AND COALESCE(parcel.warehouseAt, parcel.updatedAt, parcel.createdAt) <= :end',
+        'COALESCE(parcel.warehouse_at, parcel.updated_at, parcel.created_at) >= :start AND COALESCE(parcel.warehouse_at, parcel.updated_at, parcel.created_at) <= :end',
         { start, end },
       );
     }
@@ -660,22 +623,21 @@ export class DriverService {
     const codQuery = this.parcelRepo
       .createQueryBuilder('parcel')
       .select('SUM(parcel.cod)', 'total')
-      .addSelect("UPPER(COALESCE(parcel.codCurrency, 'USD'))", 'currency')
-      .where('parcel.driverId = :driverId', { driverId })
+      .addSelect('parcel.cod_currency', 'currency')
+      .where('parcel.driver_id = :driverId', { driverId })
       .andWhere('parcel.status = :status', { status: 'delivered' })
-      .andWhere(
-        '(parcel.driverPaymentStatus = :payment OR parcel.driverPaymentStatus IS NULL OR parcel.driverPaymentStatus != :paidStatus)',
-        { payment: 'unpaid', paidStatus: 'paid' },
-      );
+      .andWhere('parcel.driver_payment_status = :payment', {
+        payment: 'unpaid',
+      });
 
     if (start && end) {
       codQuery.andWhere(
-        'COALESCE(parcel.deliveredAt, parcel.updatedAt, parcel.createdAt) >= :start AND COALESCE(parcel.deliveredAt, parcel.updatedAt, parcel.createdAt) <= :end',
+        'parcel.updated_at >= :start AND parcel.updated_at <= :end',
         { start, end },
       );
     }
     const codCollected = await codQuery
-      .groupBy("UPPER(COALESCE(parcel.codCurrency, 'USD'))")
+      .groupBy('parcel.cod_currency')
       .getRawMany();
 
     const codPendingUSD = parseFloat(
@@ -690,13 +652,13 @@ export class DriverService {
     // Delivery Fee earned (SUM of deliveryFee for delivered orders in period)
     const feeQuery = this.parcelRepo
       .createQueryBuilder('parcel')
-      .select('SUM(parcel.deliveryFee)', 'total')
-      .where('parcel.driverId = :driverId', { driverId })
+      .select('SUM(parcel.delivery_fee)', 'total')
+      .where('parcel.driver_id = :driverId', { driverId })
       .andWhere('parcel.status = :status', { status: 'delivered' });
 
     if (start && end) {
       feeQuery.andWhere(
-        'COALESCE(parcel.deliveredAt, parcel.updatedAt, parcel.createdAt) >= :start AND COALESCE(parcel.deliveredAt, parcel.updatedAt, parcel.createdAt) <= :end',
+        'parcel.delivered_at >= :start AND parcel.delivered_at <= :end',
         { start, end },
       );
     }
@@ -1368,70 +1330,70 @@ export class DriverService {
     const settledResult = await this.driverPaymentRepo
       .createQueryBuilder('payment')
       .select('SUM(payment.amount)', 'total')
-      .where('payment.driverId = :driverId', { driverId })
+      .where('payment.driver_id = :driverId', { driverId })
       .getRawOne();
 
     // Total COD USD delivered by this driver
     const codUsdDelivered = await this.parcelRepo
       .createQueryBuilder('parcel')
       .select('SUM(parcel.cod)', 'total')
-      .where('parcel.driverId = :driverId', { driverId })
+      .where('parcel.driver_id = :driverId', { driverId })
       .andWhere("parcel.status = 'delivered'")
-      .andWhere("parcel.codCurrency = 'USD'")
+      .andWhere("parcel.cod_currency = 'USD'")
       .getRawOne();
 
     // Total COD KHR delivered by this driver
     const codKhrDelivered = await this.parcelRepo
       .createQueryBuilder('parcel')
       .select('SUM(parcel.cod)', 'total')
-      .where('parcel.driverId = :driverId', { driverId })
+      .where('parcel.driver_id = :driverId', { driverId })
       .andWhere("parcel.status = 'delivered'")
-      .andWhere("parcel.codCurrency = 'KHR'")
+      .andWhere("parcel.cod_currency = 'KHR'")
       .getRawOne();
 
     // Handed over COD (USD & KHR) - driverPaymentStatus = 'paid'
     const codUsdPaid = await this.parcelRepo
       .createQueryBuilder('parcel')
       .select('SUM(parcel.cod)', 'total')
-      .where('parcel.driverId = :driverId', { driverId })
+      .where('parcel.driver_id = :driverId', { driverId })
       .andWhere("parcel.status = 'delivered'")
-      .andWhere("parcel.codCurrency = 'USD'")
-      .andWhere("parcel.driverPaymentStatus = 'paid'")
+      .andWhere("parcel.cod_currency = 'USD'")
+      .andWhere("parcel.driver_payment_status = 'paid'")
       .getRawOne();
 
     const codKhrPaid = await this.parcelRepo
       .createQueryBuilder('parcel')
       .select('SUM(parcel.cod)', 'total')
-      .where('parcel.driverId = :driverId', { driverId })
+      .where('parcel.driver_id = :driverId', { driverId })
       .andWhere("parcel.status = 'delivered'")
-      .andWhere("parcel.codCurrency = 'KHR'")
-      .andWhere("parcel.driverPaymentStatus = 'paid'")
+      .andWhere("parcel.cod_currency = 'KHR'")
+      .andWhere("parcel.driver_payment_status = 'paid'")
       .getRawOne();
 
     // Pending handover COD (USD & KHR) - driverPaymentStatus = 'unpaid'
     const codUsdPending = await this.parcelRepo
       .createQueryBuilder('parcel')
       .select('SUM(parcel.cod)', 'total')
-      .where('parcel.driverId = :driverId', { driverId })
+      .where('parcel.driver_id = :driverId', { driverId })
       .andWhere("parcel.status = 'delivered'")
-      .andWhere("parcel.codCurrency = 'USD'")
-      .andWhere("parcel.driverPaymentStatus = 'unpaid'")
+      .andWhere("parcel.cod_currency = 'USD'")
+      .andWhere("parcel.driver_payment_status = 'unpaid'")
       .getRawOne();
 
     const codKhrPending = await this.parcelRepo
       .createQueryBuilder('parcel')
       .select('SUM(parcel.cod)', 'total')
-      .where('parcel.driverId = :driverId', { driverId })
+      .where('parcel.driver_id = :driverId', { driverId })
       .andWhere("parcel.status = 'delivered'")
-      .andWhere("parcel.codCurrency = 'KHR'")
-      .andWhere("parcel.driverPaymentStatus = 'unpaid'")
+      .andWhere("parcel.cod_currency = 'KHR'")
+      .andWhere("parcel.driver_payment_status = 'unpaid'")
       .getRawOne();
 
     // Delivery fee earned
     const deliveryFeeResult = await this.parcelRepo
       .createQueryBuilder('parcel')
-      .select('SUM(parcel.deliveryFee)', 'total')
-      .where('parcel.driverId = :driverId', { driverId })
+      .select('SUM(parcel.delivery_fee)', 'total')
+      .where('parcel.driver_id = :driverId', { driverId })
       .andWhere("parcel.status = 'delivered'")
       .getRawOne();
 

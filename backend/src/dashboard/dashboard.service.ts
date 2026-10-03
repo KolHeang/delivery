@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In } from 'typeorm';
+import { Repository } from 'typeorm';
 import { Parcel } from '../parcels/entities/parcel.entity';
 import { User } from '../users/entities/users.entity';
 import { Customer } from '../customers/entities/customer.entity';
@@ -13,7 +13,31 @@ export class DashboardService {
     @InjectRepository(User) private driverRepo: Repository<User>,
     @InjectRepository(Customer) private customerRepo: Repository<Customer>,
     @InjectRepository(Merchant) private merchantRepo: Repository<Merchant>,
-  ) { }
+  ) {}
+
+  private parseFlexibleDate(dateStr?: string | Date | null): Date | null {
+    if (!dateStr) return null;
+    if (dateStr instanceof Date) return isNaN(dateStr.getTime()) ? null : dateStr;
+    const str = String(dateStr).trim();
+    const ddmmyyyy = str.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/);
+    if (ddmmyyyy) {
+      const day = parseInt(ddmmyyyy[1], 10);
+      const month = parseInt(ddmmyyyy[2], 10) - 1;
+      const year = parseInt(ddmmyyyy[3], 10);
+      const d = new Date(year, month, day);
+      return isNaN(d.getTime()) ? null : d;
+    }
+    const yyyymmdd = str.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
+    if (yyyymmdd) {
+      const year = parseInt(yyyymmdd[1], 10);
+      const month = parseInt(yyyymmdd[2], 10) - 1;
+      const day = parseInt(yyyymmdd[3], 10);
+      const d = new Date(year, month, day);
+      return isNaN(d.getTime()) ? null : d;
+    }
+    const d = new Date(str);
+    return isNaN(d.getTime()) ? null : d;
+  }
 
   private applyDateFilter(
     queryBuilder: any,
@@ -21,37 +45,60 @@ export class DashboardService {
     startDate?: string,
     endDate?: string,
   ) {
-    if (startDate) {
+    const start = this.parseFlexibleDate(startDate);
+    const end = this.parseFlexibleDate(endDate);
+    if (start) {
+      start.setHours(0, 0, 0, 0);
       queryBuilder.andWhere(`${alias}.createdAt >= :startDate`, {
-        startDate: new Date(startDate + 'T00:00:00'),
+        startDate: start,
       });
     }
-    if (endDate) {
+    if (end) {
+      end.setHours(23, 59, 59, 999);
       queryBuilder.andWhere(`${alias}.createdAt <= :endDate`, {
-        endDate: new Date(endDate + 'T23:59:59.999'),
+        endDate: end,
       });
     }
     return queryBuilder;
   }
 
-  async getStats(startDate?: string, endDate?: string) {
+  private applyTenantFilter(
+    queryBuilder: any,
+    alias: string,
+    tenantId?: number,
+  ) {
+    if (tenantId) {
+      queryBuilder.andWhere(`${alias}.tenantId = :tenantId`, { tenantId });
+    }
+    return queryBuilder;
+  }
+
+  async getStats(startDate?: string, endDate?: string, tenantId?: number) {
+    const tenantFilter = tenantId ? { tenantId } : {};
+
     const [totalDrivers, totalStaff, totalCustomers, totalMerchants] =
       await Promise.all([
         this.driverRepo.count({
-          where: { isDriver: true },
+          where: { ...tenantFilter, isDriver: true },
         }),
         this.driverRepo.count({
-          where: { isStaff: true },
+          where: { ...tenantFilter, isStaff: true },
         }),
-        this.customerRepo.count(),
-        this.merchantRepo.count(),
+        this.customerRepo.count({
+          where: tenantFilter,
+        }),
+        this.merchantRepo.count({
+          where: tenantFilter,
+        }),
       ]);
 
     const statusCountsQb = this.parcelRepo
       .createQueryBuilder('parcel')
       .select('parcel.status', 'status')
       .addSelect('COUNT(*)', 'count')
+      .where('1=1')
       .groupBy('parcel.status');
+    this.applyTenantFilter(statusCountsQb, 'parcel', tenantId);
     this.applyDateFilter(statusCountsQb, 'parcel', startDate, endDate);
     const rawStatusCounts = await statusCountsQb.getRawMany();
 
@@ -78,6 +125,7 @@ export class DashboardService {
       .createQueryBuilder('parcel')
       .select('SUM(parcel.deliveryFee)', 'total')
       .where("parcel.status = 'delivered'");
+    this.applyTenantFilter(revenueQuery, 'parcel', tenantId);
     this.applyDateFilter(revenueQuery, 'parcel', startDate, endDate);
     const revenueResult = await revenueQuery.getRawOne();
 
@@ -87,18 +135,20 @@ export class DashboardService {
       .addSelect('parcel.codCurrency', 'currency')
       .where("parcel.status = 'delivered'")
       .groupBy('parcel.codCurrency');
+    this.applyTenantFilter(codQuery, 'parcel', tenantId);
     this.applyDateFilter(codQuery, 'parcel', startDate, endDate);
     const codResults = await codQuery.getRawMany();
 
     const feeQuery = this.parcelRepo
       .createQueryBuilder('parcel')
       .select('SUM(parcel.deliveryFee)', 'total')
-      .where('1=1');
+      .where("parcel.status = 'delivered'");
+    this.applyTenantFilter(feeQuery, 'parcel', tenantId);
     this.applyDateFilter(feeQuery, 'parcel', startDate, endDate);
     const feeResult = await feeQuery.getRawOne();
 
     const availableDrivers = await this.driverRepo.count({
-      where: { isDriver: true, isActive: true },
+      where: { ...tenantFilter, isDriver: true, isActive: true },
     });
 
     const collectedCashUSD = parseFloat(
@@ -131,7 +181,7 @@ export class DashboardService {
     };
   }
 
-  async getChartData(startDate?: string, endDate?: string) {
+  async getChartData(startDate?: string, endDate?: string, tenantId?: number) {
     let startD = startDate
       ? new Date(startDate)
       : new Date(Date.now() - 13 * 24 * 60 * 60 * 1000);
@@ -163,11 +213,13 @@ export class DashboardService {
       .groupBy("TO_CHAR(parcel.created_at, 'YYYY-MM-DD')")
       .orderBy("TO_CHAR(parcel.created_at, 'YYYY-MM-DD')", 'ASC');
 
+    dailyDataQuery.where('1=1');
+    this.applyTenantFilter(dailyDataQuery, 'parcel', tenantId);
+
     if (startDate || endDate) {
-      dailyDataQuery.where('1=1');
       this.applyDateFilter(dailyDataQuery, 'parcel', startDate, endDate);
     } else {
-      dailyDataQuery.where("parcel.created_at >= NOW() - INTERVAL '30 days'");
+      dailyDataQuery.andWhere("parcel.created_at >= NOW() - INTERVAL '30 days'");
     }
     const rawDailyData = await dailyDataQuery.getRawMany();
 
@@ -228,6 +280,7 @@ export class DashboardService {
       )
       .orderBy("DATE_TRUNC('month', parcel.created_at)", 'ASC');
 
+    this.applyTenantFilter(monthlyRevenueQuery, 'parcel', tenantId);
     this.applyDateFilter(monthlyRevenueQuery, 'parcel', startDate, endDate);
     const monthlyRevenue = await monthlyRevenueQuery.getRawMany();
 
@@ -239,13 +292,18 @@ export class DashboardService {
       .where('1=1')
       .groupBy('parcel.status');
 
+    this.applyTenantFilter(statusBreakdownQuery, 'parcel', tenantId);
     this.applyDateFilter(statusBreakdownQuery, 'parcel', startDate, endDate);
     const statusBreakdown = await statusBreakdownQuery.getRawMany();
 
     return { dailyData, monthlyRevenue, statusBreakdown };
   }
 
-  async getRecentParcels(startDate?: string, endDate?: string) {
+  async getRecentParcels(
+    startDate?: string,
+    endDate?: string,
+    tenantId?: number,
+  ) {
     const qb = this.parcelRepo
       .createQueryBuilder('parcel')
       .leftJoinAndSelect('parcel.merchant', 'merchant')
@@ -256,15 +314,26 @@ export class DashboardService {
       .orderBy('parcel.createdAt', 'DESC')
       .take(10);
 
+    this.applyTenantFilter(qb, 'parcel', tenantId);
     this.applyDateFilter(qb, 'parcel', startDate, endDate);
     return qb.getMany();
   }
 
-  async getRecentOrders(startDate?: string, endDate?: string) {
-    return this.getRecentParcels(startDate, endDate);
+  async getRecentOrders(
+    startDate?: string,
+    endDate?: string,
+    tenantId?: number,
+  ) {
+    return this.getRecentParcels(startDate, endDate, tenantId);
   }
 
-  async getTopDrivers(startDate?: string, endDate?: string) {
+  async getTopDrivers(
+    startDate?: string,
+    endDate?: string,
+    tenantId?: number,
+  ) {
+    const tenantFilter = tenantId ? { tenantId } : {};
+
     if (startDate || endDate) {
       const qb = this.parcelRepo
         .createQueryBuilder('parcel')
@@ -276,6 +345,7 @@ export class DashboardService {
         .orderBy('COUNT(*)', 'DESC')
         .limit(5);
 
+      this.applyTenantFilter(qb, 'parcel', tenantId);
       this.applyDateFilter(qb, 'parcel', startDate, endDate);
       const rawDrivers = await qb.getRawMany();
 
@@ -302,7 +372,7 @@ export class DashboardService {
     }
 
     const drivers = await this.driverRepo.find({
-      where: { isDriver: true, isActive: true },
+      where: { ...tenantFilter, isDriver: true, isActive: true },
       relations: { zone: true, roleRelation: true },
       take: 5,
     });
@@ -310,7 +380,7 @@ export class DashboardService {
     const driversWithStats = await Promise.all(
       drivers.map(async (d) => {
         const count = await this.parcelRepo.count({
-          where: { driverId: d.id, status: 'delivered' },
+          where: { ...tenantFilter, driverId: d.id, status: 'delivered' },
         });
         return {
           id: d.id,

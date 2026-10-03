@@ -5,13 +5,23 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   OneToMany,
+  ManyToOne,
+  JoinColumn,
 } from 'typeorm';
 import { Expense } from './expense.entity';
+import { Tenant } from '../../saas/entities/tenant.entity';
 
 @Entity('expense_types')
 export class ExpenseType {
   @PrimaryGeneratedColumn()
   id: number;
+
+  @ManyToOne(() => Tenant, { nullable: true, onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'tenant_id' })
+  tenant: Tenant;
+
+  @Column({ name: 'tenant_id', nullable: true })
+  tenantId: number;
 
   @Column()
   name: string;

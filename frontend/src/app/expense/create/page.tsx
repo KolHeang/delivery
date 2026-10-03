@@ -7,15 +7,14 @@ import Sidebar from '@/components/layout/Sidebar';
 import Topbar from '@/components/layout/Topbar';
 import api from '@/lib/api';
 import { useLanguage } from '@/lib/LanguageContext';
-
 import FormField from '@/components/ui/FormField';
 
 export default function AddExpensePage() {
   const router = useRouter();
+  const { lang, t } = useLanguage();
   const [types, setTypes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const { lang, t } = useLanguage();
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [form, setForm] = useState({
     description: '',
@@ -36,6 +35,17 @@ export default function AddExpensePage() {
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [router]);
+
+  const handleFieldChange = (field: string, val: string) => {
+    setForm(prev => ({ ...prev, [field]: val }));
+    if (errors[field]) {
+      setErrors(prev => {
+        const next = { ...prev };
+        delete next[field];
+        return next;
+      });
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -92,30 +102,24 @@ export default function AddExpensePage() {
         <Topbar title={t('addExpense') || 'Add Expense'} subtitle={t('addExpenseSubtitle') || 'Record a new company expenditure'} />
         <div className="page-content">
           <div className="card">
-            <div className="card-header"><span className="card-title">💸 {t('expenseDetails') || 'Expense Details'}</span></div>
+            <div className="card-header"><span className="card-title">{t('expenseDetails') || 'Expense Details'}</span></div>
             <div className="card-body">
               <form noValidate onSubmit={handleSubmit}>
                 <FormField label={t('descOrItem') || 'Description / Item'} required error={errors.description}>
                   <input
                     type="text"
-                    className="form-control"
+                    className={`form-control ${errors.description ? 'is-invalid' : ''}`}
                     placeholder={t('placeholderDescExpense') || 'e.g. Weekly office supplies, fuel reimbursement'}
                     value={form.description}
-                    onChange={e => {
-                      setForm({ ...form, description: e.target.value });
-                      if (errors.description) setErrors(prev => ({ ...prev, description: '' }));
-                    }}
+                    onChange={e => handleFieldChange('description', e.target.value)}
                   />
                 </FormField>
 
                 <FormField label={t('expenseCategory') || 'Expense Category / Type'} required error={errors.typeId}>
                   <select
-                    className="form-control"
+                    className={`form-control ${errors.typeId ? 'is-invalid' : ''}`}
                     value={form.typeId}
-                    onChange={e => {
-                      setForm({ ...form, typeId: e.target.value });
-                      if (errors.typeId) setErrors(prev => ({ ...prev, typeId: '' }));
-                    }}
+                    onChange={e => handleFieldChange('typeId', e.target.value)}
                   >
                     <option value="">{lang === 'km' ? '-- ជ្រើសរើសប្រភេទចំណាយ --' : '-- Select Expense Category --'}</option>
                     {types.map(t => (
@@ -130,33 +134,37 @@ export default function AddExpensePage() {
                       type="number"
                       step="0.01"
                       min="0"
-                      className="form-control"
+                      className={`form-control ${errors.amount ? 'is-invalid' : ''}`}
                       placeholder="0.00"
                       value={form.amount}
-                      onChange={e => {
-                        setForm({ ...form, amount: e.target.value });
-                        if (errors.amount) setErrors(prev => ({ ...prev, amount: '' }));
-                      }}
+                      onChange={e => handleFieldChange('amount', e.target.value)}
                     />
                   </FormField>
                   <FormField label={t('dateLabel') || 'Date'} required error={errors.date}>
                     <input
                       type="date"
-                      className="form-control"
+                      className={`form-control ${errors.date ? 'is-invalid' : ''}`}
                       value={form.date}
-                      onChange={e => {
-                        setForm({ ...form, date: e.target.value });
-                        if (errors.date) setErrors(prev => ({ ...prev, date: '' }));
-                      }}
+                      onChange={e => handleFieldChange('date', e.target.value)}
                     />
                   </FormField>
                 </div>
 
                 <div style={{ marginTop: 20, display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
-                  <button type="button" className="btn btn-outline" onClick={() => router.push('/expense')}>
-                    {t('cancel') || 'Cancel'}
+                  <button
+                    type="button"
+                    className="btn btn-cancel"
+                    style={{ background: '#dc2626', color: '#ffffff', border: '1px solid #dc2626', fontWeight: 700 }}
+                    onClick={() => router.push('/expense')}
+                  >
+                    {t('cancel') || 'បោះបង់'}
                   </button>
-                  <button type="submit" className="btn btn-primary" disabled={saving}>
+                  <button
+                    type="submit"
+                    className="btn btn-primary"
+                    style={{ background: '#2563eb', color: '#ffffff', border: '1px solid #2563eb', fontWeight: 700 }}
+                    disabled={saving}
+                  >
                     {saving ? t('saving') || 'Saving...' : t('addExpense') || 'Add Expense'}
                   </button>
                 </div>

@@ -51,6 +51,7 @@ export class ActivityLogInterceptor implements NestInterceptor {
             },
             userId,
             merchantId,
+            tenantId: user?.tenantId ?? null,
           });
         } catch (err) {
           console.error('Failed to save activity log in interceptor:', err);

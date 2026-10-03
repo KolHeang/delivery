@@ -15,6 +15,7 @@ import { User } from '../../users/entities/users.entity';
 import { Zone } from '../../zones/entities/zone.entity';
 import { ParcelEvent } from './parcel-event.entity';
 import { PickupRequest } from './pickup-request.entity';
+import { Tenant } from '../../saas/entities/tenant.entity';
 
 export type ParcelStatus =
   | 'pending'
@@ -24,7 +25,8 @@ export type ParcelStatus =
   | 'in-transit'
   | 'delivered'
   | 'failed'
-  | 'returned';
+  | 'returned'
+  | 'cancelled';
 export type ParcelSize = 'small' | 'medium' | 'large';
 export type PaymentStatus = 'pending' | 'paid';
 
@@ -32,6 +34,13 @@ export type PaymentStatus = 'pending' | 'paid';
 export class Parcel {
   @PrimaryGeneratedColumn()
   id: number;
+
+  @ManyToOne(() => Tenant, { nullable: true, onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'tenant_id' })
+  tenant: Tenant;
+
+  @Column({ name: 'tenant_id', nullable: true })
+  tenantId: number;
 
   @Column({ name: 'tracking_code', unique: true })
   trackingCode: string;
@@ -178,8 +187,13 @@ export class Parcel {
   @BeforeInsert()
   generateTrackingCode() {
     if (!this.trackingCode) {
-      const timestamp = Date.now().toString().slice(-8);
-      this.trackingCode = `CO${timestamp}`;
+      const today = new Date();
+      const day = String(today.getDate()).padStart(2, '0');
+      const month = String(today.getMonth() + 1).padStart(2, '0');
+      const year = today.getFullYear();
+      const rand = String(Math.floor(1000 + Math.random() * 9000));
+
+      this.trackingCode = `CO${day}${month}${year}${rand}`;
     }
   }
 }

@@ -98,6 +98,12 @@ export class CreateParcelDto {
   @IsNumber()
   @Type(() => Number)
   createdById?: number;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsNumber()
+  @Type(() => Number)
+  tenantId?: number;
 }
 
 export class UpdateParcelDto {
@@ -127,6 +133,7 @@ export class UpdateParcelDto {
   @IsOptional() @IsString() deliveredAt?: string;
   @IsOptional() @IsNumber() @Type(() => Number) createdById?: number;
   @IsOptional() @IsNumber() @Type(() => Number) updatedById?: number;
+  @IsOptional() @IsNumber() @Type(() => Number) tenantId?: number;
 }
 
 export class UpdateParcelStatusDto {

@@ -18,8 +18,25 @@ interface Role {
   id: number;
   name: string;
   description: string;
+  tenantId?: number | null;
   permissions: Permission[];
 }
+
+const PERM_GROUP_TO_PLAN_FEATURE: Record<string, string> = {
+  parcels: 'delivery',
+  orders: 'delivery',
+  zones: 'delivery',
+  merchants: 'shops',
+  users: 'staff',
+  drivers: 'staff',
+  vehicles: 'staff',
+  payments: 'payment',
+  expenses: 'accounting',
+  incomes: 'accounting',
+  reports: 'reports',
+  settings: 'settings',
+  roles: 'settings',
+};
 
 export default function EditRolePage() {
   const router = useRouter();
@@ -27,11 +44,13 @@ export default function EditRolePage() {
   const { t } = useLanguage();
 
   const [allPermissions, setAllPermissions] = useState<Permission[]>([]);
+  const [planFeatures, setPlanFeatures] = useState<Record<string, boolean> | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
   const [roleName, setRoleName] = useState('');
   const [roleDescription, setRoleDescription] = useState('');
+  const [roleNameError, setRoleNameError] = useState('');
   const [selectedPermissionIds, setSelectedPermissionIds] = useState<number[]>([]);
   const [isSystemRole, setIsSystemRole] = useState(false);
 
@@ -42,19 +61,27 @@ export default function EditRolePage() {
     }
     const load = async () => {
       try {
-        const [pRes, rRes] = await Promise.all([
+        const [permRes, subRes, roleRes] = await Promise.allSettled([
           api.get('/roles/permissions'),
-          api.get(`/roles/${params.id}`)
+          api.get('/saas/subscriptions/me'),
+          api.get(`/roles/${params.id}`),
         ]);
         
-        setAllPermissions(pRes.data);
+        if (permRes.status === 'fulfilled') {
+          setAllPermissions(permRes.value.data || []);
+        }
+        if (subRes.status === 'fulfilled' && subRes.value.data?.plan?.features) {
+          setPlanFeatures(subRes.value.data.plan.features);
+        }
         
-        const roleData: Role = rRes.data;
-        if (roleData) {
-          setRoleName(roleData.name);
-          setRoleDescription(roleData.description || '');
-          setSelectedPermissionIds(roleData.permissions.map(p => p.id));
-          setIsSystemRole(['admin', 'staff', 'driver'].includes(roleData.name));
+        if (roleRes.status === 'fulfilled') {
+          const roleData: Role = roleRes.value.data;
+          if (roleData) {
+            setRoleName(roleData.name);
+            setRoleDescription(roleData.description || '');
+            setSelectedPermissionIds(roleData.permissions.map(p => p.id));
+            setIsSystemRole(roleData.tenantId === null);
+          }
         }
       } catch (err) {
         console.error('Failed to load role details', err);
@@ -65,6 +92,13 @@ export default function EditRolePage() {
     };
     load();
   }, [params.id, router]);
+
+  const isCategoryAllowed = (category: string) => {
+    if (!planFeatures) return true;
+    const requiredFeature = PERM_GROUP_TO_PLAN_FEATURE[category];
+    if (!requiredFeature) return true;
+    return planFeatures[requiredFeature] !== false;
+  };
 
   const handleTogglePermission = (id: number) => {
     setSelectedPermissionIds(prev =>
@@ -87,9 +121,10 @@ export default function EditRolePage() {
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!roleName.trim()) {
-      alert(t('roleNameRequired'));
+      setRoleNameError(t('roleNameRequired') || 'សូមបំពេញឈ្មោះតួនាទី (Role Name)');
       return;
     }
+    setRoleNameError('');
 
     setSaving(true);
     try {
@@ -113,6 +148,7 @@ export default function EditRolePage() {
     const groups: Record<string, Permission[]> = {};
     allPermissions.forEach(p => {
       const category = p.name.split('.')[0] || 'general';
+      if (!isCategoryAllowed(category)) return;
       if (!groups[category]) {
         groups[category] = [];
       }
@@ -141,22 +177,25 @@ export default function EditRolePage() {
         <div className="page-content">
           <div className="card">
             <div className="card-header">
-              <span className="card-title">🛡️ {t('editRoleForm')}</span>
+              <span className="card-title">{t('editRoleForm')}</span>
             </div>
             <div className="card-body">
-              <form onSubmit={handleSave}>
+              <form onSubmit={handleSave} noValidate>
                 <div className="form-row">
                   <div className="form-group">
-                    <label className="form-label">{t('roleName')} <span>*</span></label>
+                    <label className="form-label">{t('roleName')} <span style={{ color: '#ef4444' }}>*</span></label>
                     <input
-                      className="form-control"
+                      className={`form-control ${roleNameError ? 'is-invalid' : ''}`}
                       placeholder={t('roleNamePlaceholder')}
                       value={roleName}
-                      onChange={e => setRoleName(e.target.value)}
-                      required
+                      onChange={e => {
+                        setRoleName(e.target.value);
+                        if (roleNameError) setRoleNameError('');
+                      }}
                       disabled={isSystemRole}
                       style={{ textTransform: 'lowercase' }}
                     />
+                    {roleNameError && <div className="form-error-text">{roleNameError}</div>}
                   </div>
                   <div className="form-group">
                     <label className="form-label">{t('roleDescription')}</label>
@@ -179,8 +218,8 @@ export default function EditRolePage() {
                       return (
                         <div key={groupName} style={{ border: '1px solid var(--border)', borderRadius: '8px', padding: '16px' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border)', paddingBottom: '8px', marginBottom: '12px' }}>
-                            <span style={{ textTransform: 'uppercase', fontWeight: 800, fontSize: '12px', color: 'var(--accent)', letterSpacing: '0.5px' }}>
-                              🔑 {t(('permGroup_' + groupName) as any) || groupName} {t('permissionsLabel')}
+                            <span style={{ textTransform: 'uppercase', fontWeight: 800, fontSize: '13px', color: 'var(--accent)', letterSpacing: '0.5px' }}>
+                              {t(('permGroup_' + groupName) as any) || groupName}
                             </span>
                             <div style={{ display: 'flex', gap: 8 }}>
                               <button
@@ -244,10 +283,20 @@ export default function EditRolePage() {
                 </div>
 
                 <div style={{ marginTop: 32, display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
-                  <button type="button" className="btn btn-outline" onClick={() => router.push('/setting/role')}>
+                  <button
+                    type="button"
+                    className="btn btn-cancel"
+                    style={{ background: '#dc2626', color: '#ffffff', border: '1px solid #dc2626', fontWeight: 700 }}
+                    onClick={() => router.push('/setting/role')}
+                  >
                     {t('cancel')}
                   </button>
-                  <button type="submit" className="btn btn-primary" disabled={saving}>
+                  <button
+                    type="submit"
+                    className="btn btn-primary"
+                    style={{ background: '#2563eb', color: '#ffffff', border: '1px solid #2563eb', fontWeight: 700 }}
+                    disabled={saving}
+                  >
                     {saving ? t('savingRole') : t('saveChanges')}
                   </button>
                 </div>

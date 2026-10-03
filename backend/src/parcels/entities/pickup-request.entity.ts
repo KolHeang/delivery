@@ -11,13 +11,21 @@ import {
 import { Merchant } from '../../merchants/entities/merchant.entity';
 import { User } from '../../users/entities/users.entity';
 import { Parcel } from './parcel.entity';
+import { Tenant } from '../../saas/entities/tenant.entity';
 
-export type PickupRequestStatus = 'pending' | 'picked-up' | 'in-warehouse' | 'completed';
+export type PickupRequestStatus = 'pending' | 'picked-up' | 'in-warehouse' | 'completed' | 'cancelled';
 
 @Entity('pickup_requests')
 export class PickupRequest {
   @PrimaryGeneratedColumn()
   id: number;
+
+  @ManyToOne(() => Tenant, { nullable: true, onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'tenant_id' })
+  tenant: Tenant;
+
+  @Column({ name: 'tenant_id', nullable: true })
+  tenantId: number;
 
   @Column({ name: 'declared_quantity' })
   declaredQuantity: number;

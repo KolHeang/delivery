@@ -6,7 +6,9 @@ import { isAuthenticated } from '@/lib/auth';
 import Sidebar from '@/components/layout/Sidebar';
 import Topbar from '@/components/layout/Topbar';
 import api from '@/lib/api';
-import { MdAdd, MdEdit, MdDelete, MdMoreHoriz, MdClose, MdBookmark } from 'react-icons/md';
+import { MdMoreHoriz, MdClose, MdBookmark } from 'react-icons/md';
+import { FaRegEdit, FaTrashAlt } from 'react-icons/fa';
+import { FiPlusCircle } from 'react-icons/fi';
 import { useLanguage } from '@/lib/LanguageContext';
 import Modal from '@/components/ui/Modal';
 import Pagination from '@/components/ui/Pagination';
@@ -32,9 +34,9 @@ export default function ZonesPage() {
       const r = await api.get('/zones', {
         params: { page: currentPage, limit: pageSize }
       });
-      if (r.data && r.data.result !== undefined) {
-        setItems(r.data.result || []);
-        setTotalItems(r.data.total || 0);
+      if (r.data && (r.data.results !== undefined || r.data.result !== undefined)) {
+        setItems(r.data.results || r.data.result || []);
+        setTotalItems(r.data.total ?? 0);
       } else {
         setItems(Array.isArray(r.data) ? r.data : []);
         setTotalItems(Array.isArray(r.data) ? r.data.length : 0);
@@ -108,7 +110,7 @@ export default function ZonesPage() {
             <div className="card-header">
               <span className="card-title">🗺️ {lang === 'km' ? 'តំបន់ដែលបានកំណត់' : 'Zones Configured'}</span>
               <button className="btn btn-primary btn-sm" onClick={openCreate}>
-                <MdAdd size={14} /> {lang === 'km' ? 'បន្ថែមតំបន់' : 'Add Zone'}
+                <FiPlusCircle size={14} /> {lang === 'km' ? 'បន្ថែមតំបន់' : 'Add Zone'}
               </button>
             </div>
             <div style={{ overflowX: 'auto' }}>
@@ -117,7 +119,7 @@ export default function ZonesPage() {
                   <tr>
                     <th style={{ width: '60px' }}>{lang === 'km' ? 'ល.រ' : 'No.'}</th>
                     <th>{lang === 'km' ? 'ឈ្មោះតំបន់' : 'Zone Name'}</th>
-                    <th>{lang === 'km' ? 'ឈ្មោះភ្នាក់ងារ' : 'Agent Name'}</th>
+                    <th style={{ width: '130px' }}>{lang === 'km' ? 'តម្លៃសេវាដឹក' : 'Delivery Fee'}</th>
                     <th>{lang === 'km' ? 'ប្រភេទតំបន់រង' : 'Subzone Types'}</th>
                     <th style={{ width: '100px', textAlign: 'center' }}>{lang === 'km' ? 'សកម្មភាព' : 'Actions'}</th>
                   </tr>
@@ -141,11 +143,9 @@ export default function ZonesPage() {
                           <td style={{ verticalAlign: 'top', paddingTop: '16px', color: '#1e293b', fontSize: 14 }}>{(currentPage - 1) * pageSize + i + 1}</td>
                           <td style={{ verticalAlign: 'top', paddingTop: '16px', fontWeight: 700 }}>{z.name}</td>
                           <td style={{ verticalAlign: 'top', paddingTop: '16px' }}>
-                            {z.driver ? (
-                              <span style={{ fontWeight: 600 }}>{z.driver.nameKh || z.driver.name}</span>
-                            ) : (
-                              ''
-                            )}
+                            <span style={{ fontWeight: 600, color: 'var(--accent, #2563eb)' }}>
+                              ${parseFloat(z.price || 0).toFixed(2)}
+                            </span>
                           </td>
                           <td style={{ verticalAlign: 'top', paddingTop: '12px', paddingBottom: '12px' }}>
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
@@ -215,7 +215,7 @@ export default function ZonesPage() {
                                 onMouseEnter={(e) => e.currentTarget.style.color = '#0f172a'}
                                 onMouseLeave={(e) => e.currentTarget.style.color = '#64748b'}
                               >
-                                <MdAdd size={20} />
+                                <FiPlusCircle size={16} />
                               </button>
                               {/* Edit */}
                               <button
@@ -236,7 +236,7 @@ export default function ZonesPage() {
                                 onMouseEnter={(e) => e.currentTarget.style.color = '#0f172a'}
                                 onMouseLeave={(e) => e.currentTarget.style.color = '#64748b'}
                               >
-                                <MdEdit size={20} />
+                                <FaRegEdit size={16} />
                               </button>
                               {/* Delete */}
                               <button
@@ -257,7 +257,7 @@ export default function ZonesPage() {
                                 onMouseEnter={(e) => e.currentTarget.style.opacity = '0.7'}
                                 onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
                               >
-                                <MdDelete size={20} />
+                                <FaTrashAlt size={16} />
                               </button>
                             </div>
                           </td>

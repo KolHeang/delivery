@@ -8,10 +8,19 @@ import {
 } from 'typeorm';
 import { Parcel } from '../../parcels/entities/parcel.entity';
 
-@Entity('invoices')
+import { Tenant } from '../../saas/entities/tenant.entity';
+
+@Entity('merchant_invoices')
 export class Invoice {
   @PrimaryGeneratedColumn()
   id: number;
+
+  @ManyToOne(() => Tenant, { onDelete: 'CASCADE', nullable: true })
+  @JoinColumn({ name: 'tenant_id' })
+  tenant: Tenant;
+
+  @Column({ name: 'tenant_id', nullable: true })
+  tenantId: number;
 
   @Column({ name: 'invoice_number', unique: true })
   invoiceNumber: string;
@@ -26,3 +35,5 @@ export class Invoice {
   @CreateDateColumn({ name: 'created_at' })
   printedAt: Date;
 }
+
+export { Invoice as MerchantInvoice };

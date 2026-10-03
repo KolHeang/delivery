@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Expense } from './entities/expense.entity';
 import { ExpenseType } from './entities/expense-type.entity';
-import { paginateRepo } from '../config/pagination';
+import { PaginatedResult } from '../interface/pagination.interface';
 
 @Injectable()
 export class ExpensesService {
@@ -41,28 +41,52 @@ export class ExpensesService {
     amount: number,
     date: Date,
     typeId?: number,
+    tenantId?: number,
   ) {
     const expense = this.expenseRepo.create({
       description,
       amount,
       date,
       typeId,
+      tenantId,
     });
     return this.expenseRepo.save(expense);
   }
 
-  async findAll(query?: { page?: number; limit?: number }) {
-    return paginateRepo(this.expenseRepo, query || {}, {
-      relations: { type: true },
-      order: { date: 'DESC', createdAt: 'DESC' },
-    });
+  async findAll(query?: { page?: number; limit?: number }, tenantId?: number): Promise<PaginatedResult<Expense>> {
+    const qb = this.expenseRepo
+      .createQueryBuilder('expense')
+      .leftJoinAndSelect('expense.type', 'type')
+      .orderBy('expense.date', 'DESC')
+      .addOrderBy('expense.createdAt', 'DESC');
+
+    if (tenantId) {
+      qb.andWhere('expense.tenantId = :tenantId', { tenantId });
+    }
+
+    const page = query?.page ? Math.max(1, Number(query.page)) : 1;
+    const limit = query?.limit ? Math.max(1, Number(query.limit)) : 10;
+    const skip = (page - 1) * limit;
+
+    qb.skip(skip).take(limit);
+
+    const [results, total] = await qb.getManyAndCount();
+
+    return {
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+      results,
+    };
   }
 
   async findOne(id: number) {
-    const expense = await this.expenseRepo.findOne({
-      where: { id },
-      relations: { type: true },
-    });
+    const expense = await this.expenseRepo
+      .createQueryBuilder('expense')
+      .leftJoinAndSelect('expense.type', 'type')
+      .where('expense.id = :id', { id })
+      .getOne();
     if (!expense) throw new NotFoundException('Expense not found');
     return expense;
   }

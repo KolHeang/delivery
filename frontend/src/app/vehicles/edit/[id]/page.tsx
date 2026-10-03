@@ -18,14 +18,15 @@ export default function EditVehiclePage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({ plate: '', type: 'motorbike', brand: '', model: '', year: new Date().getFullYear(), status: 'active' });
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (!isAuthenticated()) { router.push('/'); return; }
     
     const load = async () => {
       try {
-        const res = await api.get(`/vehicles`);
-        const vehicle = res.data.find((v: any) => v.id === parseInt(params.id as string));
+        const res = await api.get(`/vehicles/${params.id}`);
+        const vehicle = res.data;
         if (vehicle) {
           setForm({
             plate: vehicle.plate || '',
@@ -45,10 +46,36 @@ export default function EditVehiclePage() {
     load();
   }, [params.id, router]);
 
-  const f = (k: string) => (e: any) => setForm(p => ({ ...p, [k]: k === 'year' ? parseInt(e.target.value) : e.target.value }));
+  const f = (k: string) => (e: any) => {
+    setForm(p => ({ ...p, [k]: k === 'year' ? parseInt(e.target.value) : e.target.value }));
+    if (errors[k]) {
+      setErrors(prev => {
+        const next = { ...prev };
+        delete next[k];
+        return next;
+      });
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const errs: Record<string, string> = {};
+    if (!form.plate.trim()) {
+      errs.plate = 'សូមបំពេញស្លាកលេខយានយន្ត';
+    }
+    if (!form.brand.trim()) {
+      errs.brand = 'សូមបំពេញម៉ាកយានយន្ត';
+    }
+    if (!form.model.trim()) {
+      errs.model = 'សូមបំពេញម៉ូដែលយានយន្ត';
+    }
+
+    if (Object.keys(errs).length > 0) {
+      setErrors(errs);
+      return;
+    }
+
+    setErrors({});
     setSaving(true);
     try {
       await api.patch(`/vehicles/${params.id}`, form);
@@ -73,24 +100,51 @@ export default function EditVehiclePage() {
     <div className="app-layout">
       <Sidebar />
       <div className="main-content">
-        <Topbar title={t('editVehicle')} subtitle={t('editVehicle')} />
+        <Topbar title={t('editVehicle')} subtitle="កែប្រែព័ត៌មាន និងស្ថានភាពយានយន្ត" />
         <div className="page-content">
           <div className="card">
-            <div className="card-header"><span className="card-title">🚗 {t('editVehicle')}</span></div>
+            <div className="card-header"><span className="card-title">{t('editVehicle')}</span></div>
             <div className="card-body">
-              <form onSubmit={handleSubmit}>
+              <form onSubmit={handleSubmit} noValidate>
                 <div className="form-row">
-                  <div className="form-group"><label className="form-label">{t('plateNumber')} <span>*</span></label><input className="form-control" value={form.plate} onChange={f('plate')} placeholder="e.g. 2A-4532" required /></div>
                   <div className="form-group">
-                    <label className="form-label">{t('vehicleType')} <span>*</span></label>
+                    <label className="form-label">{t('plateNumber')} <span style={{ color: '#ef4444' }}>*</span></label>
+                    <input
+                      className={`form-control ${errors.plate ? 'is-invalid' : ''}`}
+                      value={form.plate}
+                      onChange={f('plate')}
+                      placeholder="e.g. 2A-4532"
+                    />
+                    {errors.plate && <div className="form-error-text">{errors.plate}</div>}
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">{t('vehicleType')} <span style={{ color: '#ef4444' }}>*</span></label>
                     <select className="form-control" value={form.type} onChange={f('type')}>
-                      {TYPES.map(t => <option key={t} value={t}>{TYPE_ICONS[t]} {t}</option>)}
+                      {TYPES.map(t => <option key={t} value={t}>{t}</option>)}
                     </select>
                   </div>
                 </div>
                 <div className="form-row">
-                  <div className="form-group"><label className="form-label">{t('brand')} <span>*</span></label><input className="form-control" value={form.brand} onChange={f('brand')} required /></div>
-                  <div className="form-group"><label className="form-label">{t('model')} <span>*</span></label><input className="form-control" value={form.model} onChange={f('model')} required /></div>
+                  <div className="form-group">
+                    <label className="form-label">{t('brand')} <span style={{ color: '#ef4444' }}>*</span></label>
+                    <input
+                      className={`form-control ${errors.brand ? 'is-invalid' : ''}`}
+                      value={form.brand}
+                      onChange={f('brand')}
+                      placeholder="e.g. Honda"
+                    />
+                    {errors.brand && <div className="form-error-text">{errors.brand}</div>}
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">{t('model')} <span style={{ color: '#ef4444' }}>*</span></label>
+                    <input
+                      className={`form-control ${errors.model ? 'is-invalid' : ''}`}
+                      value={form.model}
+                      onChange={f('model')}
+                      placeholder="e.g. Dream 125"
+                    />
+                    {errors.model && <div className="form-error-text">{errors.model}</div>}
+                  </div>
                 </div>
                 <div className="form-row">
                   <div className="form-group"><label className="form-label">{t('year')}</label><input type="number" min="2000" max="2030" className="form-control" value={form.year} onChange={f('year')} /></div>
@@ -105,10 +159,20 @@ export default function EditVehiclePage() {
                 </div>
                 
                 <div style={{ marginTop: 20, display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
-                  <button type="button" className="btn btn-outline" onClick={() => router.push('/vehicles')}>
+                  <button
+                    type="button"
+                    className="btn btn-cancel"
+                    style={{ background: '#dc2626', color: '#ffffff', border: '1px solid #dc2626', fontWeight: 700 }}
+                    onClick={() => router.push('/vehicles')}
+                  >
                     {t('cancel')}
                   </button>
-                  <button type="submit" className="btn btn-primary" disabled={saving}>
+                  <button
+                    type="submit"
+                    className="btn btn-primary"
+                    style={{ background: '#2563eb', color: '#ffffff', border: '1px solid #2563eb', fontWeight: 700 }}
+                    disabled={saving}
+                  >
                     {saving ? t('saving') : t('save')}
                   </button>
                 </div>

@@ -7,11 +7,19 @@ import {
   JoinColumn,
 } from 'typeorm';
 import { Parcel } from './parcel.entity';
+import { Tenant } from '../../saas/entities/tenant.entity';
 
 @Entity('parcel_events')
 export class ParcelEvent {
   @PrimaryGeneratedColumn()
   id: number;
+
+  @ManyToOne(() => Tenant, { nullable: true, onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'tenant_id' })
+  tenant: Tenant;
+
+  @Column({ name: 'tenant_id', nullable: true })
+  tenantId: number;
 
   @Column({ name: 'parcel_id' })
   parcelId: number;

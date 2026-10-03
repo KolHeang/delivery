@@ -5,7 +5,7 @@ import { Zone } from './entities/zone.entity';
 import { SubZone } from './entities/subzone.entity';
 import { CreateZoneDto, UpdateZoneDto } from './dto/zone.dto';
 
-import { paginateRepo } from '../config/pagination';
+import { PaginatedResult } from '../interface/pagination.interface';
 
 @Injectable()
 export class ZonesService {
@@ -15,25 +15,58 @@ export class ZonesService {
     private readonly subZoneRepo: Repository<SubZone>,
   ) {}
 
-  async findAll(query?: { page?: number; limit?: number }): Promise<any> {
-    return paginateRepo(this.repo, query || {}, {
-      relations: { driver: true, subZones: true },
-      order: { name: 'ASC' },
-    });
+  async findAll(query?: { page?: number; limit?: number }, tenantId?: number): Promise<PaginatedResult<Zone>> {
+    const qb = this.repo
+      .createQueryBuilder('zone')
+      .leftJoinAndSelect('zone.driver', 'driver')
+      .leftJoinAndSelect('zone.subZones', 'subZones')
+      .orderBy('zone.name', 'ASC');
+
+    if (tenantId) {
+      const tenantCount = await this.repo.count({ where: { tenantId } });
+      if (tenantCount > 0) {
+        qb.andWhere('zone.tenantId = :tenantId', { tenantId });
+      } else {
+        qb.andWhere('zone.tenantId IS NULL');
+      }
+    } else {
+      qb.andWhere('zone.tenantId IS NULL');
+    }
+
+    const page = query?.page ? Math.max(1, Number(query.page)) : 1;
+    const limit = query?.limit ? Math.max(1, Number(query.limit)) : 10;
+    const skip = (page - 1) * limit;
+
+    qb.skip(skip).take(limit);
+
+    const [results, total] = await qb.getManyAndCount();
+
+    return {
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+      results,
+    };
   }
 
   async findOne(id: number): Promise<Zone> {
-    const item = await this.repo.findOne({
-      where: { id },
-      relations: { driver: true },
-    });
+    const item = await this.repo
+      .createQueryBuilder('zone')
+      .leftJoinAndSelect('zone.driver', 'driver')
+      .leftJoinAndSelect('zone.subZones', 'subZones')
+      .where('zone.id = :id', { id })
+      .getOne();
+
     if (!item) throw new NotFoundException(`Zone #${id} not found`);
     return item;
   }
 
   create(dto: CreateZoneDto): Promise<Zone> {
     if (!dto.code) {
-      dto.code = `ZON-${dto.name.toUpperCase().replace(/\s+/g, '-')}-${Date.now().toString().slice(-4)}`;
+      const clean = dto.name.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 6);
+      const rand = Math.floor(1000 + Math.random() * 9000);
+      dto.code = clean ? `ZON-${clean}-${Date.now().toString().slice(-4)}${rand}` : `ZON-${Date.now().toString().slice(-6)}${rand}`;
     }
     if (dto.price === undefined) {
       dto.price = 0;

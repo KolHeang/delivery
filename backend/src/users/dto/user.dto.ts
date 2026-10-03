@@ -15,6 +15,11 @@ import { ApiProperty } from '@nestjs/swagger';
 import { Type, Transform } from 'class-transformer';
 
 export class CreateUserDto {
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  code?: string;
+
   @ApiProperty()
   @IsNotEmpty()
   @IsString()
@@ -75,6 +80,7 @@ export class CreateUserDto {
 
   @ApiProperty({ required: false })
   @IsOptional()
+  @IsString()
   joinDate?: string;
 
   @ApiProperty({ required: false })
@@ -137,9 +143,21 @@ export class CreateUserDto {
   })
   @IsBoolean()
   isDriver?: boolean;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsNumber()
+  @Type(() => Number)
+  tenantId?: number;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  tenantSubdomain?: string;
 }
 
 export class UpdateUserDto {
+  @IsOptional() @IsString() code?: string;
   @IsOptional() @IsString() name?: string;
   @IsOptional() @IsEmail() email?: string;
   @IsOptional() @MinLength(6) password?: string;
@@ -186,8 +204,11 @@ export class UpdateUserDto {
   @IsOptional() @IsNumber() @Min(0) @Max(5) @Type(() => Number) rating?: number;
   @IsOptional() @IsNumber() @Type(() => Number) zoneId?: number;
   @IsOptional() @IsNumber() @Type(() => Number) vehicleId?: number;
+  @IsOptional() @IsString() joinDate?: string;
   @IsOptional() @IsNumber() @Type(() => Number) salary?: number;
   @IsOptional() @IsString() photo?: string;
   @IsOptional() @IsString() dob?: string;
   @IsOptional() @IsString() gender?: string;
+  @IsOptional() @IsNumber() @Type(() => Number) tenantId?: number;
+  @IsOptional() @IsString() tenantSubdomain?: string;
 }

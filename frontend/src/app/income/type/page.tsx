@@ -5,10 +5,11 @@ import { useRouter } from 'next/navigation';
 import { isAuthenticated } from '@/lib/auth';
 import Sidebar from '@/components/layout/Sidebar';
 import Topbar from '@/components/layout/Topbar';
+import api from '@/lib/api';
 import Modal from '@/components/ui/Modal';
 import Pagination from '@/components/ui/Pagination';
-import api from '@/lib/api';
-import { MdAdd, MdEdit, MdDelete } from 'react-icons/md';
+import { FaRegEdit, FaTrashAlt } from 'react-icons/fa';
+import { FiPlusCircle } from 'react-icons/fi';
 import { useLanguage } from '@/lib/LanguageContext';
 import FormField from '@/components/ui/FormField';
 
@@ -61,6 +62,7 @@ export default function IncomeTypePage() {
       return;
     }
     setAddErrors({});
+
     setSaving(true);
     try {
       await api.post('/incomes/types', { name: name.trim(), description: desc.trim() });
@@ -93,99 +95,90 @@ export default function IncomeTypePage() {
       return;
     }
     setEditErrors({});
+
     setUpdating(true);
     try {
-      await api.patch(`/incomes/types/${editItem.id}`, {
-        name: editName.trim(),
-        description: editDesc.trim(),
-      });
+      await api.patch(`/incomes/types/${editItem.id}`, { name: editName.trim(), description: editDesc.trim() });
       setEditItem(null);
       await load();
     } catch {
-      alert(lang === 'km' ? 'មិនអាចកែសម្រួលប្រភេទចំណូលបានទេ' : 'Failed to update category');
+      alert(t('failedToUpdateCategory') || 'Failed to update category');
     }
     setUpdating(false);
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm(t('deleteCategoryConfirmIncome') || 'Delete this category? Related incomes will be updated.')) return;
+    if (!confirm(t('confirmDeleteCategory') || 'Are you sure you want to delete this category?')) return;
     try {
       await api.delete(`/incomes/types/${id}`);
       await load();
-    } catch {
-      alert(t('failedToDeleteCategory') || 'Failed to delete category');
+    } catch (err: any) {
+      alert(err.response?.data?.message || t('failedToDeleteCategory') || 'Failed to delete category');
     }
   };
 
+  // Pagination logic
   const totalItems = types.length;
-  const paginatedTypes = types.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  const startIndex = (currentPage - 1) * pageSize;
+  const paginatedTypes = types.slice(startIndex, startIndex + pageSize);
+
+  if (loading) return (
+    <div className="app-layout">
+      <Sidebar />
+      <div className="main-content">
+        <div className="loading-wrapper"><div className="spinner" /></div>
+      </div>
+    </div>
+  );
 
   return (
     <div className="app-layout">
       <Sidebar />
       <div className="main-content">
-        <Topbar title={t('typeOfIncome') || 'Type Of Income'} subtitle={t('incomeTypeSubtitle') || 'Manage income source categories and accounts'} />
+        <Topbar title={t('incomeCategoriesTitle') || 'Income Categories'} subtitle={t('incomeCategoriesSubtitle') || 'Manage and classify income sources'} />
         <div className="page-content">
           <div className="card">
-            <div className="card-header">
-              <span className="card-title">📋 {t('incomeCategories') || 'Income Categories'}</span>
+            <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span className="card-title">{t('categoryList') || 'Category List'}</span>
               <button
-                className="btn btn-primary"
-                style={{
-                  padding: '8px 18px',
-                  fontSize: '13.5px',
-                  fontWeight: 600,
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 6,
-                  borderRadius: 8,
-                  cursor: 'pointer',
-                }}
+                className="btn btn-primary btn-sm"
                 onClick={() => setAddModalOpen(true)}
+                style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700 }}
               >
-                <MdAdd size={18} /> {t('addIncomeCategory') || 'Add Income Category'}
+                <FiPlusCircle size={16} /> {t('addCategory') || 'Add Category'}
               </button>
             </div>
-            <div className="table-wrapper" style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%' }}>
+            <div className="card-body" style={{ padding: 0 }}>
+              <table className="table">
                 <thead>
                   <tr>
-                    <th style={{ width: 60, textAlign: 'center' }}>{t('colNo') || 'No.'}</th>
-                    <th style={{ width: 280 }}>{t('incomeCategoryName') || 'Income Category Name'}</th>
+                    <th style={{ width: 80 }}>{t('no') || '#'}</th>
+                    <th>{t('categoryName') || 'Category Name'}</th>
                     <th>{t('description') || 'Description'}</th>
-                    <th style={{ width: 100, textAlign: 'center' }}>{t('reportAction') || 'Action'}</th>
+                    <th style={{ width: 120, textAlign: 'center' }}>{t('actions') || 'Actions'}</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {loading ? (
+                  {paginatedTypes.length === 0 ? (
                     <tr>
-                      <td colSpan={4} style={{ textAlign: 'center', padding: '40px 0' }}>
-                        <div className="loading-wrapper"><div className="spinner" /></div>
-                      </td>
-                    </tr>
-                  ) : paginatedTypes.length === 0 ? (
-                    <tr>
-                      <td colSpan={4} style={{ textAlign: 'center', padding: '36px 20px', color: 'var(--text-muted)', fontSize: 13 }}>
-                        {t('noDataFound') || 'គ្មានទិន្នន័យ'}
+                      <td colSpan={4} style={{ textAlign: 'center', padding: '32px', color: 'var(--text-muted)' }}>
+                        {t('noCategoriesFound') || 'No income categories found. Click "Add Category" to create one.'}
                       </td>
                     </tr>
                   ) : (
                     paginatedTypes.map((tItem, idx) => (
                       <tr key={tItem.id}>
-                        <td style={{ color: 'var(--text-muted)', fontSize: 12, textAlign: 'center' }}>
-                          {(currentPage - 1) * pageSize + idx + 1}
-                        </td>
-                        <td style={{ fontWeight: 700 }}>{tItem.name}</td>
-                        <td style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{tItem.description || '—'}</td>
-                        <td>
-                          <div style={{ display: 'flex', justifyContent: 'center', gap: 6 }}>
+                        <td>{startIndex + idx + 1}</td>
+                        <td style={{ fontWeight: 600, color: 'var(--accent)' }}>{tItem.name}</td>
+                        <td>{tItem.description || '-'}</td>
+                        <td style={{ textAlign: 'center' }}>
+                          <div style={{ display: 'inline-flex', gap: 6 }}>
                             <button
                               className="btn btn-ghost btn-icon btn-sm"
-                              style={{ color: '#2563eb' }}
                               onClick={() => openEdit(tItem)}
-                              title={lang === 'km' ? 'កែសម្រួល' : 'Edit'}
+                              title={lang === 'km' ? 'កែប្រែ' : 'Edit'}
                             >
-                              <MdEdit size={16} />
+                              <FaRegEdit size={14} />
                             </button>
                             <button
                               className="btn btn-ghost btn-icon btn-sm"
@@ -193,7 +186,7 @@ export default function IncomeTypePage() {
                               onClick={() => handleDelete(tItem.id)}
                               title={lang === 'km' ? 'លុប' : 'Delete'}
                             >
-                              <MdDelete size={16} />
+                              <FaTrashAlt size={14} />
                             </button>
                           </div>
                         </td>
@@ -253,10 +246,20 @@ export default function IncomeTypePage() {
               />
             </div>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 20 }}>
-              <button type="button" className="btn btn-outline" onClick={() => setAddModalOpen(false)}>
+              <button
+                type="button"
+                className="btn btn-cancel"
+                style={{ background: '#dc2626', color: '#ffffff', border: '1px solid #dc2626', fontWeight: 700 }}
+                onClick={() => setAddModalOpen(false)}
+              >
                 {t('cancel') || 'បោះបង់'}
               </button>
-              <button type="submit" className="btn btn-primary" disabled={saving}>
+              <button
+                type="submit"
+                className="btn btn-primary"
+                style={{ background: '#2563eb', color: '#ffffff', border: '1px solid #2563eb', fontWeight: 700 }}
+                disabled={saving}
+              >
                 {saving ? (t('creating') || 'Creating...') : (t('createType') || 'Create Type')}
               </button>
             </div>
@@ -269,7 +272,7 @@ export default function IncomeTypePage() {
         <Modal
           open={!!editItem}
           onClose={() => setEditItem(null)}
-          title={`✏️ ${lang === 'km' ? 'កែសម្រួលប្រភេទចំណូល' : 'Edit Income Category'}`}
+          title={lang === 'km' ? 'កែសម្រួលប្រភេទចំណូល' : 'Edit Income Category'}
           size="md"
         >
           <form noValidate onSubmit={handleUpdate}>
@@ -299,10 +302,20 @@ export default function IncomeTypePage() {
               />
             </div>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 20 }}>
-              <button type="button" className="btn btn-outline" onClick={() => setEditItem(null)}>
+              <button
+                type="button"
+                className="btn btn-cancel"
+                style={{ background: '#dc2626', color: '#ffffff', border: '1px solid #dc2626', fontWeight: 700 }}
+                onClick={() => setEditItem(null)}
+              >
                 {t('cancel') || 'បោះបង់'}
               </button>
-              <button type="submit" className="btn btn-primary" disabled={updating}>
+              <button
+                type="submit"
+                className="btn btn-primary"
+                style={{ background: '#2563eb', color: '#ffffff', border: '1px solid #2563eb', fontWeight: 700 }}
+                disabled={updating}
+              >
                 {updating ? (lang === 'km' ? 'កំពុងរក្សាទុក...' : 'Saving...') : (lang === 'km' ? 'រក្សាទុកការផ្លាស់ប្តូរ' : 'Save Changes')}
               </button>
             </div>

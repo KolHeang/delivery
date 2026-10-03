@@ -232,7 +232,8 @@ export class SubscriptionsService {
     }
 
     // 1.1 Auto-register default domain in saas_domains
-    const primaryDomainStr = `${cleanSubdomain}.ebsexpress.com`;
+    const baseDomain = process.env.BASE_DOMAIN || 'new-delivery.rithyboth.work';
+    const primaryDomainStr = `${cleanSubdomain}.${baseDomain}`;
     let existingDomain = await this.domainRepo.findOne({ where: { domain: primaryDomainStr } });
     if (!existingDomain) {
       const newDomain = this.domainRepo.create({
@@ -312,7 +313,7 @@ export class SubscriptionsService {
       workspace: {
         companyName: dto.companyName,
         subdomain: cleanSubdomain,
-        url: `https://${cleanSubdomain}.ebsexpress.com`,
+        url: `https://${cleanSubdomain}.${process.env.BASE_DOMAIN || 'new-delivery.rithyboth.work'}`,
       },
     };
   }

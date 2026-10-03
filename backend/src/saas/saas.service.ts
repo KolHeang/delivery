@@ -125,9 +125,10 @@ export class SaasService {
     const savedTenant = await this.tenantRepo.save(tenant);
 
     // 4. Create primary Domain
+    const baseDomain = process.env.BASE_DOMAIN || 'new-delivery.rithyboth.work';
     const domain = this.domainRepo.create({
       tenantId: savedTenant.id,
-      domain: `${cleanSlug}.delivery.com`,
+      domain: `${cleanSlug}.${baseDomain}`,
       isPrimary: true,
       isVerified: true,
     });
@@ -219,7 +220,7 @@ export class SaasService {
       workspace: {
         companyName: savedTenant.name,
         subdomain: cleanSlug,
-        url: `https://${cleanSlug}.delivery.com`,
+        url: `https://${cleanSlug}.${baseDomain}`,
       },
     };
   }
@@ -315,9 +316,10 @@ export class SaasService {
 
     // Update primary domain if slug changed
     if (dto.slug) {
+      const baseDomain = process.env.BASE_DOMAIN || 'new-delivery.rithyboth.work';
       await this.domainRepo.update(
         { tenantId: id, isPrimary: true },
-        { domain: `${dto.slug}.ebsexpress.com` },
+        { domain: `${dto.slug}.${baseDomain}` },
       );
     }
 
@@ -518,7 +520,8 @@ export class SaasService {
       await this.domainRepo.update({ tenantId }, { isPrimary: false });
     }
 
-    const isSubdomain = cleanDomain.includes('localhost') || cleanDomain.endsWith('.ebsexpress.com');
+    const baseDomain = process.env.BASE_DOMAIN || 'new-delivery.rithyboth.work';
+    const isSubdomain = cleanDomain.includes('localhost') || cleanDomain.endsWith('.ebsexpress.com') || cleanDomain.endsWith(`.${baseDomain}`);
 
     const newDomain = this.domainRepo.create({
       tenantId,
@@ -527,7 +530,7 @@ export class SaasService {
       isPrimary: dto.isPrimary ?? false,
       isVerified: isSubdomain ? true : false,
       sslStatus: isSubdomain ? 'active' : 'pending',
-      dnsTarget: dto.dnsTarget || 'cname.ebsexpress.com',
+      dnsTarget: dto.dnsTarget || `cname.${baseDomain}`,
     });
 
     return this.domainRepo.save(newDomain);

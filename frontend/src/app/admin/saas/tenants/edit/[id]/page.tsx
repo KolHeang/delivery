@@ -47,6 +47,8 @@ const FlagEn = ({ size = 20 }: { size?: number }) => (
   </svg>
 );
 
+import { getDomainSuffix } from '@/lib/domain';
+
 export default function EditTenantPage() {
   const router = useRouter();
   const params = useParams();
@@ -58,7 +60,7 @@ export default function EditTenantPage() {
   const [saving, setSaving] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
-  const [domainSuffix, setDomainSuffix] = useState('.ebsexpress.com');
+  const [domainSuffix, setDomainSuffix] = useState('.new-delivery.rithyboth.work');
 
   const tr = (km: string, en: string) => (lang === 'km' ? km : en);
 
@@ -82,11 +84,7 @@ export default function EditTenantPage() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    if (window.location.host.includes('localhost')) {
-      setDomainSuffix(`.localhost:${window.location.port || '3000'}`);
-    } else {
-      setDomainSuffix('.ebsexpress.com');
-    }
+    setDomainSuffix(getDomainSuffix());
 
     const token = localStorage.getItem('access_token');
     const saasAdminRaw = localStorage.getItem('saas_admin');

@@ -239,7 +239,7 @@ export default function Sidebar() {
             textOverflow: 'ellipsis',
             overflow: 'hidden'
           }}>
-            {activeSubdomain ? `${activeSubdomain}.ebsexpress.com` : (lang === 'km' ? 'ប្រព័ន្ធដឹកជញ្ជូន' : 'Delivery System')}
+            {activeSubdomain ? `${activeSubdomain}${typeof window !== 'undefined' ? (window.location.hostname.includes('rithyboth.work') ? '.new-delivery.rithyboth.work' : (window.location.hostname.includes('localhost') ? '.localhost' : '.new-delivery.rithyboth.work')) : '.new-delivery.rithyboth.work'}` : (lang === 'km' ? 'ប្រព័ន្ធដឹកជញ្ជូន' : 'Delivery System')}
           </span>
         </div>
       </div>

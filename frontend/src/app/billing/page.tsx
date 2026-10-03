@@ -24,6 +24,7 @@ import {
 import { useTenant } from '@/lib/TenantContext';
 import { useLanguage } from '@/lib/LanguageContext';
 import { printInvoicePdf } from '@/lib/invoice-pdf';
+import { getTenantWorkspaceUrl } from '@/lib/domain';
 
 export default function BillingPage() {
   const router = useRouter();
@@ -321,13 +322,13 @@ export default function BillingPage() {
                       </div>
                       <div style={{ fontSize: 15, fontWeight: 900, color: '#0f172a', marginTop: 2 }}>
                         {subInfo.companyName || 'Angkor Express'}{' '}
-                        <span style={{ color: '#4f46e5', fontWeight: 700 }}>— https://{subInfo.subdomain}.ebsexpress.com</span>
+                        <span style={{ color: '#4f46e5', fontWeight: 700 }}>— {getTenantWorkspaceUrl(subInfo.subdomain)}</span>
                       </div>
                     </div>
                   </div>
 
                   <a
-                    href={`http://${subInfo.subdomain}.localhost:3000`}
+                    href={getTenantWorkspaceUrl(subInfo.subdomain)}
                     target="_blank"
                     rel="noreferrer"
                     style={{

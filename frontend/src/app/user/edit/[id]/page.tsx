@@ -9,6 +9,7 @@ import api from '@/lib/api';
 import { useLanguage } from '@/lib/LanguageContext';
 
 const emptyForm = {
+  code: '',
   name: '',
   nameKh: '',
   phone: '',
@@ -60,6 +61,7 @@ export default function EditStaffPage() {
         const i = userRes.data;
         if (i) {
           setForm({
+            code: i.code || '',
             name: i.name,
             nameKh: i.nameKh || '',
             phone: i.phone || '',
@@ -138,6 +140,7 @@ export default function EditStaffPage() {
     setSaving(true);
     try {
       const formData = new FormData();
+      if (form.code) formData.append('code', form.code);
       formData.append('name', form.name);
       if (form.nameKh) formData.append('nameKh', form.nameKh);
       if (form.phone) formData.append('phone', form.phone);
@@ -223,7 +226,7 @@ export default function EditStaffPage() {
                   </div>
                 </div>
 
-                {/* Row 1: Role & Zone */}
+                {/* Row 1: Role & Zone / Join Date */}
                 <div className="form-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '18px' }}>
                   <div className="form-group">
                     <label className="form-label" style={{ fontWeight: 600 }}>
@@ -244,7 +247,7 @@ export default function EditStaffPage() {
 
                   {form.role === 'driver' ? (
                     <div className="form-group">
-                      <label className="form-label">
+                      <label className="form-label" style={{ fontWeight: 600 }}>
                         {lang === 'km' ? 'តំបន់ប្រចាំការ' : 'Delivery Zone'}
                       </label>
                       <select className="form-control" value={form.zoneId} onChange={f('zoneId')}>

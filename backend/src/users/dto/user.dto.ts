@@ -15,6 +15,11 @@ import { ApiProperty } from '@nestjs/swagger';
 import { Type, Transform } from 'class-transformer';
 
 export class CreateUserDto {
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  code?: string;
+
   @ApiProperty()
   @IsNotEmpty()
   @IsString()
@@ -152,6 +157,7 @@ export class CreateUserDto {
 }
 
 export class UpdateUserDto {
+  @IsOptional() @IsString() code?: string;
   @IsOptional() @IsString() name?: string;
   @IsOptional() @IsEmail() email?: string;
   @IsOptional() @MinLength(6) password?: string;

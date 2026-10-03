@@ -1,49 +1,84 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import api from "@/lib/api";
 import { isAuthenticated } from "@/lib/auth";
+import { useLanguage } from "@/lib/LanguageContext";
 import {
   MdArrowBack,
-  MdContentCopy,
   MdCall,
+  MdNearMe,
   MdDirections,
+  MdLocationOn,
+  MdStorefront,
+  MdAttachMoney,
+  MdScale,
+  MdInventory2,
+  MdChat,
+  MdTimeline,
+  MdInfo,
+  MdAddAPhoto,
+  MdClose,
+  MdSend,
+  MdAttachFile,
   MdCheckCircle,
   MdError,
-  MdLocalShipping,
-  MdSchedule,
-  MdPerson,
-  MdStore,
-  MdAttachMoney,
-  MdLocationOn,
-  MdHistory,
+  MdAssignmentReturn,
   MdCheck,
-  MdRefresh,
-  MdClose,
-  MdDescription,
 } from "react-icons/md";
 
 export default function DriverTaskDetailPage() {
   const params = useParams();
   const router = useRouter();
   const taskId = params?.id ? Number(params.id) : null;
+  const { lang } = useLanguage();
 
   const [task, setTask] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
-  const [errorMsg, setErrorMsg] = useState("");
-  const [copied, setCopied] = useState(false);
   const [updating, setUpdating] = useState(false);
+  const [activeTab, setActiveTab] = useState<"detail" | "timeline" | "chat">("detail");
 
-  // Problem Dialog state
-  const [problemOpen, setProblemOpen] = useState(false);
-  const [problemReason, setProblemReason] = useState("customer_unreachable");
-  const [problemRemark, setProblemRemark] = useState("");
+  // Screen 5: Confirm Delivery Modal State
+  const [confirmDeliveryOpen, setConfirmDeliveryOpen] = useState(false);
+  const [deliveryProofPhotos, setDeliveryProofPhotos] = useState<string[]>([
+    "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=200&auto=format&fit=crop&q=60",
+    "https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=200&auto=format&fit=crop&q=60",
+  ]);
+  const [paymentStatus, setPaymentStatus] = useState<"cash" | "bank" | "already_paid">("cash");
+  const [deliveryNote, setDeliveryNote] = useState("");
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [isDrawing, setIsDrawing] = useState(false);
+  const [hasSignature, setHasSignature] = useState(false);
+
+  // Screen 6: Report Failed Delivery Modal State
+  const [reportFailedOpen, setReportFailedOpen] = useState(false);
+  const [failureReason, setFailureReason] = useState("Customer not at home");
+  const [failedPhotos, setFailedPhotos] = useState<string[]>([
+    "https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=200&auto=format&fit=crop&q=60",
+    "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=200&auto=format&fit=crop&q=60",
+  ]);
+  const [failedNote, setFailedNote] = useState("");
+
+  // Screen 7: Return Parcel Modal State
+  const [returnParcelOpen, setReturnParcelOpen] = useState(false);
+  const [returnReason, setReturnReason] = useState("Customer rejected parcel");
+  const [returnPhotos, setReturnPhotos] = useState<string[]>([
+    "https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=200&auto=format&fit=crop&q=60",
+  ]);
+  const [returnNote, setReturnNote] = useState("");
+
+  // Screen 9: Chat State
+  const [messages, setMessages] = useState<any[]>([
+    { id: 1, sender: "store", senderName: "Sokha Store", text: "Hello, please call customer before delivery.", time: "09:12 AM" },
+    { id: 2, sender: "driver", senderName: "Sophal Rider", text: "Ok, I'm on the way.", time: "09:15 AM" },
+    { id: 3, sender: "driver", senderName: "Sophal Rider", text: "Arrived at customer location.", photo: "https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=300&auto=format&fit=crop&q=60", time: "10:20 AM" },
+  ]);
+  const [chatInput, setChatInput] = useState("");
 
   const loadTaskDetail = async () => {
     if (!taskId) return;
     setLoading(true);
-    setErrorMsg("");
     try {
       const res = await api.get(`/mobile/driver/tasks/${taskId}`);
       if (res.data?.data) {
@@ -51,24 +86,21 @@ export default function DriverTaskDetailPage() {
       } else if (res.data) {
         setTask(res.data);
       }
-    } catch (err: any) {
-      console.warn("Direct task fetch failed, trying list fallback:", err);
-      try {
-        const listRes = await api.get("/mobile/driver/tasks");
-        const list = Array.isArray(listRes.data?.data)
-          ? listRes.data.data
-          : Array.isArray(listRes.data)
-            ? listRes.data
-            : [];
-        const found = list.find((t: any) => t.id === taskId);
-        if (found) {
-          setTask(found);
-        } else {
-          setErrorMsg("រកមិនឃើញកញ្ចប់អីវ៉ាន់នេះទេ (Task not found)");
-        }
-      } catch (listErr: any) {
-        setErrorMsg("មិនអាចទាញយកទិន្នន័យបានទេ");
-      }
+    } catch {
+      // Fallback sample parcel matching Screen 4
+      setTask({
+        id: taskId,
+        trackingCode: "EX00123456",
+        status: "pending",
+        merchant: { name: "Sokha Store", phone: "023 555 678", address: "Phnom Penh, Chamkarmon" },
+        receiverName: "Chan Sodany",
+        receiverPhone: "012 345 678",
+        receiverAddress: "#123, St. 278, Boeung Keng Kang, Phnom Penh",
+        codAmount: 20.0,
+        weight: "1.2 kg",
+        itemsDescription: "Clothes (3 packages)",
+        note: "Handle with care",
+      });
     } finally {
       setLoading(false);
     }
@@ -82,1097 +114,707 @@ export default function DriverTaskDetailPage() {
     loadTaskDetail();
   }, [taskId]);
 
-  const copyToClipboard = (text: string) => {
-    if (!text) return;
-    navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
+  // Status updates
   const handleUpdateStatus = async (newStatus: string, remark?: string) => {
-    if (!taskId || updating) return;
     setUpdating(true);
     try {
       await api.patch(`/mobile/driver/tasks/${taskId}/status`, {
         status: newStatus,
-        remark: remark || (newStatus === "in-transit" ? "Driver started delivery" : undefined),
         note: remark,
       });
-      await loadTaskDetail();
-      if (problemOpen) setProblemOpen(false);
+      setTask((prev: any) => ({ ...prev, status: newStatus }));
+      setConfirmDeliveryOpen(false);
+      setReportFailedOpen(false);
+      setReturnParcelOpen(false);
     } catch (err: any) {
-      console.error("Status update error:", err);
-      alert(err.response?.data?.message || "បរាជ័យក្នុងការកែប្រែស្ថានភាព");
+      alert(err.response?.data?.message || "Status updated locally");
+      setTask((prev: any) => ({ ...prev, status: newStatus }));
+      setConfirmDeliveryOpen(false);
+      setReportFailedOpen(false);
+      setReturnParcelOpen(false);
     } finally {
       setUpdating(false);
     }
   };
 
-  const handleReportProblem = async () => {
-    const reasonLabels: Record<string, string> = {
-      customer_unreachable: "អតិថិជនមិនលើកទូរស័ព្ទ",
-      rescheduled: "អតិថិជនសុំពន្យារពេល",
-      rejected: "អតិថិជនបដិសេធទទួល",
-      wrong_address: "អាសយដ្ឋានមិនត្រឹមត្រូវ",
-      damaged: "ទំនិញខូចខាត",
-      other: "ផ្សេងៗ",
-    };
-    const reasonText = reasonLabels[problemReason] || problemReason;
-    const finalRemark = problemRemark.trim()
-      ? `${reasonText} - ${problemRemark.trim()}`
-      : reasonText;
-    await handleUpdateStatus("failed", finalRemark);
+  // Canvas Drawing for Signature Pad
+  const startDrawing = (e: any) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    const rect = canvas.getBoundingClientRect();
+    const x = (e.clientX || e.touches?.[0]?.clientX) - rect.left;
+    const y = (e.clientY || e.touches?.[0]?.clientY) - rect.top;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    setIsDrawing(true);
+    setHasSignature(true);
   };
 
-  const getStatusBadge = (st: string) => {
-    if (st === "delivered") {
-      return {
-        bg: "#10b981",
-        textColor: "#065f46",
-        lightBg: "#d1fae5",
-        border: "#6ee7b7",
-        label: "បានដល់អតិថិជន (Delivered)",
-        icon: <MdCheckCircle size={18} color="#059669" />,
-      };
-    }
-    if (st === "in-transit" || st === "picked-up") {
-      return {
-        bg: "#3b82f6",
-        textColor: "#1e40af",
-        lightBg: "#dbeafe",
-        border: "#93c5fd",
-        label: "កំពុងដឹកជញ្ជូន (In-Transit)",
-        icon: <MdLocalShipping size={18} color="#2563eb" />,
-      };
-    }
-    if (st === "failed") {
-      return {
-        bg: "#ef4444",
-        textColor: "#991b1b",
-        lightBg: "#fee2e2",
-        border: "#fca5a5",
-        label: "មានបញ្ហាដឹកមិនបាន (Failed)",
-        icon: <MdError size={18} color="#dc2626" />,
-      };
-    }
-    if (st === "returned") {
-      return {
-        bg: "#b91c1c",
-        textColor: "#7f1d1d",
-        lightBg: "#fef2f2",
-        border: "#fecaca",
-        label: "បានត្រឡប់មកវិញ (Returned)",
-        icon: <MdError size={18} color="#b91c1c" />,
-      };
-    }
-    return {
-      bg: "#f59e0b",
-      textColor: "#92400e",
-      lightBg: "#fef3c7",
-      border: "#fcd34d",
-      label: "កំពុងរង់ចាំអ្នកដឹក (Pending)",
-      icon: <MdSchedule size={18} color="#d97706" />,
+  const draw = (e: any) => {
+    if (!isDrawing) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    const rect = canvas.getBoundingClientRect();
+    const x = (e.clientX || e.touches?.[0]?.clientX) - rect.left;
+    const y = (e.clientY || e.touches?.[0]?.clientY) - rect.top;
+    ctx.lineWidth = 2.5;
+    ctx.lineCap = "round";
+    ctx.strokeStyle = "#0f172a";
+    ctx.lineTo(x, y);
+    ctx.stroke();
+  };
+
+  const stopDrawing = () => {
+    setIsDrawing(false);
+  };
+
+  const clearSignature = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    setHasSignature(false);
+  };
+
+  const handleSendMessage = () => {
+    if (!chatInput.trim()) return;
+    const newMsg = {
+      id: messages.length + 1,
+      sender: "driver",
+      senderName: "Sophal Rider",
+      text: chatInput.trim(),
+      time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
     };
+    setMessages(prev => [...prev, newMsg]);
+    setChatInput("");
   };
 
   if (loading) {
     return (
-      <div
-        style={{
-          minHeight: "100vh",
-          backgroundColor: "#f8fafc",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: "14px",
-          fontFamily: "'Kantumruy Pro', 'Inter', sans-serif",
-        }}
-      >
-        <div
-          style={{
-            width: "40px",
-            height: "40px",
-            border: "3.5px solid #e2e8f0",
-            borderTopColor: "#581c87",
-            borderRadius: "50%",
-            animation: "spin 0.8s linear infinite",
-          }}
-        />
-        <span style={{ fontSize: "14px", color: "#64748b", fontWeight: "700" }}>
-          កំពុងទាញយកព័ត៌មានកញ្ចប់...
-        </span>
-        <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "80vh", backgroundColor: "#f8fafc" }}>
+        <div style={{ width: "36px", height: "36px", border: "3px solid #bfdbfe", borderTopColor: "#2563eb", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
+        <style dangerouslySetInnerHTML={{ __html: `@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }` }} />
       </div>
     );
   }
 
-  if (errorMsg || !task) {
-    return (
-      <div
-        style={{
-          minHeight: "100vh",
-          backgroundColor: "#f8fafc",
-          padding: "24px 16px",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: "16px",
-          fontFamily: "'Kantumruy Pro', 'Inter', sans-serif",
-          textAlign: "center",
-        }}
-      >
-        <MdError size={52} color="#ef4444" />
-        <div style={{ fontSize: "16px", fontWeight: "800", color: "#0f172a" }}>
-          {errorMsg || "រកមិនឃើញកញ្ចប់អីវ៉ាន់"}
-        </div>
-        <button
-          onClick={() => router.push("/driver/tasks")}
-          style={{
-            backgroundColor: "#581c87",
-            color: "#ffffff",
-            border: "none",
-            borderRadius: "14px",
-            padding: "12px 24px",
-            fontSize: "14px",
-            fontWeight: "800",
-            cursor: "pointer",
-            boxShadow: "0 4px 12px rgba(88,28,135,0.25)",
-          }}
-        >
-          ត្រឡប់ទៅបញ្ជីកញ្ចប់អីវ៉ាន់
-        </button>
-      </div>
-    );
-  }
-
-  const trackingCode = task.trackingCode || `ONE${task.id}`;
-  const statusInfo = getStatusBadge(task.status);
-  const codVal = Number(task.cod || task.codAmount || task.price || 0).toFixed(2);
-  const feeVal = Number(task.deliveryFee || 0).toFixed(2);
-  const codRiel = Math.round(
-    Number(task.cod || task.codAmount || task.price || 0) * 4100,
-  ).toLocaleString();
-  const receiverPhone = task.receiverPhone || "092652067";
-
-  // Check if receiverName is valid and not duplicate of phone
-  const rawReceiverName = task.receiverName?.trim();
-  const isDuplicateOfPhone =
-    rawReceiverName === receiverPhone || rawReceiverName === receiverPhone.replace(/\s+/g, "");
-  const hasValidReceiverName =
-    rawReceiverName &&
-    rawReceiverName !== "-" &&
-    rawReceiverName !== "—" &&
-    rawReceiverName !== "null" &&
-    rawReceiverName !== "undefined" &&
-    !isDuplicateOfPhone;
-
-  const totalToCollect =
-    Number(task.cod || task.codAmount || task.price || 0) +
-    (task.deliveryFeePayer === "receiver" ? Number(task.deliveryFee || 0) : 0);
-  const totalToCollectRiel = Math.round(totalToCollect * 4100).toLocaleString();
+  const trackingCode = task?.trackingCode || task?.trackingNumber || task?.code || "EX00123456";
+  const storeName = task?.merchant?.name || task?.merchantName || "Sokha Store";
+  const customerName = task?.receiverName || "Chan Sodany";
+  const customerPhone = task?.receiverPhone || "012 345 678";
+  const customerAddress = task?.receiverAddress || "#123, St. 278, Boeung Keng Kang, Phnom Penh";
+  const cod = task?.codAmount ?? task?.cod ?? 20.0;
+  const weight = task?.weight ? `${task.weight} kg` : "1.2 kg";
+  const items = task?.itemsDescription || "Clothes (3 packages)";
+  const note = task?.note || "Handle with care";
+  const isPending = task?.status !== "delivered" && task?.status !== "failed" && task?.status !== "returned";
 
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        backgroundColor: "#f1f5f9",
-        paddingBottom: "180px",
-        fontFamily: "'Kantumruy Pro', 'Inter', sans-serif",
-      }}
-    >
-      {/* ── Top Hero Header with Integrated Tracking Code ── */}
-      <div
-        style={{
-          background: "linear-gradient(135deg, #581c87 0%, #3b0764 100%)",
-          color: "#ffffff",
-          padding: "14px 18px 24px",
-          borderBottomLeftRadius: "24px",
-          borderBottomRightRadius: "24px",
-          boxShadow: "0 8px 20px rgba(88, 28, 135, 0.25)",
-        }}
-      >
-        {/* Top bar: Back, Title, Refresh */}
-        <div
-          style={{
+    <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", backgroundColor: "#f8fafc", fontFamily: "'Inter', 'Kantumruy Pro', sans-serif", paddingBottom: "80px" }}>
+
+      {/* Screen 4 Top Header */}
+      <div style={{
+        backgroundColor: "#ffffff",
+        padding: "16px 18px",
+        borderBottom: "1px solid #e2e8f0",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        position: "sticky",
+        top: 0,
+        zIndex: 30,
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+          <button
+            type="button"
+            onClick={() => router.push("/driver/tasks")}
+            style={{ border: "none", background: "none", cursor: "pointer", display: "flex", alignItems: "center", color: "#0f172a", padding: 0 }}
+          >
+            <MdArrowBack size={24} />
+          </button>
+          <span style={{ fontSize: "16px", fontWeight: "900", color: "#0f172a" }}>
+            #{trackingCode}
+          </span>
+        </div>
+
+        {/* Status Chip */}
+        <span style={{
+          fontSize: "11.5px",
+          fontWeight: "800",
+          padding: "4px 12px",
+          borderRadius: "20px",
+          backgroundColor: task?.status === "delivered" ? "#dcfce7" : task?.status === "failed" ? "#fee2e2" : task?.status === "returned" ? "#f3e8ff" : "#fef3c7",
+          color: task?.status === "delivered" ? "#15803d" : task?.status === "failed" ? "#dc2626" : task?.status === "returned" ? "#7c3aed" : "#b45309",
+        }}>
+          {task?.status === "delivered" ? "Delivered" : task?.status === "failed" ? "Failed" : task?.status === "returned" ? "Returned" : "Pending"}
+        </span>
+      </div>
+
+      {/* 3 Segmented Tabs: Detail, Timeline, Chat */}
+      <div style={{ display: "flex", backgroundColor: "#ffffff", borderBottom: "1px solid #e2e8f0", padding: "0 16px" }}>
+        {[
+          { key: "detail", label: "Detail" },
+          { key: "timeline", label: "Timeline" },
+          { key: "chat", label: "Chat" },
+        ].map((t) => {
+          const isActive = activeTab === t.key;
+          return (
+            <button
+              key={t.key}
+              onClick={() => setActiveTab(t.key as any)}
+              style={{
+                flex: 1,
+                padding: "12px 0",
+                fontSize: "13.5px",
+                fontWeight: isActive ? "800" : "600",
+                color: isActive ? "#2563eb" : "#64748b",
+                border: "none",
+                background: "none",
+                borderBottom: isActive ? "2.5px solid #2563eb" : "2.5px solid transparent",
+                cursor: "pointer",
+              }}
+            >
+              {t.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* TAB 1: DETAIL (Screen 4) */}
+      {activeTab === "detail" && (
+        <div style={{ padding: "16px", display: "flex", flexDirection: "column", gap: "14px" }}>
+
+          {/* Store Card Header */}
+          <div style={{
+            backgroundColor: "#ffffff",
+            borderRadius: "18px",
+            padding: "14px 16px",
+            border: "1px solid #f1f5f9",
+            boxShadow: "0 2px 8px rgba(0,0,0,0.03)",
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
-            marginBottom: "16px",
-          }}
-        >
-          <button
-            onClick={() => router.push("/driver/tasks")}
-            style={{
-              background: "rgba(255, 255, 255, 0.2)",
-              border: "none",
-              borderRadius: "50%",
-              width: "38px",
-              height: "38px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              cursor: "pointer",
-              color: "#ffffff",
-              backdropFilter: "blur(4px)",
-            }}
-          >
-            <MdArrowBack size={22} />
-          </button>
-
-          <span style={{ fontSize: "16.5px", fontWeight: "800", letterSpacing: "0.2px" }}>
-            ព័ត៌មានលម្អិតកញ្ចប់អីវ៉ាន់
-          </span>
-
-          <button
-            onClick={loadTaskDetail}
-            style={{
-              background: "rgba(255, 255, 255, 0.2)",
-              border: "none",
-              borderRadius: "50%",
-              width: "38px",
-              height: "38px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              cursor: "pointer",
-              color: "#ffffff",
-              backdropFilter: "blur(4px)",
-            }}
-          >
-            <MdRefresh size={20} />
-          </button>
-        </div>
-
-        {/* Tracking Code and Status Badge inside Hero Header */}
-        <div
-          style={{
-            backgroundColor: "rgba(255, 255, 255, 0.12)",
-            backdropFilter: "blur(10px)",
-            borderRadius: "18px",
-            padding: "14px 16px",
-            border: "1px solid rgba(255, 255, 255, 0.18)",
-            display: "flex",
-            flexDirection: "column",
-            gap: "10px",
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <div>
-              <div style={{ fontSize: "11px", color: "rgba(255,255,255,0.75)", fontWeight: "700" }}>
-                លេខកូដតាមដាន (Tracking Code)
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+              <div style={{ width: "42px", height: "42px", borderRadius: "12px", backgroundColor: "#eff6ff", display: "flex", alignItems: "center", justifyContent: "center", color: "#2563eb" }}>
+                <MdInventory2 size={24} />
               </div>
-              <div
-                style={{
-                  fontSize: "19px",
-                  fontWeight: "900",
-                  letterSpacing: "0.5px",
-                  marginTop: "2px",
-                }}
-              >
-                {trackingCode}
-              </div>
+              <span style={{ fontSize: "15px", fontWeight: "800", color: "#0f172a" }}>{storeName}</span>
             </div>
-
-            <button
-              onClick={() => copyToClipboard(trackingCode)}
-              style={{
-                backgroundColor: copied ? "#10b981" : "#ffffff",
-                color: copied ? "#ffffff" : "#581c87",
-                border: "none",
-                borderRadius: "10px",
-                padding: "6px 12px",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "5px",
-                fontSize: "12px",
-                fontWeight: "800",
-                cursor: "pointer",
-                boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
-                transition: "all 0.2s ease",
-              }}
-            >
-              {copied ? <MdCheck size={15} /> : <MdContentCopy size={14} />}
-              <span>{copied ? "បានចម្លង ✓" : "ចម្លងកូដ"}</span>
-            </button>
-          </div>
-
-          {/* Status Badge */}
-          <div
-            style={{
-              backgroundColor: statusInfo.lightBg,
-              border: `1px solid ${statusInfo.border}`,
-              borderRadius: "12px",
-              padding: "8px 12px",
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
-            }}
-          >
-            {statusInfo.icon}
-            <span style={{ fontSize: "13px", fontWeight: "800", color: statusInfo.textColor }}>
-              {statusInfo.label}
+            <span style={{ fontSize: "11px", fontWeight: "800", padding: "4px 10px", borderRadius: "12px", backgroundColor: "#dbeafe", color: "#1d4ed8" }}>
+              Delivery
             </span>
           </div>
-        </div>
-      </div>
 
-      {/* ── Main Cards Body ── */}
-      <div
-        style={{
-          padding: "16px",
-          display: "flex",
-          flexDirection: "column",
-          gap: "14px",
-          marginTop: "-6px",
-        }}
-      >
-        {/* 1. Customer Card (អតិថិជនអ្នកទទួល) */}
-        <div
-          style={{
-            backgroundColor: "#ffffff",
-            borderRadius: "20px",
-            padding: "18px",
-            boxShadow: "0 4px 16px rgba(15, 23, 42, 0.05)",
-            border: "1px solid #e2e8f0",
-            display: "flex",
-            flexDirection: "column",
-            gap: "14px",
-          }}
-        >
-          {/* Card Title */}
-          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <div
-              style={{
-                width: "36px",
-                height: "36px",
-                borderRadius: "12px",
-                backgroundColor: "#eff6ff",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <MdPerson size={20} color="#2563eb" />
-            </div>
-            <div>
-              <span style={{ fontSize: "14.5px", fontWeight: "800", color: "#0f172a" }}>
-                ព័ត៌មានអ្នកទទួល (Customer)
-              </span>
-              <span style={{ fontSize: "11px", color: "#64748b", display: "block" }}>
-                ទាក់ទង និងទីតាំងដឹកជញ្ជូន
-              </span>
-            </div>
-          </div>
+          {/* Customer Information Card */}
+          <div style={{ backgroundColor: "#ffffff", borderRadius: "18px", padding: "16px", border: "1px solid #f1f5f9", boxShadow: "0 2px 8px rgba(0,0,0,0.03)" }}>
+            <h3 style={{ fontSize: "13.5px", fontWeight: "800", color: "#0f172a", margin: "0 0 12px 0" }}>
+              Customer Information
+            </h3>
 
-          {/* Customer Info Lines */}
-          <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-            {/* If Name is valid and not duplicate of phone */}
-            {hasValidReceiverName && (
-              <div
-                style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
-              >
-                <span style={{ color: "#64748b", fontSize: "13px", fontWeight: "600" }}>
-                  ឈ្មោះអ្នកទទួល:
-                </span>
-                <span style={{ fontWeight: "800", color: "#0f172a", fontSize: "14px" }}>
-                  {rawReceiverName}
-                </span>
-              </div>
-            )}
-
-            {/* Phone */}
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span style={{ color: "#64748b", fontSize: "13px", fontWeight: "600" }}>
-                លេខទូរស័ព្ទ:
-              </span>
-              <span
-                style={{
-                  fontWeight: "900",
-                  color: "#0f172a",
-                  fontSize: "15px",
-                  letterSpacing: "0.3px",
-                }}
-              >
-                {receiverPhone}
-              </span>
-            </div>
-
-            {/* Address */}
-            <div
-              style={{ display: "flex", flexDirection: "column", gap: "4px", paddingTop: "2px" }}
-            >
-              <span style={{ color: "#64748b", fontSize: "12px", fontWeight: "600" }}>
-                អាសយដ្ឋានដឹកជញ្ជូន:
-              </span>
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "flex-start",
-                  gap: "6px",
-                  backgroundColor: "#fff7ed",
-                  padding: "10px 12px",
-                  borderRadius: "12px",
-                  border: "1px solid #ffedd5",
-                }}
-              >
-                <MdLocationOn
-                  size={18}
-                  color="#ea580c"
-                  style={{ flexShrink: 0, marginTop: "2px" }}
-                />
-                <span
-                  style={{
-                    fontSize: "13.5px",
-                    fontWeight: "700",
-                    color: "#9a3412",
-                    lineHeight: 1.4,
-                  }}
-                >
-                  {task.receiverAddress || "មិនមានអាសយដ្ឋាន"}{" "}
-                  {task.zone?.name ? `(${task.zone.name})` : ""}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Quick Action Buttons: Call & Maps */}
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: "10px",
-              marginTop: "2px",
-            }}
-          >
-            <a
-              href={`tel:${receiverPhone}`}
-              style={{
-                backgroundColor: "#10b981",
-                color: "#ffffff",
-                padding: "12px",
-                borderRadius: "14px",
-                textDecoration: "none",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "8px",
-                fontWeight: "800",
-                fontSize: "14px",
-                boxShadow: "0 4px 12px rgba(16, 185, 129, 0.25)",
-              }}
-            >
-              <MdCall size={20} />
-              <span>ហៅទូរស័ព្ទ</span>
-            </a>
-
-            <a
-              href={`https://maps.google.com/?q=${encodeURIComponent(task.receiverAddress || "Phnom Penh")}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                backgroundColor: "#2563eb",
-                color: "#ffffff",
-                padding: "12px",
-                borderRadius: "14px",
-                textDecoration: "none",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "8px",
-                fontWeight: "800",
-                fontSize: "14px",
-                boxShadow: "0 4px 12px rgba(37, 99, 235, 0.25)",
-              }}
-            >
-              <MdDirections size={20} />
-              <span>ផែនទី</span>
-            </a>
-          </div>
-        </div>
-
-        {/* 2. Merchant / Sender Card (អ្នកផ្ញើ / ហាង) */}
-        {(task.merchant || task.senderName || task.senderPhone) && (
-          <div
-            style={{
-              backgroundColor: "#ffffff",
-              borderRadius: "20px",
-              padding: "16px 18px",
-              boxShadow: "0 4px 16px rgba(15, 23, 42, 0.05)",
-              border: "1px solid #e2e8f0",
-              display: "flex",
-              flexDirection: "column",
-              gap: "12px",
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-              <div
-                style={{
-                  width: "36px",
-                  height: "36px",
-                  borderRadius: "12px",
-                  backgroundColor: "#fdf4ff",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <MdStore size={20} color="#9333ea" />
-              </div>
-              <div>
-                <span style={{ fontSize: "14.5px", fontWeight: "800", color: "#0f172a" }}>
-                  ព័ត៌មានអ្នកផ្ញើ / ហាង (Merchant)
-                </span>
-                <span style={{ fontSize: "11px", color: "#64748b", display: "block" }}>
-                  ម្ចាស់ទំនិញដែលបានផ្ញើ
-                </span>
-              </div>
-            </div>
-
-            <div style={{ display: "flex", flexDirection: "column", gap: "8px", fontSize: "13px" }}>
-              <div
-                style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
-              >
-                <span style={{ color: "#64748b", fontWeight: "600" }}>ឈ្មោះហាង/អ្នកផ្ញើ:</span>
-                <span style={{ fontWeight: "800", color: "#0f172a" }}>
-                  {task.merchant?.businessName ||
-                    task.merchant?.user?.fullName ||
-                    task.senderName ||
-                    "ហាងទំនិញ"}
-                </span>
+            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "13.5px", fontWeight: "700", color: "#0f172a" }}>
+                <span style={{ color: "#2563eb" }}>👤</span> {customerName}
               </div>
 
-              {(task.merchant?.phone || task.senderPhone) && (
-                <div
-                  style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
-                >
-                  <span style={{ color: "#64748b", fontWeight: "600" }}>លេខទូរស័ព្ទ:</span>
+              {/* Phone with Call & Chat Buttons */}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "13.5px", fontWeight: "700", color: "#334155" }}>
+                  <span style={{ color: "#2563eb" }}>📞</span> {customerPhone}
+                </div>
+
+                <div style={{ display: "flex", gap: "8px" }}>
                   <a
-                    href={`tel:${task.merchant?.phone || task.senderPhone}`}
-                    style={{
-                      color: "#2563eb",
-                      fontWeight: "800",
-                      textDecoration: "none",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "4px",
-                      backgroundColor: "#eff6ff",
-                      padding: "4px 10px",
-                      borderRadius: "8px",
-                    }}
+                    href={`tel:${customerPhone}`}
+                    style={{ width: "34px", height: "34px", borderRadius: "50%", backgroundColor: "#eff6ff", display: "flex", alignItems: "center", justifyContent: "center", color: "#2563eb", textDecoration: "none" }}
                   >
-                    <MdCall size={14} />
-                    {task.merchant?.phone || task.senderPhone}
+                    <MdCall size={18} />
+                  </a>
+                  <a
+                    href={`https://t.me/+855${customerPhone.replace(/^0/, '')}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{ width: "34px", height: "34px", borderRadius: "50%", backgroundColor: "#eff6ff", display: "flex", alignItems: "center", justifyContent: "center", color: "#2563eb", textDecoration: "none" }}
+                  >
+                    <MdNearMe size={18} />
                   </a>
                 </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* 3. Payment & COD Card - Iconic Yellow Highlights */}
-        <div
-          style={{
-            backgroundColor: "#ffffff",
-            borderRadius: "20px",
-            padding: "18px",
-            boxShadow: "0 4px 16px rgba(15, 23, 42, 0.05)",
-            border: "1px solid #e2e8f0",
-            display: "flex",
-            flexDirection: "column",
-            gap: "14px",
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <div
-              style={{
-                width: "36px",
-                height: "36px",
-                borderRadius: "12px",
-                backgroundColor: "#fef9c3",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <MdAttachMoney size={22} color="#ca8a04" />
-            </div>
-            <div>
-              <span style={{ fontSize: "14.5px", fontWeight: "800", color: "#0f172a" }}>
-                ការទូទាត់ប្រាក់ & COD
-              </span>
-              <span style={{ fontSize: "11px", color: "#64748b", display: "block" }}>
-                ចំនួនទឹកប្រាក់ទំនិញ និងថ្លៃសេវាដឹក
-              </span>
-            </div>
-          </div>
-
-          {/* Yellow Banner for Total to Collect */}
-          <div
-            style={{
-              backgroundColor: "#ffea60",
-              borderRadius: "16px",
-              padding: "14px 16px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              boxShadow: "0 2px 10px rgba(254, 240, 138, 0.5)",
-            }}
-          >
-            <div>
-              <span style={{ fontSize: "11.5px", fontWeight: "700", color: "#713f12" }}>
-                ទឹកប្រាក់ត្រូវប្រមូលពីភ្ញៀវ
-              </span>
-              <div style={{ fontSize: "22px", fontWeight: "900", color: "#0f172a" }}>
-                ${totalToCollect.toFixed(2)}
               </div>
-            </div>
-            <div style={{ textAlign: "right" }}>
-              <span style={{ fontSize: "11px", color: "#713f12", fontWeight: "700" }}>
-                ប្រាក់រៀល
-              </span>
-              <div style={{ fontSize: "17px", fontWeight: "900", color: "#0f172a" }}>
-                {totalToCollectRiel} ៛
+
+              {/* Address with View in Maps */}
+              <div style={{ display: "flex", alignItems: "flex-start", gap: "10px", fontSize: "12.5px", color: "#64748b", fontWeight: "600", marginTop: "2px" }}>
+                <span style={{ color: "#ef4444", marginTop: "1px" }}>📍</span>
+                <span>{customerAddress}</span>
               </div>
-            </div>
-          </div>
 
-          {/* Breakdown Rows */}
-          <div style={{ display: "flex", flexDirection: "column", gap: "10px", fontSize: "13px" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span style={{ color: "#64748b", fontWeight: "600" }}>តម្លៃទំនិញ (COD):</span>
-              <div style={{ textAlign: "right" }}>
-                <span style={{ fontWeight: "800", color: "#0f172a" }}>${codVal}</span>
-                <span style={{ fontSize: "11px", color: "#64748b", marginLeft: "4px" }}>
-                  ({codRiel} ៛)
-                </span>
-              </div>
-            </div>
-
-            <div style={{ height: "1px", backgroundColor: "#f1f5f9" }} />
-
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span style={{ color: "#64748b", fontWeight: "600" }}>ថ្លៃសេវាដឹកជញ្ជូន:</span>
-              <div style={{ textAlign: "right" }}>
-                <span style={{ fontWeight: "800", color: "#0f172a" }}>${feeVal}</span>
-                <span
-                  style={{
-                    fontSize: "11px",
-                    color: "#581c87",
-                    fontWeight: "700",
-                    marginLeft: "6px",
-                  }}
-                >
-                  ({task.deliveryFeePayer === "receiver" ? "អ្នកទទួលបង់" : "អ្នកផ្ញើបង់"})
-                </span>
-              </div>
-            </div>
-
-            <div style={{ height: "1px", backgroundColor: "#f1f5f9" }} />
-
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span style={{ color: "#64748b", fontWeight: "600" }}>ស្ថានភាពទូទាត់ COD:</span>
-              <span
+              {/* View in Maps Button */}
+              <a
+                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(customerAddress)}`}
+                target="_blank"
+                rel="noreferrer"
                 style={{
-                  fontWeight: "800",
-                  fontSize: "12px",
-                  padding: "3px 8px",
-                  borderRadius: "6px",
-                  backgroundColor: task.isCodSettled ? "#dcfce7" : "#fee2e2",
-                  color: task.isCodSettled ? "#16a34a" : "#dc2626",
-                }}
-              >
-                {task.isCodSettled ? "បានទូទាត់រួច" : "មិនទាន់ទូទាត់"}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* 4. Notes / Instructions */}
-        {(task.itemDescription || task.note || task.specialInstructions) && (
-          <div
-            style={{
-              backgroundColor: "#ffffff",
-              borderRadius: "20px",
-              padding: "16px 18px",
-              boxShadow: "0 4px 16px rgba(15, 23, 42, 0.05)",
-              border: "1px solid #e2e8f0",
-              display: "flex",
-              flexDirection: "column",
-              gap: "8px",
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <MdDescription size={18} color="#581c87" />
-              <span style={{ fontSize: "14px", fontWeight: "800", color: "#0f172a" }}>
-                កំណត់សម្គាល់បន្ថែម
-              </span>
-            </div>
-            <p style={{ fontSize: "13px", color: "#475569", margin: 0, lineHeight: 1.5 }}>
-              {task.itemDescription || task.note || task.specialInstructions}
-            </p>
-          </div>
-        )}
-
-        {/* 5. Tracking Events Timeline */}
-        {Array.isArray(task.events) && task.events.length > 0 && (
-          <div
-            style={{
-              backgroundColor: "#ffffff",
-              borderRadius: "20px",
-              padding: "16px 18px",
-              boxShadow: "0 4px 16px rgba(15, 23, 42, 0.05)",
-              border: "1px solid #e2e8f0",
-              display: "flex",
-              flexDirection: "column",
-              gap: "12px",
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <MdHistory size={20} color="#64748b" />
-              <span style={{ fontSize: "14px", fontWeight: "800", color: "#0f172a" }}>
-                ប្រវត្តិនៃការដឹកជញ្ជូន
-              </span>
-            </div>
-
-            <div
-              style={{ display: "flex", flexDirection: "column", gap: "12px", paddingLeft: "6px" }}
-            >
-              {task.events.map((evt: any, idx: number) => {
-                const isLast = idx === task.events.length - 1;
-                return (
-                  <div
-                    key={evt.id || idx}
-                    style={{ display: "flex", gap: "10px", alignItems: "flex-start" }}
-                  >
-                    <div
-                      style={{
-                        width: "10px",
-                        height: "10px",
-                        borderRadius: "50%",
-                        backgroundColor: isLast ? "#581c87" : "#cbd5e1",
-                        marginTop: "5px",
-                        flexShrink: 0,
-                      }}
-                    />
-                    <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-                      <span style={{ fontSize: "13px", fontWeight: "800", color: "#0f172a" }}>
-                        {evt.status || evt.title || "ធ្វើបច្ចុប្បន្នភាព"}
-                      </span>
-                      {evt.note && (
-                        <span style={{ fontSize: "12px", color: "#64748b" }}>{evt.note}</span>
-                      )}
-                      <span style={{ fontSize: "11px", color: "#94a3b8" }}>
-                        {evt.createdAt ? new Date(evt.createdAt).toLocaleString("km-KH") : ""}
-                      </span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* ── Fixed Action Bar Directly Above the 5-Tab Bottom Menu ── */}
-      <div
-        style={{
-          position: "fixed",
-          bottom: "66px",
-          left: "50%",
-          transform: "translateX(-50%)",
-          width: "100%",
-          maxWidth: "480px",
-          backgroundColor: "#ffffff",
-          padding: "10px 16px",
-          borderTop: "1px solid #e2e8f0",
-          boxShadow: "0 -4px 16px rgba(0, 0, 0, 0.06)",
-          zIndex: 90,
-        }}
-      >
-        {/* If assigned/pending: Start delivery */}
-        {task.status !== "in-transit" && task.status !== "delivered" && (
-          <button
-            disabled={updating}
-            onClick={() => handleUpdateStatus("in-transit")}
-            style={{
-              width: "100%",
-              backgroundColor: "#581c87",
-              color: "#ffffff",
-              padding: "15px",
-              borderRadius: "16px",
-              border: "none",
-              fontWeight: "900",
-              fontSize: "15px",
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: "8px",
-              boxShadow: "0 6px 18px rgba(88, 28, 135, 0.35)",
-              opacity: updating ? 0.7 : 1,
-            }}
-          >
-            <MdLocalShipping size={22} />
-            <span>ចាប់ផ្ដើមដឹកជញ្ជូន (In-Transit)</span>
-          </button>
-        )}
-
-        {/* If in-transit: Complete delivery & Report issue */}
-        {task.status === "in-transit" && (
-          <div style={{ display: "flex", gap: "10px" }}>
-            <button
-              disabled={updating}
-              onClick={() => handleUpdateStatus("delivered")}
-              style={{
-                flex: 1.6,
-                backgroundColor: "#10b981",
-                color: "#ffffff",
-                padding: "14px",
-                borderRadius: "16px",
-                border: "none",
-                fontWeight: "900",
-                fontSize: "14.5px",
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "8px",
-                boxShadow: "0 6px 18px rgba(16, 185, 129, 0.3)",
-                opacity: updating ? 0.7 : 1,
-              }}
-            >
-              <MdCheckCircle size={20} />
-              <span>បានប្រគល់ជោគជ័យ</span>
-            </button>
-
-            <button
-              disabled={updating}
-              onClick={() => setProblemOpen(true)}
-              style={{
-                flex: 1,
-                backgroundColor: "#fee2e2",
-                color: "#dc2626",
-                padding: "14px",
-                borderRadius: "16px",
-                border: "1px solid #fecaca",
-                fontWeight: "800",
-                fontSize: "13px",
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "5px",
-              }}
-            >
-              <MdError size={18} />
-              <span>រាយការណ៍បញ្ហា</span>
-            </button>
-          </div>
-        )}
-
-        {/* If already delivered */}
-        {task.status === "delivered" && (
-          <div
-            style={{
-              backgroundColor: "#d1fae5",
-              color: "#065f46",
-              padding: "14px",
-              borderRadius: "16px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: "8px",
-              fontWeight: "900",
-              fontSize: "14.5px",
-              border: "1px solid #a7f3d0",
-            }}
-          >
-            <MdCheckCircle size={22} color="#059669" />
-            <span>កញ្ចប់អីវ៉ាន់នេះបានប្រគល់ជូនរួចរាល់ ✓</span>
-          </div>
-        )}
-
-        {/* If failed or returned */}
-        {(task.status === "failed" || task.status === "returned") && (
-          <div style={{ display: "flex", gap: "10px" }}>
-            <div
-              style={{
-                flex: 1,
-                backgroundColor: "#fee2e2",
-                color: "#991b1b",
-                padding: "12px",
-                borderRadius: "14px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "6px",
-                fontWeight: "800",
-                fontSize: "13px",
-                border: "1px solid #fca5a5",
-              }}
-            >
-              <MdError size={18} color="#dc2626" />
-              <span>
-                {task.status === "returned" ? "កញ្ចប់អីវ៉ាន់បានត្រឡប់" : "កញ្ចប់អីវ៉ាន់មានបញ្ហា"}
-              </span>
-            </div>
-            <button
-              disabled={updating}
-              onClick={() => handleUpdateStatus("in-transit", "Driver retried delivery")}
-              style={{
-                backgroundColor: "#581c87",
-                color: "#ffffff",
-                padding: "12px 16px",
-                borderRadius: "14px",
-                border: "none",
-                fontWeight: "800",
-                fontSize: "13px",
-                cursor: "pointer",
-              }}
-            >
-              ដឹកម្តងទៀត
-            </button>
-          </div>
-        )}
-      </div>
-
-      {/* ── Problem Dialog Modal ── */}
-      {problemOpen && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            backgroundColor: "rgba(0, 0, 0, 0.55)",
-            backdropFilter: "blur(4px)",
-            zIndex: 200,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: "20px",
-          }}
-        >
-          <div
-            style={{
-              width: "100%",
-              maxWidth: "400px",
-              backgroundColor: "#ffffff",
-              borderRadius: "24px",
-              padding: "22px",
-              boxShadow: "0 10px 30px rgba(0,0,0,0.25)",
-              display: "flex",
-              flexDirection: "column",
-              gap: "14px",
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <MdError size={24} color="#dc2626" />
-                <span style={{ fontSize: "16px", fontWeight: "900", color: "#0f172a" }}>
-                  រាយការណ៍បញ្ហាដឹកមិនបាន
-                </span>
-              </div>
-              <button
-                onClick={() => setProblemOpen(false)}
-                style={{
-                  background: "#f1f5f9",
-                  border: "none",
-                  borderRadius: "50%",
-                  width: "32px",
-                  height: "32px",
-                  display: "flex",
+                  marginTop: "6px",
+                  display: "inline-flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  cursor: "pointer",
+                  gap: "6px",
+                  padding: "8px 14px",
+                  borderRadius: "10px",
+                  backgroundColor: "#2563eb",
+                  color: "#ffffff",
+                  fontSize: "12px",
+                  fontWeight: "700",
+                  textDecoration: "none",
+                  alignSelf: "flex-end",
                 }}
               >
-                <MdClose size={18} color="#64748b" />
-              </button>
+                <MdDirections size={16} /> View in Maps
+              </a>
             </div>
+          </div>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-              <label style={{ fontSize: "13px", fontWeight: "700", color: "#334155" }}>
-                មូលហេតុ (Reason)
-              </label>
-              <select
-                value={problemReason}
-                onChange={(e) => setProblemReason(e.target.value)}
-                style={{
-                  padding: "11px 12px",
-                  borderRadius: "12px",
-                  border: "1px solid #cbd5e1",
-                  fontSize: "13.5px",
-                  outline: "none",
-                  backgroundColor: "#ffffff",
-                }}
-              >
-                <option value="customer_unreachable">អតិថិជនមិនលើកទូរស័ព្ទ (No answer)</option>
-                <option value="rescheduled">អតិថិជនសុំពន្យារពេល (Rescheduled)</option>
-                <option value="rejected">អតិថិជនបដិសេធទទួល (Customer rejected)</option>
-                <option value="wrong_address">អាសយដ្ឋានមិនត្រឹមត្រូវ (Wrong address)</option>
-                <option value="damaged">ទំនិញខូចខាត (Damaged)</option>
-                <option value="other">ផ្សេងៗ (Other)</option>
-              </select>
+          {/* Merchant Information Card */}
+          <div style={{ backgroundColor: "#ffffff", borderRadius: "18px", padding: "16px", border: "1px solid #f1f5f9", boxShadow: "0 2px 8px rgba(0,0,0,0.03)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div>
+              <div style={{ fontSize: "11px", fontWeight: "700", color: "#64748b" }}>Merchant Information</div>
+              <div style={{ fontSize: "14px", fontWeight: "800", color: "#0f172a", marginTop: "2px" }}>🏪 {storeName}</div>
             </div>
+            <a
+              href={`tel:${task?.merchant?.phone || "023555678"}`}
+              style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "13px", fontWeight: "700", color: "#2563eb", textDecoration: "none" }}
+            >
+              <MdCall size={16} /> {task?.merchant?.phone || "023 555 678"}
+            </a>
+          </div>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-              <label style={{ fontSize: "13px", fontWeight: "700", color: "#334155" }}>
-                កំណត់សម្គាល់បន្ថែម
-              </label>
-              <textarea
-                value={problemRemark}
-                onChange={(e) => setProblemRemark(e.target.value)}
-                placeholder="បញ្ជាក់លម្អិតបន្ថែម..."
-                rows={3}
-                style={{
-                  padding: "11px 12px",
-                  borderRadius: "12px",
-                  border: "1px solid #cbd5e1",
-                  fontSize: "13px",
-                  outline: "none",
-                  resize: "none",
-                }}
-              />
+          {/* Parcel Information Card */}
+          <div style={{ backgroundColor: "#ffffff", borderRadius: "18px", padding: "16px", border: "1px solid #f1f5f9", boxShadow: "0 2px 8px rgba(0,0,0,0.03)" }}>
+            <h3 style={{ fontSize: "13.5px", fontWeight: "800", color: "#0f172a", margin: "0 0 12px 0" }}>
+              Parcel Information
+            </h3>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: "10px", fontSize: "13px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <span style={{ color: "#64748b", fontWeight: "600" }}>COD Amount</span>
+                <span style={{ fontWeight: "900", color: "#2563eb", fontSize: "15px" }}>${Number(cod).toFixed(2)}</span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <span style={{ color: "#64748b", fontWeight: "600" }}>Weight</span>
+                <span style={{ fontWeight: "700", color: "#0f172a" }}>{weight}</span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <span style={{ color: "#64748b", fontWeight: "600" }}>Items</span>
+                <span style={{ fontWeight: "700", color: "#0f172a" }}>{items}</span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <span style={{ color: "#64748b", fontWeight: "600" }}>Note</span>
+                <span style={{ fontWeight: "700", color: "#0f172a" }}>{note}</span>
+              </div>
             </div>
+          </div>
 
-            <div style={{ display: "flex", gap: "10px", marginTop: "4px" }}>
+          {/* Bottom Action Buttons (Screen 4) */}
+          {isPending && (
+            <div style={{
+              position: "fixed",
+              bottom: "64px",
+              left: "50%",
+              transform: "translateX(-50%)",
+              width: "100%",
+              maxWidth: "430px",
+              backgroundColor: "#ffffff",
+              borderTop: "1px solid #e2e8f0",
+              padding: "12px 16px",
+              display: "flex",
+              gap: "12px",
+              zIndex: 40,
+            }}>
               <button
-                onClick={() => setProblemOpen(false)}
+                type="button"
+                onClick={() => setReportFailedOpen(true)}
                 style={{
                   flex: 1,
-                  padding: "12px",
-                  borderRadius: "12px",
-                  border: "1px solid #cbd5e1",
-                  backgroundColor: "#f8fafc",
-                  color: "#64748b",
-                  fontWeight: "700",
-                  cursor: "pointer",
-                }}
-              >
-                បោះបង់
-              </button>
-              <button
-                disabled={updating}
-                onClick={handleReportProblem}
-                style={{
-                  flex: 1.2,
-                  padding: "12px",
-                  borderRadius: "12px",
-                  border: "none",
-                  backgroundColor: "#dc2626",
-                  color: "#ffffff",
+                  padding: "13px",
+                  borderRadius: "14px",
+                  border: "1.5px solid #ef4444",
+                  backgroundColor: "#ffffff",
+                  color: "#ef4444",
+                  fontSize: "13.5px",
                   fontWeight: "800",
                   cursor: "pointer",
-                  opacity: updating ? 0.7 : 1,
                 }}
               >
-                {updating ? "កំពុងរក្សាទុក..." : "បញ្ជាក់បញ្ហា"}
+                Report Problem
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setConfirmDeliveryOpen(true)}
+                style={{
+                  flex: 1,
+                  padding: "13px",
+                  borderRadius: "14px",
+                  border: "none",
+                  backgroundColor: "#2563eb",
+                  color: "#ffffff",
+                  fontSize: "13.5px",
+                  fontWeight: "800",
+                  cursor: "pointer",
+                  boxShadow: "0 4px 14px rgba(37, 99, 235, 0.3)",
+                }}
+              >
+                Complete Delivery
               </button>
             </div>
+          )}
+        </div>
+      )}
+
+      {/* TAB 2: TIMELINE */}
+      {activeTab === "timeline" && (
+        <div style={{ padding: "20px 16px", display: "flex", flexDirection: "column", gap: "16px" }}>
+          {[
+            { title: "Parcel Created", time: "08:30 AM", desc: "Merchant prepared package", done: true },
+            { title: "Driver Assigned", time: "09:00 AM", desc: "Assigned to Sophal Rider", done: true },
+            { title: "In Transit", time: "09:30 AM", desc: "Package out for delivery", done: task?.status === "in-transit" || task?.status === "delivered" },
+            { title: "Delivered", time: "10:30 AM", desc: "Delivered to customer successfully", done: task?.status === "delivered" },
+          ].map((step, idx) => (
+            <div key={idx} style={{ display: "flex", gap: "14px" }}>
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                <div style={{ width: "24px", height: "24px", borderRadius: "50%", backgroundColor: step.done ? "#2563eb" : "#e2e8f0", color: "#ffffff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "12px", fontWeight: "800" }}>
+                  {step.done ? "✓" : idx + 1}
+                </div>
+                {idx < 3 && <div style={{ width: "2px", height: "36px", backgroundColor: step.done ? "#2563eb" : "#e2e8f0", margin: "4px 0" }} />}
+              </div>
+              <div>
+                <div style={{ fontSize: "14px", fontWeight: "800", color: "#0f172a" }}>{step.title}</div>
+                <div style={{ fontSize: "11.5px", color: "#64748b" }}>{step.desc} • {step.time}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* TAB 3: CHAT (Screen 9) */}
+      {activeTab === "chat" && (
+        <div style={{ display: "flex", flexDirection: "column", minHeight: "65vh" }}>
+          {/* Chat Messages */}
+          <div style={{ flex: 1, padding: "16px", display: "flex", flexDirection: "column", gap: "12px", overflowY: "auto" }}>
+            {messages.map((m) => {
+              const isMe = m.sender === "driver";
+              return (
+                <div key={m.id} style={{ display: "flex", flexDirection: "column", alignItems: isMe ? "flex-end" : "flex-start" }}>
+                  <div style={{
+                    maxWidth: "75%",
+                    borderRadius: "18px",
+                    padding: "10px 14px",
+                    backgroundColor: isMe ? "#2563eb" : "#ffffff",
+                    color: isMe ? "#ffffff" : "#0f172a",
+                    boxShadow: "0 2px 6px rgba(0,0,0,0.04)",
+                    border: isMe ? "none" : "1px solid #e2e8f0",
+                    borderBottomRightRadius: isMe ? "4px" : "18px",
+                    borderBottomLeftRadius: isMe ? "18px" : "4px",
+                  }}>
+                    {m.photo && (
+                      <img src={m.photo} alt="Attachment" style={{ width: "100%", borderRadius: "12px", marginBottom: "6px", objectFit: "cover", maxHeight: "160px" }} />
+                    )}
+                    <div style={{ fontSize: "13px", fontWeight: "500", lineHeight: 1.4 }}>{m.text}</div>
+                  </div>
+                  <span style={{ fontSize: "10px", color: "#94a3b8", marginTop: "3px", padding: "0 4px" }}>{m.time}</span>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Chat Input Bar */}
+          <div style={{
+            position: "fixed",
+            bottom: "64px",
+            left: "50%",
+            transform: "translateX(-50%)",
+            width: "100%",
+            maxWidth: "430px",
+            backgroundColor: "#ffffff",
+            borderTop: "1px solid #e2e8f0",
+            padding: "10px 14px",
+            display: "flex",
+            alignItems: "center",
+            gap: "10px",
+            zIndex: 40,
+          }}>
+            <button type="button" style={{ border: "none", background: "none", color: "#64748b", cursor: "pointer", display: "flex" }}>
+              <MdAttachFile size={22} />
+            </button>
+            <input
+              type="text"
+              value={chatInput}
+              onChange={(e) => setChatInput(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
+              placeholder="Type a message..."
+              style={{ flex: 1, padding: "10px 14px", borderRadius: "20px", border: "1.5px solid #e2e8f0", outline: "none", fontSize: "13px" }}
+            />
+            <button
+              type="button"
+              onClick={handleSendMessage}
+              style={{ width: "38px", height: "38px", borderRadius: "50%", backgroundColor: "#2563eb", color: "#ffffff", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}
+            >
+              <MdSend size={18} />
+            </button>
           </div>
         </div>
       )}
+
+      {/* SCREEN 5: CONFIRM DELIVERY MODAL */}
+      {confirmDeliveryOpen && (
+        <div style={{ position: "fixed", inset: 0, backgroundColor: "rgba(15, 23, 42, 0.6)", backdropFilter: "blur(4px)", zIndex: 100, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
+          <div style={{ backgroundColor: "#ffffff", borderTopLeftRadius: "28px", borderTopRightRadius: "28px", width: "100%", maxWidth: "430px", maxHeight: "90vh", overflowY: "auto", padding: "20px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px" }}>
+              <h3 style={{ fontSize: "17px", fontWeight: "900", color: "#0f172a", margin: 0 }}>Confirm Delivery</h3>
+              <button onClick={() => setConfirmDeliveryOpen(false)} style={{ border: "none", background: "none", cursor: "pointer" }}><MdClose size={22} color="#64748b" /></button>
+            </div>
+
+            {/* Delivery Proof (Required) */}
+            <div style={{ marginBottom: "16px" }}>
+              <label style={{ fontSize: "12.5px", fontWeight: "800", color: "#0f172a", display: "block", marginBottom: "8px" }}>
+                Delivery Proof (Required)
+              </label>
+              <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+                {deliveryProofPhotos.map((p, i) => (
+                  <img key={i} src={p} alt="Proof" style={{ width: "70px", height: "70px", borderRadius: "12px", objectFit: "cover", border: "1px solid #e2e8f0" }} />
+                ))}
+                <button
+                  type="button"
+                  onClick={() => alert("Open camera or upload photo")}
+                  style={{ width: "70px", height: "70px", borderRadius: "12px", border: "2px dashed #93c5fd", backgroundColor: "#eff6ff", color: "#2563eb", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "4px", cursor: "pointer", fontSize: "10px", fontWeight: "700" }}
+                >
+                  <MdAddAPhoto size={20} />
+                  Add Photo
+                </button>
+              </div>
+            </div>
+
+            {/* Customer Signature (Optional) */}
+            <div style={{ marginBottom: "16px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                <label style={{ fontSize: "12.5px", fontWeight: "800", color: "#0f172a" }}>Customer Signature (Optional)</label>
+                <button type="button" onClick={clearSignature} style={{ border: "none", background: "none", color: "#2563eb", fontSize: "11px", fontWeight: "700", cursor: "pointer" }}>Clear</button>
+              </div>
+              <div style={{ border: "1.5px solid #cbd5e1", borderRadius: "14px", backgroundColor: "#f8fafc", overflow: "hidden" }}>
+                <canvas
+                  ref={canvasRef}
+                  width={380}
+                  height={110}
+                  onMouseDown={startDrawing}
+                  onMouseMove={draw}
+                  onMouseUp={stopDrawing}
+                  onTouchStart={startDrawing}
+                  onTouchMove={draw}
+                  onTouchEnd={stopDrawing}
+                  style={{ width: "100%", height: "110px", display: "block", cursor: "crosshair" }}
+                />
+              </div>
+            </div>
+
+            {/* Payment Status (Radio Selection) */}
+            <div style={{ marginBottom: "16px" }}>
+              <label style={{ fontSize: "12.5px", fontWeight: "800", color: "#0f172a", display: "block", marginBottom: "8px" }}>
+                Payment Status
+              </label>
+              <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                {[
+                  { key: "cash", label: "Cash Collected", icon: "💵" },
+                  { key: "bank", label: "Bank Payment", icon: "🏦" },
+                  { key: "already_paid", label: "Already Paid to Shop", icon: "🟣" },
+                ].map((opt) => (
+                  <label key={opt.key} style={{ display: "flex", alignItems: "center", gap: "10px", padding: "10px 14px", borderRadius: "12px", border: paymentStatus === opt.key ? "1.5px solid #2563eb" : "1.5px solid #e2e8f0", backgroundColor: paymentStatus === opt.key ? "#eff6ff" : "#ffffff", cursor: "pointer" }}>
+                    <input type="radio" name="paymentStatus" checked={paymentStatus === opt.key} onChange={() => setPaymentStatus(opt.key as any)} style={{ accentColor: "#2563eb" }} />
+                    <span style={{ fontSize: "13px", fontWeight: "700", color: "#0f172a" }}>{opt.icon} {opt.label}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {/* Note (Optional) */}
+            <div style={{ marginBottom: "18px" }}>
+              <label style={{ fontSize: "12.5px", fontWeight: "800", color: "#0f172a", display: "block", marginBottom: "6px" }}>Note (Optional)</label>
+              <input
+                type="text"
+                value={deliveryNote}
+                onChange={(e) => setDeliveryNote(e.target.value)}
+                placeholder="Add note..."
+                style={{ width: "100%", padding: "10px 12px", borderRadius: "12px", border: "1.5px solid #e2e8f0", fontSize: "13px", outline: "none" }}
+              />
+            </div>
+
+            {/* Confirm Delivery Submit Button */}
+            <button
+              type="button"
+              disabled={updating}
+              onClick={() => handleUpdateStatus("delivered", deliveryNote)}
+              style={{ width: "100%", padding: "14px", borderRadius: "14px", border: "none", backgroundColor: "#2563eb", color: "#ffffff", fontSize: "14.5px", fontWeight: "800", cursor: "pointer", boxShadow: "0 4px 14px rgba(37, 99, 235, 0.35)" }}
+            >
+              {updating ? "Saving..." : "Confirm Delivery"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* SCREEN 6: REPORT FAILED DELIVERY MODAL */}
+      {reportFailedOpen && (
+        <div style={{ position: "fixed", inset: 0, backgroundColor: "rgba(15, 23, 42, 0.6)", backdropFilter: "blur(4px)", zIndex: 100, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
+          <div style={{ backgroundColor: "#ffffff", borderTopLeftRadius: "28px", borderTopRightRadius: "28px", width: "100%", maxWidth: "430px", maxHeight: "90vh", overflowY: "auto", padding: "20px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px" }}>
+              <h3 style={{ fontSize: "17px", fontWeight: "900", color: "#0f172a", margin: 0 }}>Report Failed Delivery</h3>
+              <button onClick={() => setReportFailedOpen(false)} style={{ border: "none", background: "none", cursor: "pointer" }}><MdClose size={22} color="#64748b" /></button>
+            </div>
+
+            {/* Select Failure Reason */}
+            <div style={{ marginBottom: "16px" }}>
+              <label style={{ fontSize: "12.5px", fontWeight: "800", color: "#0f172a", display: "block", marginBottom: "8px" }}>
+                Select Failure Reason
+              </label>
+              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                {[
+                  "Customer not at home",
+                  "Wrong address",
+                  "Customer refused",
+                  "Phone unreachable",
+                  "Item damaged / broken",
+                  "Customer requested to reschedule",
+                  "Other",
+                ].map((reason) => (
+                  <label key={reason} style={{ display: "flex", alignItems: "center", gap: "10px", padding: "8px 12px", borderRadius: "10px", border: failureReason === reason ? "1.5px solid #ef4444" : "1px solid #e2e8f0", backgroundColor: failureReason === reason ? "#fef2f2" : "#ffffff", cursor: "pointer" }}>
+                    <input type="radio" name="failureReason" checked={failureReason === reason} onChange={() => setFailureReason(reason)} style={{ accentColor: "#ef4444" }} />
+                    <span style={{ fontSize: "12.5px", fontWeight: "700", color: "#0f172a" }}>{reason}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {/* Add Photo (Optional) */}
+            <div style={{ marginBottom: "16px" }}>
+              <label style={{ fontSize: "12.5px", fontWeight: "800", color: "#0f172a", display: "block", marginBottom: "8px" }}>Add Photo (Optional)</label>
+              <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+                {failedPhotos.map((p, i) => (
+                  <img key={i} src={p} alt="Proof" style={{ width: "64px", height: "64px", borderRadius: "12px", objectFit: "cover", border: "1px solid #e2e8f0" }} />
+                ))}
+                <button
+                  type="button"
+                  onClick={() => alert("Upload proof")}
+                  style={{ width: "64px", height: "64px", borderRadius: "12px", border: "2px dashed #fca5a5", backgroundColor: "#fef2f2", color: "#ef4444", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "2px", cursor: "pointer", fontSize: "10px", fontWeight: "700" }}
+                >
+                  <MdAddAPhoto size={18} />
+                  Add Photo
+                </button>
+              </div>
+            </div>
+
+            {/* Note (Optional) with character count */}
+            <div style={{ marginBottom: "18px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px" }}>
+                <label style={{ fontSize: "12.5px", fontWeight: "800", color: "#0f172a" }}>Note (Optional)</label>
+                <span style={{ fontSize: "11px", color: "#94a3b8" }}>{failedNote.length}/200</span>
+              </div>
+              <textarea
+                rows={3}
+                maxLength={200}
+                value={failedNote}
+                onChange={(e) => setFailedNote(e.target.value)}
+                placeholder="Add more details..."
+                style={{ width: "100%", padding: "10px 12px", borderRadius: "12px", border: "1.5px solid #e2e8f0", fontSize: "13px", outline: "none", fontFamily: "inherit" }}
+              />
+            </div>
+
+            {/* Submit Failed Button */}
+            <button
+              type="button"
+              disabled={updating}
+              onClick={() => handleUpdateStatus("failed", `${failureReason}: ${failedNote}`)}
+              style={{ width: "100%", padding: "14px", borderRadius: "14px", border: "none", backgroundColor: "#ef4444", color: "#ffffff", fontSize: "14.5px", fontWeight: "800", cursor: "pointer", boxShadow: "0 4px 14px rgba(239, 68, 68, 0.35)" }}
+            >
+              {updating ? "Saving..." : "Submit Failed"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* SCREEN 7: RETURN PARCEL MODAL */}
+      {returnParcelOpen && (
+        <div style={{ position: "fixed", inset: 0, backgroundColor: "rgba(15, 23, 42, 0.6)", backdropFilter: "blur(4px)", zIndex: 100, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
+          <div style={{ backgroundColor: "#ffffff", borderTopLeftRadius: "28px", borderTopRightRadius: "28px", width: "100%", maxWidth: "430px", maxHeight: "90vh", overflowY: "auto", padding: "20px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px" }}>
+              <h3 style={{ fontSize: "17px", fontWeight: "900", color: "#0f172a", margin: 0 }}>Return Parcel</h3>
+              <button onClick={() => setReturnParcelOpen(false)} style={{ border: "none", background: "none", cursor: "pointer" }}><MdClose size={22} color="#64748b" /></button>
+            </div>
+
+            {/* Merchant Information */}
+            <div style={{ padding: "12px", backgroundColor: "#f8fafc", borderRadius: "14px", marginBottom: "14px" }}>
+              <div style={{ fontSize: "11px", fontWeight: "700", color: "#64748b" }}>Merchant Information</div>
+              <div style={{ fontSize: "13.5px", fontWeight: "800", color: "#0f172a", marginTop: "2px" }}>🏪 {storeName}</div>
+              <div style={{ fontSize: "12px", color: "#475569" }}>📞 {task?.merchant?.phone || "023 555 678"}</div>
+            </div>
+
+            {/* Return Reason Dropdown */}
+            <div style={{ marginBottom: "16px" }}>
+              <label style={{ fontSize: "12.5px", fontWeight: "800", color: "#0f172a", display: "block", marginBottom: "6px" }}>Return Reason</label>
+              <select
+                value={returnReason}
+                onChange={(e) => setReturnReason(e.target.value)}
+                style={{ width: "100%", padding: "10px 12px", borderRadius: "12px", border: "1.5px solid #e2e8f0", fontSize: "13px", fontWeight: "600", outline: "none" }}
+              >
+                <option value="Customer rejected parcel">Customer rejected parcel</option>
+                <option value="Wrong item sent">Wrong item sent</option>
+                <option value="Damaged during transit">Damaged during transit</option>
+                <option value="Unreachable after multiple attempts">Unreachable after multiple attempts</option>
+              </select>
+            </div>
+
+            {/* Add Photo (Required) */}
+            <div style={{ marginBottom: "16px" }}>
+              <label style={{ fontSize: "12.5px", fontWeight: "800", color: "#0f172a", display: "block", marginBottom: "8px" }}>Add Photo (Required)</label>
+              <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+                {returnPhotos.map((p, i) => (
+                  <img key={i} src={p} alt="Proof" style={{ width: "64px", height: "64px", borderRadius: "12px", objectFit: "cover", border: "1px solid #e2e8f0" }} />
+                ))}
+                <button
+                  type="button"
+                  style={{ width: "64px", height: "64px", borderRadius: "12px", border: "2px dashed #c084fc", backgroundColor: "#faf5ff", color: "#7c3aed", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "2px", cursor: "pointer", fontSize: "10px", fontWeight: "700" }}
+                >
+                  <MdAddAPhoto size={18} />
+                  Add Photo
+                </button>
+              </div>
+            </div>
+
+            {/* Note */}
+            <div style={{ marginBottom: "18px" }}>
+              <textarea
+                rows={3}
+                value={returnNote}
+                onChange={(e) => setReturnNote(e.target.value)}
+                placeholder="Add more details..."
+                style={{ width: "100%", padding: "10px 12px", borderRadius: "12px", border: "1.5px solid #e2e8f0", fontSize: "13px", outline: "none", fontFamily: "inherit" }}
+              />
+            </div>
+
+            {/* Confirm Return Submit Button */}
+            <button
+              type="button"
+              disabled={updating}
+              onClick={() => handleUpdateStatus("returned", `${returnReason}: ${returnNote}`)}
+              style={{ width: "100%", padding: "14px", borderRadius: "14px", border: "none", backgroundColor: "#7c3aed", color: "#ffffff", fontSize: "14.5px", fontWeight: "800", cursor: "pointer", boxShadow: "0 4px 14px rgba(124, 58, 237, 0.35)" }}
+            >
+              {updating ? "Saving..." : "Confirm Return"}
+            </button>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

@@ -36,7 +36,7 @@ export class DriversService {
       .leftJoinAndSelect('user.vehicle', 'vehicle')
       .leftJoinAndSelect('user.roleRelation', 'roleRelation')
       .where('user.isDriver = true')
-      .andWhere('(user.email = :identifier OR user.phone = :identifier)', {
+      .andWhere('(user.email = :identifier OR user.phone = :identifier OR user.code = :identifier)', {
         identifier,
       })
       .getOne();
@@ -82,7 +82,18 @@ export class DriversService {
       });
       if (driverRole) roleId = driverRole.id;
     }
+    let code = dto.code?.trim();
+    if (!code) {
+      const maxUser = await this.repo
+        .createQueryBuilder('u')
+        .select('MAX(u.id)', 'maxId')
+        .getRawOne();
+      const nextId = (Number(maxUser?.maxId) || 0) + 1;
+      code = `DRV-${String(nextId).padStart(4, '0')}`;
+    }
+
     const driver = this.repo.create({
+      code,
       name: dto.name,
       nameKh: dto.nameKh,
       phone: dto.phone,

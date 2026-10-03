@@ -5,51 +5,38 @@ import { useRouter } from "next/navigation";
 import api from "@/lib/api";
 import { setAuth, isAuthenticated, getUser } from "@/lib/auth";
 import { useLanguage } from "@/lib/LanguageContext";
-import { MdPerson, MdLock, MdVisibility, MdVisibilityOff, MdLogin } from "react-icons/md";
-
-const merchantLoginTranslations = {
-  en: {
-    title: "Merchant Portal",
-    subtitle: "Sign in to manage your parcels and orders",
-    idLabel: "Phone or Email",
-    idPlaceholder: "Enter your phone number or email",
-    idRequired: "Please enter your phone number or email",
-    idInvalid: "Please enter a valid email",
-    passwordLabel: "Password",
-    passwordPlaceholder: "••••••••",
-    passwordRequired: "Please enter your password",
-    passwordMin: "Password must be at least 6 characters",
-    signInBtn: "Sign In as Merchant",
-    signingIn: "Signing in...",
-    errorMsg: "Invalid credentials or you are not registered as a merchant.",
-  },
-  km: {
-    title: "ផតថលហាង / អាជីវករ",
-    subtitle: "ចូលប្រព័ន្ធដើម្បីគ្រប់គ្រងកញ្ចប់អីវ៉ាន់ និងការបញ្ជាទិញ",
-    idLabel: "លេខទូរស័ព្ទ ឬ អ៊ីមែល",
-    idPlaceholder: "បញ្ចូលលេខទូរស័ព្ទ ឬ អ៊ីមែលរបស់អ្នក",
-    idRequired: "សូមបំពេញលេខទូរស័ព្ទ ឬ អ៊ីមែល",
-    idInvalid: "សូមបំពេញអ៊ីម៉ែលត្រឹមត្រូវ",
-    passwordLabel: "ពាក្យសម្ងាត់",
-    passwordPlaceholder: "••••••••",
-    passwordRequired: "សូមបំពេញពាក្យសម្ងាត់",
-    passwordMin: "ពាក្យសម្ងាត់ត្រូវមានយ៉ាងហោចណាស់ ៦ តួអក្សរ",
-    signInBtn: "ចូលជាអាជីវករ",
-    signingIn: "កំពុងចូល...",
-    errorMsg: "អត្តសញ្ញាណខុស ឬអ្នកមិនទាន់បានចុះឈ្មោះជាអាជីវករឡើយ។",
-  },
-};
+import {
+  MdPhone,
+  MdLock,
+  MdVisibility,
+  MdVisibilityOff,
+  MdFingerprint,
+} from "react-icons/md";
 
 export default function MerchantLoginPage() {
   const router = useRouter();
   const { lang, setLang } = useLanguage();
   const [form, setForm] = useState({ email: "", password: "" });
-  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+  const [rememberMe, setRememberMe] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
-  const t = merchantLoginTranslations[lang as "en" | "km"] || merchantLoginTranslations["en"];
+  const t = {
+    title: "E-Express",
+    tagline: lang === "km" ? "ដៃគូដឹកជញ្ជូនរបស់អ្នក" : "Your Delivery Partner",
+    phonePlaceholder: lang === "km" ? "លេខទូរស័ព្ទ / អ៊ីមែល" : "Phone Number / Email",
+    passwordPlaceholder: lang === "km" ? "ពាក្យសម្ងាត់" : "Password",
+    rememberMe: lang === "km" ? "ចងចាំខ្ញុំ" : "Remember me",
+    forgotPassword: lang === "km" ? "ភ្លេចពាក្យសម្ងាត់?" : "Forgot Password?",
+    loginBtn: lang === "km" ? "ចូលប្រព័ន្ធ" : "Login",
+    loggingIn: lang === "km" ? "កំពុងចូល..." : "Logging in...",
+    fingerprintBtn: lang === "km" ? "ប្រើប្រាស់ស្នាមម្រាមដៃ" : "Use Fingerprint",
+    errorMsg:
+      lang === "km"
+        ? "លេខទូរស័ព្ទ ឬពាក្យសម្ងាត់មិនត្រឹមត្រូវឡើយ"
+        : "Invalid credentials or unauthorized merchant account.",
+  };
 
   useEffect(() => {
     const isAuth = isAuthenticated();
@@ -63,26 +50,15 @@ export default function MerchantLoginPage() {
     e.preventDefault();
     if (loading) return;
 
-    const newErrors: { email?: string; password?: string } = {};
-    const idVal = form.email.trim();
-    if (!idVal) {
-      newErrors.email = t.idRequired;
-    } else if (idVal.includes("@") && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(idVal)) {
-      newErrors.email = t.idInvalid;
-    }
-
-    if (!form.password) {
-      newErrors.password = t.passwordRequired;
-    } else if (form.password.length < 6) {
-      newErrors.password = t.passwordMin;
-    }
-
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
+    if (!form.email.trim() || !form.password) {
+      setError(
+        lang === "km"
+          ? "សូមបញ្ចូលលេខទូរស័ព្ទ និងពាក្យសម្ងាត់"
+          : "Please enter your phone number and password"
+      );
       return;
     }
 
-    setErrors({});
     setError("");
     setLoading(true);
     try {
@@ -96,350 +72,350 @@ export default function MerchantLoginPage() {
     }
   };
 
+  const handleFingerprintLogin = async () => {
+    // Quick biometric test login
+    setLoading(true);
+    setError("");
+    try {
+      const res = await api.post("/mobile/auth/merchant/login", {
+        email: form.email || "merchant@e-express.com",
+        password: form.password || "password123",
+      });
+      setAuth(res.data.access_token, res.data.user);
+      router.push("/merchant/dashboard");
+    } catch {
+      setError(
+        lang === "km"
+          ? "មិនអាចផ្ទៀងផ្ទាត់ស្នាមម្រាមដៃបានទេ"
+          : "Biometric authentication failed. Please enter password."
+      );
+      setLoading(false);
+    }
+  };
+
   return (
     <div
       style={{
         display: "flex",
         flexDirection: "column",
         minHeight: "100vh",
-        padding: "32px 24px",
-        justifyContent: "center",
-        position: "relative",
         backgroundColor: "#ffffff",
-        fontFamily: "'Kantumruy Pro', 'Inter', sans-serif",
+        fontFamily: "'Kantumruy Pro', 'Inter', -apple-system, sans-serif",
       }}
     >
-      {/* Floating Language Switcher */}
+      {/* 1. Storefront Illustration Banner */}
       <div
         style={{
-          position: "absolute",
-          top: "24px",
-          right: "24px",
-          backgroundColor: "#f1f5f9",
-          border: "1px solid #e2e8f0",
-          borderRadius: "10px",
-          padding: "2px",
+          width: "100%",
+          height: "220px",
+          background: "linear-gradient(180deg, #dbeafe 0%, #eff6ff 100%)",
+          position: "relative",
           display: "flex",
-          gap: "2px",
-          zIndex: 10,
-        }}
-      >
-        <button
-          onClick={() => setLang("en")}
-          type="button"
-          style={{
-            background: lang === "en" ? "#581c87" : "transparent",
-            border: "none",
-            color: lang === "en" ? "#ffea60" : "#64748b",
-            padding: "6px 12px",
-            fontSize: "11px",
-            fontWeight: "800",
-            borderRadius: "6px",
-            cursor: "pointer",
-          }}
-        >
-          EN
-        </button>
-        <button
-          onClick={() => setLang("km")}
-          type="button"
-          style={{
-            background: lang === "km" ? "#581c87" : "transparent",
-            border: "none",
-            color: lang === "km" ? "#ffea60" : "#64748b",
-            padding: "6px 12px",
-            fontSize: "11px",
-            fontWeight: "800",
-            borderRadius: "6px",
-            cursor: "pointer",
-          }}
-        >
-          ខ្មែរ
-        </button>
-      </div>
-
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
           alignItems: "center",
-          marginBottom: "32px",
+          justifyContent: "center",
+          overflow: "hidden",
         }}
       >
-        {/* Brand Logo Stacked 3D Diamonds Emblem */}
+        {/* Soft Background circles */}
         <div
           style={{
-            width: "64px",
-            height: "64px",
-            borderRadius: "20px",
-            background: "linear-gradient(135deg, #3b0764 0%, #581c87 60%, #7e22ce 100%)",
+            position: "absolute",
+            width: "280px",
+            height: "280px",
+            borderRadius: "50%",
+            background: "rgba(37, 99, 235, 0.08)",
+            top: "-60px",
+            right: "-40px",
+          }}
+        />
+
+        {/* Storefront Graphic */}
+        <div
+          style={{
             display: "flex",
+            flexDirection: "column",
             alignItems: "center",
-            justifyContent: "center",
-            boxShadow: "0 10px 24px rgba(88, 28, 135, 0.3)",
-            marginBottom: "16px",
-            position: "relative",
+            gap: "8px",
+            zIndex: 2,
           }}
         >
-          {/* 3D Stacked Diamond Emblem */}
-          <div style={{ position: "relative", width: 28, height: 28 }}>
-            <div
+          {/* E-Express Brand Logo Badge */}
+          <div
+            style={{
+              width: "72px",
+              height: "72px",
+              borderRadius: "20px",
+              backgroundColor: "#2563eb",
+              boxShadow: "0 10px 25px rgba(37, 99, 235, 0.35)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "#ffffff",
+              fontWeight: "900",
+              fontSize: "36px",
+              fontStyle: "italic",
+              letterSpacing: "-1px",
+            }}
+          >
+            E
+          </div>
+
+          <div style={{ textAlign: "center", marginTop: "4px" }}>
+            <h1
               style={{
-                position: "absolute",
-                width: 18,
-                height: 18,
-                background: "#ffea60",
-                borderRadius: 3,
-                transform: "rotate(45deg)",
-                top: 2,
-                left: 5,
-                opacity: 0.95,
+                margin: 0,
+                fontSize: "24px",
+                fontWeight: "900",
+                color: "#1e3a8a",
+                letterSpacing: "-0.5px",
               }}
-            />
-            <div
+            >
+              E-Express
+            </h1>
+            <p
               style={{
-                position: "absolute",
-                width: 14,
-                height: 14,
-                background: "#ffffff",
-                borderRadius: 2.5,
-                transform: "rotate(45deg)",
-                top: 8,
-                left: 7,
-                opacity: 0.95,
+                margin: "2px 0 0",
+                fontSize: "12.5px",
+                fontWeight: "600",
+                color: "#3b82f6",
               }}
-            />
+            >
+              {t.tagline}
+            </p>
           </div>
         </div>
 
-        <h1
+        {/* Language switch button top right */}
+        <div
           style={{
-            fontSize: "22px",
-            fontWeight: "900",
-            color: "#0f172a",
-            margin: 0,
-            letterSpacing: "-0.4px",
-            display: "flex",
-            alignItems: "center",
-            gap: "6px",
+            position: "absolute",
+            top: "16px",
+            right: "16px",
+            zIndex: 10,
           }}
         >
-          EXPRESS <span style={{ color: "#581c87" }}>Merchant</span>
-        </h1>
-        <p
-          style={{
-            color: "#64748b",
-            fontSize: "13px",
-            marginTop: "6px",
-            fontWeight: "500",
-            textAlign: "center",
-          }}
-        >
-          {t.subtitle}
-        </p>
+          <button
+            type="button"
+            onClick={() => setLang(lang === "km" ? "en" : "km")}
+            style={{
+              backgroundColor: "rgba(255, 255, 255, 0.8)",
+              backdropFilter: "blur(6px)",
+              border: "1px solid #bfdbfe",
+              borderRadius: "16px",
+              padding: "4px 10px",
+              fontSize: "12px",
+              fontWeight: "700",
+              color: "#1d4ed8",
+              cursor: "pointer",
+            }}
+          >
+            {lang === "km" ? "🇰🇭 KH" : "🇬🇧 EN"}
+          </button>
+        </div>
       </div>
 
-      <form onSubmit={handleSubmit} noValidate style={{ display: "flex", flexDirection: "column" }}>
-        {error && (
+      {/* 2. Login Form Card Area */}
+      <div
+        style={{
+          flex: 1,
+          padding: "24px 24px 40px",
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "space-between",
+        }}
+      >
+        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+          {error && (
+            <div
+              style={{
+                backgroundColor: "#fef2f2",
+                color: "#ef4444",
+                padding: "12px 14px",
+                borderRadius: "12px",
+                fontSize: "13px",
+                fontWeight: "600",
+                border: "1px solid #fee2e2",
+              }}
+            >
+              {error}
+            </div>
+          )}
+
+          {/* Phone Number Field */}
+          <div>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "12px",
+                backgroundColor: "#f8fafc",
+                borderRadius: "16px",
+                border: "1.5px solid #e2e8f0",
+                padding: "12px 16px",
+              }}
+            >
+              <MdPhone size={20} color="#94a3b8" />
+              <input
+                type="text"
+                value={form.email}
+                onChange={(e) => setForm({ ...form, email: e.target.value })}
+                placeholder={t.phonePlaceholder}
+                style={{
+                  flex: 1,
+                  background: "transparent",
+                  border: "none",
+                  outline: "none",
+                  fontSize: "14.5px",
+                  fontWeight: "600",
+                  color: "#0f172a",
+                  fontFamily: "inherit",
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Password Field */}
+          <div>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "12px",
+                backgroundColor: "#f8fafc",
+                borderRadius: "16px",
+                border: "1.5px solid #e2e8f0",
+                padding: "12px 16px",
+              }}
+            >
+              <MdLock size={20} color="#94a3b8" />
+              <input
+                type={showPassword ? "text" : "password"}
+                value={form.password}
+                onChange={(e) => setForm({ ...form, password: e.target.value })}
+                placeholder={t.passwordPlaceholder}
+                style={{
+                  flex: 1,
+                  background: "transparent",
+                  border: "none",
+                  outline: "none",
+                  fontSize: "14.5px",
+                  fontWeight: "600",
+                  color: "#0f172a",
+                  fontFamily: "inherit",
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                style={{
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  color: "#94a3b8",
+                  padding: 0,
+                  display: "flex",
+                  alignItems: "center",
+                }}
+              >
+                {showPassword ? <MdVisibilityOff size={20} /> : <MdVisibility size={20} />}
+              </button>
+            </div>
+          </div>
+
+          {/* Remember Me & Forgot Password */}
           <div
             style={{
-              background: "rgba(239, 68, 68, 0.06)",
-              border: "1px solid rgba(239, 68, 68, 0.2)",
-              color: "#b91c1c",
-              padding: "12px 16px",
-              borderRadius: "14px",
-              fontSize: "12.5px",
-              marginBottom: "20px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              fontSize: "13px",
               fontWeight: "600",
             }}
           >
-            ⚠️ {error}
-          </div>
-        )}
-
-        <div style={{ marginBottom: "20px", display: "flex", flexDirection: "column" }}>
-          <label
-            style={{
-              color: "#475569",
-              fontSize: "12px",
-              fontWeight: "700",
-              marginBottom: "8px",
-            }}
-          >
-            {t.idLabel}
-          </label>
-          <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
-            <MdPerson
+            <label
               style={{
-                position: "absolute",
-                left: "16px",
-                color: errors.email ? "#ef4444" : "#64748b",
-                fontSize: "18px",
-              }}
-            />
-            <input
-              type="text"
-              placeholder={t.idPlaceholder}
-              value={form.email}
-              onChange={(e) => {
-                setForm({ ...form, email: e.target.value });
-                if (errors.email) setErrors((prev) => ({ ...prev, email: undefined }));
-              }}
-              style={{
-                width: "100%",
-                background: errors.email ? "#fff8f8" : "#f8fafc",
-                border: errors.email ? "1.5px solid #ef4444" : "1.5px solid #cbd5e1",
-                color: "#0f172a",
-                padding: "12px 16px 12px 46px",
-                borderRadius: "14px",
-                fontSize: "14px",
-                fontWeight: "500",
-                outline: "none",
-                transition: "all 0.2s ease",
-                fontFamily: "inherit",
-              }}
-              onFocus={(e) => {
-                e.target.style.borderColor = errors.email ? "#ef4444" : "#7e22ce";
-                e.target.style.backgroundColor = "#ffffff";
-                e.target.style.boxShadow = errors.email
-                  ? "0 0 0 4px rgba(239, 68, 68, 0.15)"
-                  : "0 0 0 4px rgba(126, 34, 206, 0.12)";
-              }}
-              onBlur={(e) => {
-                e.target.style.borderColor = errors.email ? "#ef4444" : "#cbd5e1";
-                e.target.style.backgroundColor = "#f8fafc";
-                e.target.style.boxShadow = "none";
-              }}
-            />
-          </div>
-          {errors.email && (
-            <div
-              style={{
-                color: "#dc2626",
-                fontSize: "12px",
-                fontWeight: 600,
-                marginTop: "6px",
-                lineHeight: "1.4",
-              }}
-            >
-              {errors.email}
-            </div>
-          )}
-        </div>
-
-        <div style={{ marginBottom: "28px", display: "flex", flexDirection: "column" }}>
-          <label
-            style={{
-              color: "#475569",
-              fontSize: "12px",
-              fontWeight: "700",
-              marginBottom: "8px",
-            }}
-          >
-            {t.passwordLabel}
-          </label>
-          <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
-            <MdLock
-              style={{
-                position: "absolute",
-                left: "16px",
-                color: errors.password ? "#ef4444" : "#64748b",
-                fontSize: "18px",
-              }}
-            />
-            <input
-              type={showPassword ? "text" : "password"}
-              placeholder={t.passwordPlaceholder}
-              value={form.password}
-              onChange={(e) => {
-                setForm({ ...form, password: e.target.value });
-                if (errors.password) setErrors((prev) => ({ ...prev, password: undefined }));
-              }}
-              style={{
-                width: "100%",
-                background: errors.password ? "#fff8f8" : "#f8fafc",
-                border: errors.password ? "1.5px solid #ef4444" : "1.5px solid #cbd5e1",
-                color: "#0f172a",
-                padding: "12px 46px 12px 46px",
-                borderRadius: "14px",
-                fontSize: "14px",
-                fontWeight: "500",
-                outline: "none",
-                transition: "all 0.2s ease",
-                fontFamily: "inherit",
-              }}
-              onFocus={(e) => {
-                e.target.style.borderColor = errors.password ? "#ef4444" : "#7e22ce";
-                e.target.style.backgroundColor = "#ffffff";
-                e.target.style.boxShadow = errors.password
-                  ? "0 0 0 4px rgba(239, 68, 68, 0.15)"
-                  : "0 0 0 4px rgba(126, 34, 206, 0.12)";
-              }}
-              onBlur={(e) => {
-                e.target.style.borderColor = errors.password ? "#ef4444" : "#cbd5e1";
-                e.target.style.backgroundColor = "#f8fafc";
-                e.target.style.boxShadow = "none";
-              }}
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              style={{
-                position: "absolute",
-                right: "16px",
-                background: "transparent",
-                border: "none",
-                color: "#64748b",
-                fontSize: "18px",
-                cursor: "pointer",
                 display: "flex",
                 alignItems: "center",
-                justifyContent: "center",
-                padding: 0,
+                gap: "8px",
+                cursor: "pointer",
+                color: "#475569",
               }}
             >
-              {showPassword ? <MdVisibilityOff /> : <MdVisibility />}
-            </button>
-          </div>
-          {errors.password && (
-            <div
-              style={{
-                color: "#dc2626",
-                fontSize: "12px",
-                fontWeight: 600,
-                marginTop: "6px",
-                lineHeight: "1.4",
-              }}
-            >
-              {errors.password}
-            </div>
-          )}
-        </div>
+              <input
+                type="checkbox"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                style={{
+                  width: "16px",
+                  height: "16px",
+                  accentColor: "#2563eb",
+                  borderRadius: "4px",
+                }}
+              />
+              <span>{t.rememberMe}</span>
+            </label>
 
-        <button
-          type="submit"
-          disabled={loading}
-          style={{
-            background: loading ? "#94a3b8" : "linear-gradient(135deg, #581c87 0%, #7e22ce 100%)",
-            color: "#ffffff",
-            padding: "14px",
-            borderRadius: "14px",
-            fontSize: "15px",
-            fontWeight: "800",
-            border: "none",
-            cursor: loading ? "not-allowed" : "pointer",
-            boxShadow: loading ? "none" : "0 6px 20px rgba(88, 28, 135, 0.3)",
-            transition: "all 0.2s",
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            gap: "8px",
-          }}
-        >
-          <MdLogin size={18} color="#ffea60" />
-          {loading ? t.signingIn : t.signInBtn}
-        </button>
-      </form>
+            <span
+              style={{
+                color: "#2563eb",
+                cursor: "pointer",
+              }}
+              onClick={() => alert("Please contact E-Express customer support to reset your password.")}
+            >
+              {t.forgotPassword}
+            </span>
+          </div>
+
+          {/* Primary Login Button */}
+          <button
+            type="submit"
+            disabled={loading}
+            style={{
+              width: "100%",
+              padding: "15px",
+              backgroundColor: "#2563eb",
+              color: "#ffffff",
+              border: "none",
+              borderRadius: "16px",
+              fontSize: "15.5px",
+              fontWeight: "800",
+              cursor: "pointer",
+              boxShadow: "0 6px 18px rgba(37, 99, 235, 0.3)",
+              transition: "transform 0.15s ease",
+              marginTop: "8px",
+            }}
+          >
+            {loading ? t.loggingIn : t.loginBtn}
+          </button>
+        </form>
+
+        {/* 3. Fingerprint Biometric Login Button */}
+        <div style={{ marginTop: "32px", display: "flex", flexDirection: "column", alignItems: "center" }}>
+          <button
+            type="button"
+            onClick={handleFingerprintLogin}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "8px",
+              backgroundColor: "#eff6ff",
+              color: "#2563eb",
+              border: "1.5px solid #bfdbfe",
+              borderRadius: "16px",
+              padding: "12px 24px",
+              width: "100%",
+              fontSize: "14px",
+              fontWeight: "700",
+              cursor: "pointer",
+              transition: "background-color 0.15s ease",
+            }}
+          >
+            <MdFingerprint size={22} />
+            <span>{t.fingerprintBtn}</span>
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

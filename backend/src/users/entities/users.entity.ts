@@ -19,6 +19,9 @@ export class User {
   @PrimaryGeneratedColumn()
   id: number;
 
+  @Column({ nullable: true })
+  code: string;
+
   @Column()
   name: string;
 

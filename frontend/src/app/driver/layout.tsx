@@ -23,21 +23,19 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
   const tabLabels = {
     en: {
       dashboard: "Home",
-      tasks: "Packages",
-      scan: "Scan",
-      payments: "Payments",
-      profile: "Account",
+      tasks: "Task",
+      payments: "Payment",
+      profile: "Profile",
     },
     km: {
       dashboard: "ទំព័រដើម",
-      tasks: "កញ្ចប់អីវ៉ាន់",
-      scan: "ស្កេន",
-      payments: "ការទូទាត់ប្រាក់",
+      tasks: "កិច្ចការ",
+      payments: "ការទូទាត់",
       profile: "គណនី",
     },
   };
 
-  const labels = tabLabels[lang as "en" | "km"] || tabLabels.km;
+  const labels = tabLabels[lang as "en" | "km"] || tabLabels.en;
 
   if (!mounted) {
     return (
@@ -54,8 +52,8 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
           style={{
             width: "40px",
             height: "40px",
-            border: "3px solid rgba(88, 28, 135, 0.15)",
-            borderTopColor: "#581c87",
+            border: "3px solid rgba(37, 99, 235, 0.15)",
+            borderTopColor: "#2563eb",
             borderRadius: "50%",
             animation: "driverSpin 0.8s ease-in-out infinite",
           }}
@@ -74,13 +72,12 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
 
   // Check active routes
   const isHomeActive = pathname === "/driver/dashboard";
-  const isTasksActive = pathname.startsWith("/driver/tasks");
-  const isScanActive = pathname.startsWith("/driver/scan");
+  const isTasksActive = pathname.startsWith("/driver/tasks") || pathname.startsWith("/driver/scan");
   const isPaymentsActive =
     pathname.startsWith("/driver/payments") || pathname.startsWith("/driver/reports");
   const isProfileActive = pathname.startsWith("/driver/profile");
 
-  const ACTIVE_COLOR = "#581c87";
+  const ACTIVE_COLOR = "#2563eb";
   const INACTIVE_COLOR = "#94a3b8";
 
   return (
@@ -90,8 +87,8 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
         display: "flex",
         justifyContent: "center",
         minHeight: "100vh",
-        backgroundColor: "#e2e8f0",
-        fontFamily: "'Kantumruy Pro', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+        backgroundColor: "#0f172a",
+        fontFamily: "'Inter', 'Kantumruy Pro', -apple-system, BlinkMacSystemFont, sans-serif",
         WebkitFontSmoothing: "antialiased",
       }}
     >
@@ -99,19 +96,19 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
         className="mobile-phone-frame"
         style={{
           width: "100%",
-          maxWidth: "480px",
-          backgroundColor: "#ffffff",
+          maxWidth: "430px",
+          backgroundColor: "#f8fafc",
           minHeight: "100vh",
           display: "flex",
           flexDirection: "column",
           position: "relative",
-          boxShadow: "0 20px 50px -10px rgba(15, 23, 42, 0.12)",
+          boxShadow: "0 25px 60px -12px rgba(0, 0, 0, 0.35)",
           paddingBottom: showBottomNav ? "68px" : "0",
         }}
       >
         <main style={{ flex: 1, display: "flex", flexDirection: "column" }}>{children}</main>
 
-        {/* Clean Bottom Navigation Bar with Tab 3 as SCAN */}
+        {/* 4 Bottom Navigation Bar matching design */}
         {showBottomNav && (
           <nav
             style={{
@@ -120,19 +117,19 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
               left: "50%",
               transform: "translateX(-50%)",
               width: "100%",
-              maxWidth: "480px",
-              height: "66px",
+              maxWidth: "430px",
+              height: "64px",
               backgroundColor: "#ffffff",
               borderTop: "1px solid #e2e8f0",
               display: "flex",
               alignItems: "center",
               justifyContent: "space-around",
-              padding: "0 8px",
+              padding: "0 10px",
               zIndex: 100,
-              boxShadow: "0 -2px 10px rgba(0, 0, 0, 0.04)",
+              boxShadow: "0 -4px 16px rgba(0, 0, 0, 0.04)",
             }}
           >
-            {/* 1. Home (ទំព័រដើម) */}
+            {/* 1. Home */}
             <Link
               href="/driver/dashboard"
               style={{
@@ -152,7 +149,7 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
               </span>
             </Link>
 
-            {/* 2. Tasks / Packages (កញ្ចប់អីវ៉ាន់) */}
+            {/* 2. Task */}
             <Link
               href="/driver/tasks"
               style={{
@@ -172,27 +169,7 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
               </span>
             </Link>
 
-            {/* 3. Scanner (ស្កេន) */}
-            <Link
-              href="/driver/scan"
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                textDecoration: "none",
-                color: isScanActive ? ACTIVE_COLOR : INACTIVE_COLOR,
-                gap: "3px",
-                flex: 1,
-              }}
-            >
-              <MdQrCodeScanner size={24} />
-              <span style={{ fontSize: "11px", fontWeight: isScanActive ? "700" : "500" }}>
-                {labels.scan}
-              </span>
-            </Link>
-
-            {/* 4. Payments (ការទូទាត់ប្រាក់) */}
+            {/* 3. Payment */}
             <Link
               href="/driver/payments"
               style={{
@@ -212,7 +189,7 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
               </span>
             </Link>
 
-            {/* 5. Account / Profile (គណនី) */}
+            {/* 4. Profile */}
             <Link
               href="/driver/profile"
               style={{

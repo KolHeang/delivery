@@ -28,8 +28,6 @@ export default function BatchEntryPage() {
     { receiverName: '-', receiverAddress: '', receiverPhone: '', deliveryFee: '1.25', codUSD: '0', codKHR: '0', pickupId: '', driverId: '', note: '' }
   ]);
 
-  const [rowErrors, setRowErrors] = useState<Record<number, { receiverAddress?: string; receiverPhone?: string }>>({});
-
   useEffect(() => {
     if (!isAuthenticated()) { router.push('/'); return; }
     Promise.all([api.get('/select/merchants'), api.get('/select/zones'), api.get('/select/drivers')])
@@ -105,7 +103,6 @@ export default function BatchEntryPage() {
 
   const handleSaveBatch = async () => {
     let hasError = false;
-    const newRowErrors: Record<number, { receiverAddress?: string; receiverPhone?: string }> = {};
 
     if (!selectedMerchantId) {
       setMerchantError(lang === 'km' ? 'សូមជ្រើសរើសហាង' : 'Please select a shop');
@@ -116,15 +113,14 @@ export default function BatchEntryPage() {
     
     // Validation
     const errs: Record<number, { receiverAddress?: string; receiverPhone?: string }> = {};
-    let hasError = false;
     for (let i = 0; i < rows.length; i++) {
       const r = rows[i];
       const rowErr: { receiverAddress?: string; receiverPhone?: string } = {};
-      if (!r.receiverAddress.trim()) {
+      if (!r.receiverAddress?.trim()) {
         rowErr.receiverAddress = 'សូមបំពេញអាសយដ្ឋាន';
         hasError = true;
       }
-      if (!r.receiverPhone.trim()) {
+      if (!r.receiverPhone?.trim()) {
         rowErr.receiverPhone = 'សូមបំពេញលេខទូរស័ព្ទ';
         hasError = true;
       }
@@ -417,8 +413,7 @@ export default function BatchEntryPage() {
                         </button>
                       </td>
                     </tr>
-                  );
-                })}
+                  ))}
                 </tbody>
               </table>
             </div>

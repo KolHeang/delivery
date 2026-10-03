@@ -2,117 +2,77 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { isAuthenticated, clearAuth } from "@/lib/auth";
+import { isAuthenticated, clearAuth, getUser } from "@/lib/auth";
 import api from "@/lib/api";
 import { useLanguage } from "@/lib/LanguageContext";
-import MerchantHeader from "@/components/merchant/MerchantHeader";
 import {
-  MdStorefront,
-  MdLock,
+  MdStore,
   MdTranslate,
+  MdLock,
+  MdHeadsetMic,
+  MdDescription,
+  MdSecurity,
+  MdDeleteOutline,
   MdLogout,
   MdChevronRight,
   MdCameraAlt,
   MdClose,
-  MdInventory2,
-  MdAttachMoney,
+  MdCheckCircle,
   MdPhone,
-  MdLocationOn,
-  MdVerified,
   MdEmail,
-  MdEdit,
+  MdLocationOn,
 } from "react-icons/md";
-
-const profileTranslations = {
-  en: {
-    loading: "Loading profile...",
-    merchantId: "Merchant ID",
-    merchantRole: "Verified Store",
-    totalParcelsStat: "Total Parcels",
-    balanceStat: "Balance",
-    myShop: "Shop Information",
-    security: "Change Password",
-    language: "App Language",
-    logout: "Log Out Account",
-    phoneLabel: "Phone Number",
-    emailLabel: "Email Address",
-    addressLabel: "Store Address",
-    zoneLabel: "Operating Zone",
-    closeBtn: "Close",
-    editBtn: "Edit Shop Details",
-    saveBtn: "Save Changes",
-    currentPasswordLabel: "Current Password",
-    newPasswordLabel: "New Password",
-    confirmPasswordLabel: "Confirm New Password",
-    passwordChangedSuccess: "Password changed successfully",
-    profileUpdatedSuccess: "Shop profile updated successfully",
-  },
-  km: {
-    loading: "កំពុងផ្ទុកព័ត៌មាន...",
-    merchantId: "អត្តលេខ",
-    merchantRole: "ហាងទំនិញផ្លូវការ",
-    totalParcelsStat: "កញ្ចប់ផ្ញើសរុប",
-    balanceStat: "សមតុល្យគណនី",
-    myShop: "ព័ត៌មានហាង",
-    security: "ផ្លាស់ប្តូរលេខសម្ងាត់",
-    language: "ភាសាកម្មវិធី",
-    logout: "ចាកចេញពីគណនី",
-    phoneLabel: "លេខទូរស័ព្ទ",
-    emailLabel: "អ៊ីមែល",
-    addressLabel: "អាសយដ្ឋានហាង",
-    zoneLabel: "តំបន់ប្រតិបត្តិការ",
-    closeBtn: "បិទ",
-    editBtn: "កែប្រែព័ត៌មានហាង",
-    saveBtn: "រក្សាទុកការផ្លាស់ប្តូរ",
-    currentPasswordLabel: "លេខសម្ងាត់ចាស់",
-    newPasswordLabel: "លេខសម្ងាត់ថ្មី",
-    confirmPasswordLabel: "ផ្ទៀងផ្ទាត់លេខសម្ងាត់ថ្មី",
-    passwordChangedSuccess: "ប្តូរលេខសម្ងាត់ជោគជ័យ",
-    profileUpdatedSuccess: "បច្ចុប្បន្នភាពព័ត៌មានជោគជ័យ",
-  },
-};
+import { FaTelegram } from "react-icons/fa";
 
 export default function MerchantProfilePage() {
   const router = useRouter();
   const { lang, setLang } = useLanguage();
   const [profile, setProfile] = useState<any>(null);
-  const [dashData, setDashData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
-  const t = profileTranslations[lang as "en" | "km"] || profileTranslations.en;
-
   // Modals state
-  const [showShopDetailModal, setShowShopDetailModal] = useState(false);
+  const [showInfoModal, setShowInfoModal] = useState(false);
+  const [showLanguageModal, setShowLanguageModal] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [showContactModal, setShowContactModal] = useState(false);
+  const [showTermsModal, setShowTermsModal] = useState(false);
+  const [showPrivacyModal, setShowPrivacyModal] = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
 
-  // Password Change State
+  // Password state
   const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordError, setPasswordError] = useState("");
   const [passwordSuccess, setPasswordSuccess] = useState("");
-  const [passwordSubmitting, setPasswordSubmitting] = useState(false);
 
-  // Edit Profile State
-  const [showEditShopModal, setShowEditShopModal] = useState(false);
-  const [editName, setEditName] = useState("");
-  const [editPhone, setEditPhone] = useState("");
-  const [editEmail, setEditEmail] = useState("");
-  const [editAddress, setEditAddress] = useState("");
-  const [editSubmitting, setEditSubmitting] = useState(false);
-  const [editError, setEditError] = useState("");
-  const [editSuccess, setEditSuccess] = useState("");
+  const t = {
+    title: lang === "km" ? "គណនីហាង" : "Profile",
+    merchantInfo: lang === "km" ? "ព័ត៌មានហាង / អាជីវករ" : "Merchant Information",
+    language: lang === "km" ? "ភាសា" : "Language",
+    changePassword: lang === "km" ? "ផ្លាស់ប្តូរលេខសម្ងាត់" : "Change Password",
+    contactSupport: lang === "km" ? "ទាក់ទងមកកាន់ E-Express" : "Contact E-Express",
+    terms: lang === "km" ? "លក្ខខណ្ឌប្រើប្រាស់" : "Terms & Conditions",
+    privacy: lang === "km" ? "គោលការណ៍ឯកជនភាព" : "Privacy Policy",
+    deleteAccount: lang === "km" ? "លុបគណនី" : "Delete Account",
+    logout: lang === "km" ? "ចាកចេញ" : "Log Out",
+    logoutConfirm:
+      lang === "km"
+        ? "តើអ្នកពិតជាចង់ចាកចេញពីគណនីហាងមែនទេ?"
+        : "Are you sure you want to log out of your merchant account?",
+    cancel: lang === "km" ? "ថយក្រោយ" : "Cancel",
+    save: lang === "km" ? "រក្សាទុក" : "Save",
+    close: lang === "km" ? "បិទ" : "Close",
+    appVersion: "E-Express Merchant App v2.4.0",
+  };
 
-  const loadProfileData = async () => {
+  const loadData = async () => {
+    setLoading(true);
     try {
-      const [profRes, dashRes] = await Promise.all([
-        api.get("/mobile/merchant/profile"),
-        api.get("/mobile/merchant/dashboard"),
-      ]);
-      setProfile(profRes.data);
-      setDashData(dashRes.data);
+      const res = await api.get("/mobile/merchant/profile").catch(() => null);
+      if (res?.data) setProfile(res.data);
     } catch (err) {
-      console.error("Failed to load merchant profile data", err);
+      console.error("Failed to load merchant profile", err);
     } finally {
       setLoading(false);
     }
@@ -123,7 +83,7 @@ export default function MerchantProfilePage() {
       router.push("/merchant/login");
       return;
     }
-    loadProfileData();
+    loadData();
   }, [router]);
 
   const handleLogout = () => {
@@ -131,149 +91,32 @@ export default function MerchantProfilePage() {
     router.push("/merchant/login");
   };
 
-  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onloadend = async () => {
-      const base64Photo = reader.result as string;
-      try {
-        const res = await api.patch("/mobile/merchant/profile", { photo: base64Photo });
-        setProfile(res.data);
-      } catch (err) {
-        console.error("Failed to update merchant photo", err);
-      }
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const openEditShopModal = () => {
-    setEditName(profile?.name || "");
-    setEditPhone(profile?.phone || "");
-    setEditEmail(profile?.email || "");
-    setEditAddress(profile?.address || "");
-    setEditError("");
-    setEditSuccess("");
-    setShowEditShopModal(true);
-  };
-
-  const handleEditShopSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setEditError("");
-    setEditSuccess("");
-    setEditSubmitting(true);
-    try {
-      const res = await api.patch("/mobile/merchant/profile", {
-        name: editName,
-        phone: editPhone,
-        email: editEmail,
-        address: editAddress,
-      });
-      setProfile(res.data);
-      setEditSuccess(t.profileUpdatedSuccess);
-      setTimeout(() => {
-        setShowEditShopModal(false);
-        setEditSuccess("");
-      }, 1200);
-    } catch (err: any) {
-      const msg =
-        err.response?.data?.message ||
-        (lang === "km" ? "ការបច្ចុប្បន្នភាពមិនជោគជ័យទេ" : "Failed to update profile");
-      setEditError(typeof msg === "string" ? msg : JSON.stringify(msg));
-    } finally {
-      setEditSubmitting(false);
-    }
-  };
-
-  const handleChangePasswordSubmit = async (e: React.FormEvent) => {
+  const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setPasswordError("");
     setPasswordSuccess("");
 
-    if (!oldPassword) {
-      setPasswordError(lang === "km" ? "សូមបញ្ចូលលេខសម្ងាត់ចាស់" : "Please enter current password");
-      return;
-    }
-    if (!newPassword || newPassword.length < 6) {
-      setPasswordError(
-        lang === "km"
-          ? "លេខសម្ងាត់ថ្មីយ៉ាងហោចណាស់ ៦ ខ្ទង់"
-          : "New password must be at least 6 characters",
-      );
-      return;
-    }
     if (newPassword !== confirmPassword) {
-      setPasswordError(
-        lang === "km" ? "លេខសម្ងាត់ផ្ទៀងផ្ទាត់មិនត្រូវគ្នាទេ" : "New passwords do not match",
-      );
+      setPasswordError("Passwords do not match");
       return;
     }
 
-    setPasswordSubmitting(true);
     try {
-      const res = await api.patch("/mobile/merchant/change-password", {
-        oldPassword,
-        newPassword,
-      });
-      setPasswordSuccess(res.data?.message || t.passwordChangedSuccess);
-      setOldPassword("");
-      setNewPassword("");
-      setConfirmPassword("");
+      await api.patch("/mobile/merchant/change-password", { oldPassword, newPassword });
+      setPasswordSuccess("Password changed successfully");
       setTimeout(() => {
         setShowPasswordModal(false);
         setPasswordSuccess("");
-      }, 1400);
+      }, 1200);
     } catch (err: any) {
-      const msg =
-        err.response?.data?.message ||
-        (lang === "km" ? "ការប្តូរលេខសម្ងាត់មិនជោគជ័យទេ" : "Failed to change password");
-      setPasswordError(typeof msg === "string" ? msg : JSON.stringify(msg));
-    } finally {
-      setPasswordSubmitting(false);
+      setPasswordError(err.response?.data?.message || "Failed to change password");
     }
   };
 
-  if (loading) {
-    return (
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          minHeight: "80vh",
-          backgroundColor: "#f8fafc",
-          padding: "24px",
-          fontFamily: "'Kantumruy Pro', 'Inter', sans-serif",
-        }}
-      >
-        <div
-          style={{
-            width: "36px",
-            height: "36px",
-            border: "3px solid rgba(88, 28, 135, 0.15)",
-            borderTopColor: "#581c87",
-            borderRadius: "50%",
-            animation: "spin 0.8s linear infinite",
-            marginBottom: "14px",
-          }}
-        />
-        <span style={{ fontSize: "14px", color: "#64748b", fontWeight: "600" }}>{t.loading}</span>
-        <style
-          dangerouslySetInnerHTML={{
-            __html: `@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`,
-          }}
-        />
-      </div>
-    );
-  }
-
-  const displayName = profile?.name || "Tita Shop";
-  const branchName =
-    profile?.zone?.name || (lang === "km" ? "សាខាប៉េងហួតបឹងស្នោ" : "Peng Huoth Boeng Snor");
-  const phoneOrId = profile?.phone || "099 865 327";
-  const totalParcels = dashData?.statistics?.totalParcel ?? 2;
-  const balanceAmount = dashData?.balance?.amount || 0;
+  const user = getUser() as any;
+  const storeName = profile?.name || user?.name || "Little Girl Studio";
+  const storePhone = profile?.phone || user?.phone || "098 387 7786";
+  const storeAddress = profile?.address || "#45, St. 310, BKK3, Phnom Penh";
 
   return (
     <div
@@ -282,276 +125,118 @@ export default function MerchantProfilePage() {
         flexDirection: "column",
         minHeight: "100vh",
         backgroundColor: "#f8fafc",
-        fontFamily: "'Kantumruy Pro', 'Inter', sans-serif",
-        paddingBottom: "110px",
+        fontFamily: "'Kantumruy Pro', 'Inter', -apple-system, sans-serif",
+        paddingBottom: "90px",
       }}
     >
-      {/* 1. Global Reusable Merchant Header */}
-      <MerchantHeader />
-
-      <div style={{ padding: "16px", display: "flex", flexDirection: "column", gap: "14px" }}>
-        {/* 2. Digital Merchant Store ID Card (Option 1: Modern & Balanced) */}
-        <div
+      {/* 1. Header Bar */}
+      <div
+        style={{
+          backgroundColor: "#ffffff",
+          padding: "16px 20px",
+          borderBottom: "1px solid #f1f5f9",
+          position: "sticky",
+          top: 0,
+          zIndex: 40,
+        }}
+      >
+        <h1
           style={{
-            background: "linear-gradient(135deg, #2e0854 0%, #581c87 55%, #7e22ce 100%)",
-            borderRadius: "22px",
-            padding: "18px 18px 14px",
-            color: "#ffffff",
-            boxShadow: "0 8px 24px rgba(88, 28, 135, 0.2)",
-            position: "relative",
-            overflow: "hidden",
+            margin: 0,
+            fontSize: "20px",
+            fontWeight: "900",
+            color: "#0f172a",
+            letterSpacing: "-0.3px",
           }}
         >
-          {/* Watermark circle layer */}
-          <div
-            style={{
-              position: "absolute",
-              top: "-20px",
-              right: "-20px",
-              width: "120px",
-              height: "120px",
-              borderRadius: "50%",
-              background:
-                "radial-gradient(circle, rgba(255, 234, 96, 0.15) 0%, rgba(255, 255, 255, 0) 70%)",
-              pointerEvents: "none",
-            }}
-          />
+          {t.title}
+        </h1>
+      </div>
 
-          {/* Top Info Section: Avatar + Identity */}
+      <div style={{ padding: "20px 16px", display: "flex", flexDirection: "column", gap: "20px" }}>
+        {/* 2. Store Avatar & Identity Card (Screen 18 Match) */}
+        <div
+          style={{
+            backgroundColor: "#ffffff",
+            borderRadius: "24px",
+            padding: "24px 20px",
+            border: "1px solid #e2e8f0",
+            boxShadow: "0 4px 16px rgba(0,0,0,0.03)",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            textAlign: "center",
+            gap: "10px",
+          }}
+        >
           <div
             style={{
+              width: "88px",
+              height: "88px",
+              borderRadius: "50%",
+              backgroundColor: "#2563eb",
+              color: "#ffffff",
               display: "flex",
               alignItems: "center",
-              gap: "14px",
-              position: "relative",
-              zIndex: 1,
+              justifyContent: "center",
+              fontSize: "30px",
+              fontWeight: "900",
+              boxShadow: "0 6px 18px rgba(37, 99, 235, 0.25)",
+              border: "3px solid #ffffff",
+              overflow: "hidden",
             }}
           >
-            {/* Avatar Container */}
-            <div style={{ position: "relative", flexShrink: 0 }}>
-              <div
-                style={{
-                  width: "66px",
-                  height: "66px",
-                  borderRadius: "50%",
-                  backgroundColor: "#ffffff",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: "24px",
-                  color: "#581c87",
-                  fontWeight: "900",
-                  boxShadow: "0 4px 14px rgba(0,0,0,0.2)",
-                  overflow: "hidden",
-                  border: "2.5px solid #ffea60",
-                }}
-              >
-                {profile?.photo ? (
-                  <img
-                    src={
-                      profile.photo.startsWith("http") || profile.photo.startsWith("data:")
-                        ? profile.photo
-                        : `${process.env.NEXT_PUBLIC_API_URL?.replace("/api", "")}/uploads/${profile.photo}`
-                    }
-                    alt={displayName}
-                    style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                  />
-                ) : (
-                  <span>{displayName.slice(0, 2).toUpperCase()}</span>
-                )}
-              </div>
-
-              {/* Camera Upload Button */}
-              <label
-                style={{
-                  position: "absolute",
-                  bottom: "-2px",
-                  right: "-2px",
-                  width: "24px",
-                  height: "24px",
-                  borderRadius: "50%",
-                  backgroundColor: "#ffea60",
-                  border: "2px solid #581c87",
-                  color: "#581c87",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  cursor: "pointer",
-                  boxShadow: "0 2px 6px rgba(0,0,0,0.25)",
-                }}
-                title={lang === "km" ? "ប្តូររូបថត" : "Upload Photo"}
-              >
-                <MdCameraAlt size={13} />
-                <input
-                  type="file"
-                  accept="image/*"
-                  style={{ display: "none" }}
-                  onChange={handlePhotoUpload}
-                />
-              </label>
-            </div>
-
-            {/* Identity Information */}
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                <h2
-                  style={{
-                    fontSize: "18px",
-                    fontWeight: "900",
-                    color: "#ffffff",
-                    margin: 0,
-                    letterSpacing: "-0.2px",
-                    whiteSpace: "nowrap",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                  }}
-                >
-                  {displayName}
-                </h2>
-                <MdVerified size={18} color="#ffea60" style={{ flexShrink: 0 }} />
-              </div>
-
-              <div
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "4px",
-                  marginTop: "3px",
-                  backgroundColor: "rgba(255, 255, 255, 0.18)",
-                  padding: "2px 8px",
-                  borderRadius: "8px",
-                  fontSize: "11px",
-                  fontWeight: "700",
-                  color: "#ffea60",
-                  backdropFilter: "blur(4px)",
-                }}
-              >
-                <span>ID: MCH-{String(profile?.id || "001").padStart(3, "0")}</span>
-                <span>•</span>
-                <span>{t.merchantRole}</span>
-              </div>
-
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "10px",
-                  marginTop: "4px",
-                  fontSize: "11px",
-                  color: "#e9d5ff",
-                  fontWeight: "600",
-                }}
-              >
-                <span>📱 {phoneOrId}</span>
-                <span>•</span>
-                <span>📍 {branchName}</span>
-              </div>
-            </div>
+            {profile?.photo ? (
+              <img
+                src={profile.photo}
+                alt={storeName}
+                style={{ width: "100%", height: "100%", objectFit: "cover" }}
+              />
+            ) : (
+              <span>{storeName.slice(0, 2).toUpperCase()}</span>
+            )}
           </div>
 
-          {/* Performance Summary 2-Stat Strip */}
-          <div
-            style={{
-              marginTop: "14px",
-              paddingTop: "12px",
-              borderTop: "1px solid rgba(255, 255, 255, 0.16)",
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: "8px",
-              textAlign: "center",
-              position: "relative",
-              zIndex: 1,
-            }}
-          >
-            <div
+          <div>
+            <h2
               style={{
-                backgroundColor: "rgba(255, 255, 255, 0.12)",
-                borderRadius: "12px",
-                padding: "8px 6px",
+                fontSize: "20px",
+                fontWeight: "900",
+                color: "#0f172a",
+                margin: 0,
+                letterSpacing: "-0.3px",
               }}
             >
-              <div
-                style={{
-                  fontSize: "15px",
-                  fontWeight: "900",
-                  color: "#ffffff",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: "4px",
-                }}
-              >
-                <MdInventory2 size={16} color="#e9d5ff" />
-                <span>{totalParcels}</span>
-              </div>
-              <div
-                style={{
-                  fontSize: "11px",
-                  color: "#d8b4fe",
-                  fontWeight: "600",
-                  marginTop: "2px",
-                }}
-              >
-                {t.totalParcelsStat}
-              </div>
-            </div>
-
-            <div
-              style={{
-                backgroundColor: "rgba(255, 255, 255, 0.12)",
-                borderRadius: "12px",
-                padding: "8px 6px",
-              }}
-            >
-              <div
-                style={{
-                  fontSize: "15px",
-                  fontWeight: "900",
-                  color: "#ffea60",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: "4px",
-                }}
-              >
-                <MdAttachMoney size={16} color="#ffea60" />
-                <span>${balanceAmount.toFixed(2)}</span>
-              </div>
-              <div
-                style={{
-                  fontSize: "11px",
-                  color: "#d8b4fe",
-                  fontWeight: "600",
-                  marginTop: "2px",
-                }}
-              >
-                {t.balanceStat}
-              </div>
+              {storeName}
+            </h2>
+            <div style={{ fontSize: "13px", color: "#64748b", fontWeight: "600", marginTop: "2px" }}>
+              {storePhone}
             </div>
           </div>
         </div>
 
-        {/* 3. Settings & Preferences Menu Card */}
+        {/* 3. Screen 18 Menu Options */}
         <div
           style={{
             backgroundColor: "#ffffff",
             borderRadius: "20px",
-            boxShadow: "0 3px 16px rgba(15, 23, 42, 0.03)",
-            border: "1px solid #f1f5f9",
+            border: "1px solid #e2e8f0",
+            boxShadow: "0 3px 14px rgba(0,0,0,0.02)",
             overflow: "hidden",
+            display: "flex",
+            flexDirection: "column",
           }}
         >
-          {/* Row 1: Shop Information */}
+          {/* 1. Merchant Information */}
           <div
-            onClick={() => setShowShopDetailModal(true)}
+            onClick={() => setShowInfoModal(true)}
             style={{
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
               padding: "16px 18px",
               cursor: "pointer",
-              borderBottom: "1px solid #f8fafc",
-              transition: "background-color 0.15s ease",
+              borderBottom: "1px solid #f1f5f9",
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
@@ -559,36 +244,33 @@ export default function MerchantProfilePage() {
                 style={{
                   width: "40px",
                   height: "40px",
-                  borderRadius: "50%",
-                  backgroundColor: "#f3e8ff",
-                  color: "#581c87",
+                  borderRadius: "12px",
+                  backgroundColor: "#eff6ff",
+                  color: "#2563eb",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  flexShrink: 0,
                 }}
               >
-                <MdStorefront size={22} />
+                <MdStore size={22} />
               </div>
               <span style={{ fontSize: "15px", fontWeight: "700", color: "#1e293b" }}>
-                {t.myShop}
+                {t.merchantInfo}
               </span>
             </div>
-
-            <MdChevronRight size={22} color="#cbd5e1" />
+            <MdChevronRight size={22} color="#94a3b8" />
           </div>
 
-          {/* Row 2: Change Password */}
+          {/* 2. Language */}
           <div
-            onClick={() => setShowPasswordModal(true)}
+            onClick={() => setShowLanguageModal(true)}
             style={{
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
               padding: "16px 18px",
               cursor: "pointer",
-              borderBottom: "1px solid #f8fafc",
-              transition: "background-color 0.15s ease",
+              borderBottom: "1px solid #f1f5f9",
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
@@ -596,46 +278,12 @@ export default function MerchantProfilePage() {
                 style={{
                   width: "40px",
                   height: "40px",
-                  borderRadius: "50%",
-                  backgroundColor: "#f3e8ff",
-                  color: "#7e22ce",
+                  borderRadius: "12px",
+                  backgroundColor: "#f0fdf4",
+                  color: "#16a34a",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  flexShrink: 0,
-                }}
-              >
-                <MdLock size={20} />
-              </div>
-              <span style={{ fontSize: "15px", fontWeight: "700", color: "#1e293b" }}>
-                {t.security}
-              </span>
-            </div>
-
-            <MdChevronRight size={22} color="#cbd5e1" />
-          </div>
-
-          {/* Row 3: App Language Switcher */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              padding: "13px 18px",
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
-              <div
-                style={{
-                  width: "40px",
-                  height: "40px",
-                  borderRadius: "50%",
-                  backgroundColor: "#ecfdf5",
-                  color: "#10b981",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  flexShrink: 0,
                 }}
               >
                 <MdTranslate size={20} />
@@ -644,793 +292,583 @@ export default function MerchantProfilePage() {
                 {t.language}
               </span>
             </div>
-
-            {/* Language Segmented Switch */}
-            <div
-              style={{
-                backgroundColor: "#f1f5f9",
-                borderRadius: "10px",
-                padding: "2px",
-                display: "flex",
-                gap: "2px",
-              }}
-            >
-              <button
-                onClick={() => setLang("km")}
+            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+              <span
                 style={{
-                  background: lang === "km" ? "#581c87" : "transparent",
-                  border: "none",
-                  color: lang === "km" ? "#ffea60" : "#64748b",
-                  padding: "5px 12px",
-                  fontSize: "11.5px",
-                  fontWeight: "800",
+                  fontSize: "13px",
+                  fontWeight: "700",
+                  color: "#2563eb",
+                  backgroundColor: "#eff6ff",
+                  padding: "3px 8px",
                   borderRadius: "8px",
-                  cursor: "pointer",
-                  transition: "all 0.15s ease",
                 }}
               >
-                ខ្មែរ
-              </button>
-              <button
-                onClick={() => setLang("en")}
-                style={{
-                  background: lang === "en" ? "#581c87" : "transparent",
-                  border: "none",
-                  color: lang === "en" ? "#ffea60" : "#64748b",
-                  padding: "5px 12px",
-                  fontSize: "11.5px",
-                  fontWeight: "800",
-                  borderRadius: "8px",
-                  cursor: "pointer",
-                  transition: "all 0.15s ease",
-                }}
-              >
-                EN
-              </button>
+                {lang === "km" ? "ភាសាខ្មែរ" : "English"}
+              </span>
+              <MdChevronRight size={22} color="#94a3b8" />
             </div>
+          </div>
+
+          {/* 3. Change Password */}
+          <div
+            onClick={() => setShowPasswordModal(true)}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              padding: "16px 18px",
+              cursor: "pointer",
+              borderBottom: "1px solid #f1f5f9",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+              <div
+                style={{
+                  width: "40px",
+                  height: "40px",
+                  borderRadius: "12px",
+                  backgroundColor: "#faf5ff",
+                  color: "#9333ea",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <MdLock size={20} />
+              </div>
+              <span style={{ fontSize: "15px", fontWeight: "700", color: "#1e293b" }}>
+                {t.changePassword}
+              </span>
+            </div>
+            <MdChevronRight size={22} color="#94a3b8" />
+          </div>
+
+          {/* 4. Contact E-Express */}
+          <div
+            onClick={() => setShowContactModal(true)}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              padding: "16px 18px",
+              cursor: "pointer",
+              borderBottom: "1px solid #f1f5f9",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+              <div
+                style={{
+                  width: "40px",
+                  height: "40px",
+                  borderRadius: "12px",
+                  backgroundColor: "#f0f9ff",
+                  color: "#0284c7",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <MdHeadsetMic size={20} />
+              </div>
+              <span style={{ fontSize: "15px", fontWeight: "700", color: "#1e293b" }}>
+                {t.contactSupport}
+              </span>
+            </div>
+            <MdChevronRight size={22} color="#94a3b8" />
+          </div>
+
+          {/* 5. Terms & Conditions */}
+          <div
+            onClick={() => setShowTermsModal(true)}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              padding: "16px 18px",
+              cursor: "pointer",
+              borderBottom: "1px solid #f1f5f9",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+              <div
+                style={{
+                  width: "40px",
+                  height: "40px",
+                  borderRadius: "12px",
+                  backgroundColor: "#f8fafc",
+                  color: "#64748b",
+                  border: "1px solid #e2e8f0",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <MdDescription size={20} />
+              </div>
+              <span style={{ fontSize: "15px", fontWeight: "700", color: "#1e293b" }}>
+                {t.terms}
+              </span>
+            </div>
+            <MdChevronRight size={22} color="#94a3b8" />
+          </div>
+
+          {/* 6. Privacy Policy */}
+          <div
+            onClick={() => setShowPrivacyModal(true)}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              padding: "16px 18px",
+              cursor: "pointer",
+              borderBottom: "1px solid #f1f5f9",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+              <div
+                style={{
+                  width: "40px",
+                  height: "40px",
+                  borderRadius: "12px",
+                  backgroundColor: "#f8fafc",
+                  color: "#64748b",
+                  border: "1px solid #e2e8f0",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <MdSecurity size={20} />
+              </div>
+              <span style={{ fontSize: "15px", fontWeight: "700", color: "#1e293b" }}>
+                {t.privacy}
+              </span>
+            </div>
+            <MdChevronRight size={22} color="#94a3b8" />
+          </div>
+
+          {/* 7. Delete Account */}
+          <div
+            onClick={() => alert("Please contact E-Express administrator to request account deletion.")}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              padding: "16px 18px",
+              cursor: "pointer",
+              borderBottom: "1px solid #f1f5f9",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+              <div
+                style={{
+                  width: "40px",
+                  height: "40px",
+                  borderRadius: "12px",
+                  backgroundColor: "#fef2f2",
+                  color: "#ef4444",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <MdDeleteOutline size={20} />
+              </div>
+              <span style={{ fontSize: "15px", fontWeight: "700", color: "#dc2626" }}>
+                {t.deleteAccount}
+              </span>
+            </div>
+            <MdChevronRight size={22} color="#fca5a5" />
+          </div>
+
+          {/* 8. Log Out */}
+          <div
+            onClick={() => setShowLogoutModal(true)}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              padding: "16px 18px",
+              cursor: "pointer",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+              <div
+                style={{
+                  width: "40px",
+                  height: "40px",
+                  borderRadius: "12px",
+                  backgroundColor: "#fee2e2",
+                  color: "#ef4444",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <MdLogout size={20} />
+              </div>
+              <span style={{ fontSize: "15px", fontWeight: "800", color: "#ef4444" }}>
+                {t.logout}
+              </span>
+            </div>
+            <MdChevronRight size={22} color="#fca5a5" />
           </div>
         </div>
 
-        {/* 4. Standalone Log Out Button Card */}
-        <button
-          onClick={handleLogout}
+        {/* 4. App Version */}
+        <div style={{ textAlign: "center", color: "#94a3b8", fontSize: "12px", fontWeight: "600" }}>
+          {t.appVersion}
+        </div>
+      </div>
+
+      {/* --- MODAL 1: Merchant Information --- */}
+      {showInfoModal && (
+        <div
           style={{
-            marginTop: "2px",
-            backgroundColor: "#ffffff",
-            borderRadius: "20px",
-            border: "1px solid #fee2e2",
-            padding: "14px 18px",
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "rgba(15, 23, 42, 0.6)",
+            backdropFilter: "blur(4px)",
             display: "flex",
             alignItems: "center",
-            justifyContent: "space-between",
-            cursor: "pointer",
-            width: "100%",
-            fontFamily: "inherit",
-            boxShadow: "0 2px 8px rgba(239, 68, 68, 0.04)",
+            justifyContent: "center",
+            zIndex: 1000,
+            padding: "20px",
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+          <div
+            style={{
+              backgroundColor: "#ffffff",
+              borderRadius: "24px",
+              padding: "24px",
+              width: "100%",
+              maxWidth: "360px",
+              boxShadow: "0 20px 40px rgba(0,0,0,0.2)",
+              display: "flex",
+              flexDirection: "column",
+              gap: "14px",
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <h3 style={{ margin: 0, fontSize: "17px", fontWeight: "800", color: "#0f172a" }}>
+                {t.merchantInfo}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowInfoModal(false)}
+                style={{ background: "none", border: "none", cursor: "pointer", color: "#64748b" }}
+              >
+                <MdClose size={22} />
+              </button>
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: "10px", fontSize: "13.5px" }}>
+              <div>
+                <span style={{ color: "#64748b", fontSize: "12px" }}>Store Name</span>
+                <div style={{ fontWeight: "800", color: "#0f172a" }}>{storeName}</div>
+              </div>
+              <div>
+                <span style={{ color: "#64748b", fontSize: "12px" }}>Phone Number</span>
+                <div style={{ fontWeight: "800", color: "#0f172a" }}>{storePhone}</div>
+              </div>
+              <div>
+                <span style={{ color: "#64748b", fontSize: "12px" }}>Store Pickup Address</span>
+                <div style={{ fontWeight: "700", color: "#0f172a" }}>{storeAddress}</div>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowInfoModal(false)}
+              style={{
+                width: "100%",
+                padding: "12px",
+                backgroundColor: "#2563eb",
+                color: "#ffffff",
+                border: "none",
+                borderRadius: "12px",
+                fontSize: "13.5px",
+                fontWeight: "700",
+                cursor: "pointer",
+                marginTop: "6px",
+              }}
+            >
+              {t.close}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* --- MODAL 2: Language Modal --- */}
+      {showLanguageModal && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "rgba(15, 23, 42, 0.6)",
+            backdropFilter: "blur(4px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+            padding: "20px",
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: "#ffffff",
+              borderRadius: "24px",
+              padding: "24px",
+              width: "100%",
+              maxWidth: "340px",
+              boxShadow: "0 20px 40px rgba(0,0,0,0.2)",
+              display: "flex",
+              flexDirection: "column",
+              gap: "14px",
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <h3 style={{ margin: 0, fontSize: "17px", fontWeight: "800", color: "#0f172a" }}>
+                Select Language
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowLanguageModal(false)}
+                style={{ background: "none", border: "none", cursor: "pointer", color: "#64748b" }}
+              >
+                <MdClose size={22} />
+              </button>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                setLang("en");
+                setShowLanguageModal(false);
+              }}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                padding: "14px",
+                borderRadius: "14px",
+                border: lang === "en" ? "2px solid #2563eb" : "1.5px solid #e2e8f0",
+                backgroundColor: lang === "en" ? "#eff6ff" : "#ffffff",
+                cursor: "pointer",
+              }}
+            >
+              <span style={{ fontSize: "15px", fontWeight: "700" }}>🇬🇧 English</span>
+              {lang === "en" && <MdCheckCircle size={20} color="#2563eb" />}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setLang("km");
+                setShowLanguageModal(false);
+              }}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                padding: "14px",
+                borderRadius: "14px",
+                border: lang === "km" ? "2px solid #2563eb" : "1.5px solid #e2e8f0",
+                backgroundColor: lang === "km" ? "#eff6ff" : "#ffffff",
+                cursor: "pointer",
+              }}
+            >
+              <span style={{ fontSize: "15px", fontWeight: "700" }}>🇰🇭 ភាសាខ្មែរ (Khmer)</span>
+              {lang === "km" && <MdCheckCircle size={20} color="#2563eb" />}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* --- MODAL 3: Contact E-Express --- */}
+      {showContactModal && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "rgba(15, 23, 42, 0.6)",
+            backdropFilter: "blur(4px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+            padding: "20px",
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: "#ffffff",
+              borderRadius: "24px",
+              padding: "24px",
+              width: "100%",
+              maxWidth: "340px",
+              boxShadow: "0 20px 40px rgba(0,0,0,0.2)",
+              display: "flex",
+              flexDirection: "column",
+              gap: "14px",
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <h3 style={{ margin: 0, fontSize: "17px", fontWeight: "800", color: "#0f172a" }}>
+                {t.contactSupport}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowContactModal(false)}
+                style={{ background: "none", border: "none", cursor: "pointer", color: "#64748b" }}
+              >
+                <MdClose size={22} />
+              </button>
+            </div>
+
+            <a
+              href="tel:+85523888999"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "12px",
+                padding: "12px",
+                borderRadius: "14px",
+                backgroundColor: "#eff6ff",
+                color: "#2563eb",
+                textDecoration: "none",
+                fontWeight: "700",
+              }}
+            >
+              <MdPhone size={22} />
+              <span>Hotline: +855 23 888 999</span>
+            </a>
+
+            <a
+              href="https://t.me/eexpress_support"
+              target="_blank"
+              rel="noreferrer"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "12px",
+                padding: "12px",
+                borderRadius: "14px",
+                backgroundColor: "#f0f9ff",
+                color: "#0284c7",
+                textDecoration: "none",
+                fontWeight: "700",
+              }}
+            >
+              <FaTelegram size={22} />
+              <span>Telegram: @eexpress_support</span>
+            </a>
+          </div>
+        </div>
+      )}
+
+      {/* --- MODAL 4: Log Out Confirmation Dialog --- */}
+      {showLogoutModal && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "rgba(15, 23, 42, 0.6)",
+            backdropFilter: "blur(4px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+            padding: "20px",
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: "#ffffff",
+              borderRadius: "24px",
+              padding: "24px",
+              width: "100%",
+              maxWidth: "340px",
+              boxShadow: "0 20px 40px rgba(0,0,0,0.2)",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              textAlign: "center",
+              gap: "14px",
+            }}
+          >
             <div
               style={{
-                width: "38px",
-                height: "38px",
+                width: "50px",
+                height: "50px",
                 borderRadius: "50%",
-                backgroundColor: "#fef2f2",
+                backgroundColor: "#fee2e2",
                 color: "#ef4444",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                flexShrink: 0,
               }}
             >
-              <MdLogout size={19} />
+              <MdLogout size={26} />
             </div>
-            <span style={{ fontSize: "15px", fontWeight: "800", color: "#dc2626" }}>
+
+            <h3 style={{ margin: 0, fontSize: "18px", fontWeight: "800", color: "#0f172a" }}>
               {t.logout}
-            </span>
-          </div>
+            </h3>
 
-          <MdChevronRight size={22} color="#fca5a5" />
-        </button>
-      </div>
+            <p style={{ margin: 0, fontSize: "13.5px", color: "#64748b", lineHeight: "1.5" }}>
+              {t.logoutConfirm}
+            </p>
 
-      {/* --- MODAL 1: Shop Information Details --- */}
-      {showShopDetailModal && (
-        <div
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: "rgba(15, 23, 42, 0.55)",
-            backdropFilter: "blur(4px)",
-            zIndex: 9999,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: "16px",
-          }}
-        >
-          <div
-            style={{
-              backgroundColor: "#ffffff",
-              borderRadius: "24px",
-              width: "100%",
-              maxWidth: "380px",
-              padding: "20px",
-              boxShadow: "0 20px 40px rgba(0,0,0,0.2)",
-              border: "1px solid #f1f5f9",
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                marginBottom: "16px",
-              }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                <div
-                  style={{
-                    width: "36px",
-                    height: "36px",
-                    borderRadius: "12px",
-                    backgroundColor: "#f3e8ff",
-                    color: "#581c87",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  <MdStorefront size={20} />
-                </div>
-                <h3 style={{ fontSize: "16px", fontWeight: "900", color: "#0f172a", margin: 0 }}>
-                  {t.myShop}
-                </h3>
-              </div>
+            <div style={{ display: "flex", gap: "8px", width: "100%", marginTop: "6px" }}>
               <button
-                onClick={() => setShowShopDetailModal(false)}
-                style={{
-                  width: "32px",
-                  height: "32px",
-                  borderRadius: "50%",
-                  backgroundColor: "#f1f5f9",
-                  border: "none",
-                  color: "#64748b",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  cursor: "pointer",
-                }}
-              >
-                <MdClose size={18} />
-              </button>
-            </div>
-
-            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-              <div
-                style={{
-                  background: "#f8fafc",
-                  padding: "12px 14px",
-                  borderRadius: "14px",
-                  border: "1px solid #f1f5f9",
-                }}
-              >
-                <div style={{ fontSize: "11px", color: "#64748b", fontWeight: "700" }}>
-                  {lang === "km" ? "ឈ្មោះហាង" : "Shop Name"}
-                </div>
-                <div
-                  style={{
-                    fontSize: "14px",
-                    fontWeight: "800",
-                    color: "#0f172a",
-                    marginTop: "2px",
-                  }}
-                >
-                  {displayName}
-                </div>
-              </div>
-
-              <div
-                style={{
-                  background: "#f8fafc",
-                  padding: "12px 14px",
-                  borderRadius: "14px",
-                  border: "1px solid #f1f5f9",
-                }}
-              >
-                <div style={{ fontSize: "11px", color: "#64748b", fontWeight: "700" }}>
-                  {t.phoneLabel}
-                </div>
-                <div
-                  style={{
-                    fontSize: "14px",
-                    fontWeight: "800",
-                    color: "#0f172a",
-                    marginTop: "2px",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "6px",
-                  }}
-                >
-                  <MdPhone size={16} color="#581c87" /> {phoneOrId}
-                </div>
-              </div>
-
-              <div
-                style={{
-                  background: "#f8fafc",
-                  padding: "12px 14px",
-                  borderRadius: "14px",
-                  border: "1px solid #f1f5f9",
-                }}
-              >
-                <div style={{ fontSize: "11px", color: "#64748b", fontWeight: "700" }}>
-                  {t.emailLabel}
-                </div>
-                <div
-                  style={{
-                    fontSize: "14px",
-                    fontWeight: "800",
-                    color: "#0f172a",
-                    marginTop: "2px",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "6px",
-                  }}
-                >
-                  <MdEmail size={16} color="#7e22ce" /> {profile?.email || "—"}
-                </div>
-              </div>
-
-              <div
-                style={{
-                  background: "#f8fafc",
-                  padding: "12px 14px",
-                  borderRadius: "14px",
-                  border: "1px solid #f1f5f9",
-                }}
-              >
-                <div style={{ fontSize: "11px", color: "#64748b", fontWeight: "700" }}>
-                  {t.addressLabel}
-                </div>
-                <div
-                  style={{
-                    fontSize: "13.5px",
-                    fontWeight: "700",
-                    color: "#0f172a",
-                    marginTop: "2px",
-                    display: "flex",
-                    alignItems: "flex-start",
-                    gap: "6px",
-                  }}
-                >
-                  <MdLocationOn
-                    size={16}
-                    color="#e11d48"
-                    style={{ marginTop: "2px", flexShrink: 0 }}
-                  />
-                  <span>{profile?.address || branchName}</span>
-                </div>
-              </div>
-            </div>
-
-            <div style={{ display: "flex", gap: "10px", marginTop: "18px" }}>
-              <button
-                onClick={() => {
-                  setShowShopDetailModal(false);
-                  openEditShopModal();
-                }}
+                type="button"
+                onClick={() => setShowLogoutModal(false)}
                 style={{
                   flex: 1,
-                  background: "linear-gradient(135deg, #581c87 0%, #7e22ce 100%)",
-                  color: "#ffffff",
-                  border: "none",
-                  borderRadius: "14px",
                   padding: "12px",
-                  fontSize: "13.5px",
-                  fontWeight: "800",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: "6px",
-                  boxShadow: "0 4px 14px rgba(88, 28, 135, 0.25)",
-                }}
-              >
-                <MdEdit size={16} color="#ffea60" /> {t.editBtn}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* --- MODAL 2: Edit Shop Profile --- */}
-      {showEditShopModal && (
-        <div
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: "rgba(15, 23, 42, 0.55)",
-            backdropFilter: "blur(4px)",
-            zIndex: 9999,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: "16px",
-          }}
-        >
-          <div
-            style={{
-              backgroundColor: "#ffffff",
-              borderRadius: "24px",
-              width: "100%",
-              maxWidth: "380px",
-              padding: "20px",
-              boxShadow: "0 20px 40px rgba(0,0,0,0.2)",
-              border: "1px solid #f1f5f9",
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                marginBottom: "16px",
-              }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                <div
-                  style={{
-                    width: "36px",
-                    height: "36px",
-                    borderRadius: "12px",
-                    backgroundColor: "#f3e8ff",
-                    color: "#581c87",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  <MdEdit size={18} />
-                </div>
-                <h3 style={{ fontSize: "16px", fontWeight: "900", color: "#0f172a", margin: 0 }}>
-                  {t.editBtn}
-                </h3>
-              </div>
-              <button
-                onClick={() => setShowEditShopModal(false)}
-                style={{
-                  width: "32px",
-                  height: "32px",
-                  borderRadius: "50%",
                   backgroundColor: "#f1f5f9",
+                  color: "#475569",
                   border: "none",
-                  color: "#64748b",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
+                  borderRadius: "12px",
+                  fontSize: "14px",
+                  fontWeight: "700",
                   cursor: "pointer",
                 }}
               >
-                <MdClose size={18} />
+                {t.cancel}
               </button>
-            </div>
-
-            {editError && (
-              <div
-                style={{
-                  backgroundColor: "#fef2f2",
-                  border: "1px solid #fecaca",
-                  color: "#dc2626",
-                  borderRadius: "12px",
-                  padding: "10px 14px",
-                  fontSize: "12px",
-                  fontWeight: "700",
-                  marginBottom: "14px",
-                }}
-              >
-                ⚠️ {editError}
-              </div>
-            )}
-            {editSuccess && (
-              <div
-                style={{
-                  backgroundColor: "#f0fdf4",
-                  border: "1px solid #bbf7d0",
-                  color: "#16a34a",
-                  borderRadius: "12px",
-                  padding: "10px 14px",
-                  fontSize: "12px",
-                  fontWeight: "700",
-                  marginBottom: "14px",
-                }}
-              >
-                ✅ {editSuccess}
-              </div>
-            )}
-
-            <form
-              onSubmit={handleEditShopSubmit}
-              style={{ display: "flex", flexDirection: "column", gap: "12px" }}
-            >
-              <div>
-                <label
-                  style={{
-                    fontSize: "12px",
-                    fontWeight: "700",
-                    color: "#475569",
-                    display: "block",
-                    marginBottom: "4px",
-                  }}
-                >
-                  {lang === "km" ? "ឈ្មោះហាង" : "Shop Name"}
-                </label>
-                <input
-                  type="text"
-                  value={editName}
-                  onChange={(e) => setEditName(e.target.value)}
-                  required
-                  style={{
-                    width: "100%",
-                    padding: "11px 12px",
-                    borderRadius: "12px",
-                    border: "1.5px solid #cbd5e1",
-                    fontSize: "13.5px",
-                    outline: "none",
-                    backgroundColor: "#f8fafc",
-                    boxSizing: "border-box",
-                  }}
-                />
-              </div>
-              <div>
-                <label
-                  style={{
-                    fontSize: "12px",
-                    fontWeight: "700",
-                    color: "#475569",
-                    display: "block",
-                    marginBottom: "4px",
-                  }}
-                >
-                  {t.phoneLabel}
-                </label>
-                <input
-                  type="text"
-                  value={editPhone}
-                  onChange={(e) => setEditPhone(e.target.value)}
-                  required
-                  style={{
-                    width: "100%",
-                    padding: "11px 12px",
-                    borderRadius: "12px",
-                    border: "1.5px solid #cbd5e1",
-                    fontSize: "13.5px",
-                    outline: "none",
-                    backgroundColor: "#f8fafc",
-                    boxSizing: "border-box",
-                  }}
-                />
-              </div>
-              <div>
-                <label
-                  style={{
-                    fontSize: "12px",
-                    fontWeight: "700",
-                    color: "#475569",
-                    display: "block",
-                    marginBottom: "4px",
-                  }}
-                >
-                  {t.emailLabel}
-                </label>
-                <input
-                  type="email"
-                  value={editEmail}
-                  onChange={(e) => setEditEmail(e.target.value)}
-                  style={{
-                    width: "100%",
-                    padding: "11px 12px",
-                    borderRadius: "12px",
-                    border: "1.5px solid #cbd5e1",
-                    fontSize: "13.5px",
-                    outline: "none",
-                    backgroundColor: "#f8fafc",
-                    boxSizing: "border-box",
-                  }}
-                />
-              </div>
-              <div>
-                <label
-                  style={{
-                    fontSize: "12px",
-                    fontWeight: "700",
-                    color: "#475569",
-                    display: "block",
-                    marginBottom: "4px",
-                  }}
-                >
-                  {t.addressLabel}
-                </label>
-                <input
-                  type="text"
-                  value={editAddress}
-                  onChange={(e) => setEditAddress(e.target.value)}
-                  style={{
-                    width: "100%",
-                    padding: "11px 12px",
-                    borderRadius: "12px",
-                    border: "1.5px solid #cbd5e1",
-                    fontSize: "13.5px",
-                    outline: "none",
-                    backgroundColor: "#f8fafc",
-                    boxSizing: "border-box",
-                  }}
-                />
-              </div>
 
               <button
-                type="submit"
-                disabled={editSubmitting}
+                type="button"
+                onClick={handleLogout}
                 style={{
-                  marginTop: "6px",
-                  width: "100%",
-                  background: "linear-gradient(135deg, #581c87 0%, #7e22ce 100%)",
+                  flex: 1,
+                  padding: "12px",
+                  backgroundColor: "#ef4444",
                   color: "#ffffff",
                   border: "none",
-                  borderRadius: "14px",
-                  padding: "13px",
+                  borderRadius: "12px",
                   fontSize: "14px",
-                  fontWeight: "800",
-                  cursor: editSubmitting ? "not-allowed" : "pointer",
-                  opacity: editSubmitting ? 0.7 : 1,
-                  boxShadow: "0 4px 14px rgba(88, 28, 135, 0.25)",
-                }}
-              >
-                {editSubmitting ? (lang === "km" ? "កំពុងរក្សាទុក..." : "Saving...") : t.saveBtn}
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* --- MODAL 3: Change Password --- */}
-      {showPasswordModal && (
-        <div
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: "rgba(15, 23, 42, 0.55)",
-            backdropFilter: "blur(4px)",
-            zIndex: 9999,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: "16px",
-          }}
-        >
-          <div
-            style={{
-              backgroundColor: "#ffffff",
-              borderRadius: "24px",
-              width: "100%",
-              maxWidth: "380px",
-              padding: "20px",
-              boxShadow: "0 20px 40px rgba(0,0,0,0.2)",
-              border: "1px solid #f1f5f9",
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                marginBottom: "16px",
-              }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                <div
-                  style={{
-                    width: "36px",
-                    height: "36px",
-                    borderRadius: "12px",
-                    backgroundColor: "#f3e8ff",
-                    color: "#581c87",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  <MdLock size={20} />
-                </div>
-                <h3 style={{ fontSize: "16px", fontWeight: "900", color: "#0f172a", margin: 0 }}>
-                  {t.security}
-                </h3>
-              </div>
-              <button
-                onClick={() => setShowPasswordModal(false)}
-                style={{
-                  width: "32px",
-                  height: "32px",
-                  borderRadius: "50%",
-                  backgroundColor: "#f1f5f9",
-                  border: "none",
-                  color: "#64748b",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
+                  fontWeight: "700",
                   cursor: "pointer",
                 }}
               >
-                <MdClose size={18} />
+                {t.logout}
               </button>
             </div>
-
-            {passwordError && (
-              <div
-                style={{
-                  backgroundColor: "#fef2f2",
-                  border: "1px solid #fecaca",
-                  color: "#dc2626",
-                  borderRadius: "12px",
-                  padding: "10px 14px",
-                  fontSize: "12px",
-                  fontWeight: "700",
-                  marginBottom: "14px",
-                }}
-              >
-                ⚠️ {passwordError}
-              </div>
-            )}
-            {passwordSuccess && (
-              <div
-                style={{
-                  backgroundColor: "#f0fdf4",
-                  border: "1px solid #bbf7d0",
-                  color: "#16a34a",
-                  borderRadius: "12px",
-                  padding: "10px 14px",
-                  fontSize: "12px",
-                  fontWeight: "700",
-                  marginBottom: "14px",
-                }}
-              >
-                ✅ {passwordSuccess}
-              </div>
-            )}
-
-            <form
-              onSubmit={handleChangePasswordSubmit}
-              style={{ display: "flex", flexDirection: "column", gap: "12px" }}
-            >
-              <div>
-                <label
-                  style={{
-                    fontSize: "12px",
-                    fontWeight: "700",
-                    color: "#475569",
-                    display: "block",
-                    marginBottom: "4px",
-                  }}
-                >
-                  {t.currentPasswordLabel}
-                </label>
-                <input
-                  type="password"
-                  value={oldPassword}
-                  onChange={(e) => setOldPassword(e.target.value)}
-                  placeholder="••••••••"
-                  required
-                  style={{
-                    width: "100%",
-                    padding: "11px 12px",
-                    borderRadius: "12px",
-                    border: "1.5px solid #cbd5e1",
-                    fontSize: "13.5px",
-                    outline: "none",
-                    backgroundColor: "#f8fafc",
-                    boxSizing: "border-box",
-                  }}
-                />
-              </div>
-              <div>
-                <label
-                  style={{
-                    fontSize: "12px",
-                    fontWeight: "700",
-                    color: "#475569",
-                    display: "block",
-                    marginBottom: "4px",
-                  }}
-                >
-                  {t.newPasswordLabel}
-                </label>
-                <input
-                  type="password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="••••••••"
-                  required
-                  minLength={6}
-                  style={{
-                    width: "100%",
-                    padding: "11px 12px",
-                    borderRadius: "12px",
-                    border: "1.5px solid #cbd5e1",
-                    fontSize: "13.5px",
-                    outline: "none",
-                    backgroundColor: "#f8fafc",
-                    boxSizing: "border-box",
-                  }}
-                />
-              </div>
-              <div>
-                <label
-                  style={{
-                    fontSize: "12px",
-                    fontWeight: "700",
-                    color: "#475569",
-                    display: "block",
-                    marginBottom: "4px",
-                  }}
-                >
-                  {t.confirmPasswordLabel}
-                </label>
-                <input
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="••••••••"
-                  required
-                  minLength={6}
-                  style={{
-                    width: "100%",
-                    padding: "11px 12px",
-                    borderRadius: "12px",
-                    border: "1.5px solid #cbd5e1",
-                    fontSize: "13.5px",
-                    outline: "none",
-                    backgroundColor: "#f8fafc",
-                    boxSizing: "border-box",
-                  }}
-                />
-              </div>
-
-              <button
-                type="submit"
-                disabled={passwordSubmitting}
-                style={{
-                  marginTop: "6px",
-                  width: "100%",
-                  background: "linear-gradient(135deg, #581c87 0%, #7e22ce 100%)",
-                  color: "#ffffff",
-                  border: "none",
-                  borderRadius: "14px",
-                  padding: "13px",
-                  fontSize: "14px",
-                  fontWeight: "800",
-                  cursor: passwordSubmitting ? "not-allowed" : "pointer",
-                  opacity: passwordSubmitting ? 0.7 : 1,
-                  boxShadow: "0 4px 14px rgba(88, 28, 135, 0.25)",
-                }}
-              >
-                {passwordSubmitting
-                  ? lang === "km"
-                    ? "កំពុងផ្លាស់ប្តូរ..."
-                    : "Changing..."
-                  : lang === "km"
-                    ? "រក្សាទុកលេខសម្ងាត់ថ្មី"
-                    : "Save New Password"}
-              </button>
-            </form>
           </div>
         </div>
       )}

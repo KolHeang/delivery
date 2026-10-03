@@ -133,6 +133,7 @@ export default function StaffPage() {
                 <thead>
                   <tr>
                     <th>{t('colNo') || 'ល.រ'}</th>
+                    <th>{t('code') || 'កូដ'}</th>
                     <th>{t('name') || 'ឈ្មោះ'}</th>
                     <th>{t('phone') || 'ទូរស័ព្ទ'}</th>
                     <th>{t('email') || 'អ៊ីមែល'}</th>
@@ -148,13 +149,13 @@ export default function StaffPage() {
                 <tbody>
                   {loading ? (
                     <tr>
-                      <td colSpan={11} style={{ padding: '40px 0', textAlign: 'center' }}>
+                      <td colSpan={12} style={{ padding: '40px 0', textAlign: 'center' }}>
                         <div className="loading-wrapper"><div className="spinner" /></div>
                       </td>
                     </tr>
                   ) : filtered.length === 0 ? (
                     <tr>
-                      <td colSpan={11} style={{ padding: '36px 20px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
+                      <td colSpan={12} style={{ padding: '36px 20px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
                         {t('noDataFound') || 'គ្មានទិន្នន័យ'}
                       </td>
                     </tr>
@@ -169,6 +170,24 @@ export default function StaffPage() {
                         <tr key={d.id}>
                           <td style={{ color: 'var(--text-muted)', fontSize: 12 }}>
                             {(currentPage - 1) * pageSize + idx + 1}
+                          </td>
+                          <td>
+                            {d.code ? (
+                              <span style={{
+                                backgroundColor: '#f1f5f9',
+                                color: '#475569',
+                                fontWeight: 700,
+                                fontSize: '12px',
+                                padding: '3px 8px',
+                                borderRadius: '6px',
+                                border: '1px solid #e2e8f0',
+                                display: 'inline-block'
+                              }}>
+                                {d.code}
+                              </span>
+                            ) : (
+                              <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>—</span>
+                            )}
                           </td>
                           <td>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>

@@ -27,6 +27,11 @@ export class UsersService implements OnModuleInit {
         FROM saas_subscriptions s 
         WHERE u.id = s.user_id AND (u.tenant_id IS NULL OR u.tenant_subdomain IS NULL);
       `);
+      await this.repo.query(`
+        UPDATE users 
+        SET code = CASE WHEN is_driver = true THEN 'DRV-' || LPAD(id::text, 4, '0') ELSE 'STF-' || LPAD(id::text, 4, '0') END 
+        WHERE code IS NULL OR code = '';
+      `);
     } catch (e) {
       // ignore
     }
@@ -55,7 +60,7 @@ export class UsersService implements OnModuleInit {
     if (query?.search) {
       const term = `%${query.search.trim()}%`;
       qb.andWhere(
-        '(user.name ILIKE :term OR user.nameKh ILIKE :term OR user.phone ILIKE :term OR user.email ILIKE :term)',
+        '(user.code ILIKE :term OR user.name ILIKE :term OR user.nameKh ILIKE :term OR user.phone ILIKE :term OR user.email ILIKE :term)',
         { term },
       );
     }
@@ -144,8 +149,20 @@ export class UsersService implements OnModuleInit {
 
     const isActive = dto.isActive !== undefined ? dto.isActive : (dto.active !== undefined ? dto.active : true);
 
+    let code = dto.code?.trim();
+    if (!code) {
+      const prefix = isDriver ? 'DRV' : 'STF';
+      const maxUser = await this.repo
+        .createQueryBuilder('u')
+        .select('MAX(u.id)', 'maxId')
+        .getRawOne();
+      const nextId = (Number(maxUser?.maxId) || 0) + 1;
+      code = `${prefix}-${String(nextId).padStart(4, '0')}`;
+    }
+
     const payload: any = {
       ...dto,
+      code,
       password: hashed,
       roleId,
       isActive,

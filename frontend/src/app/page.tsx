@@ -2,14 +2,23 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { isAuthenticated } from '@/lib/auth';
+import { isAuthenticated, getUser } from '@/lib/auth';
 
 export default function RootPage() {
   const router = useRouter();
 
   useEffect(() => {
     if (isAuthenticated()) {
-      router.replace('/dashboard');
+      const user = getUser();
+      if (user?.role === 'driver') {
+        router.replace('/driver/tasks');
+      } else if (user?.role === 'merchant') {
+        router.replace('/merchant/orders');
+      } else if (typeof window !== 'undefined' && localStorage.getItem('saas_admin')) {
+        router.replace('/admin/saas');
+      } else {
+        router.replace('/dashboard');
+      }
     } else {
       router.replace('/auth');
     }

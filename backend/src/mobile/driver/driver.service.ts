@@ -35,6 +35,7 @@ export class DriverService {
     if (!driver) throw new NotFoundException('Driver not found');
     return {
       id: driver.id,
+      code: driver.code,
       name: driver.name,
       nameKh: driver.nameKh,
       phone: driver.phone,

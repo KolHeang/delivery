@@ -13,7 +13,8 @@ export const printInvoicePdf = (inv: any) => {
   const invoiceNumber = inv.invoiceNumber || `INV-${inv.id}`;
   const companyName = inv.subscription?.companyName || inv.tenant?.name || inv.user?.name || 'Company Client';
   const cleanSlug = (inv.subscription?.subdomain || inv.tenant?.slug || companyName.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-')).replace(/^-|-$/g, '');
-  const subdomain = cleanSlug ? `${cleanSlug}.ebsexpress.com` : 'workspace.ebsexpress.com';
+  const domainSuffix = typeof window !== 'undefined' && window.location.hostname.includes('rithyboth.work') ? 'new-delivery.rithyboth.work' : (typeof window !== 'undefined' && window.location.hostname.includes('localhost') ? 'localhost' : 'new-delivery.rithyboth.work');
+  const subdomain = cleanSlug ? `${cleanSlug}.${domainSuffix}` : `workspace.${domainSuffix}`;
   const planName = inv.subscription?.plan?.name || inv.plan?.name || 'Professional';
 
   // Determine Billing Cycle (without parentheses)

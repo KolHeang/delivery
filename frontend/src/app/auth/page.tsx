@@ -9,6 +9,7 @@ import { useLanguage } from '@/lib/LanguageContext';
 import { useTenant } from '@/lib/TenantContext';
 import { MdEmail, MdLock, MdVisibility, MdVisibilityOff } from 'react-icons/md';
 import { FlagKm, FlagEn } from '@/components/ui/Flags';
+import { detectTenantSubdomain } from '@/lib/domain';
 
 const loginTranslations: Record<string, Record<string, string>> = {
   en: {
@@ -56,19 +57,9 @@ export default function LoginPage() {
   const [showForgotModal, setShowForgotModal] = useState(false);
 
   React.useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const hostname = window.location.hostname;
-      if (hostname.includes('.localhost')) {
-        const sub = hostname.split('.localhost')[0].replace(/\..*$/, '').toLowerCase();
-        if (sub && sub !== 'www' && sub !== 'app' && sub !== 'api') {
-          setCurrentSubdomain(sub);
-        }
-      } else {
-        const parts = hostname.split('.');
-        if (parts.length > 2 && parts[0] !== 'www' && parts[0] !== 'app') {
-          setCurrentSubdomain(parts[0].toLowerCase());
-        }
-      }
+    const sub = detectTenantSubdomain();
+    if (sub) {
+      setCurrentSubdomain(sub);
     }
   }, []);
 

@@ -3,6 +3,8 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { saasApi } from './saas-api';
 
+import { detectTenantSubdomain, getTenantWorkspaceUrl, getDomainSuffix } from './domain';
+
 export interface TenantInfo {
   id: number;
   companyName: string;
@@ -61,43 +63,19 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      const host = window.location.host; // includes port if localhost
-      const hostname = window.location.hostname;
-      const isIp = /^(\d{1,3}\.){3}\d{1,3}$/.test(hostname);
-      
-      let detectedSubdomain: string | null = null;
+      const host = window.location.host;
+      const detectedSubdomain = detectTenantSubdomain();
 
-      if (!isIp && hostname !== 'localhost') {
-        const parts = hostname.split('.');
-        if (parts.length > 1) {
-          const first = parts[0].toLowerCase();
-          if (first !== 'www' && first !== 'app' && first !== 'api') {
-            detectedSubdomain = first;
-          }
-        }
-      }
-
-      // Query param fallback for dev testing: ?tenant=ankor
-      const searchParams = new URLSearchParams(window.location.search);
-      if (!detectedSubdomain && searchParams.get('tenant')) {
-        detectedSubdomain = searchParams.get('tenant');
-      }
-
-      // Check if not on root platform domain
-      const isRootPlatform = (hostname === 'localhost' && !detectedSubdomain) || hostname === 'ebsexpress.com' || hostname === 'www.ebsexpress.com';
-
-      if (!isRootPlatform || detectedSubdomain) {
-        if (detectedSubdomain) {
-          setSubdomain(detectedSubdomain);
-          setIsTenant(true);
-          const fallbackName = detectedSubdomain.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-          setTenant({
-            id: 0,
-            companyName: fallbackName,
-            subdomain: detectedSubdomain,
-            status: 'active',
-          });
-        }
+      if (detectedSubdomain) {
+        setSubdomain(detectedSubdomain);
+        setIsTenant(true);
+        const fallbackName = detectedSubdomain.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+        setTenant({
+          id: 0,
+          companyName: fallbackName,
+          subdomain: detectedSubdomain,
+          status: 'active',
+        });
 
         setLoading(true);
         // Call Dynamic Domain Resolver
@@ -118,10 +96,15 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
             plan: res.plan,
           });
           setIsNotFound(false);
+        } else {
+          // Keep tenant set with fallback or not found
+          setIsNotFound(false);
         }
       } else {
+        // Root Platform
         setIsTenant(false);
         setTenant(null);
+        setSubdomain(null);
         setIsNotFound(false);
       }
     } catch (err) {
@@ -137,6 +120,7 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   if (isNotFound && subdomain && typeof window !== 'undefined' && !window.location.pathname.startsWith('/admin/saas')) {
+    const domainSuffix = getDomainSuffix();
     return (
       <div
         style={{
@@ -182,12 +166,12 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
             រកមិនឃើញ Workspace នេះទេ
           </h2>
           <p style={{ fontSize: 14, color: '#64748b', lineHeight: 1.6, marginBottom: 28 }}>
-            Workspace <strong style={{ color: '#ef4444' }}>{subdomain}.ebsexpress.com</strong> មិនទាន់ត្រូវបានបង្កើត ឬផុតកំណត់។ សូមពិនិត្យមើល URL ឡើងវិញ។
+            Workspace <strong style={{ color: '#ef4444' }}>{subdomain}{domainSuffix}</strong> មិនទាន់ត្រូវបានបង្កើត ឬផុតកំណត់។ សូមពិនិត្យមើល URL ឡើងវិញ។
           </p>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <a
-              href="http://localhost:3000/pricing"
+              href="/pricing"
               style={{
                 padding: '14px',
                 borderRadius: 12,
@@ -202,7 +186,7 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
               🚀 បង្កើត Workspace ថ្មីឥឡូវនេះ (Create Workspace)
             </a>
             <a
-              href="http://localhost:3000"
+              href="/"
               style={{
                 padding: '12px',
                 borderRadius: 12,

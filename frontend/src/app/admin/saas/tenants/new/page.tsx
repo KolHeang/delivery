@@ -29,6 +29,7 @@ import {
   MdKeyboardArrowDown,
 } from 'react-icons/md';
 import { SaasCloudIcon } from '@/components/ui/SaasCloudIcon';
+import { getDomainSuffix } from '@/lib/domain';
 
 export default function CreateTenantPage() {
   const router = useRouter();
@@ -61,17 +62,13 @@ export default function CreateTenantPage() {
     password: string;
     planName: string;
   } | null>(null);
-  const [domainSuffix, setDomainSuffix] = useState('.ebsexpress.com');
+  const [domainSuffix, setDomainSuffix] = useState('.new-delivery.rithyboth.work');
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    if (window.location.host.includes('localhost')) {
-      setDomainSuffix(`.localhost:${window.location.port || '3000'}`);
-    } else {
-      setDomainSuffix('.ebsexpress.com');
-    }
+    setDomainSuffix(getDomainSuffix());
 
     const token = localStorage.getItem('access_token');
     const saasAdminRaw = localStorage.getItem('saas_admin');

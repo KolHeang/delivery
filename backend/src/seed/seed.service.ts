@@ -29,11 +29,11 @@ export class SeedService {
     @InjectRepository(Tenant) private readonly tenantRepo: Repository<Tenant>,
   ) { }
 
-  // async onApplicationBootstrap() {
-  //   this.logger.log('🚀 Initializing Super Admin & Platform Seed Data...');
-  //   await this.seedSuperAdminData();
-  //   await this.seedPhnomPenhZones();
-  // }
+  async onApplicationBootstrap() {
+    this.logger.log('🚀 Initializing Super Admin & Platform Seed Data...');
+    await this.seedSuperAdminData();
+    await this.seedPhnomPenhZones();
+  }
 
   /**
    * Master Super Admin Seed Function

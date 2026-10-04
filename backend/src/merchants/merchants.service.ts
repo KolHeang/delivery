@@ -18,7 +18,7 @@ export class MerchantsService {
       .orderBy('merchant.name', 'ASC');
 
     if (tenantId) {
-      qb.andWhere('merchant.tenantId = :tenantId', { tenantId });
+      qb.andWhere('(merchant.tenantId = :tenantId OR merchant.tenantId IS NULL)', { tenantId });
     }
 
     if (query?.search) {

@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { Merchant } from '../../merchants/entities/merchant.entity';
 import { Parcel } from '../../parcels/entities/parcel.entity';
@@ -9,6 +9,7 @@ import { CreateParcelDto } from '../../parcels/dto/parcel.dto';
 import { PickupRequest } from '../../parcels/entities/pickup-request.entity';
 import { CreatePickupRequestDto } from '../../parcels/dto/pickup-request.dto';
 import { Zone } from '../../zones/entities/zone.entity';
+import { MerchantPayment } from '../../payments/entities/merchant-payment.entity';
 
 @Injectable()
 export class MerchantService {
@@ -23,6 +24,8 @@ export class MerchantService {
     private readonly pickupRequestRepo: Repository<PickupRequest>,
     @InjectRepository(Zone)
     private readonly zoneRepo: Repository<Zone>,
+    @InjectRepository(MerchantPayment)
+    private readonly merchantPaymentRepo: Repository<MerchantPayment>,
   ) {}
 
   async getProfile(merchantId: number) {
@@ -364,11 +367,68 @@ export class MerchantService {
       {} as Record<string, number>,
     );
 
+    // Calculate settled/paid COD (delivered parcels already paid to merchant)
+    const paidCOD = await this.parcelRepo
+      .createQueryBuilder('parcel')
+      .select('SUM(parcel.cod)', 'total')
+      .addSelect('parcel.codCurrency', 'currency')
+      .where('parcel.merchantId = :merchantId', { merchantId })
+      .andWhere('parcel.status = :status', { status: 'delivered' })
+      .andWhere('parcel.merchantPaymentStatus = :paid', { paid: 'paid' })
+      .groupBy('parcel.codCurrency')
+      .getRawMany();
+
+    // Calculate unpaid delivered COD (ready for payout)
+    const unpaidDeliveredCOD = await this.parcelRepo
+      .createQueryBuilder('parcel')
+      .select('SUM(parcel.cod)', 'total')
+      .addSelect('parcel.codCurrency', 'currency')
+      .where('parcel.merchantId = :merchantId', { merchantId })
+      .andWhere('parcel.status = :status', { status: 'delivered' })
+      .andWhere('(parcel.merchantPaymentStatus = :unpaid OR parcel.merchantPaymentStatus IS NULL)', {
+        unpaid: 'unpaid',
+      })
+      .groupBy('parcel.codCurrency')
+      .getRawMany();
+
+    // Calculate active in-transit COD (not yet delivered)
+    const inTransitCOD = await this.parcelRepo
+      .createQueryBuilder('parcel')
+      .select('SUM(parcel.cod)', 'total')
+      .addSelect('parcel.codCurrency', 'currency')
+      .where('parcel.merchantId = :merchantId', { merchantId })
+      .andWhere('parcel.status NOT IN (:...statuses)', {
+        statuses: ['delivered', 'cancelled', 'returned'],
+      })
+      .groupBy('parcel.codCurrency')
+      .getRawMany();
+
+    const amountCollectedUsd = parseFloat(paidCOD.find((c) => c.currency === 'USD')?.total || '0') || 0;
+    const amountCollectedKhr = parseFloat(paidCOD.find((c) => c.currency === 'KHR')?.total || '0') || 0;
+
+    const unpaidUsd = parseFloat(unpaidDeliveredCOD.find((c) => c.currency === 'USD')?.total || '0') || 0;
+    const unpaidKhr = parseFloat(unpaidDeliveredCOD.find((c) => c.currency === 'KHR')?.total || '0') || 0;
+
+    const inTransitUsd = parseFloat(inTransitCOD.find((c) => c.currency === 'USD')?.total || '0') || 0;
+    const inTransitKhr = parseFloat(inTransitCOD.find((c) => c.currency === 'KHR')?.total || '0') || 0;
+
+    const pendingAmountUsd = unpaidUsd + inTransitUsd;
+    const pendingAmountKhr = unpaidKhr + inTransitKhr;
+
+    const amountToReceiveUsd = pendingAmountUsd;
+    const amountToReceiveKhr = pendingAmountKhr;
+
     return {
       balance: {
         amount: Number(merchant.balance) || 0,
         currency: 'USD',
       },
+      amountToReceiveUsd,
+      amountToReceiveKhr,
+      amountCollectedUsd,
+      amountCollectedKhr,
+      pendingAmountUsd,
+      pendingAmountKhr,
       statistics: {
         totalParcel: totalParcel,
         pendingPickup: stats['pending'] || 0,
@@ -440,47 +500,111 @@ export class MerchantService {
 
   async getSettlements(
     merchantId: number,
-    query?: { status?: 'paid' | 'unpaid'; page?: number; limit?: number },
+    query?: { status?: 'paid' | 'unpaid' | string; page?: number; limit?: number },
   ) {
-    const qb = this.parcelRepo
-      .createQueryBuilder('parcel')
-      .where('parcel.merchantId = :merchantId', { merchantId })
-      .andWhere('parcel.status = :status', { status: 'delivered' });
-
-    if (query?.status) {
-      qb.andWhere('parcel.merchantPaymentStatus = :pStatus', { pStatus: query.status });
-    }
-
-    qb.orderBy('parcel.deliveredAt', 'DESC');
-
-    // Totals calculations
-    const totals = await this.parcelRepo
-      .createQueryBuilder('parcel')
-      .select('SUM(CASE WHEN parcel.merchantPaymentStatus = :paid THEN parcel.cod ELSE 0 END)', 'settledUSD')
-      .addSelect('SUM(CASE WHEN parcel.merchantPaymentStatus = :unpaid THEN parcel.cod ELSE 0 END)', 'pendingUSD')
-      .addSelect('SUM(parcel.deliveryFee)', 'totalFee')
-      .where('parcel.merchantId = :merchantId', { merchantId })
-      .andWhere('parcel.status = :status', { status: 'delivered' })
-      .setParameters({ paid: 'paid', unpaid: 'unpaid' })
-      .getRawOne();
-
     const page = query?.page ? Math.max(1, Number(query.page)) : 1;
     const limit = query?.limit ? Math.max(1, Number(query.limit)) : 50;
 
-    qb.skip((page - 1) * limit).take(limit);
-    const [data, total] = await qb.getManyAndCount();
+    const [payments, total] = await this.merchantPaymentRepo.findAndCount({
+      where: { merchantId },
+      relations: { creator: true },
+      order: { createdAt: 'DESC' },
+      skip: (page - 1) * limit,
+      take: limit,
+    });
+
+    const formattedPayments = await Promise.all(
+      payments.map(async (payment) => {
+        let parcels: Parcel[] = [];
+        if (payment.parcelIds && payment.parcelIds.length > 0) {
+          parcels = await this.parcelRepo.find({
+            where: { id: In(payment.parcelIds) },
+            relations: { customer: true },
+          });
+        }
+
+        const orders = parcels.map((p) => ({
+          id: p.trackingCode || `ORD-${p.id}`,
+          customerName: p.receiverName || p.customer?.name || 'Customer',
+          amount: parseFloat(p.cod as any) || 0,
+          currency: p.codCurrency || 'USD',
+          status: 'Delivered',
+        }));
+
+        return {
+          id: payment.reference || `REC${String(payment.id).padStart(6, '0')}`,
+          date: payment.date || payment.createdAt,
+          period: 'Settlement Payout',
+          totalOrders: payment.parcelIds?.length || orders.length,
+          totalAmount: parseFloat(payment.amount as any) || 0,
+          totalAmountKhr: parseFloat(payment.amountKHR as any) || 0,
+          paymentMethod: 'Bank Transfer / Cash',
+          transferRef: payment.reference || `REF-${payment.id}`,
+          status: 'Paid',
+          note: payment.note,
+          creator: payment.creator?.name || 'Admin',
+          orders,
+        };
+      }),
+    );
 
     return {
-      summary: {
-        totalSettledUSD: parseFloat(totals?.settledUSD || '0'),
-        totalPendingUSD: parseFloat(totals?.pendingUSD || '0'),
-        totalFeeUSD: parseFloat(totals?.totalFee || '0'),
-      },
-      data,
+      data: formattedPayments,
       total,
       page,
       limit,
       totalPages: Math.ceil(total / limit),
+    };
+  }
+
+  async getSettlementById(merchantId: number, id: number | string) {
+    const isNum = !isNaN(Number(id));
+    const whereConditions: any[] = [{ reference: String(id), merchantId }];
+    if (isNum) {
+      whereConditions.push({ id: Number(id), merchantId });
+    }
+
+    const payment = await this.merchantPaymentRepo.findOne({
+      where: whereConditions,
+      relations: { creator: true },
+    });
+
+    if (!payment) {
+      throw new NotFoundException(`Payment receipt #${id} not found`);
+    }
+
+    let parcels: Parcel[] = [];
+    if (payment.parcelIds && payment.parcelIds.length > 0) {
+      parcels = await this.parcelRepo.find({
+        where: { id: In(payment.parcelIds) },
+        relations: { customer: true, zone: true },
+      });
+    }
+
+    const orders = parcels.map((p) => ({
+      id: p.trackingCode || `ORD-${p.id}`,
+      customerName: p.receiverName || p.customer?.name || 'Customer',
+      phone: p.receiverPhone || '',
+      address: p.receiverAddress || '',
+      amount: parseFloat(p.cod as any) || 0,
+      currency: p.codCurrency || 'USD',
+      status: 'Delivered',
+    }));
+
+    return {
+      id: payment.reference || `REC${String(payment.id).padStart(6, '0')}`,
+      rawId: payment.id,
+      date: payment.date || payment.createdAt,
+      period: 'Settlement Payout',
+      totalOrders: payment.parcelIds?.length || orders.length,
+      totalAmount: parseFloat(payment.amount as any) || 0,
+      totalAmountKhr: parseFloat(payment.amountKHR as any) || 0,
+      paymentMethod: 'Bank Transfer / Cash',
+      transferRef: payment.reference || `REF-${payment.id}`,
+      status: 'Paid',
+      note: payment.note,
+      creator: payment.creator?.name || 'Admin',
+      orders,
     };
   }
 }

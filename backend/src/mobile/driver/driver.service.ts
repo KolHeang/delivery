@@ -1571,7 +1571,7 @@ export class DriverService {
       date: formattedDate,
       invoiceStatus: deliveredCount > 0 ? 'Completed' : 'Pending',
       rider: {
-        name: driver.name || 'Sophal Rider',
+        name: driver.nameKh || driver.name || 'Driver',
         riderId: riderCode,
         phone: driver.phone,
       },

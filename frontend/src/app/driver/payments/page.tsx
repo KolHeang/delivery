@@ -30,14 +30,14 @@ export default function DriverPaymentsPage() {
   const [showCalendarModal, setShowCalendarModal] = useState(false);
   const [invoices, setInvoices] = useState<any[]>([]);
   const [dailyStats, setDailyStats] = useState({
-    total: 24,
-    delivered: 18,
-    failed: 4,
-    returned: 2,
-    feePerParcel: 1.0,
-    totalFee: 24.0,
-    deduction: 2.0,
-    netTotal: 22.0,
+    total: 0,
+    delivered: 0,
+    failed: 0,
+    returned: 0,
+    feePerParcel: 0.0,
+    totalFee: 0.0,
+    deduction: 0.0,
+    netTotal: 0.0,
     status: "Pending", // "Pending" | "Completed"
   });
 
@@ -58,41 +58,54 @@ export default function DriverPaymentsPage() {
     netTotal: lang === "km" ? "ទឹកប្រាក់ទូទាត់សុទ្ធ" : "Net Total Amount",
     paymentStatus: lang === "km" ? "ស្ថានភាពទូទាត់" : "Payment Status",
     history: lang === "km" ? "ប្រវត្តិវិក្កយបត្រកន្លងមក" : "Invoice History",
+    noHistory: lang === "km" ? "មិនទាន់មានប្រវត្តិវិក្កយបត្រកន្លងមកទេ" : "No past invoice history yet",
     selectDate: lang === "km" ? "ជ្រើសរើសកាលបរិច្ឆេទ" : "Select Date",
     today: lang === "km" ? "ថ្ងៃនេះ" : "Today",
     close: lang === "km" ? "បិទ" : "Close",
   };
 
-  const loadData = async () => {
+  const loadData = async (targetDate?: string) => {
     setLoading(true);
+    const dateQuery = targetDate || selectedDate;
     try {
-      const [profRes, dashRes, taskRes] = await Promise.all([
+      const [profRes, dailyRes, paymentsRes, taskRes] = await Promise.all([
         api.get("/mobile/driver/profile").catch(() => null),
-        api.get("/mobile/driver/dashboard?period=all").catch(() => null),
-        api.get("/mobile/driver/tasks").catch(() => null),
+        api.get(`/mobile/driver/invoices/daily?date=${dateQuery}`).catch(() => null),
+        api.get("/mobile/driver/payments").catch(() => null),
+        api.get(`/mobile/driver/tasks?date=${dateQuery}`).catch(() => null),
       ]);
 
       if (profRes?.data) {
         setProfile(profRes.data?.data || profRes.data);
       }
 
-      let taskList: any[] = [];
-      if (taskRes?.data) {
-        taskList = Array.isArray(taskRes.data)
+      if (dailyRes?.data) {
+        const d = dailyRes.data;
+        const parcels = d.parcels || {};
+        const fin = d.financial || {};
+        setDailyStats({
+          total: Number(parcels.total) || 0,
+          delivered: Number(parcels.delivered) || 0,
+          failed: Number(parcels.failed) || 0,
+          returned: Number(parcels.returned) || 0,
+          feePerParcel: Number(fin.feePerParcel) || 0.0,
+          totalFee: Number(fin.totalDeliveryFee) || 0.0,
+          deduction: Math.abs(Number(fin.adjustment) || 0.0),
+          netTotal: Number(fin.totalAmount) || 0.0,
+          status: d.invoiceStatus || (parcels.delivered > 0 ? "Completed" : "Pending"),
+        });
+      } else if (taskRes?.data) {
+        const taskList = Array.isArray(taskRes.data)
           ? taskRes.data
           : taskRes.data?.results || taskRes.data?.data || [];
-      }
-
-      // Calculate dynamic stats from actual tasks if available
-      if (taskList.length > 0) {
         const deliveredCount = taskList.filter(
-          (t) => t.status === "delivered" || t.deliveryStatus === "delivered"
+          (t: any) => t.status === "delivered" || t.deliveryStatus === "delivered"
         ).length;
         const failedCount = taskList.filter(
-          (t) => t.status === "failed" || t.status === "problem" || t.deliveryStatus === "failed"
+          (t: any) => t.status === "failed" || t.status === "problem" || t.deliveryStatus === "failed"
         ).length;
         const returnedCount = taskList.filter(
-          (t) => t.status === "returned" || t.deliveryStatus === "returned"
+          (t: any) => t.status === "returned" || t.deliveryStatus === "returned"
         ).length;
         const totalCount = taskList.length;
 
@@ -106,41 +119,50 @@ export default function DriverPaymentsPage() {
           delivered: deliveredCount,
           failed: failedCount,
           returned: returnedCount,
-          feePerParcel: fee,
+          feePerParcel: totalCount > 0 ? fee : 0.0,
           totalFee: subtotal,
           deduction: ded,
           netTotal: net,
+          status: deliveredCount > 0 ? "Completed" : "Pending",
+        });
+      } else {
+        setDailyStats({
+          total: 0,
+          delivered: 0,
+          failed: 0,
+          returned: 0,
+          feePerParcel: 0.0,
+          totalFee: 0.0,
+          deduction: 0.0,
+          netTotal: 0.0,
           status: "Pending",
         });
       }
 
-      // Populate history invoices
-      setInvoices([
-        {
-          id: "INV-20241222",
-          date: "Sun, 22 Dec 2024",
-          totalParcels: 28,
-          delivered: 26,
-          netAmount: 26.0,
+      // Populate history invoices from real backend payments
+      if (paymentsRes?.data) {
+        const rawList = Array.isArray(paymentsRes.data)
+          ? paymentsRes.data
+          : paymentsRes.data?.result || paymentsRes.data?.data || [];
+        const formatted = rawList.map((item: any) => ({
+          id: item.reference || `INV-${item.id}`,
+          date: item.date
+            ? new Date(item.date).toLocaleDateString("en-US", {
+                weekday: "short",
+                day: "numeric",
+                month: "short",
+                year: "numeric",
+              })
+            : "N/A",
+          totalParcels: item.parcelCount || (item.parcelIds ? item.parcelIds.length : 0),
+          delivered: item.parcelCount || (item.parcelIds ? item.parcelIds.length : 0),
+          netAmount: Number(item.totalUSD || item.usdAmount || item.amount) || 0,
           status: "Completed",
-        },
-        {
-          id: "INV-20241221",
-          date: "Sat, 21 Dec 2024",
-          totalParcels: 32,
-          delivered: 30,
-          netAmount: 30.0,
-          status: "Completed",
-        },
-        {
-          id: "INV-20241220",
-          date: "Fri, 20 Dec 2024",
-          totalParcels: 20,
-          delivered: 19,
-          netAmount: 18.5,
-          status: "Completed",
-        },
-      ]);
+        }));
+        setInvoices(formatted);
+      } else {
+        setInvoices([]);
+      }
     } catch (err) {
       console.error("Failed to load driver payment data", err);
     } finally {
@@ -153,14 +175,14 @@ export default function DriverPaymentsPage() {
       router.push("/driver/login");
       return;
     }
-    loadData();
-  }, [router]);
+    loadData(selectedDate);
+  }, [router, selectedDate]);
 
   const user = getUser() as any;
   const riderName =
-    profile?.name || user?.name || user?.username || "Sophal Rider";
+    profile?.nameKh || profile?.name || user?.name || user?.username || "Driver";
   const riderCode =
-    profile?.code || (profile?.id ? `DRV-${String(profile.id).padStart(3, "0")}` : "RDR001");
+    profile?.code || (profile?.id ? `DRV-${String(profile.id).padStart(3, "0")}` : (user?.id ? `DRV-${String(user.id).padStart(3, "0")}` : "DRV-001"));
 
   const formattedSelectedDate = (() => {
     try {
@@ -520,50 +542,70 @@ export default function DriverPaymentsPage() {
           </div>
 
           <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-            {invoices.map((inv) => (
+            {invoices.length === 0 ? (
               <div
-                key={inv.id}
                 style={{
                   backgroundColor: "#ffffff",
                   borderRadius: "16px",
-                  padding: "14px 16px",
-                  border: "1px solid #f1f5f9",
-                  boxShadow: "0 2px 8px rgba(0,0,0,0.02)",
+                  padding: "24px 16px",
+                  border: "1px dashed #e2e8f0",
+                  textAlign: "center",
+                  color: "#94a3b8",
                   display: "flex",
+                  flexDirection: "column",
                   alignItems: "center",
-                  justifyContent: "space-between",
+                  gap: "6px",
                 }}
               >
-                <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                    <span style={{ fontSize: "13.5px", fontWeight: "800", color: "#0f172a" }}>
-                      {inv.id}
-                    </span>
-                    <span
-                      style={{
-                        backgroundColor: "#dcfce7",
-                        color: "#15803d",
-                        padding: "2px 6px",
-                        borderRadius: "6px",
-                        fontSize: "10px",
-                        fontWeight: "700",
-                      }}
-                    >
-                      {inv.status}
-                    </span>
-                  </div>
-                  <span style={{ fontSize: "11.5px", color: "#64748b", fontWeight: "600" }}>
-                    {inv.date} • {inv.delivered}/{inv.totalParcels} {t.delivered}
-                  </span>
-                </div>
-
-                <div style={{ textAlign: "right" }}>
-                  <div style={{ fontSize: "15px", fontWeight: "900", color: "#16a34a" }}>
-                    +${inv.netAmount.toFixed(2)}
-                  </div>
-                </div>
+                <MdReceiptLong size={28} color="#cbd5e1" />
+                <div style={{ fontSize: "13px", fontWeight: "700" }}>{t.noHistory}</div>
               </div>
-            ))}
+            ) : (
+              invoices.map((inv) => (
+                <div
+                  key={inv.id}
+                  style={{
+                    backgroundColor: "#ffffff",
+                    borderRadius: "16px",
+                    padding: "14px 16px",
+                    border: "1px solid #f1f5f9",
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.02)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                  }}
+                >
+                  <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      <span style={{ fontSize: "13.5px", fontWeight: "800", color: "#0f172a" }}>
+                        {inv.id}
+                      </span>
+                      <span
+                        style={{
+                          backgroundColor: "#dcfce7",
+                          color: "#15803d",
+                          padding: "2px 6px",
+                          borderRadius: "6px",
+                          fontSize: "10px",
+                          fontWeight: "700",
+                        }}
+                      >
+                        {inv.status}
+                      </span>
+                    </div>
+                    <span style={{ fontSize: "11.5px", color: "#64748b", fontWeight: "600" }}>
+                      {inv.date} • {inv.delivered}/{inv.totalParcels} {t.delivered}
+                    </span>
+                  </div>
+
+                  <div style={{ textAlign: "right" }}>
+                    <div style={{ fontSize: "15px", fontWeight: "900", color: "#16a34a" }}>
+                      +${inv.netAmount.toFixed(2)}
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
       </div>

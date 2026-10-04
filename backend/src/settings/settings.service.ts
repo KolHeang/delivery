@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, IsNull } from 'typeorm';
 import { Organisation } from './entities/organisation.entity';
 import { GeneralSetting } from './entities/general-setting.entity';
 import { Tenant } from '../saas/entities/tenant.entity';
@@ -33,7 +33,7 @@ export class SettingsService {
       org = await this.orgRepo.findOne({ where: { tenantId: resolvedTenantId } });
     }
     if (!org) {
-      org = await this.orgRepo.findOne({ where: { tenantId: null as any } });
+      org = await this.orgRepo.findOne({ where: { tenantId: IsNull() } });
     }
     if (!org) {
       org = await this.orgRepo.findOne({ where: {} });
@@ -106,11 +106,11 @@ export class SettingsService {
     }
 
     if (settings.length === 0) {
-      settings = await this.settingRepo.find({ where: { tenantId: null as any } });
+      settings = await this.settingRepo.find({ where: { tenantId: IsNull() } });
       if (settings.length === 0) {
-        const toCreate = defaults.map(d => ({ key: d.key, value: d.value, tenantId: null }));
+        const toCreate = defaults.map((d) => ({ key: d.key, value: d.value, tenantId: null }));
         await this.settingRepo.save(this.settingRepo.create(toCreate));
-        return this.settingRepo.find({ where: { tenantId: null as any } });
+        return this.settingRepo.find({ where: { tenantId: IsNull() } });
       }
     }
     return settings;
@@ -127,7 +127,7 @@ export class SettingsService {
         setting.value = value;
       }
     } else {
-      setting = await this.settingRepo.findOne({ where: { key, tenantId: null as any } });
+      setting = await this.settingRepo.findOne({ where: { key, tenantId: IsNull() } });
       if (!setting) {
         setting = await this.settingRepo.findOne({ where: { key } });
       }

@@ -23,16 +23,13 @@ export default function MerchantSettlementPage() {
   const { lang } = useLanguage();
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [selectedReceipt, setSelectedReceipt] = useState<any>(null);
-  const [showOrderListModal, setShowOrderListModal] = useState(false);
-  const [showPrintModal, setShowPrintModal] = useState(false);
   const [dateFilter, setDateFilter] = useState("all");
 
   const t = {
     title: lang === "km" ? "ការទូទាត់ និងវិក្កយបត្រ" : "Payments",
     amountToReceive: lang === "km" ? "ទឹកប្រាក់ត្រូវទទួលបាន" : "Amount to Receive",
-    amountCollected: lang === "km" ? "ប្រាក់ប្រមូលបាន" : "Amount Collected",
-    pendingAmount: lang === "km" ? "ប្រាក់កំពុងរង់ចាំ" : "Pending Amount",
+    amountCollected: lang === "km" ? "បានទូទាត់រួច" : "Paid / Settled",
+    pendingAmount: lang === "km" ? "រង់ចាំទូទាត់" : "Pending Settlement",
     paymentHistory: lang === "km" ? "ប្រវត្តិវិក្កយបត្រទូទាត់" : "Payment History",
     seeAll: lang === "km" ? "មើលទាំងអស់ >" : "See All >",
     all: lang === "km" ? "ទាំងអស់" : "All",
@@ -45,14 +42,45 @@ export default function MerchantSettlementPage() {
     close: lang === "km" ? "បិទ" : "Close",
   };
 
+  const [dashboardData, setDashboardData] = useState<any>(null);
+  const [settlements, setSettlements] = useState<any[]>([]);
+
   const loadData = async () => {
     setLoading(true);
     try {
-      const [profRes, settRes] = await Promise.all([
+      const [profRes, settRes, dashRes] = await Promise.all([
         api.get("/mobile/merchant/profile").catch(() => null),
         api.get("/mobile/merchant/settlements").catch(() => null),
+        api.get("/mobile/merchant/dashboard").catch(() => null),
       ]);
       if (profRes?.data) setProfile(profRes.data);
+      if (dashRes?.data) setDashboardData(dashRes.data);
+      if (settRes?.data) {
+        const list = Array.isArray(settRes.data)
+          ? settRes.data
+          : settRes.data?.data || settRes.data?.results || [];
+        const formattedList = list.map((rec: any, idx: number) => {
+          return {
+            id: rec.id || rec.reference || `REC${String(idx + 1).padStart(6, "0")}`,
+            date: rec.date
+              ? new Date(rec.date).toLocaleDateString()
+              : rec.createdAt
+              ? new Date(rec.createdAt).toLocaleDateString()
+              : "N/A",
+            period: rec.period || "Settlement Payout",
+            totalOrders: rec.totalOrders || (rec.orders ? rec.orders.length : 0),
+            totalAmount: Number(rec.totalAmount ?? rec.amount ?? 0),
+            totalAmountKhr: Number(rec.totalAmountKhr ?? rec.amountKHR ?? 0),
+            paymentMethod: rec.paymentMethod || "Bank Transfer / Cash",
+            transferRef: rec.transferRef || rec.reference || "-",
+            status: rec.status || "Paid",
+            orders: rec.orders || [],
+          };
+        });
+        setSettlements(formattedList);
+      } else {
+        setSettlements([]);
+      }
     } catch (err) {
       console.error("Failed to load settlement data", err);
     } finally {
@@ -68,63 +96,9 @@ export default function MerchantSettlementPage() {
     loadData();
   }, [router]);
 
-  // Sample settlement history matching reference screens 13, 14, 15, 16, 17
-  const sampleReceipts = [
-    {
-      id: "REC2024103106",
-      date: "31 Oct 2024",
-      period: "1 Oct 2024 - 31 Oct 2024",
-      totalOrders: 17,
-      totalAmount: 1274.5,
-      totalAmountKhr: 5225450,
-      paymentMethod: "ABA Bank",
-      transferRef: "#ABA887711",
-      status: "Paid",
-      orders: [
-        { id: "EX10235", customerName: "Sokha Chan", amount: 28.2, status: "Delivered" },
-        { id: "EX10234", customerName: "Menglong Ngeth", amount: 42.0, status: "Delivered" },
-        { id: "EX10233", customerName: "Kim Seng", amount: 18.5, status: "Delivered" },
-        { id: "EX10232", customerName: "Chanthy Roeun", amount: 35.0, status: "Delivered" },
-        { id: "EX10231", customerName: "Vanna Long", amount: 22.0, status: "Delivered" },
-        { id: "EX10230", customerName: "Dara Som", amount: 15.0, status: "Delivered" },
-        { id: "EX10229", customerName: "Phalla Keo", amount: 55.0, status: "Delivered" },
-        { id: "EX10228", customerName: "Sreynich Heng", amount: 32.5, status: "Delivered" },
-        { id: "EX10227", customerName: "Bopha Pich", amount: 44.0, status: "Delivered" },
-        { id: "EX10226", customerName: "Rithy San", amount: 68.0, status: "Delivered" },
-      ],
-    },
-    {
-      id: "REC2024093005",
-      date: "30 Sep 2024",
-      period: "1 Sep 2024 - 30 Sep 2024",
-      totalOrders: 12,
-      totalAmount: 810.0,
-      totalAmountKhr: 3321000,
-      paymentMethod: "Wing Bank",
-      transferRef: "#WING554433",
-      status: "Paid",
-      orders: [
-        { id: "EX10190", customerName: "Channa Pov", amount: 30.0, status: "Delivered" },
-        { id: "EX10189", customerName: "Sopheap Dy", amount: 45.0, status: "Delivered" },
-      ],
-    },
-    {
-      id: "REC2024083104",
-      date: "31 Aug 2024",
-      period: "1 Aug 2024 - 31 Aug 2024",
-      totalOrders: 10,
-      totalAmount: 735.2,
-      totalAmountKhr: 3014320,
-      paymentMethod: "ABA Bank",
-      transferRef: "#ABA332211",
-      status: "Paid",
-      orders: [],
-    },
-  ];
-
   const user = getUser() as any;
-  const storeName = profile?.name || user?.name || "Little Girl Studio";
-  const storePhone = profile?.phone || user?.phone || "098 387 7786";
+  const storeName = profile?.name || profile?.nameKh || user?.name || (lang === "km" ? "ហាង" : "Store");
+  const storePhone = profile?.phone || user?.phone || "-";
 
   return (
     <div
@@ -190,10 +164,10 @@ export default function MerchantSettlementPage() {
               }}
             >
               <span style={{ fontSize: "24px", fontWeight: "900", letterSpacing: "-0.5px" }}>
-                ៛ 2,014,000
+                ៛ {(Number(dashboardData?.amountToReceiveKhr) || 0).toLocaleString()}
               </span>
               <span style={{ fontSize: "17px", fontWeight: "700", color: "#dbeafe" }}>
-                / $232.50
+                / ${(Number(dashboardData?.amountToReceiveUsd) || 0).toFixed(2)}
               </span>
             </div>
           </div>
@@ -212,10 +186,10 @@ export default function MerchantSettlementPage() {
                 {t.amountCollected}
               </div>
               <div style={{ fontSize: "14px", fontWeight: "800", marginTop: "2px" }}>
-                ៛ 2,151,000
+                ៛ {(Number(dashboardData?.amountCollectedKhr) || 0).toLocaleString()}
               </div>
               <div style={{ fontSize: "12px", color: "#93c5fd", fontWeight: "700" }}>
-                $550.00
+                ${(Number(dashboardData?.amountCollectedUsd) || 0).toFixed(2)}
               </div>
             </div>
 
@@ -224,10 +198,10 @@ export default function MerchantSettlementPage() {
                 {t.pendingAmount}
               </div>
               <div style={{ fontSize: "14px", fontWeight: "800", color: "#fef08a", marginTop: "2px" }}>
-                ៛ 724,000
+                ៛ {(Number(dashboardData?.pendingAmountKhr) || 0).toLocaleString()}
               </div>
               <div style={{ fontSize: "12px", color: "#fde047", fontWeight: "700" }}>
-                $185.00
+                ${(Number(dashboardData?.pendingAmountUsd) || 0).toFixed(2)}
               </div>
             </div>
           </div>
@@ -260,7 +234,7 @@ export default function MerchantSettlementPage() {
           ))}
         </div>
 
-        {/* 4. Payment Receipt History List (Screen 13/14 Match) */}
+        {/* 4. Payment Receipt History List */}
         <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
           <div
             style={{
@@ -277,543 +251,129 @@ export default function MerchantSettlementPage() {
           </div>
 
           <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-            {sampleReceipts.map((rec) => (
+            {settlements.length === 0 ? (
               <div
-                key={rec.id}
-                onClick={() => setSelectedReceipt(rec)}
                 style={{
                   backgroundColor: "#ffffff",
-                  borderRadius: "18px",
-                  padding: "16px",
-                  border: "1px solid #f1f5f9",
-                  boxShadow: "0 2px 8px rgba(0,0,0,0.02)",
+                  borderRadius: "16px",
+                  padding: "32px 20px",
+                  border: "1px dashed #cbd5e1",
+                  textAlign: "center",
                   display: "flex",
+                  flexDirection: "column",
                   alignItems: "center",
-                  justifyContent: "space-between",
-                  cursor: "pointer",
-                  transition: "transform 0.15s ease",
+                  gap: "10px",
                 }}
               >
-                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                  <div
-                    style={{
-                      width: "42px",
-                      height: "42px",
-                      borderRadius: "12px",
-                      backgroundColor: "#eff6ff",
-                      color: "#2563eb",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
-                    <MdReceiptLong size={22} />
-                  </div>
-
-                  <div>
-                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                      <span style={{ fontSize: "14.5px", fontWeight: "800", color: "#0f172a" }}>
-                        #{rec.id}
-                      </span>
-                      <span
-                        style={{
-                          backgroundColor: "#dcfce7",
-                          color: "#15803d",
-                          padding: "2px 6px",
-                          borderRadius: "6px",
-                          fontSize: "10px",
-                          fontWeight: "800",
-                        }}
-                      >
-                        {rec.status}
-                      </span>
-                    </div>
-
-                    <div style={{ fontSize: "12px", color: "#64748b", fontWeight: "600", marginTop: "2px" }}>
-                      {rec.date} • {rec.totalOrders} Orders
-                    </div>
-                  </div>
-                </div>
-
-                <div style={{ textAlign: "right" }}>
-                  <div style={{ fontSize: "16px", fontWeight: "900", color: "#16a34a" }}>
-                    +${rec.totalAmount.toFixed(2)}
-                  </div>
-                  <div style={{ fontSize: "11px", color: "#94a3b8", fontWeight: "600", marginTop: "2px" }}>
-                    ៛ {rec.totalAmountKhr.toLocaleString()}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* --- MODAL 1: SCREEN 15 RECEIPT DETAIL --- */}
-      {selectedReceipt && (
-        <div
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: "rgba(15, 23, 42, 0.6)",
-            backdropFilter: "blur(4px)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 1000,
-            padding: "20px",
-          }}
-        >
-          <div
-            style={{
-              backgroundColor: "#ffffff",
-              borderRadius: "24px",
-              padding: "24px",
-              width: "100%",
-              maxWidth: "380px",
-              boxShadow: "0 20px 40px rgba(0,0,0,0.2)",
-              display: "flex",
-              flexDirection: "column",
-              gap: "16px",
-            }}
-          >
-            {/* Header */}
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                borderBottom: "1px solid #f1f5f9",
-                paddingBottom: "12px",
-              }}
-            >
-              <h3 style={{ margin: 0, fontSize: "17px", fontWeight: "800", color: "#0f172a" }}>
-                {t.receiptDetail}
-              </h3>
-              <button
-                type="button"
-                onClick={() => setSelectedReceipt(null)}
-                style={{ background: "none", border: "none", cursor: "pointer", color: "#64748b" }}
-              >
-                <MdClose size={22} />
-              </button>
-            </div>
-
-            {/* Store & Paid Badge */}
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                 <div
                   style={{
-                    width: "40px",
-                    height: "40px",
+                    width: "48px",
+                    height: "48px",
                     borderRadius: "50%",
-                    backgroundColor: "#2563eb",
-                    color: "#ffffff",
+                    backgroundColor: "#f1f5f9",
+                    color: "#94a3b8",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    fontSize: "16px",
-                    fontWeight: "900",
                   }}
                 >
-                  🏪
+                  <MdReceiptLong size={24} />
                 </div>
-                <div>
-                  <div style={{ fontSize: "15px", fontWeight: "800", color: "#0f172a" }}>
-                    {storeName}
-                  </div>
-                  <div style={{ fontSize: "12px", color: "#64748b" }}>{storePhone}</div>
+                <div style={{ fontSize: "14px", fontWeight: "700", color: "#64748b" }}>
+                  {lang === "km" ? "មិនទាន់មានប្រវត្តិវិក្កយបត្រទូទាត់នៅឡើយទេ" : "No payment receipts yet"}
                 </div>
               </div>
+            ) : (
+              settlements.map((rec: any, idx: number) => {
+                const recId = rec.receiptNumber || rec.code || rec.id || `REC${idx + 1}`;
+                const isPaid = String(rec.status || "").toLowerCase() === "paid";
+                const statusLabel = isPaid
+                  ? lang === "km"
+                    ? "បានទូទាត់"
+                    : "Paid"
+                  : lang === "km"
+                  ? "រង់ចាំ"
+                  : "Pending";
+                const totalAmt = Number(rec.totalAmount ?? rec.totalAmountUsd ?? rec.amount ?? 0);
+                const totalAmtKhr = Number(rec.totalAmountKhr ?? rec.amountKHR ?? 0);
+                const orderCount = rec.totalOrders || (Array.isArray(rec.orders) ? rec.orders.length : (Array.isArray(rec.parcels) ? rec.parcels.length : 0));
+                const dateStr = rec.date || (rec.createdAt ? new Date(rec.createdAt).toLocaleDateString() : "");
 
-              <span
-                style={{
-                  backgroundColor: "#dcfce7",
-                  color: "#15803d",
-                  padding: "4px 10px",
-                  borderRadius: "10px",
-                  fontSize: "11px",
-                  fontWeight: "800",
-                }}
-              >
-                PAID
-              </span>
-            </div>
+                return (
+                  <div
+                    key={rec.id || idx}
+                    onClick={() => router.push(`/merchant/settlement/${rec.id || rec.reference}`)}
+                    style={{
+                      backgroundColor: "#ffffff",
+                      borderRadius: "18px",
+                      padding: "16px",
+                      border: "1px solid #f1f5f9",
+                      boxShadow: "0 2px 8px rgba(0,0,0,0.02)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      cursor: "pointer",
+                      transition: "transform 0.15s ease",
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                      <div
+                        style={{
+                          width: "42px",
+                          height: "42px",
+                          borderRadius: "12px",
+                          backgroundColor: "#eff6ff",
+                          color: "#2563eb",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                      >
+                        <MdReceiptLong size={22} />
+                      </div>
 
-            {/* Breakdown */}
-            <div
-              style={{
-                backgroundColor: "#f8fafc",
-                borderRadius: "16px",
-                padding: "16px",
-                display: "flex",
-                flexDirection: "column",
-                gap: "10px",
-                fontSize: "13.5px",
-              }}
-            >
-              <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <span style={{ color: "#64748b" }}>Receipt No:</span>
-                <span style={{ fontWeight: "800", color: "#0f172a", fontFamily: "monospace" }}>
-                  #{selectedReceipt.id}
-                </span>
-              </div>
+                      <div>
+                        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                          <span style={{ fontSize: "14.5px", fontWeight: "800", color: "#0f172a" }}>
+                            #{recId}
+                          </span>
+                          <span
+                            style={{
+                              backgroundColor: isPaid ? "#dcfce7" : "#fef3c7",
+                              color: isPaid ? "#15803d" : "#b45309",
+                              padding: "2px 8px",
+                              borderRadius: "6px",
+                              fontSize: "11px",
+                              fontWeight: "800",
+                            }}
+                          >
+                            {statusLabel}
+                          </span>
+                        </div>
 
-              <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <span style={{ color: "#64748b" }}>Payment Date:</span>
-                <span style={{ fontWeight: "700", color: "#0f172a" }}>{selectedReceipt.date}</span>
-              </div>
-
-              <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <span style={{ color: "#64748b" }}>Paid Via:</span>
-                <span style={{ fontWeight: "700", color: "#2563eb" }}>
-                  {selectedReceipt.paymentMethod}
-                </span>
-              </div>
-
-              <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <span style={{ color: "#64748b" }}>Transfer Ref:</span>
-                <span style={{ fontWeight: "700", color: "#0f172a", fontFamily: "monospace" }}>
-                  {selectedReceipt.transferRef}
-                </span>
-              </div>
-
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  paddingTop: "8px",
-                  borderTop: "1px solid #e2e8f0",
-                }}
-              >
-                <span style={{ fontWeight: "800", color: "#0f172a" }}>Total Net Amount:</span>
-                <span style={{ fontWeight: "900", color: "#16a34a", fontSize: "16px" }}>
-                  ${selectedReceipt.totalAmount.toFixed(2)}
-                </span>
-              </div>
-            </div>
-
-            {/* View Order List (17) Button */}
-            <button
-              type="button"
-              onClick={() => setShowOrderListModal(true)}
-              style={{
-                width: "100%",
-                padding: "12px",
-                backgroundColor: "#eff6ff",
-                color: "#2563eb",
-                border: "1.5px solid #bfdbfe",
-                borderRadius: "12px",
-                fontSize: "13.5px",
-                fontWeight: "700",
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "6px",
-              }}
-            >
-              <MdInventory2 size={18} />
-              <span>View Order List ({selectedReceipt.totalOrders})</span>
-            </button>
-
-            {/* Print & Share actions */}
-            <div style={{ display: "flex", gap: "8px" }}>
-              <button
-                type="button"
-                onClick={() => setShowPrintModal(true)}
-                style={{
-                  flex: 1,
-                  padding: "12px",
-                  backgroundColor: "#2563eb",
-                  color: "#ffffff",
-                  border: "none",
-                  borderRadius: "12px",
-                  fontSize: "13.5px",
-                  fontWeight: "700",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: "6px",
-                }}
-              >
-                <MdPrint size={18} />
-                <span>{t.printReceipt}</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => alert("Receipt copied to clipboard")}
-                style={{
-                  padding: "12px 16px",
-                  backgroundColor: "#f1f5f9",
-                  color: "#475569",
-                  border: "none",
-                  borderRadius: "12px",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <MdShare size={18} />
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* --- MODAL 2: SCREEN 16 ORDERS IN RECEIPT --- */}
-      {showOrderListModal && selectedReceipt && (
-        <div
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: "rgba(15, 23, 42, 0.6)",
-            backdropFilter: "blur(4px)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 1100,
-            padding: "20px",
-          }}
-        >
-          <div
-            style={{
-              backgroundColor: "#ffffff",
-              borderRadius: "24px",
-              padding: "24px",
-              width: "100%",
-              maxWidth: "380px",
-              maxHeight: "80vh",
-              boxShadow: "0 20px 40px rgba(0,0,0,0.2)",
-              display: "flex",
-              flexDirection: "column",
-              gap: "14px",
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                borderBottom: "1px solid #f1f5f9",
-                paddingBottom: "10px",
-              }}
-            >
-              <h3 style={{ margin: 0, fontSize: "16px", fontWeight: "800", color: "#0f172a" }}>
-                {t.ordersInReceipt}
-              </h3>
-              <button
-                type="button"
-                onClick={() => setShowOrderListModal(false)}
-                style={{ background: "none", border: "none", cursor: "pointer", color: "#64748b" }}
-              >
-                <MdClose size={22} />
-              </button>
-            </div>
-
-            <div
-              style={{
-                flex: 1,
-                overflowY: "auto",
-                display: "flex",
-                flexDirection: "column",
-                gap: "8px",
-              }}
-            >
-              {selectedReceipt.orders.map((ord: any) => (
-                <div
-                  key={ord.id}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    padding: "10px 12px",
-                    borderRadius: "12px",
-                    backgroundColor: "#f8fafc",
-                    border: "1px solid #f1f5f9",
-                  }}
-                >
-                  <div>
-                    <div style={{ fontSize: "13.5px", fontWeight: "800", color: "#0f172a" }}>
-                      #{ord.id}
+                        <div style={{ fontSize: "12px", color: "#64748b", fontWeight: "600", marginTop: "2px" }}>
+                          {dateStr} • {orderCount} {lang === "km" ? "កញ្ចប់" : "Orders"}
+                        </div>
+                      </div>
                     </div>
-                    <div style={{ fontSize: "11.5px", color: "#64748b" }}>{ord.customerName}</div>
-                  </div>
 
-                  <div style={{ textAlign: "right" }}>
-                    <div style={{ fontSize: "14px", fontWeight: "800", color: "#16a34a" }}>
-                      +${ord.amount.toFixed(2)}
+                    <div style={{ textAlign: "right" }}>
+                      <div style={{ fontSize: "16px", fontWeight: "900", color: "#16a34a" }}>
+                        +${totalAmt.toFixed(2)}
+                      </div>
+                      {totalAmtKhr > 0 && (
+                        <div style={{ fontSize: "11px", color: "#94a3b8", fontWeight: "600", marginTop: "2px" }}>
+                          ៛ {totalAmtKhr.toLocaleString()}
+                        </div>
+                      )}
                     </div>
-                    <span
-                      style={{
-                        fontSize: "9.5px",
-                        fontWeight: "700",
-                        color: "#15803d",
-                        backgroundColor: "#dcfce7",
-                        padding: "1px 6px",
-                        borderRadius: "4px",
-                      }}
-                    >
-                      {ord.status}
-                    </span>
                   </div>
-                </div>
-              ))}
-            </div>
-
-            <button
-              type="button"
-              onClick={() => setShowOrderListModal(false)}
-              style={{
-                width: "100%",
-                padding: "12px",
-                backgroundColor: "#2563eb",
-                color: "#ffffff",
-                border: "none",
-                borderRadius: "12px",
-                fontSize: "13.5px",
-                fontWeight: "700",
-                cursor: "pointer",
-              }}
-            >
-              {t.close}
-            </button>
+                );
+              })
+            )}
           </div>
         </div>
-      )}
-
-      {/* --- MODAL 3: SCREEN 17 PRINTABLE INVOICE / RECEIPT --- */}
-      {showPrintModal && selectedReceipt && (
-        <div
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: "rgba(15, 23, 42, 0.7)",
-            backdropFilter: "blur(6px)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 1200,
-            padding: "20px",
-          }}
-        >
-          <div
-            style={{
-              backgroundColor: "#ffffff",
-              borderRadius: "20px",
-              padding: "24px",
-              width: "100%",
-              maxWidth: "380px",
-              maxHeight: "85vh",
-              overflowY: "auto",
-              boxShadow: "0 25px 50px rgba(0,0,0,0.25)",
-              display: "flex",
-              flexDirection: "column",
-              gap: "14px",
-              fontFamily: "monospace",
-            }}
-          >
-            <div style={{ textAlign: "center", borderBottom: "1.5px dashed #cbd5e1", paddingBottom: "12px" }}>
-              <h2 style={{ margin: 0, fontSize: "20px", fontWeight: "900", color: "#1e3a8a" }}>
-                E-Express
-              </h2>
-              <div style={{ fontSize: "11px", color: "#64748b" }}>Payment Receipt</div>
-            </div>
-
-            <div style={{ fontSize: "12px", display: "flex", flexDirection: "column", gap: "4px" }}>
-              <div>Store: {storeName}</div>
-              <div>Phone: {storePhone}</div>
-              <div>Date: {selectedReceipt.date}</div>
-              <div>Receipt: #{selectedReceipt.id}</div>
-              <div>Paid Via: {selectedReceipt.paymentMethod}</div>
-            </div>
-
-            <div
-              style={{
-                borderTop: "1.5px dashed #cbd5e1",
-                borderBottom: "1.5px dashed #cbd5e1",
-                padding: "8px 0",
-                fontSize: "12px",
-              }}
-            >
-              <div style={{ display: "flex", justifyContent: "space-between", fontWeight: "800" }}>
-                <span>Item</span>
-                <span>Amount</span>
-              </div>
-              {selectedReceipt.orders.slice(0, 5).map((ord: any) => (
-                <div
-                  key={ord.id}
-                  style={{ display: "flex", justifyContent: "space-between", marginTop: "4px" }}
-                >
-                  <span>#{ord.id}</span>
-                  <span>${ord.amount.toFixed(2)}</span>
-                </div>
-              ))}
-              {selectedReceipt.orders.length > 5 && (
-                <div style={{ color: "#64748b", marginTop: "4px" }}>
-                  + {selectedReceipt.orders.length - 5} more orders...
-                </div>
-              )}
-            </div>
-
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "14px", fontWeight: "900" }}>
-              <span>Total Paid:</span>
-              <span style={{ color: "#16a34a" }}>${selectedReceipt.totalAmount.toFixed(2)}</span>
-            </div>
-
-            <div style={{ display: "flex", gap: "8px", marginTop: "8px" }}>
-              <button
-                type="button"
-                onClick={() => {
-                  window.print();
-                }}
-                style={{
-                  flex: 1,
-                  padding: "12px",
-                  backgroundColor: "#2563eb",
-                  color: "#ffffff",
-                  border: "none",
-                  borderRadius: "10px",
-                  fontSize: "13px",
-                  fontWeight: "700",
-                  cursor: "pointer",
-                }}
-              >
-                Print / PDF
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setShowPrintModal(false)}
-                style={{
-                  padding: "12px 16px",
-                  backgroundColor: "#f1f5f9",
-                  color: "#475569",
-                  border: "none",
-                  borderRadius: "10px",
-                  fontSize: "13px",
-                  fontWeight: "700",
-                  cursor: "pointer",
-                }}
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      </div>
     </div>
   );
 }

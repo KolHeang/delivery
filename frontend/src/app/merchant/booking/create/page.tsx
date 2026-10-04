@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useLanguage } from "@/lib/LanguageContext";
+import { getUser, isAuthenticated } from "@/lib/auth";
 import api from "@/lib/api";
 import {
   MdArrowBack,
@@ -23,8 +24,9 @@ import {
 export default function CreateBookingWizardPage() {
   const router = useRouter();
   const { lang } = useLanguage();
+  const [profile, setProfile] = useState<any>(null);
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
-  const [packageCount, setPackageCount] = useState(3);
+  const [packageCount, setPackageCount] = useState(1);
   const [packagePhoto, setPackagePhoto] = useState<string | null>(null);
   const [useStoreLocation, setUseStoreLocation] = useState(true);
   const [customAddress, setCustomAddress] = useState("");
@@ -34,12 +36,29 @@ export default function CreateBookingWizardPage() {
     tags: string[];
   } | null>(null);
 
-  // Recipient info
-  const [recipientName, setRecipientName] = useState("Sokha Chan");
-  const [recipientPhone, setRecipientPhone] = useState("012 345 678");
-  const [deliveryAddress, setDeliveryAddress] = useState("#12, St. 271, Boeng Tumpun, Phnom Penh");
-  const [codAmount, setCodAmount] = useState("28.00");
-  const [notes, setNotes] = useState("Call customer before arrival");
+  // Recipient info - empty by default
+  const [recipientName, setRecipientName] = useState("");
+  const [recipientPhone, setRecipientPhone] = useState("");
+  const [deliveryAddress, setDeliveryAddress] = useState("");
+  const [codAmount, setCodAmount] = useState("");
+  const [notes, setNotes] = useState("");
+
+  useEffect(() => {
+    if (!isAuthenticated()) {
+      router.push("/merchant/login");
+      return;
+    }
+    api
+      .get("/mobile/merchant/profile")
+      .then((res) => {
+        if (res.data) setProfile(res.data);
+      })
+      .catch(() => {});
+  }, [router]);
+
+  const user = getUser() as any;
+  const storeName = profile?.name || user?.name || (lang === "km" ? "ហាងរបស់ខ្ញុំ" : "My Store");
+  const storeAddress = profile?.address || (lang === "km" ? "អាសយដ្ឋានហាង" : "Store Address");
 
   const t = {
     title: lang === "km" ? "បង្កើតការផ្ញើទំនិញ" : "Create Booking",
@@ -53,8 +72,8 @@ export default function CreateBookingWizardPage() {
     fromGallery: lang === "km" ? "ជ្រើសពីរូបភាព" : "From Gallery",
     useStoreLocation: lang === "km" ? "ប្រើប្រាស់ទីតាំងហាងរបស់ខ្ញុំ" : "Use My Store Location",
     customLocation: lang === "km" ? "ជ្រើសរើសទីតាំងផ្សេង" : "Custom Location",
-    storeName: "Little Girl Studio",
-    storeAddress: "#45, St. 310, BKK3, Phnom Penh",
+    storeName,
+    storeAddress,
     nextBtn: lang === "km" ? "បន្តទៅមុខ" : "Next",
     confirmBtn: lang === "km" ? "បញ្ជាក់ការកក់" : "Confirm Booking",
     successHeading: lang === "km" ? "ការកក់ទទួលបានជោគជ័យ!" : "Booking Created Successfully!",
@@ -369,12 +388,13 @@ export default function CreateBookingWizardPage() {
 
             <div>
               <label style={{ fontSize: "12px", fontWeight: "700", color: "#64748b" }}>
-                Recipient Name
+                {lang === "km" ? "ឈ្មោះអ្នកទទួល" : "Recipient Name"}
               </label>
               <input
                 type="text"
                 value={recipientName}
                 onChange={(e) => setRecipientName(e.target.value)}
+                placeholder={lang === "km" ? "ឧ. សុខា ចាន់" : "e.g. Sokha Chan"}
                 style={{
                   width: "100%",
                   padding: "10px 12px",
@@ -389,12 +409,13 @@ export default function CreateBookingWizardPage() {
 
             <div>
               <label style={{ fontSize: "12px", fontWeight: "700", color: "#64748b" }}>
-                Recipient Phone
+                {lang === "km" ? "លេខទូរស័ព្ទអ្នកទទួល" : "Recipient Phone"}
               </label>
               <input
                 type="text"
                 value={recipientPhone}
                 onChange={(e) => setRecipientPhone(e.target.value)}
+                placeholder={lang === "km" ? "ឧ. 012 345 678" : "e.g. 012 345 678"}
                 style={{
                   width: "100%",
                   padding: "10px 12px",
@@ -409,12 +430,13 @@ export default function CreateBookingWizardPage() {
 
             <div>
               <label style={{ fontSize: "12px", fontWeight: "700", color: "#64748b" }}>
-                Delivery Address
+                {lang === "km" ? "អាសយដ្ឋានដឹកជញ្ជូន" : "Delivery Address"}
               </label>
               <input
                 type="text"
                 value={deliveryAddress}
                 onChange={(e) => setDeliveryAddress(e.target.value)}
+                placeholder={lang === "km" ? "ឧ. #12, ផ្លូវ 271, បឹងទំពុន, ភ្នំពេញ" : "e.g. #12, St. 271, Phnom Penh"}
                 style={{
                   width: "100%",
                   padding: "10px 12px",
@@ -437,6 +459,7 @@ export default function CreateBookingWizardPage() {
                   step="0.01"
                   value={codAmount}
                   onChange={(e) => setCodAmount(e.target.value)}
+                  placeholder="0.00"
                   style={{
                     width: "100%",
                     padding: "10px 12px",

@@ -1,5 +1,3 @@
-version: '3.9'
-
 services:
   delivery-api:
     build:
@@ -72,8 +70,9 @@ services:
     image: redis:7-alpine
     container_name: delivery-redis
     restart: unless-stopped
+    # command: redis-server --requirepass "redis@2026$$"
     ports:
-      - "6379:6379"
+      - '6379:6379'
     networks:
       - app-network
     volumes:

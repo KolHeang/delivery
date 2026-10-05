@@ -1,11 +1,20 @@
-import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  OnModuleInit,
+  OnModuleDestroy,
+  Logger,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
 import Redis from 'ioredis';
 import { Parcel } from '../parcels/entities/parcel.entity';
 import { User } from '../users/entities/users.entity';
 import { LocationUpdateDto } from './dto/location-update.dto';
-import { calculateDistanceInMeters, calculateDistanceInKm, calculateEtaMinutes } from './utils/geo.util';
+import {
+  calculateDistanceInMeters,
+  calculateDistanceInKm,
+  calculateEtaMinutes,
+} from './utils/geo.util';
 
 export interface DriverLiveLocation {
   driverId: number;
@@ -37,7 +46,7 @@ export class TrackingService implements OnModuleInit, OnModuleDestroy {
     private parcelRepo: Repository<Parcel>,
     @InjectRepository(User)
     private userRepo: Repository<User>,
-  ) { }
+  ) {}
 
   onModuleInit() {
     try {
@@ -56,17 +65,23 @@ export class TrackingService implements OnModuleInit, OnModuleDestroy {
 
       this.redisClient.on('connect', () => {
         this.isRedisConnected = true;
-        this.logger.log('Redis connected successfully for Real-Time GEO Tracking');
+        this.logger.log(
+          'Redis connected successfully for Real-Time GEO Tracking',
+        );
       });
 
       this.redisClient.on('error', (err) => {
         this.isRedisConnected = false;
-        this.logger.warn(`Redis not available (${err.message}). Using In-Memory Fast Cache fallback.`);
+        this.logger.warn(
+          `Redis not available (${err.message}). Using In-Memory Fast Cache fallback.`,
+        );
       });
 
-      this.redisClient.connect().catch(() => { });
+      this.redisClient.connect().catch(() => {});
     } catch (e: any) {
-      this.logger.warn('Failed to initialize Redis client, using In-Memory store.');
+      this.logger.warn(
+        'Failed to initialize Redis client, using In-Memory store.',
+      );
     }
   }
 
@@ -74,7 +89,7 @@ export class TrackingService implements OnModuleInit, OnModuleDestroy {
     if (this.redisClient) {
       try {
         this.redisClient.disconnect();
-      } catch (e) { }
+      } catch (e) {}
     }
   }
 
@@ -97,10 +112,17 @@ export class TrackingService implements OnModuleInit, OnModuleDestroy {
     tenantId?: number;
   }): Promise<DriverLiveLocation> {
     const driverIdNum = Number(data.driverId);
-    const lat = data.latitude !== undefined ? Number(data.latitude) : Number(data.lat || 0);
-    const lng = data.longitude !== undefined ? Number(data.longitude) : Number(data.lng || 0);
+    const lat =
+      data.latitude !== undefined
+        ? Number(data.latitude)
+        : Number(data.lat || 0);
+    const lng =
+      data.longitude !== undefined
+        ? Number(data.longitude)
+        : Number(data.lng || 0);
     const orderId = data.orderId ? String(data.orderId) : undefined;
-    const activeParcelCodes = data.activeParcelCodes || (orderId ? [orderId] : []);
+    const activeParcelCodes =
+      data.activeParcelCodes || (orderId ? [orderId] : []);
 
     // 1. រក្សាទុកកូអរដោនេក្នុង Redis GEO (បើ Redis មានដំណើរការ)
     // ចំណាំ៖ Redis GEOADD យក Longitude មុន Latitude
@@ -168,7 +190,8 @@ export class TrackingService implements OnModuleInit, OnModuleDestroy {
       if (data.accuracy !== undefined) driverInfo.accuracy = data.accuracy;
       if (data.battery !== undefined) driverInfo.battery = data.battery;
       if (data.isOnline !== undefined) driverInfo.isOnline = data.isOnline;
-      if (activeParcelCodes.length > 0) driverInfo.activeParcelCodes = activeParcelCodes;
+      if (activeParcelCodes.length > 0)
+        driverInfo.activeParcelCodes = activeParcelCodes;
       if (data.tenantId !== undefined) driverInfo.tenantId = data.tenantId;
       driverInfo.updatedAt = new Date();
     }
@@ -241,7 +264,8 @@ export class TrackingService implements OnModuleInit, OnModuleDestroy {
 
     // 2. Also fetch registered drivers from DB so the list is complete and accurate
     try {
-      const qb = this.userRepo.createQueryBuilder('user')
+      const qb = this.userRepo
+        .createQueryBuilder('user')
         .where('user.isDriver = true')
         .andWhere('user.isActive = true');
 
@@ -257,8 +281,8 @@ export class TrackingService implements OnModuleInit, OnModuleDestroy {
         { lat: 11.5684, lng: 104.9212 }, // Daun Penh / Central Market
         { lat: 11.5721, lng: 104.8974 }, // Tuol Kork
         { lat: 11.5432, lng: 104.9125 }, // Russian Market / Toul Tom Poung
-        { lat: 11.5280, lng: 104.9350 }, // Chamkarmon / Boeung Keng Kang
-        { lat: 11.5620, lng: 104.8850 }, // Sen Sok
+        { lat: 11.528, lng: 104.935 }, // Chamkarmon / Boeung Keng Kang
+        { lat: 11.562, lng: 104.885 }, // Sen Sok
       ];
 
       for (let i = 0; i < dbDrivers.length; i++) {
@@ -277,7 +301,7 @@ export class TrackingService implements OnModuleInit, OnModuleDestroy {
               take: 10,
             });
             activeCodes = parcels.map((p) => p.trackingCode);
-          } catch (pe) { }
+          } catch (pe) {}
 
           result.push({
             driverId: d.id,
@@ -297,7 +321,9 @@ export class TrackingService implements OnModuleInit, OnModuleDestroy {
         }
       }
     } catch (e: any) {
-      this.logger.warn(`Failed to merge DB drivers in getAllLiveDrivers: ${e.message}`);
+      this.logger.warn(
+        `Failed to merge DB drivers in getAllLiveDrivers: ${e.message}`,
+      );
     }
 
     return result;
@@ -306,58 +332,63 @@ export class TrackingService implements OnModuleInit, OnModuleDestroy {
   /**
    * Simulate realistic driver movement in Phnom Penh for demonstration
    */
-  async simulatePhnomPenhDrivers(tenantId?: number): Promise<DriverLiveLocation[]> {
+  async simulatePhnomPenhDrivers(
+    tenantId?: number,
+  ): Promise<DriverLiveLocation[]> {
     const drivers = await this.getAllLiveDrivers(tenantId);
     const updatedList: DriverLiveLocation[] = [];
 
     // If no DB drivers, create 3 realistic simulated drivers
-    const targetDrivers = drivers.length > 0 ? drivers : [
-      {
-        driverId: 901,
-        driverName: 'សុខ ចន្ថា (Sok Chantha)',
-        driverPhone: '012 345 678',
-        lat: 11.5684,
-        lng: 104.9212,
-        speed: 28,
-        heading: 45,
-        accuracy: 5,
-        battery: 88,
-        isOnline: true,
-        activeParcelCodes: ['CO02092026842', 'EXP-9921'],
-        tenantId,
-        updatedAt: new Date(),
-      },
-      {
-        driverId: 902,
-        driverName: 'ជា វីរៈ (Chea Vireak)',
-        driverPhone: '098 765 432',
-        lat: 11.5721,
-        lng: 104.8974,
-        speed: 34,
-        heading: 120,
-        accuracy: 8,
-        battery: 74,
-        isOnline: true,
-        activeParcelCodes: ['CO02098421'],
-        tenantId,
-        updatedAt: new Date(),
-      },
-      {
-        driverId: 903,
-        driverName: 'កែវ សុភាព (Keo Sopheap)',
-        driverPhone: '077 112 233',
-        lat: 11.5432,
-        lng: 104.9125,
-        speed: 15,
-        heading: 210,
-        accuracy: 6,
-        battery: 92,
-        isOnline: true,
-        activeParcelCodes: ['EXP-8812', 'EXP-8813'],
-        tenantId,
-        updatedAt: new Date(),
-      },
-    ];
+    const targetDrivers =
+      drivers.length > 0
+        ? drivers
+        : [
+            {
+              driverId: 901,
+              driverName: 'សុខ ចន្ថា (Sok Chantha)',
+              driverPhone: '012 345 678',
+              lat: 11.5684,
+              lng: 104.9212,
+              speed: 28,
+              heading: 45,
+              accuracy: 5,
+              battery: 88,
+              isOnline: true,
+              activeParcelCodes: ['CO02092026842', 'EXP-9921'],
+              tenantId,
+              updatedAt: new Date(),
+            },
+            {
+              driverId: 902,
+              driverName: 'ជា វីរៈ (Chea Vireak)',
+              driverPhone: '098 765 432',
+              lat: 11.5721,
+              lng: 104.8974,
+              speed: 34,
+              heading: 120,
+              accuracy: 8,
+              battery: 74,
+              isOnline: true,
+              activeParcelCodes: ['CO02098421'],
+              tenantId,
+              updatedAt: new Date(),
+            },
+            {
+              driverId: 903,
+              driverName: 'កែវ សុភាព (Keo Sopheap)',
+              driverPhone: '077 112 233',
+              lat: 11.5432,
+              lng: 104.9125,
+              speed: 15,
+              heading: 210,
+              accuracy: 6,
+              battery: 92,
+              isOnline: true,
+              activeParcelCodes: ['EXP-8812', 'EXP-8813'],
+              tenantId,
+              updatedAt: new Date(),
+            },
+          ];
 
     for (const d of targetDrivers) {
       // Add slight random jitter (50 - 150m) to simulate movement
@@ -377,7 +408,9 @@ export class TrackingService implements OnModuleInit, OnModuleDestroy {
         accuracy: 5,
         battery: Math.max(20, (d.battery || 80) - 1),
         isOnline: true,
-        activeParcelCodes: d.activeParcelCodes?.length ? d.activeParcelCodes : ['CO02098421'],
+        activeParcelCodes: d.activeParcelCodes?.length
+          ? d.activeParcelCodes
+          : ['CO02098421'],
         tenantId: d.tenantId,
       });
 
@@ -465,19 +498,23 @@ export class TrackingService implements OnModuleInit, OnModuleDestroy {
         updatedAt: parcel['updatedAt'],
         destinationCoords,
       },
-      driver: parcel.driver ? {
-        id: parcel.driver.id,
-        name: parcel.driver.name,
-        phone: parcel.driver.phone,
-      } : null,
-      liveLocation: driverLiveLocation ? {
-        lat: driverLiveLocation.lat,
-        lng: driverLiveLocation.lng,
-        heading: driverLiveLocation.heading || 0,
-        speed: driverLiveLocation.speed || 0,
-        isOnline: driverLiveLocation.isOnline,
-        updatedAt: driverLiveLocation.updatedAt,
-      } : null,
+      driver: parcel.driver
+        ? {
+            id: parcel.driver.id,
+            name: parcel.driver.name,
+            phone: parcel.driver.phone,
+          }
+        : null,
+      liveLocation: driverLiveLocation
+        ? {
+            lat: driverLiveLocation.lat,
+            lng: driverLiveLocation.lng,
+            heading: driverLiveLocation.heading || 0,
+            speed: driverLiveLocation.speed || 0,
+            isOnline: driverLiveLocation.isOnline,
+            updatedAt: driverLiveLocation.updatedAt,
+          }
+        : null,
       eta: {
         distanceKm: distanceKm ? Number(distanceKm.toFixed(2)) : null,
         minutes: etaMinutes,

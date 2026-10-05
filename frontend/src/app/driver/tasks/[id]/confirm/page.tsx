@@ -72,10 +72,7 @@ export default function ConfirmDeliveryPage({ params }: { params: Promise<{ id: 
   const [success, setSuccess] = useState(false);
 
   // Form states
-  const [proofPhotos, setProofPhotos] = useState<string[]>([
-    'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=300&q=80',
-    'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?auto=format&fit=crop&w=300&q=80',
-  ]);
+  const [proofPhotos, setProofPhotos] = useState<string[]>([]);
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'bank' | 'already_paid'>('cash');
   const [note, setNote] = useState('');
 
@@ -267,7 +264,7 @@ export default function ConfirmDeliveryPage({ params }: { params: Promise<{ id: 
     );
   }
 
-  const merchantName = parcel?.merchant?.name || parcel?.merchant?.nameKh || 'Sokha Store';
+  const merchantName = parcel?.merchant?.name || parcel?.merchant?.nameKh || parcel?.merchantName || (lang === 'km' ? 'ហាង' : 'Store');
 
   return (
     <div style={{

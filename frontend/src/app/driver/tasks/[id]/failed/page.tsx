@@ -75,10 +75,7 @@ export default function FailedDeliveryPage({ params }: { params: Promise<{ id: s
 
   // Form states
   const [selectedReason, setSelectedReason] = useState('Customer not at home');
-  const [photos, setPhotos] = useState<string[]>([
-    'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=300&q=80',
-    'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?auto=format&fit=crop&w=300&q=80',
-  ]);
+  const [photos, setPhotos] = useState<string[]>([]);
   const [note, setNote] = useState('');
 
   const t = failedTranslations[lang as 'en' | 'km'] || failedTranslations.en;
@@ -204,8 +201,8 @@ export default function FailedDeliveryPage({ params }: { params: Promise<{ id: s
     );
   }
 
-  const merchantName = parcel?.merchant?.name || parcel?.merchant?.nameKh || 'Apple Store';
-  const phoneAndAddress = `${parcel?.receiverPhone || '012 345 678'}, ${parcel?.receiverAddress || 'Phnom Penh, Sen Sok'}`;
+  const merchantName = parcel?.merchant?.name || parcel?.merchant?.nameKh || parcel?.merchantName || (lang === 'km' ? 'ហាង' : 'Store');
+  const phoneAndAddress = `${parcel?.receiverPhone || 'N/A'}, ${parcel?.receiverAddress || parcel?.address || 'N/A'}`;
 
   return (
     <div style={{
@@ -276,7 +273,7 @@ export default function FailedDeliveryPage({ params }: { params: Promise<{ id: s
             </div>
             <div style={{ minWidth: 0 }}>
               <div style={{ fontSize: '13.5px', fontWeight: '800', color: '#0f172a' }}>
-                #{parcel?.trackingCode || 'EX00123458'}
+                #{parcel?.trackingCode || parcel?.trackingNumber || parcel?.code || taskId}
               </div>
               <div style={{ fontSize: '12px', fontWeight: '700', color: '#334155' }}>
                 {merchantName}

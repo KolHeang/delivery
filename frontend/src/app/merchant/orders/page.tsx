@@ -59,101 +59,11 @@ export default function MerchantOrdersPage() {
     loadOrders();
   }, [router]);
 
-  // Default sample items matching screenshot if empty
-  const defaultSampleOrders = [
-    {
-      id: 1,
-      code: "EX10235",
-      recipientName: "Sokha Chan",
-      recipientPhone: "012 345 678",
-      address: "#12, St. 271, Boeng Tumpun, Phnom Penh",
-      status: "in_delivery",
-      statusText: "In Delivery",
-      badgeBg: "#eff6ff",
-      badgeColor: "#2563eb",
-      amount: 28.0,
-      khrAmount: 114800,
-      createdAt: "2024-12-23T09:15:00Z",
-    },
-    {
-      id: 2,
-      code: "EX10234",
-      recipientName: "Menglong Ngeth",
-      recipientPhone: "099 876 543",
-      address: "#45, St. 310, BKK3, Phnom Penh",
-      status: "delivered",
-      statusText: "Delivered",
-      badgeBg: "#dcfce7",
-      badgeColor: "#15803d",
-      amount: 42.0,
-      khrAmount: 172200,
-      createdAt: "2024-12-23T08:30:00Z",
-    },
-    {
-      id: 3,
-      code: "EX10233",
-      recipientName: "Kim Seng",
-      recipientPhone: "070 112 233",
-      address: "#88, Russian Blvd, Toul Kork",
-      status: "pending",
-      statusText: "Pending Pickup",
-      badgeBg: "#fef3c7",
-      badgeColor: "#b45309",
-      amount: 18.5,
-      khrAmount: 75850,
-      createdAt: "2024-12-23T07:45:00Z",
-    },
-    {
-      id: 4,
-      code: "EX10232",
-      recipientName: "Chanthy Roeun",
-      recipientPhone: "088 990 011",
-      address: "#99, St. 1986, Sen Sok",
-      status: "delivered",
-      statusText: "Delivered",
-      badgeBg: "#dcfce7",
-      badgeColor: "#15803d",
-      amount: 35.0,
-      khrAmount: 143500,
-      createdAt: "2024-12-22T17:20:00Z",
-    },
-    {
-      id: 5,
-      code: "EX10231",
-      recipientName: "Vanna Long",
-      recipientPhone: "017 889 900",
-      address: "#77, St. 598, Chroy Changvar",
-      status: "failed",
-      statusText: "Failed",
-      badgeBg: "#fef2f2",
-      badgeColor: "#ef4444",
-      amount: 22.0,
-      khrAmount: 90200,
-      createdAt: "2024-12-22T14:10:00Z",
-    },
-    {
-      id: 6,
-      code: "EX10230",
-      recipientName: "Dara Som",
-      recipientPhone: "096 445 566",
-      address: "#102, St. 2004, Por Senchey",
-      status: "returned",
-      statusText: "Returned",
-      badgeBg: "#faf5ff",
-      badgeColor: "#8b5cf6",
-      amount: 15.0,
-      khrAmount: 61500,
-      createdAt: "2024-12-22T11:00:00Z",
-    },
-  ];
-
-  const allOrdersList = orders.length > 0 ? orders : defaultSampleOrders;
-
   const filteredOrders = useMemo(() => {
-    return allOrdersList.filter((item: any) => {
-      const code = (item.trackingNumber || item.code || `EX${item.id}`).toLowerCase();
-      const name = (item.recipientName || item.customerName || "").toLowerCase();
-      const phone = (item.recipientPhone || item.phone || "").toLowerCase();
+    return orders.filter((item: any) => {
+      const code = (item.trackingCode || item.trackingNumber || item.code || `${item.id}`).toLowerCase();
+      const name = (item.receiverName || item.recipientName || item.customerName || "").toLowerCase();
+      const phone = (item.receiverPhone || item.recipientPhone || item.phone || "").toLowerCase();
       const q = search.trim().toLowerCase();
 
       const matchesSearch = !q || code.includes(q) || name.includes(q) || phone.includes(q);
@@ -161,18 +71,18 @@ export default function MerchantOrdersPage() {
       const rawStatus = (item.status || item.deliveryStatus || "").toLowerCase();
       let matchesStatus = true;
       if (statusFilter === "in_delivery") {
-        matchesStatus = rawStatus === "in_delivery" || rawStatus === "in_transit";
+        matchesStatus = rawStatus === "in_delivery" || rawStatus === "in-transit" || rawStatus === "assigned";
       } else if (statusFilter === "delivered") {
         matchesStatus = rawStatus === "delivered";
       } else if (statusFilter === "failed") {
         matchesStatus = rawStatus === "failed" || rawStatus === "problem";
       } else if (statusFilter === "returned") {
-        matchesStatus = rawStatus === "returned";
+        matchesStatus = rawStatus === "returned" || rawStatus === "rejected";
       }
 
       return matchesSearch && matchesStatus;
     });
-  }, [allOrdersList, search, statusFilter]);
+  }, [orders, search, statusFilter]);
 
   return (
     <div
@@ -299,15 +209,14 @@ export default function MerchantOrdersPage() {
           </div>
         ) : (
           filteredOrders.map((order: any, idx: number) => {
-            const orderId = order.trackingNumber || order.code || `EX1023${5 - idx}`;
-            const custName =
-              order.recipientName || order.customerName || `Customer ${idx + 1}`;
-            const custPhone = order.recipientPhone || order.phone || "012 345 678";
-            const rawStatus = order.status || order.deliveryStatus || "pending";
+            const orderId = order.trackingCode || order.trackingNumber || order.code || `#${order.id || idx + 1}`;
+            const custName = order.receiverName || order.recipientName || order.customerName || (lang === "km" ? "អតិថិជន" : "Customer");
+            const custPhone = order.receiverPhone || order.recipientPhone || order.phone || "";
+            const rawStatus = (order.status || order.deliveryStatus || "pending").toLowerCase();
             const isDelivered = rawStatus === "delivered";
-            const isInTransit = rawStatus === "in_delivery" || rawStatus === "in_transit";
+            const isInTransit = rawStatus === "in_delivery" || rawStatus === "in-transit" || rawStatus === "assigned";
             const isFailed = rawStatus === "failed" || rawStatus === "problem";
-            const isReturned = rawStatus === "returned";
+            const isReturned = rawStatus === "returned" || rawStatus === "rejected";
 
             const badgeBg = isDelivered
               ? "#dcfce7"
@@ -328,17 +237,19 @@ export default function MerchantOrdersPage() {
               ? "#8b5cf6"
               : "#b45309";
             const statusText = isDelivered
-              ? "Delivered"
+              ? (lang === "km" ? "បានដឹក" : "Delivered")
               : isInTransit
-              ? "In Delivery"
+              ? (lang === "km" ? "កំពុងដឹក" : "In Delivery")
               : isFailed
-              ? "Failed"
+              ? (lang === "km" ? "មិនបានសម្រេច" : "Failed")
               : isReturned
-              ? "Returned"
-              : "Pending Pickup";
+              ? (lang === "km" ? "បានត្រឡប់" : "Returned")
+              : (lang === "km" ? "រង់ចាំការយក" : "Pending Pickup");
 
-            const amountUsd = Number(order.codAmount || order.amount || 28.0).toFixed(2);
-            const amountKhr = (Number(amountUsd) * 4100).toLocaleString();
+            const rawAmount = Number(order.cod ?? order.codAmount ?? order.amount ?? 0);
+            const isKhrCurrency = order.codCurrency === "KHR";
+            const amountUsd = isKhrCurrency ? (rawAmount / 4100).toFixed(2) : rawAmount.toFixed(2);
+            const amountKhr = isKhrCurrency ? rawAmount.toLocaleString() : Math.round(rawAmount * 4100).toLocaleString();
 
             return (
               <div
@@ -379,7 +290,7 @@ export default function MerchantOrdersPage() {
                   <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                       <span style={{ fontSize: "14.5px", fontWeight: "800", color: "#0f172a" }}>
-                        #{orderId}
+                        {orderId.startsWith("#") ? orderId : `#${orderId}`}
                       </span>
                       <span
                         style={{
@@ -399,9 +310,11 @@ export default function MerchantOrdersPage() {
                       {custName}
                     </div>
 
-                    <div style={{ fontSize: "12px", color: "#64748b", fontWeight: "500" }}>
-                      {custPhone}
-                    </div>
+                    {custPhone && (
+                      <div style={{ fontSize: "12px", color: "#64748b", fontWeight: "500" }}>
+                        {custPhone}
+                      </div>
+                    )}
                   </div>
                 </div>
 

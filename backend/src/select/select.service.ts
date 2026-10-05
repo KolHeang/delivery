@@ -29,8 +29,9 @@ export class SelectService {
   ) {}
 
   async getMerchants(tenantId?: number) {
-    const where: any = { active: true };
-    if (tenantId) where.tenantId = tenantId;
+    const where: any = tenantId
+      ? [{ active: true, tenantId }, { active: true, tenantId: IsNull() }]
+      : { active: true };
 
     return this.merchantRepo.find({
       where,

@@ -9,6 +9,7 @@ import { Parcel } from '../parcels/entities/parcel.entity';
 import { ParcelEvent } from '../parcels/entities/parcel-event.entity';
 import { PickupRequest } from '../parcels/entities/pickup-request.entity';
 import { DriverPayment } from '../payments/entities/driver-payment.entity';
+import { MerchantPayment } from '../payments/entities/merchant-payment.entity';
 import { RefreshToken } from '../auth/entities/refresh-token.entity';
 import { DeviceToken } from '../auth/entities/device-token.entity';
 import { Zone } from '../zones/entities/zone.entity';
@@ -29,6 +30,7 @@ import { MerchantService } from './merchant/merchant.service';
       ParcelEvent,
       PickupRequest,
       DriverPayment,
+      MerchantPayment,
       RefreshToken,
       DeviceToken,
       Zone,

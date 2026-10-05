@@ -100,31 +100,11 @@ export default function MerchantOrderDetailPage() {
       if (res?.data) {
         setOrder(res.data);
       } else {
-        // Sample fallback matching reference screen 04
-        setOrder({
-          id: orderId,
-          code: "EX10235",
-          status: "in_delivery",
-          statusText: "In Delivery",
-          createdAt: "23 Dec 2024 • 09:15 AM",
-          customerName: "Sokha Chan",
-          phone: "012 345 678",
-          address: "#12, St. 271, Boeng Tumpun, Phnom Penh",
-          itemName: "Cosmetics Box (2 items)",
-          weight: "1.2 kg",
-          codAmount: 28.0,
-          deliveryFee: 1.5,
-          totalValue: 29.5,
-          note: "Handle with care. Call customer before arrival.",
-          rider: {
-            name: "Sokha",
-            phone: "088 123 456",
-            rating: "4.9",
-          },
-        });
+        setOrder(null);
       }
     } catch (err) {
       console.error("Failed to load order detail", err);
+      setOrder(null);
     } finally {
       setLoading(false);
     }
@@ -144,7 +124,7 @@ export default function MerchantOrderDetailPage() {
     const newMsg = {
       id: messages.length + 1,
       sender: "merchant",
-      senderName: "Little Girl Studio",
+      senderName: "Merchant",
       text: chatInput.trim(),
       time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
     };
@@ -152,13 +132,14 @@ export default function MerchantOrderDetailPage() {
     setChatInput("");
   };
 
-  const displayCode = order?.trackingNumber || order?.code || `EX10235`;
-  const custName = order?.recipientName || order?.customerName || "Sokha Chan";
-  const custPhone = order?.recipientPhone || order?.phone || "012 345 678";
-  const custAddress = order?.recipientAddress || order?.address || "#12, St. 271, Boeng Tumpun, Phnom Penh";
-  const codVal = Number(order?.codAmount || 28.0).toFixed(2);
-  const feeVal = Number(order?.deliveryFee || 1.5).toFixed(2);
-  const totalVal = Number(order?.totalValue || Number(codVal) + Number(feeVal)).toFixed(2);
+  const displayCode = order?.trackingCode || order?.trackingNumber || order?.code || (order?.id ? `#${order.id}` : "");
+  const custName = order?.receiverName || order?.recipientName || order?.customerName || "-";
+  const custPhone = order?.receiverPhone || order?.recipientPhone || order?.phone || "-";
+  const custAddress = order?.receiverAddress || order?.recipientAddress || order?.address || "-";
+  const codVal = Number(order?.cod ?? order?.codAmount ?? 0);
+  const feeVal = Number(order?.deliveryFee || 0);
+  const totalVal = codVal + feeVal;
+  const currencySymbol = order?.codCurrency === "KHR" ? "៛ " : "$";
 
   return (
     <div

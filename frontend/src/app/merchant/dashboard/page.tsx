@@ -29,8 +29,8 @@ export default function MerchantDashboardPage() {
 
   const t = {
     amountToReceive: lang === "km" ? "ទឹកប្រាក់ត្រូវទទួលបាន" : "Amount to Receive",
-    amountCollected: lang === "km" ? "ប្រាក់ប្រមូលបាន" : "Amount Collected",
-    pendingAmount: lang === "km" ? "ប្រាក់កំពុងរង់ចាំ" : "Pending Amount",
+    amountCollected: lang === "km" ? "បានទូទាត់រួច" : "Paid / Settled",
+    pendingAmount: lang === "km" ? "រង់ចាំទូទាត់" : "Pending Settlement",
     totalPackagesToday: lang === "km" ? "កញ្ចប់អីវ៉ាន់ថ្ងៃនេះ" : "Total Packages Today",
     packages: lang === "km" ? "កញ្ចប់" : "Packages",
     delivered: lang === "km" ? "បានដឹក" : "Delivered",
@@ -79,78 +79,32 @@ export default function MerchantDashboardPage() {
   }, [router]);
 
   const user = getUser() as any;
-  const storeName = merchant?.name || user?.name || "Little Girl Studio";
-  const storePhone = merchant?.phone || user?.phone || "098 387 7786";
+  const storeName = merchant?.name || merchant?.nameKh || user?.name || (lang === "km" ? "ហាង" : "Store");
+  const storePhone = merchant?.phone || user?.phone || "-";
 
-  // Financial calculations / fallback mock matching reference
-  const amountToReceiveKhr = data?.amountToReceiveKhr ?? 2780000;
-  const amountToReceiveUsd = data?.amountToReceiveUsd ?? 723.5;
-  const amountCollectedKhr = data?.amountCollectedKhr ?? 2151000;
-  const amountCollectedUsd = data?.amountCollectedUsd ?? 550.0;
-  const pendingAmountKhr = data?.pendingAmountKhr ?? 724000;
-  const pendingAmountUsd = data?.pendingAmountUsd ?? 185.0;
+  // Financial calculations from API or defaults to 0
+  const amountToReceiveKhr = Number(data?.amountToReceiveKhr) || 0;
+  const amountToReceiveUsd = Number(data?.amountToReceiveUsd) || 0;
+  const amountCollectedKhr = Number(data?.amountCollectedKhr) || 0;
+  const amountCollectedUsd = Number(data?.amountCollectedUsd) || 0;
+  const pendingAmountKhr = Number(data?.pendingAmountKhr) || 0;
+  const pendingAmountUsd = Number(data?.pendingAmountUsd) || 0;
 
-  // Packages breakdown
-  const totalPackages = orders.length > 0 ? orders.length : 35;
+  // Packages breakdown from API statistics or computed from real orders
+  const totalPackages = data?.statistics?.totalParcel ?? orders.length;
   const deliveredCount =
-    orders.filter((o) => o.status === "delivered" || o.deliveryStatus === "delivered").length ||
-    18;
+    data?.statistics?.totalDelivered ??
+    orders.filter((o) => o.status === "delivered" || o.deliveryStatus === "delivered").length;
   const failedCount =
+    data?.statistics?.totalProblem ??
     orders.filter(
       (o) => o.status === "failed" || o.status === "problem" || o.deliveryStatus === "failed"
-    ).length || 4;
+    ).length;
   const returnedCount =
-    orders.filter((o) => o.status === "returned" || o.deliveryStatus === "returned").length || 2;
+    data?.statistics?.totalReturn ??
+    orders.filter((o) => o.status === "returned" || o.deliveryStatus === "returned").length;
 
-  // Default sample orders matching reference
-  const defaultRecentOrders = [
-    {
-      id: "EX10235",
-      customerName: "Sokha Chan",
-      phone: "012 345 678",
-      status: "in_delivery",
-      statusText: "In Delivery",
-      date: "23 Dec 2024 • 09:15 AM",
-      amount: 28.0,
-      badgeColor: "#eff6ff",
-      textColor: "#2563eb",
-    },
-    {
-      id: "EX10234",
-      customerName: "Menglong Ngeth",
-      phone: "099 876 543",
-      status: "delivered",
-      statusText: "Delivered",
-      date: "23 Dec 2024 • 08:30 AM",
-      amount: 42.0,
-      badgeColor: "#dcfce7",
-      textColor: "#15803d",
-    },
-    {
-      id: "EX10233",
-      customerName: "Kim Seng",
-      phone: "070 112 233",
-      status: "pending",
-      statusText: "Pending Pickup",
-      date: "23 Dec 2024 • 07:45 AM",
-      amount: 18.5,
-      badgeColor: "#fef3c7",
-      textColor: "#b45309",
-    },
-    {
-      id: "EX10232",
-      customerName: "Chanthy Roeun",
-      phone: "088 990 011",
-      status: "delivered",
-      statusText: "Delivered",
-      date: "22 Dec 2024 • 05:20 PM",
-      amount: 35.0,
-      badgeColor: "#dcfce7",
-      textColor: "#15803d",
-    },
-  ];
-
-  const displayOrders = orders.length > 0 ? orders : defaultRecentOrders;
+  const displayOrders = orders;
 
   return (
     <div
@@ -520,107 +474,178 @@ export default function MerchantDashboardPage() {
           </div>
 
           <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-            {displayOrders.map((order: any, idx: number) => {
-              const orderId = order.trackingNumber || order.code || order.id || `EX1023${5 - idx}`;
-              const custName =
-                order.recipientName || order.customerName || `Customer ${idx + 1}`;
-              const custPhone = order.recipientPhone || order.phone || "012 345 678";
-              const rawStatus = order.status || order.deliveryStatus || "pending";
-              const isDelivered = rawStatus === "delivered";
-              const isInTransit = rawStatus === "in_delivery" || rawStatus === "in_transit";
-
-              const badgeBg = isDelivered ? "#dcfce7" : isInTransit ? "#eff6ff" : "#fef3c7";
-              const badgeColor = isDelivered ? "#15803d" : isInTransit ? "#2563eb" : "#b45309";
-              const statusText = isDelivered
-                ? "Delivered"
-                : isInTransit
-                ? "In Delivery"
-                : "Pending";
-              const amountVal = order.codAmount || order.amount || 28.0;
-
-              return (
+            {displayOrders.length === 0 ? (
+              <div
+                style={{
+                  backgroundColor: "#ffffff",
+                  borderRadius: "16px",
+                  padding: "32px 20px",
+                  border: "1px dashed #cbd5e1",
+                  textAlign: "center",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  gap: "10px",
+                }}
+              >
                 <div
-                  key={order.id || idx}
-                  onClick={() => router.push(`/merchant/orders/${order.id || 1}`)}
                   style={{
-                    backgroundColor: "#ffffff",
-                    borderRadius: "16px",
-                    padding: "14px 16px",
-                    border: "1px solid #f1f5f9",
-                    boxShadow: "0 2px 8px rgba(0,0,0,0.02)",
+                    width: "48px",
+                    height: "48px",
+                    borderRadius: "50%",
+                    backgroundColor: "#f1f5f9",
+                    color: "#94a3b8",
                     display: "flex",
                     alignItems: "center",
-                    justifyContent: "space-between",
-                    cursor: "pointer",
-                    transition: "transform 0.15s ease",
+                    justifyContent: "center",
                   }}
                 >
-                  <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                    <div
-                      style={{
-                        width: "40px",
-                        height: "40px",
-                        borderRadius: "12px",
-                        backgroundColor: "#f8fafc",
-                        border: "1px solid #e2e8f0",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        color: "#64748b",
-                      }}
-                    >
-                      <MdInventory2 size={20} />
-                    </div>
+                  <MdInventory2 size={24} />
+                </div>
+                <div style={{ fontSize: "14px", fontWeight: "700", color: "#64748b" }}>
+                  {lang === "km" ? "មិនទាន់មានការបញ្ជាទិញនៅឡើយទេ" : "No recent delivery orders yet"}
+                </div>
+                <Link
+                  href="/merchant/booking/create"
+                  style={{
+                    textDecoration: "none",
+                    fontSize: "13px",
+                    fontWeight: "800",
+                    color: "#2563eb",
+                    marginTop: "4px",
+                  }}
+                >
+                  + {t.createNewBooking}
+                </Link>
+              </div>
+            ) : (
+              displayOrders.map((order: any, idx: number) => {
+                const orderId = order.trackingCode || order.trackingNumber || order.code || `#${order.id || idx + 1}`;
+                const custName = order.receiverName || order.recipientName || order.customerName || (lang === "km" ? "អតិថិជន" : "Customer");
+                const custPhone = order.receiverPhone || order.recipientPhone || order.phone || "";
+                const rawStatus = order.status || order.deliveryStatus || "pending";
+                const isDelivered = rawStatus === "delivered";
+                const isInTransit = rawStatus === "in_delivery" || rawStatus === "in-transit" || rawStatus === "assigned";
+                const isFailed = rawStatus === "failed" || rawStatus === "problem";
+                const isReturned = rawStatus === "returned" || rawStatus === "rejected";
 
-                    <div>
-                      <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                        <span style={{ fontSize: "14.5px", fontWeight: "800", color: "#0f172a" }}>
-                          #{orderId}
-                        </span>
-                        <span
+                const badgeBg = isDelivered
+                  ? "#dcfce7"
+                  : isFailed
+                  ? "#fee2e2"
+                  : isReturned
+                  ? "#f3e8ff"
+                  : isInTransit
+                  ? "#eff6ff"
+                  : "#fef3c7";
+
+                const badgeColor = isDelivered
+                  ? "#15803d"
+                  : isFailed
+                  ? "#dc2626"
+                  : isReturned
+                  ? "#7c3aed"
+                  : isInTransit
+                  ? "#2563eb"
+                  : "#b45309";
+
+                const statusText = isDelivered
+                  ? (lang === "km" ? "បានដឹក" : "Delivered")
+                  : isFailed
+                  ? (lang === "km" ? "មិនបានសម្រេច" : "Failed")
+                  : isReturned
+                  ? (lang === "km" ? "បានត្រឡប់" : "Returned")
+                  : isInTransit
+                  ? (lang === "km" ? "កំពុងដឹក" : "In Delivery")
+                  : (lang === "km" ? "រង់ចាំ" : "Pending");
+
+                const amountVal = Number(order.cod ?? order.codAmount ?? order.amount ?? 0);
+                const currencySymbol = order.codCurrency === "KHR" ? "៛ " : "$";
+
+                return (
+                  <div
+                    key={order.id || idx}
+                    onClick={() => router.push(`/merchant/orders/${order.id || 1}`)}
+                    style={{
+                      backgroundColor: "#ffffff",
+                      borderRadius: "16px",
+                      padding: "14px 16px",
+                      border: "1px solid #f1f5f9",
+                      boxShadow: "0 2px 8px rgba(0,0,0,0.02)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      cursor: "pointer",
+                      transition: "transform 0.15s ease",
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                      <div
+                        style={{
+                          width: "40px",
+                          height: "40px",
+                          borderRadius: "12px",
+                          backgroundColor: "#f8fafc",
+                          border: "1px solid #e2e8f0",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          color: "#64748b",
+                        }}
+                      >
+                        <MdInventory2 size={20} />
+                      </div>
+
+                      <div>
+                        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                          <span style={{ fontSize: "14.5px", fontWeight: "800", color: "#0f172a" }}>
+                            {orderId.startsWith("#") ? orderId : `#${orderId}`}
+                          </span>
+                          <span
+                            style={{
+                              backgroundColor: badgeBg,
+                              color: badgeColor,
+                              padding: "2px 6px",
+                              borderRadius: "6px",
+                              fontSize: "10.5px",
+                              fontWeight: "800",
+                            }}
+                          >
+                            {statusText}
+                          </span>
+                        </div>
+                        <div
                           style={{
-                            backgroundColor: badgeBg,
-                            color: badgeColor,
-                            padding: "2px 6px",
-                            borderRadius: "6px",
-                            fontSize: "10.5px",
-                            fontWeight: "800",
+                            fontSize: "12px",
+                            color: "#64748b",
+                            fontWeight: "600",
+                            marginTop: "2px",
                           }}
                         >
-                          {statusText}
-                        </span>
+                          {custName} {custPhone ? `• ${custPhone}` : ""}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{ textAlign: "right" }}>
+                      <div style={{ fontSize: "15px", fontWeight: "900", color: "#0f172a" }}>
+                        {currencySymbol === "៛ " ? `៛ ${amountVal.toLocaleString()}` : `$${amountVal.toFixed(2)}`}
                       </div>
                       <div
                         style={{
-                          fontSize: "12px",
-                          color: "#64748b",
+                          fontSize: "11px",
+                          color: "#94a3b8",
                           fontWeight: "600",
                           marginTop: "2px",
                         }}
                       >
-                        {custName} • {custPhone}
+                        COD
                       </div>
                     </div>
                   </div>
-
-                  <div style={{ textAlign: "right" }}>
-                    <div style={{ fontSize: "15px", fontWeight: "900", color: "#0f172a" }}>
-                      ${Number(amountVal).toFixed(2)}
-                    </div>
-                    <div
-                      style={{
-                        fontSize: "11px",
-                        color: "#94a3b8",
-                        fontWeight: "600",
-                        marginTop: "2px",
-                      }}
-                    >
-                      COD
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+                );
+              })
+            )}
           </div>
         </div>
       </div>

@@ -139,6 +139,12 @@ export class MerchantController {
     });
   }
 
+  @Get('settlements/:id')
+  @ApiOperation({ summary: 'Get COD settlement receipt detail by ID or reference' })
+  getSettlementById(@Request() req: any, @Param('id') id: string) {
+    return this.merchantService.getSettlementById(req.user.id, id);
+  }
+
   @Post('pickup-requests')
   @ApiOperation({ summary: 'Create a new pickup request' })
   createPickupRequest(@Request() req: any, @Body() dto: CreatePickupRequestDto) {

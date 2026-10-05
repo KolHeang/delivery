@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import api from "@/lib/api";
-import { isAuthenticated } from "@/lib/auth";
+import { isAuthenticated, getUser } from "@/lib/auth";
 import { useLanguage } from "@/lib/LanguageContext";
 import {
   MdArrowBack,
@@ -18,6 +18,7 @@ import {
   MdChat,
   MdTimeline,
   MdInfo,
+  MdChatBubbleOutline,
   MdAddAPhoto,
   MdClose,
   MdSend,
@@ -41,10 +42,7 @@ export default function DriverTaskDetailPage() {
 
   // Screen 5: Confirm Delivery Modal State
   const [confirmDeliveryOpen, setConfirmDeliveryOpen] = useState(false);
-  const [deliveryProofPhotos, setDeliveryProofPhotos] = useState<string[]>([
-    "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=200&auto=format&fit=crop&q=60",
-    "https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=200&auto=format&fit=crop&q=60",
-  ]);
+  const [deliveryProofPhotos, setDeliveryProofPhotos] = useState<string[]>([]);
   const [paymentStatus, setPaymentStatus] = useState<"cash" | "bank" | "already_paid">("cash");
   const [deliveryNote, setDeliveryNote] = useState("");
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -54,26 +52,17 @@ export default function DriverTaskDetailPage() {
   // Screen 6: Report Failed Delivery Modal State
   const [reportFailedOpen, setReportFailedOpen] = useState(false);
   const [failureReason, setFailureReason] = useState("Customer not at home");
-  const [failedPhotos, setFailedPhotos] = useState<string[]>([
-    "https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=200&auto=format&fit=crop&q=60",
-    "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=200&auto=format&fit=crop&q=60",
-  ]);
+  const [failedPhotos, setFailedPhotos] = useState<string[]>([]);
   const [failedNote, setFailedNote] = useState("");
 
   // Screen 7: Return Parcel Modal State
   const [returnParcelOpen, setReturnParcelOpen] = useState(false);
   const [returnReason, setReturnReason] = useState("Customer rejected parcel");
-  const [returnPhotos, setReturnPhotos] = useState<string[]>([
-    "https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=200&auto=format&fit=crop&q=60",
-  ]);
+  const [returnPhotos, setReturnPhotos] = useState<string[]>([]);
   const [returnNote, setReturnNote] = useState("");
 
   // Screen 9: Chat State
-  const [messages, setMessages] = useState<any[]>([
-    { id: 1, sender: "store", senderName: "Sokha Store", text: "Hello, please call customer before delivery.", time: "09:12 AM" },
-    { id: 2, sender: "driver", senderName: "Sophal Rider", text: "Ok, I'm on the way.", time: "09:15 AM" },
-    { id: 3, sender: "driver", senderName: "Sophal Rider", text: "Arrived at customer location.", photo: "https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=300&auto=format&fit=crop&q=60", time: "10:20 AM" },
-  ]);
+  const [messages, setMessages] = useState<any[]>([]);
   const [chatInput, setChatInput] = useState("");
 
   const loadTaskDetail = async () => {
@@ -87,20 +76,7 @@ export default function DriverTaskDetailPage() {
         setTask(res.data);
       }
     } catch {
-      // Fallback sample parcel matching Screen 4
-      setTask({
-        id: taskId,
-        trackingCode: "EX00123456",
-        status: "pending",
-        merchant: { name: "Sokha Store", phone: "023 555 678", address: "Phnom Penh, Chamkarmon" },
-        receiverName: "Chan Sodany",
-        receiverPhone: "012 345 678",
-        receiverAddress: "#123, St. 278, Boeung Keng Kang, Phnom Penh",
-        codAmount: 20.0,
-        weight: "1.2 kg",
-        itemsDescription: "Clothes (3 packages)",
-        note: "Handle with care",
-      });
+      setTask(null);
     } finally {
       setLoading(false);
     }
@@ -186,7 +162,7 @@ export default function DriverTaskDetailPage() {
     const newMsg = {
       id: messages.length + 1,
       sender: "driver",
-      senderName: "Sophal Rider",
+      senderName: currentDriverName,
       text: chatInput.trim(),
       time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
     };
@@ -203,15 +179,19 @@ export default function DriverTaskDetailPage() {
     );
   }
 
-  const trackingCode = task?.trackingCode || task?.trackingNumber || task?.code || "EX00123456";
-  const storeName = task?.merchant?.name || task?.merchantName || "Sokha Store";
-  const customerName = task?.receiverName || "Chan Sodany";
-  const customerPhone = task?.receiverPhone || "012 345 678";
-  const customerAddress = task?.receiverAddress || "#123, St. 278, Boeung Keng Kang, Phnom Penh";
-  const cod = task?.codAmount ?? task?.cod ?? 20.0;
-  const weight = task?.weight ? `${task.weight} kg` : "1.2 kg";
-  const items = task?.itemsDescription || "Clothes (3 packages)";
-  const note = task?.note || "Handle with care";
+  const user = getUser() as any;
+  const currentDriverName = user?.name || user?.username || "Driver";
+
+  const trackingCode = task?.trackingCode || task?.trackingNumber || task?.code || `#${taskId || ""}`;
+  const storeName = task?.merchant?.name || task?.merchantName || (lang === "km" ? "ហាង" : "Store");
+  const storePhone = task?.merchant?.phone || task?.merchantPhone || "-";
+  const customerName = task?.receiverName || "N/A";
+  const customerPhone = task?.receiverPhone || "N/A";
+  const customerAddress = task?.receiverAddress || task?.address || "N/A";
+  const cod = Number(task?.codAmount ?? task?.cod) || 0.0;
+  const weight = task?.weight ? `${task.weight} kg` : "-";
+  const items = task?.itemsDescription || task?.itemType || "-";
+  const note = task?.note || "-";
   const isPending = task?.status !== "delivered" && task?.status !== "failed" && task?.status !== "returned";
 
   return (
@@ -479,10 +459,10 @@ export default function DriverTaskDetailPage() {
       {activeTab === "timeline" && (
         <div style={{ padding: "20px 16px", display: "flex", flexDirection: "column", gap: "16px" }}>
           {[
-            { title: "Parcel Created", time: "08:30 AM", desc: "Merchant prepared package", done: true },
-            { title: "Driver Assigned", time: "09:00 AM", desc: "Assigned to Sophal Rider", done: true },
-            { title: "In Transit", time: "09:30 AM", desc: "Package out for delivery", done: task?.status === "in-transit" || task?.status === "delivered" },
-            { title: "Delivered", time: "10:30 AM", desc: "Delivered to customer successfully", done: task?.status === "delivered" },
+            { title: "Parcel Created", time: task?.createdAt ? new Date(task.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "-", desc: "Merchant prepared package", done: true },
+            { title: "Driver Assigned", time: task?.assignedAt ? new Date(task.assignedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "-", desc: `Assigned to ${task?.driver?.nameKh || task?.driver?.name || currentDriverName}`, done: true },
+            { title: "In Transit", time: task?.pickedUpAt ? new Date(task.pickedUpAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "-", desc: "Package out for delivery", done: task?.status === "in-transit" || task?.status === "delivered" },
+            { title: "Delivered", time: task?.deliveredAt ? new Date(task.deliveredAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "-", desc: "Delivered to customer successfully", done: task?.status === "delivered" },
           ].map((step, idx) => (
             <div key={idx} style={{ display: "flex", gap: "14px" }}>
               <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
@@ -493,7 +473,7 @@ export default function DriverTaskDetailPage() {
               </div>
               <div>
                 <div style={{ fontSize: "14px", fontWeight: "800", color: "#0f172a" }}>{step.title}</div>
-                <div style={{ fontSize: "11.5px", color: "#64748b" }}>{step.desc} • {step.time}</div>
+                <div style={{ fontSize: "11.5px", color: "#64748b" }}>{step.desc} {step.time !== "-" ? `• ${step.time}` : ""}</div>
               </div>
             </div>
           ))}
@@ -505,30 +485,37 @@ export default function DriverTaskDetailPage() {
         <div style={{ display: "flex", flexDirection: "column", minHeight: "65vh" }}>
           {/* Chat Messages */}
           <div style={{ flex: 1, padding: "16px", display: "flex", flexDirection: "column", gap: "12px", overflowY: "auto" }}>
-            {messages.map((m) => {
-              const isMe = m.sender === "driver";
-              return (
-                <div key={m.id} style={{ display: "flex", flexDirection: "column", alignItems: isMe ? "flex-end" : "flex-start" }}>
-                  <div style={{
-                    maxWidth: "75%",
-                    borderRadius: "18px",
-                    padding: "10px 14px",
-                    backgroundColor: isMe ? "#2563eb" : "#ffffff",
-                    color: isMe ? "#ffffff" : "#0f172a",
-                    boxShadow: "0 2px 6px rgba(0,0,0,0.04)",
-                    border: isMe ? "none" : "1px solid #e2e8f0",
-                    borderBottomRightRadius: isMe ? "4px" : "18px",
-                    borderBottomLeftRadius: isMe ? "18px" : "4px",
-                  }}>
-                    {m.photo && (
-                      <img src={m.photo} alt="Attachment" style={{ width: "100%", borderRadius: "12px", marginBottom: "6px", objectFit: "cover", maxHeight: "160px" }} />
-                    )}
-                    <div style={{ fontSize: "13px", fontWeight: "500", lineHeight: 1.4 }}>{m.text}</div>
+            {messages.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "40px 16px", color: "#94a3b8", display: "flex", flexDirection: "column", alignItems: "center", gap: "8px" }}>
+                <MdChatBubbleOutline size={32} color="#cbd5e1" />
+                <div style={{ fontSize: "13px", fontWeight: "600" }}>{lang === "km" ? "មិនទាន់មានសារនៅឡើយទេ" : "No messages yet"}</div>
+              </div>
+            ) : (
+              messages.map((m) => {
+                const isMe = m.sender === "driver";
+                return (
+                  <div key={m.id} style={{ display: "flex", flexDirection: "column", alignItems: isMe ? "flex-end" : "flex-start" }}>
+                    <div style={{
+                      maxWidth: "75%",
+                      borderRadius: "18px",
+                      padding: "10px 14px",
+                      backgroundColor: isMe ? "#2563eb" : "#ffffff",
+                      color: isMe ? "#ffffff" : "#0f172a",
+                      boxShadow: "0 2px 6px rgba(0,0,0,0.04)",
+                      border: isMe ? "none" : "1px solid #e2e8f0",
+                      borderBottomRightRadius: isMe ? "4px" : "18px",
+                      borderBottomLeftRadius: isMe ? "18px" : "4px",
+                    }}>
+                      {m.photo && (
+                        <img src={m.photo} alt="Attachment" style={{ width: "100%", borderRadius: "12px", marginBottom: "6px", objectFit: "cover", maxHeight: "160px" }} />
+                      )}
+                      <div style={{ fontSize: "13px", fontWeight: "500", lineHeight: 1.4 }}>{m.text}</div>
+                    </div>
+                    <span style={{ fontSize: "10px", color: "#94a3b8", marginTop: "3px", padding: "0 4px" }}>{m.time}</span>
                   </div>
-                  <span style={{ fontSize: "10px", color: "#94a3b8", marginTop: "3px", padding: "0 4px" }}>{m.time}</span>
-                </div>
-              );
-            })}
+                );
+              })
+            )}
           </div>
 
           {/* Chat Input Bar */}

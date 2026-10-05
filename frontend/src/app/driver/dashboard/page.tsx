@@ -71,16 +71,16 @@ export default function DriverDashboardPage() {
   const taskProblems = tasks.filter((t: any) => t.status === "failed" || t.status === "cancelled").length;
   const taskReturned = tasks.filter((t: any) => t.status === "returned").length;
 
-  const totalCount = taskTotal > 0 ? taskTotal : (stats.totalPackage ?? 24);
-  const assignedCount = taskTotal > 0 ? taskAssigned : (stats.assignedParcels ?? 18);
-  const deliveredCount = taskTotal > 0 ? taskDelivered : (stats.totalSuccessful ?? 12);
-  const problemCount = taskTotal > 0 ? taskProblems : (stats.totalProblem ?? 4);
-  const returnCount = taskTotal > 0 ? taskReturned : (stats.totalReturn ?? 2);
+  const totalCount = taskTotal > 0 ? taskTotal : (stats.totalPackage ?? 0);
+  const assignedCount = taskTotal > 0 ? taskAssigned : (stats.assignedParcels ?? 0);
+  const deliveredCount = taskTotal > 0 ? taskDelivered : (stats.totalSuccessful ?? 0);
+  const problemCount = taskTotal > 0 ? taskProblems : (stats.totalProblem ?? 0);
+  const returnCount = taskTotal > 0 ? taskReturned : (stats.totalReturn ?? 0);
 
-  const amountToCollect = data?.amountToCollect ?? 120.0;
-  const amountCollected = data?.wallets?.find((w: any) => w.currency === "USD")?.balance ?? 80.0;
+  const amountToCollect = Number(data?.amountToCollect) || 0.0;
+  const amountCollected = Number(data?.wallets?.find((w: any) => w.currency === "USD")?.balance) || 0.0;
 
-  const displayName = driver?.name || driver?.nameKh || "Sophal Rider";
+  const displayName = driver?.name || driver?.nameKh || "Rider";
 
   // Format date display: Mon, 23 Dec 2024
   const formatDateDisplay = (dStr: string) => {
@@ -92,12 +92,7 @@ export default function DriverDashboardPage() {
     }
   };
 
-  // Sample tasks fallback if empty to mirror Screen 2
-  const displayTasks = tasks.length > 0 ? tasks.slice(0, 4) : [
-    { id: 1, trackingNumber: "EX00123456", merchant: { name: "Sokha Store" }, receiverAddress: "Phnom Penh, Chamkarmon", status: "pending" },
-    { id: 2, trackingNumber: "EX00123457", merchant: { name: "Happy Shop" }, receiverAddress: "Phnom Penh, Toul Kork", status: "in-transit" },
-    { id: 3, trackingNumber: "EX00123458", merchant: { name: "Apple Store" }, receiverAddress: "Phnom Penh, Sen Sok", status: "failed" },
-  ];
+  const displayTasks = tasks.slice(0, 4);
 
   if (loading) {
     return (
@@ -340,53 +335,60 @@ export default function DriverDashboardPage() {
           </div>
 
           <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-            {displayTasks.map((tItem: any, idx: number) => {
-              const code = tItem.trackingNumber || tItem.code || `EX0012345${idx + 6}`;
-              const shopName = tItem.merchant?.name || tItem.shopName || "Sokha Store";
-              const isDelivered = tItem.status === "delivered";
-              const isFailed = tItem.status === "failed";
-              const isTransit = tItem.status === "in-transit" || tItem.status === "picked-up";
+            {displayTasks.length === 0 ? (
+              <div style={{ backgroundColor: "#ffffff", borderRadius: "18px", padding: "28px", textAlign: "center", border: "1px dashed #cbd5e1", color: "#94a3b8", display: "flex", flexDirection: "column", alignItems: "center", gap: "6px" }}>
+                <MdInventory2 size={32} />
+                <div style={{ fontSize: "13px", fontWeight: "700" }}>{lang === "km" ? "មិនទាន់មានកិច្ចការត្រូវបានចាត់តាំងទេ" : "No recent tasks assigned yet"}</div>
+              </div>
+            ) : (
+              displayTasks.map((tItem: any, idx: number) => {
+                const code = tItem.trackingCode || tItem.trackingNumber || tItem.code || `#${tItem.id || idx + 1}`;
+                const shopName = tItem.merchant?.name || tItem.merchantName || tItem.shopName || (lang === "km" ? "ហាង" : "Store");
+                const isDelivered = tItem.status === "delivered";
+                const isFailed = tItem.status === "failed";
+                const isTransit = tItem.status === "in-transit" || tItem.status === "picked-up" || tItem.status === "assigned";
 
-              return (
-                <div
-                  key={tItem.id || idx}
-                  onClick={() => router.push(`/driver/tasks/${tItem.id || 1}`)}
-                  style={{
-                    backgroundColor: "#ffffff",
-                    borderRadius: "18px",
-                    padding: "14px 16px",
-                    boxShadow: "0 2px 8px rgba(0,0,0,0.03)",
-                    border: "1px solid #f1f5f9",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    cursor: "pointer",
-                  }}
-                >
-                  <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                    <div style={{ width: "40px", height: "40px", borderRadius: "12px", backgroundColor: "#eff6ff", display: "flex", alignItems: "center", justifyContent: "center", color: "#2563eb", flexShrink: 0 }}>
-                      <MdInventory2 size={22} />
+                return (
+                  <div
+                    key={tItem.id || idx}
+                    onClick={() => router.push(`/driver/tasks/${tItem.id || 1}`)}
+                    style={{
+                      backgroundColor: "#ffffff",
+                      borderRadius: "18px",
+                      padding: "14px 16px",
+                      boxShadow: "0 2px 8px rgba(0,0,0,0.03)",
+                      border: "1px solid #f1f5f9",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                      <div style={{ width: "40px", height: "40px", borderRadius: "12px", backgroundColor: "#eff6ff", display: "flex", alignItems: "center", justifyContent: "center", color: "#2563eb", flexShrink: 0 }}>
+                        <MdInventory2 size={22} />
+                      </div>
+                      <div>
+                        <div style={{ fontSize: "13.5px", fontWeight: "800", color: "#0f172a" }}>{code.startsWith("#") ? code : `#${code}`}</div>
+                        <div style={{ fontSize: "12px", color: "#64748b", fontWeight: "600", marginTop: "1px" }}>{shopName}</div>
+                      </div>
                     </div>
-                    <div>
-                      <div style={{ fontSize: "13.5px", fontWeight: "800", color: "#0f172a" }}>#{code}</div>
-                      <div style={{ fontSize: "12px", color: "#64748b", fontWeight: "600", marginTop: "1px" }}>{shopName}</div>
-                    </div>
+
+                    {/* Status Badge */}
+                    <span style={{
+                      fontSize: "11px",
+                      fontWeight: "800",
+                      padding: "5px 12px",
+                      borderRadius: "20px",
+                      backgroundColor: isDelivered ? "#dcfce7" : isFailed ? "#fee2e2" : isTransit ? "#dbeafe" : "#fef3c7",
+                      color: isDelivered ? "#15803d" : isFailed ? "#b91c1c" : isTransit ? "#1e40af" : "#b45309",
+                    }}>
+                      {isDelivered ? "Delivered" : isFailed ? "Failed" : isTransit ? "Delivery" : "Pending"}
+                    </span>
                   </div>
-
-                  {/* Status Badge */}
-                  <span style={{
-                    fontSize: "11px",
-                    fontWeight: "800",
-                    padding: "5px 12px",
-                    borderRadius: "20px",
-                    backgroundColor: isDelivered ? "#dcfce7" : isFailed ? "#fee2e2" : isTransit ? "#dbeafe" : "#fef3c7",
-                    color: isDelivered ? "#15803d" : isFailed ? "#b91c1c" : isTransit ? "#1e40af" : "#b45309",
-                  }}>
-                    {isDelivered ? "Delivered" : isFailed ? "Failed" : isTransit ? "Delivery" : "Pending"}
-                  </span>
-                </div>
-              );
-            })}
+                );
+              })
+            )}
           </div>
         </div>
 

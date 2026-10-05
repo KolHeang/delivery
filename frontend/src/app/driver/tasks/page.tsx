@@ -49,29 +49,18 @@ export default function DriverTasksPage() {
   }, [router]);
 
   // Counts for filter pills
-  const totalCount = tasks.length > 0 ? tasks.length : 25;
-  const pendingCount = tasks.filter(t => t.status === "pending" || t.status === "assigned" || t.status === "in-transit").length || 6;
-  const deliveredCount = tasks.filter(t => t.status === "delivered").length || 18;
-  const failedCount = tasks.filter(t => t.status === "failed").length || 3;
-  const returnedCount = tasks.filter(t => t.status === "returned").length || 2;
+  const totalCount = tasks.length;
+  const pendingCount = tasks.filter(t => t.status === "pending" || t.status === "assigned" || t.status === "in-transit" || t.status === "picked-up").length;
+  const deliveredCount = tasks.filter(t => t.status === "delivered").length;
+  const failedCount = tasks.filter(t => t.status === "failed" || t.status === "problem").length;
+  const returnedCount = tasks.filter(t => t.status === "returned" || t.status === "rejected").length;
 
-  // Filter tasks by active status and search query
-  const sampleFallbackTasks = [
-    { id: 1, trackingCode: "EX00123456", merchantName: "Sokha Store", address: "Phnom Penh, Chamkarmon", status: "pending", secondaryStatus: "delivery" },
-    { id: 2, trackingCode: "EX00123457", merchantName: "Happy Shop", address: "Phnom Penh, Toul Kork", status: "pending", secondaryStatus: "delivery" },
-    { id: 3, trackingCode: "EX00123458", merchantName: "Apple Store", address: "Phnom Penh, Sen Sok", status: "failed", secondaryStatus: "delivery" },
-    { id: 4, trackingCode: "EX00123459", merchantName: "K-Mall", address: "Phnom Penh, Chamkarmon", status: "returned", secondaryStatus: "return" },
-    { id: 5, trackingCode: "EX00123460", merchantName: "Dara Store", address: "Phnom Penh, Mean Chey", status: "delivered", secondaryStatus: "delivery" },
-  ];
-
-  const baseList = tasks.length > 0 ? tasks : sampleFallbackTasks;
-
-  const filteredTasks = baseList.filter((item: any) => {
+  const filteredTasks = tasks.filter((item: any) => {
     const itemStatus = item.status?.toLowerCase() || "pending";
-    if (activeFilter === "pending" && itemStatus !== "pending" && itemStatus !== "assigned" && itemStatus !== "in-transit") return false;
+    if (activeFilter === "pending" && itemStatus !== "pending" && itemStatus !== "assigned" && itemStatus !== "in-transit" && itemStatus !== "picked-up") return false;
     if (activeFilter === "delivered" && itemStatus !== "delivered") return false;
-    if (activeFilter === "failed" && itemStatus !== "failed") return false;
-    if (activeFilter === "returned" && itemStatus !== "returned") return false;
+    if (activeFilter === "failed" && itemStatus !== "failed" && itemStatus !== "problem") return false;
+    if (activeFilter === "returned" && itemStatus !== "returned" && itemStatus !== "rejected") return false;
 
     if (search.trim()) {
       const q = search.toLowerCase();
@@ -218,9 +207,9 @@ export default function DriverTasksPage() {
           </div>
         ) : (
           filteredTasks.map((tItem: any, idx: number) => {
-            const code = tItem.trackingCode || tItem.trackingNumber || tItem.code || `EX0012345${idx + 6}`;
-            const shopName = tItem.merchantName || tItem.merchant?.name || tItem.shopName || "Sokha Store";
-            const location = tItem.address || tItem.receiverAddress || "Phnom Penh, Chamkarmon";
+            const code = tItem.trackingCode || tItem.trackingNumber || tItem.code || `#${tItem.id || idx + 1}`;
+            const shopName = tItem.merchantName || tItem.merchant?.name || tItem.shopName || (lang === "km" ? "ហាង" : "Store");
+            const location = tItem.receiverAddress || tItem.address || "-";
             const badge = getStatusBadge(tItem.status);
 
             return (

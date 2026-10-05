@@ -81,10 +81,7 @@ export default function ReturnParcelPage({ params }: { params: Promise<{ id: str
 
   // Form states
   const [selectedReason, setSelectedReason] = useState('Customer refused delivery');
-  const [photos, setPhotos] = useState<string[]>([
-    'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=300&q=80',
-    'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?auto=format&fit=crop&w=300&q=80',
-  ]);
+  const [photos, setPhotos] = useState<string[]>([]);
   const [note, setNote] = useState('');
 
   const t = returnTranslations[lang as 'en' | 'km'] || returnTranslations.en;
@@ -173,9 +170,9 @@ export default function ReturnParcelPage({ params }: { params: Promise<{ id: str
     );
   }
 
-  const merchantName = parcel?.merchant?.name || parcel?.merchant?.nameKh || 'K-Mall';
-  const merchantPhone = parcel?.merchant?.phone || '023 555 678';
-  const merchantAddress = parcel?.merchant?.address || 'Phnom Penh, Chamkarmon';
+  const merchantName = parcel?.merchant?.name || parcel?.merchant?.nameKh || parcel?.merchantName || (lang === 'km' ? 'ហាង' : 'Store');
+  const merchantPhone = parcel?.merchant?.phone || parcel?.merchantPhone || '-';
+  const merchantAddress = parcel?.merchant?.address || parcel?.merchantAddress || '-';
 
   return (
     <div style={{
@@ -252,7 +249,7 @@ export default function ReturnParcelPage({ params }: { params: Promise<{ id: str
 
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: '15px', fontWeight: '800', color: '#0f172a' }}>
-              #{parcel?.trackingCode || 'EX00123459'}
+              #{parcel?.trackingCode || parcel?.trackingNumber || parcel?.code || taskId}
             </div>
             <div style={{ fontSize: '13px', color: '#64748b', marginTop: '2px' }}>
               {merchantName}

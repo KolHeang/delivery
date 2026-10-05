@@ -38,9 +38,6 @@ export default function BatchEntryPage() {
         setMerchants(mList);
         setZones(zList);
         setDrivers(dList);
-        if (mList.length > 0) {
-          setSelectedMerchantId(mList[0].id.toString());
-        }
       })
       .catch(() => {})
       .finally(() => setLoading(false));

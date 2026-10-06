@@ -48,24 +48,6 @@ export class CreateDriverDto {
   @ApiProperty({ required: false }) @IsOptional() @IsString() password?: string;
 }
 
-export class UpdateDriverDto {
-  @IsOptional() @IsString() code?: string;
-  @IsOptional() @IsString() name?: string;
-  @IsOptional() @IsString() nameKh?: string;
-  @IsOptional() @IsString() phone?: string;
-  @IsOptional() @IsEmail() email?: string;
-  @IsOptional() @IsNumber() @Type(() => Number) roleId?: number;
-  @IsOptional()
-  @Transform(({ value }) => {
-    if (value === 'true') return true;
-    if (value === 'false') return false;
-    return value;
-  })
-  @IsBoolean()
-  isActive?: boolean;
-  @IsOptional() @IsNumber() @Min(0) @Max(5) @Type(() => Number) rating?: number;
-  @IsOptional() @IsNumber() @Type(() => Number) zoneId?: number;
-  @IsOptional() @IsNumber() @Type(() => Number) vehicleId?: number;
-  @IsOptional() @IsNumber() @Type(() => Number) salary?: number;
-  @IsOptional() @IsString() password?: string;
-}
+import { PartialType } from '@nestjs/swagger';
+
+export class UpdateDriverDto extends PartialType(CreateDriverDto) {}

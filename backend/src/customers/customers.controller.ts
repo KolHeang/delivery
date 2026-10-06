@@ -11,7 +11,7 @@ import {
   ParseIntPipe,
   Query,
 } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiBearerAuth, ApiOperation, ApiQuery, ApiParam } from '@nestjs/swagger';
 import { CustomersService } from './customers.service';
 import { CreateCustomerDto, UpdateCustomerDto } from './dto/customer.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -23,7 +23,12 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 export class CustomersController {
   constructor(private readonly customersService: CustomersService) {}
 
-  @Get() findAll(
+  @Get()
+  @ApiOperation({ summary: 'Get all customers' })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiQuery({ name: 'search', required: false, type: String })
+  findAll(
     @Query('page') page?: string,
     @Query('limit') limit?: string,
     @Query('search') search?: string,
@@ -36,22 +41,37 @@ export class CustomersController {
       search,
     }, tenantId);
   }
-  @Get(':id') findOne(@Param('id', ParseIntPipe) id: number) {
+
+  @Get(':id')
+  @ApiOperation({ summary: 'Get customer by ID' })
+  @ApiParam({ name: 'id', type: Number, description: 'Customer ID' })
+  findOne(@Param('id', ParseIntPipe) id: number) {
     return this.customersService.findOne(id);
   }
-  @Post() create(@Body() dto: CreateCustomerDto, @Req() req?: any) {
+
+  @Post()
+  @ApiOperation({ summary: 'Create customer' })
+  create(@Body() dto: CreateCustomerDto, @Req() req?: any) {
     if (req?.user?.tenantId) {
       dto.tenantId = req.user.tenantId;
     }
     return this.customersService.create(dto);
   }
-  @Patch(':id') update(
+
+  @Patch(':id')
+  @ApiOperation({ summary: 'Update customer' })
+  @ApiParam({ name: 'id', type: Number, description: 'Customer ID' })
+  update(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateCustomerDto,
   ) {
     return this.customersService.update(id, dto);
   }
-  @Delete(':id') remove(@Param('id', ParseIntPipe) id: number) {
+
+  @Delete(':id')
+  @ApiOperation({ summary: 'Delete customer' })
+  @ApiParam({ name: 'id', type: Number, description: 'Customer ID' })
+  remove(@Param('id', ParseIntPipe) id: number) {
     return this.customersService.remove(id);
   }
 }

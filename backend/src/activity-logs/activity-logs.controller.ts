@@ -1,5 +1,5 @@
 import { Controller, Get, Query, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { ActivityLogsService } from './activity-logs.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/permissions.guard';
@@ -15,6 +15,12 @@ export class ActivityLogsController {
   @Get()
   @RequirePermissions('settings.activity_log', 'settings.manage')
   @ApiOperation({ summary: 'Get paginated list of activity logs' })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiQuery({ name: 'action', required: false, type: String })
+  @ApiQuery({ name: 'entityName', required: false, type: String })
+  @ApiQuery({ name: 'userId', required: false, type: Number })
+  @ApiQuery({ name: 'merchantId', required: false, type: Number })
   findAll(
     @Query('page') page?: string,
     @Query('limit') limit?: string,

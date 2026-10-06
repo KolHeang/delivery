@@ -796,9 +796,30 @@ export default function LoginPage() {
         </form>
 
         {/* Dynamic Footer */}
+        <div style={{ marginTop: 22, textAlign: 'center' }}>
+          <a
+            href="/admin/saas/login"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              fontSize: 12.5,
+              fontWeight: 700,
+              color: '#4f46e5',
+              textDecoration: 'none',
+              padding: '6px 12px',
+              borderRadius: 8,
+              backgroundColor: '#eef2ff',
+              transition: 'background 0.15s',
+            }}
+          >
+            <span>👑</span> EBS Master SaaS Super Admin &rarr;
+          </a>
+        </div>
+
         <div
           style={{
-            marginTop: 26,
+            marginTop: 18,
             textAlign: 'center',
             fontSize: 12,
             color: '#94a3b8',

@@ -98,6 +98,7 @@ export default function PaymentWithStaffPage() {
   // Edit Payout Modal State
   const [editPayment, setEditPayment] = useState<any | null>(null);
   const [editAmount, setEditAmount] = useState('');
+  const [editCurrency, setEditCurrency] = useState('KHR');
   const [editNote, setEditNote] = useState('');
   const [editDate, setEditDate] = useState('');
   const [editReference, setEditReference] = useState('');
@@ -123,6 +124,7 @@ export default function PaymentWithStaffPage() {
   const handleEditPayment = (payment: any) => {
     setEditPayment(payment);
     setEditAmount(payment.amount.toString());
+    setEditCurrency(payment.currency || (parseFloat(payment.amount) >= 100 ? 'KHR' : 'USD'));
     setEditNote(payment.note || '');
     setEditDate(payment.date ? payment.date.split('T')[0] : '');
     setEditReference(payment.reference || '');
@@ -134,6 +136,7 @@ export default function PaymentWithStaffPage() {
     try {
       await api.patch(`/payments/staff/${editPayment.id}`, {
         amount: parseFloat(editAmount),
+        currency: editCurrency,
         note: editNote,
         date: editDate,
         reference: editReference,
@@ -190,10 +193,13 @@ export default function PaymentWithStaffPage() {
   }, [router]);
 
   const handleFilter = async () => {
+    if (!driverId) {
+      setOrders([]);
+      setSelectedIds([]);
+      return;
+    }
     try {
-      const url = driverId 
-        ? `/parcels?driverId=${driverId}&limit=1000`
-        : `/parcels?limit=1000`;
+      const url = `/parcels?driverId=${driverId}&limit=1000`;
       const res = await api.get(url);
       const list = Array.isArray(res.data) ? res.data : (res.data?.results || res.data?.result || []);
       setOrders(list);
@@ -279,16 +285,17 @@ export default function PaymentWithStaffPage() {
     }
     
     const selectedOrders = filteredOrders.filter((o: any) => selectedIds.includes(o.id));
-    const totalDeliveryFee = selectedOrders.reduce((sum, o: any) => sum + parseFloat(o.deliveryFee || '0'), 0);
+    const totalDriverFee = selectedOrders.reduce((sum, o: any) => sum + (o.driverFee !== undefined && o.driverFee !== null ? parseFloat(o.driverFee) : 1000), 0);
     
     setSaving(true);
     try {
       await api.post('/payments/staff', {
         driverId: parseInt(driverId),
-        amount: totalDeliveryFee,
+        amount: totalDriverFee,
+        currency: 'KHR',
         date: new Date().toISOString(),
         reference: `SETTLE-STAFF-${Date.now().toString().slice(-6)}`,
-        note: `Bulk settlement for ${selectedIds.length} parcels`,
+        note: `Bulk settlement for ${selectedIds.length} parcels (Driver fee: ${totalDriverFee.toLocaleString()} KHR)`,
         parcelIds: allOrderIdsToSettle,
       });
       alert(lang === 'km' ? 'រក្សាទុកការទូទាត់បានជោគជ័យ!' : 'Payment settled successfully!');
@@ -302,6 +309,7 @@ export default function PaymentWithStaffPage() {
   const unpaidFailedOrders = filteredOrders.filter((o: any) => (o.status === 'failed' || o.status === 'returned') && o.driverPaymentStatus === 'unpaid');
   const selectedOrders = filteredOrders.filter((o: any) => selectedIds.includes(o.id));
   const totalDeliveryFee = selectedOrders.reduce((sum, o: any) => sum + parseFloat(o.deliveryFee || '0'), 0);
+  const totalDriverFee = selectedOrders.reduce((sum, o: any) => sum + (o.driverFee !== undefined && o.driverFee !== null ? parseFloat(o.driverFee) : 1000), 0);
   const totalCodKhr = selectedOrders.filter((o: any) => o.codCurrency === 'KHR').reduce((sum, o: any) => sum + parseFloat(o.cod || '0'), 0);
   const totalCodUsd = selectedOrders.filter((o: any) => o.codCurrency === 'USD').reduce((sum, o: any) => sum + parseFloat(o.cod || '0'), 0);
 
@@ -312,6 +320,7 @@ export default function PaymentWithStaffPage() {
   const printReturnedOrders = basePrintOrders.filter((o: any) => o.status === 'returned' && o.driverPaymentStatus === statusFilter);
   
   const printTotalFee = printOrders.reduce((sum, o: any) => sum + parseFloat(o.deliveryFee || '0'), 0);
+  const printTotalDriverFee = printOrders.reduce((sum, o: any) => sum + (o.driverFee !== undefined && o.driverFee !== null ? parseFloat(o.driverFee) : 1000), 0);
   const printCodKhr = printOrders.filter((o: any) => o.codCurrency === 'KHR').reduce((sum, o: any) => sum + parseFloat(o.cod || '0'), 0);
   const printCodUsd = printOrders.filter((o: any) => o.codCurrency === 'USD').reduce((sum, o: any) => sum + parseFloat(o.cod || '0'), 0);
   const printNetReturnUsd = printCodUsd;
@@ -409,20 +418,40 @@ export default function PaymentWithStaffPage() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, flexWrap: 'wrap', gap: 16 }}>
             <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, paddingLeft: 2 }}>
-                  <span style={{ fontSize: 13, fontWeight: 700, color: '#64748b' }}>{lang === 'km' ? 'បុគ្គលិកដឹកជញ្ជូន' : 'Delivery Driver'}</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4, paddingLeft: 2 }}>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: '#475569' }}>
+                    {lang === 'km' ? 'បុគ្គលិកដឹកជញ្ជូន' : 'Delivery Driver'}
+                  </span>
+                  <span style={{ color: '#ef4444', fontWeight: 'bold', fontSize: 14 }}>*</span>
+                  <span style={{ fontSize: 11, color: '#ef4444', fontWeight: 600 }}>
+                    ({lang === 'km' ? 'ចាំបាច់' : 'Required'})
+                  </span>
                 </div>
                 <select 
                   className="form-control"
-                  style={{ minWidth: 200, height: 38, cursor: 'pointer' }}
+                  style={{ 
+                    minWidth: 230, 
+                    height: 38, 
+                    cursor: 'pointer',
+                    borderColor: !driverId ? '#ef4444' : '#ced4da',
+                    backgroundColor: !driverId ? '#fff8f8' : '#ffffff',
+                    fontWeight: driverId ? 600 : 400,
+                  }}
                   value={driverId} 
                   onChange={e => setDriverId(e.target.value)}
                 >
-                  <option value="">{lang === 'km' ? '-- ទាំងអស់ --' : '-- All --'}</option>
+                  <option value="">
+                    {lang === 'km' ? '-- ជ្រើសរើសបុគ្គលិកដឹកជញ្ជូន (ចាំបាច់) --' : '-- Select Delivery Driver (Required) --'}
+                  </option>
                   {drivers.map(d => (
                     <option key={d.id} value={d.id}>{d.name} {d.nameKh ? `(${d.nameKh})` : ''}</option>
                   ))}
                 </select>
+                {!driverId && (
+                  <span style={{ fontSize: 11, color: '#ef4444', fontWeight: 600, paddingLeft: 2 }}>
+                    {lang === 'km' ? 'សូមជ្រើសរើសអ្នកដឹកដើម្បីទូទាត់' : 'Please select a driver to settle'}
+                  </span>
+                )}
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -460,15 +489,42 @@ export default function PaymentWithStaffPage() {
             <div style={{ display: 'flex', gap: 8 }}>
               <button 
                 onClick={triggerPrintReceipt}
-                style={{ height: 34, padding: '0 16px', borderRadius: 4, background: '#fff', border: '1px solid #ced4da', display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+                disabled={!driverId || filteredOrders.length === 0}
+                style={{ 
+                  height: 34, 
+                  padding: '0 16px', 
+                  borderRadius: 4, 
+                  background: '#fff', 
+                  border: '1px solid #ced4da', 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: 6, 
+                  fontSize: 13, 
+                  fontWeight: 600, 
+                  cursor: (!driverId || filteredOrders.length === 0) ? 'not-allowed' : 'pointer',
+                  opacity: (!driverId || filteredOrders.length === 0) ? 0.6 : 1,
+                }}
               >
                 <MdPrint size={16} /> {lang === 'km' ? 'បោះពុម្ព' : 'Print'} {selectedIds.length > 0 ? `(${selectedIds.length})` : `(${filteredOrders.length} ${lang === 'km' ? 'ទាំងអស់' : 'All'})`}
               </button>
               {statusFilter === 'unpaid' && (
                 <button 
                   onClick={handleSavePayment} 
-                  disabled={saving || (selectedIds.length === 0 && unpaidFailedOrders.length === 0)}
-                  style={{ height: 34, padding: '0 16px', borderRadius: 4, background: (saving || (selectedIds.length === 0 && unpaidFailedOrders.length === 0)) ? '#6c757d' : '#0d6efd', color: '#fff', border: 'none', display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 600, cursor: (saving || (selectedIds.length === 0 && unpaidFailedOrders.length === 0)) ? 'not-allowed' : 'pointer' }}
+                  disabled={saving || !driverId || (selectedIds.length === 0 && unpaidFailedOrders.length === 0)}
+                  style={{ 
+                    height: 34, 
+                    padding: '0 16px', 
+                    borderRadius: 4, 
+                    background: (saving || !driverId || (selectedIds.length === 0 && unpaidFailedOrders.length === 0)) ? '#94a3b8' : '#0d6efd', 
+                    color: '#fff', 
+                    border: 'none', 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: 6, 
+                    fontSize: 13, 
+                    fontWeight: 600, 
+                    cursor: (saving || !driverId || (selectedIds.length === 0 && unpaidFailedOrders.length === 0)) ? 'not-allowed' : 'pointer' 
+                  }}
                 >
                   <MdSave size={16} /> {lang === 'km' ? 'រក្សាទុកការទូទាត់' : 'Save Settlement'}
                 </button>
@@ -510,12 +566,27 @@ export default function PaymentWithStaffPage() {
                     <th style={{ padding: '12px 10px', textAlign: 'left', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'អាសយដ្ឋាន' : 'Address'}</th>
                     <th style={{ padding: '12px 10px', textAlign: 'right', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'ប្រាក់បានបញ្ចូល' : 'Collected COD'}</th>
                     <th style={{ padding: '12px 10px', textAlign: 'right', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'ប្រាក់កម្រៃដឹក' : 'Delivery Fee'}</th>
+                    <th style={{ padding: '12px 10px', textAlign: 'right', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'កម្រៃអ្នកដឹក' : 'Driver Fee'}</th>
                     <th style={{ padding: '12px 10px', textAlign: 'center', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'ស្ថានភាព' : 'Status'}</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredOrders.filter((o: any) => o.status === 'delivered' && o.driverPaymentStatus === statusFilter).length === 0 ? (
-                    <tr><td colSpan={10} style={{ textAlign: 'center', padding: '30px 0', color: '#64748b' }}>{lang === 'km' ? 'គ្មានទិន្នន័យ' : 'No data'}</td></tr>
+                  {!driverId ? (
+                    <tr>
+                      <td colSpan={11} style={{ textAlign: 'center', padding: '40px 0', color: '#64748b' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+                          <span style={{ fontSize: 28 }}>🚚</span>
+                          <span style={{ fontSize: 14, fontWeight: 700, color: '#0f172a' }}>
+                            {lang === 'km' ? 'សូមជ្រើសរើសបុគ្គលិកដឹកជញ្ជូន (ចាំបាច់)' : 'Please Select a Delivery Driver (Required)'}
+                          </span>
+                          <span style={{ fontSize: 12.5, color: '#64748b' }}>
+                            {lang === 'km' ? 'ដើម្បីមើលបញ្ជីកញ្ចប់អីវ៉ាន់ និងធ្វើការទូទាត់ប្រាក់' : 'to view delivered orders and perform settlement'}
+                          </span>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : filteredOrders.filter((o: any) => o.status === 'delivered' && o.driverPaymentStatus === statusFilter).length === 0 ? (
+                    <tr><td colSpan={11} style={{ textAlign: 'center', padding: '30px 0', color: '#64748b' }}>{lang === 'km' ? 'គ្មានទិន្នន័យ' : 'No data'}</td></tr>
                   ) : (
                     filteredOrders.filter((o: any) => o.status === 'delivered' && o.driverPaymentStatus === statusFilter).map((o: any, idx: number) => {
                       const isSelected = selectedIds.includes(o.id);
@@ -576,6 +647,29 @@ export default function PaymentWithStaffPage() {
                               `$ ${parseFloat(o.deliveryFee).toFixed(2)}`
                             )}
                           </td>
+                          <td style={{ padding: '12px 10px', textAlign: 'right', color: '#16a34a', fontWeight: 700, border: 'none' }}>
+                            {statusFilter === 'unpaid' ? (
+                              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                <input 
+                                  type="number"
+                                  step="100"
+                                  value={o.driverFee !== undefined && o.driverFee !== null ? o.driverFee : 1000}
+                                  onChange={e => {
+                                    const val = parseFloat(e.target.value) || 0;
+                                    setOrders(prev => prev.map(item => item.id === o.id ? { ...item, driverFee: val } : item));
+                                  }}
+                                  onBlur={e => {
+                                    const val = parseFloat(e.target.value) || 0;
+                                    api.patch(`/parcels/${o.id}`, { driverFee: val }).catch(console.error);
+                                  }}
+                                  style={{ width: '85px', padding: '4px 6px', fontSize: '13px', border: '1px solid #86efac', borderRadius: '6px', textAlign: 'right', fontWeight: 700, color: '#15803d', backgroundColor: '#f0fdf4' }}
+                                />
+                                <span style={{ color: '#16a34a', fontSize: 12, fontWeight: 700 }}>៛</span>
+                              </div>
+                            ) : (
+                              `${(o.driverFee !== undefined && o.driverFee !== null ? parseFloat(o.driverFee) : 1000).toLocaleString()} ៛`
+                            )}
+                          </td>
                           <td style={{ padding: '12px 10px', textAlign: 'center', border: 'none' }}>
                             <span style={{ background: '#dcfce7', color: '#16a34a', padding: '4px 10px', borderRadius: 6, fontSize: 11, fontWeight: 700 }}>{lang === 'km' ? 'ជោគជ័យ' : 'Delivered'}</span>
                           </td>
@@ -592,6 +686,7 @@ export default function PaymentWithStaffPage() {
                     const khr = src.filter((o: any) => o.codCurrency === 'KHR').reduce((s: number, o: any) => s + parseFloat(o.cod || '0'), 0);
                     const usd = src.filter((o: any) => o.codCurrency === 'USD').reduce((s: number, o: any) => s + parseFloat(o.cod || '0'), 0);
                     const fee = src.reduce((s: number, o: any) => s + parseFloat(o.deliveryFee || '0'), 0);
+                    const driverEarnings = src.reduce((s: number, o: any) => s + (o.driverFee !== undefined && o.driverFee !== null ? parseFloat(o.driverFee) : 1000), 0);
                     const netReturnUSD = usd;
                     const netReturnKHR = khr;
 
@@ -602,7 +697,7 @@ export default function PaymentWithStaffPage() {
                             <td colSpan={7} style={{ textAlign: 'right', padding: '12px 16px', fontWeight: 700, color: '#334155', border: 'none' }}>
                               {lang === 'km' ? 'សរុបប្រាក់បានបញ្ចូលជារៀល' : 'Total KHR Collected'}
                             </td>
-                            <td colSpan={2} style={{ padding: '12px 10px', textAlign: 'right', border: 'none' }}>
+                            <td colSpan={3} style={{ padding: '12px 10px', textAlign: 'right', border: 'none' }}>
                               <span style={{ background: '#fef3c7', color: '#d97706', padding: '6px 16px', borderRadius: 6, fontWeight: 800, fontSize: 14 }}>
                                 {khr.toLocaleString()} ៛
                               </span>
@@ -614,18 +709,32 @@ export default function PaymentWithStaffPage() {
                           <td colSpan={7} style={{ textAlign: 'right', padding: '12px 16px', fontWeight: 700, color: '#334155', border: 'none' }}>
                             {lang === 'km' ? 'សរុបប្រាក់បានបញ្ចូលជាដុល្លារ' : 'Total USD Collected'}
                           </td>
-                          <td colSpan={2} style={{ padding: '12px 10px', textAlign: 'right', border: 'none' }}>
+                          <td colSpan={3} style={{ padding: '12px 10px', textAlign: 'right', border: 'none' }}>
                             <span style={{ background: '#dbeafe', color: '#1e40af', padding: '6px 16px', borderRadius: 6, fontWeight: 800, fontSize: 14 }}>
                               ${usd.toFixed(2)}
                             </span>
                           </td>
                           <td style={{ border: 'none' }} />
                         </tr>
-                        <tr style={{ background: '#f0fdf4', borderTop: '2px solid #bbf7d0', borderBottom: '1px solid #e2e8f0' }}>
+
+                        {/* Driver Commission Row */}
+                        <tr style={{ background: '#f0fdf4', borderTop: '2px solid #bbf7d0' }}>
+                          <td colSpan={7} style={{ textAlign: 'right', padding: '14px 16px', fontWeight: 800, color: '#15803d', fontSize: 14, border: 'none' }}>
+                            {lang === 'km' ? 'សរុបកម្រៃអ្នកដឹកទទួលបាន' : 'Total Driver Commission Earned'}
+                          </td>
+                          <td colSpan={3} style={{ padding: '12px 10px', textAlign: 'right', border: 'none' }}>
+                            <span style={{ background: '#dcfce7', color: '#15803d', padding: '6px 16px', borderRadius: 6, fontWeight: 800, fontSize: 14 }}>
+                              {driverEarnings.toLocaleString()} ៛
+                            </span>
+                          </td>
+                          <td style={{ border: 'none' }} />
+                        </tr>
+
+                        <tr style={{ background: '#f0fdf4', borderTop: '1px solid #bbf7d0', borderBottom: '1px solid #e2e8f0' }}>
                           <td colSpan={7} style={{ textAlign: 'right', padding: '14px 16px', fontWeight: 800, color: '#16a34a', fontSize: 14, border: 'none' }}>
                             {lang === 'km' ? 'ប្រាក់អ្នកដឹកត្រូវប្រគល់ជូនក្រុមហ៊ុន' : 'Net COD Return to Company'}
                           </td>
-                          <td colSpan={2} style={{ padding: '12px 10px', textAlign: 'right', border: 'none' }}>
+                          <td colSpan={3} style={{ padding: '12px 10px', textAlign: 'right', border: 'none' }}>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end' }}>
                               <span style={{ background: '#16a34a', color: '#fff', padding: '6px 16px', borderRadius: 6, fontWeight: 800, fontSize: 14 }}>
                                 ${netReturnUSD.toFixed(2)}
@@ -678,7 +787,13 @@ export default function PaymentWithStaffPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {failedOrders.length === 0 ? (
+                      {!driverId ? (
+                        <tr>
+                          <td colSpan={10} style={{ textAlign: 'center', padding: '30px 0', color: '#64748b' }}>
+                            {lang === 'km' ? 'សូមជ្រើសរើសបុគ្គលិកដឹកជញ្ជូនដើម្បីមើលកញ្ចប់អីវ៉ាន់មិនជោគជ័យ' : 'Please select a delivery driver to view failed orders'}
+                          </td>
+                        </tr>
+                      ) : failedOrders.length === 0 ? (
                         <tr><td colSpan={10} style={{ textAlign: 'center', padding: '30px 0', color: '#64748b' }}>{lang === 'km' ? 'គ្មានទិន្នន័យ' : 'No failed orders'}</td></tr>
                       ) : (
                         failedOrders.map((o: any, idx: number) => {
@@ -815,9 +930,9 @@ export default function PaymentWithStaffPage() {
                       <th style={{ padding: '12px 10px', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none', textAlign: 'left' }}>{lang === 'km' ? 'អ្នកដឹកជញ្ជូន' : 'Delivery Driver'}</th>
                       <th style={{ padding: '12px 10px', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none', textAlign: 'left' }}>{lang === 'km' ? 'លេខយោង' : 'Reference'}</th>
                       <th style={{ padding: '12px 10px', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none', textAlign: 'left' }}>{lang === 'km' ? 'កាលបរិច្ឆេទ' : 'Date'}</th>
-                      <th style={{ padding: '12px 10px', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none', textAlign: 'right' }}>{lang === 'km' ? 'ទឹកប្រាក់ ($)' : 'Amount ($)'}</th>
+                      <th style={{ padding: '12px 10px', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none', textAlign: 'right' }}>{lang === 'km' ? 'ទឹកប្រាក់' : 'Amount'}</th>
                       <th style={{ padding: '12px 10px', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none', textAlign: 'left' }}>{lang === 'km' ? 'សម្គាល់' : 'Note'}</th>
-                      <th style={{ padding: '12px 10px', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none', textAlign: 'center', width: 130 }}>{lang === 'km' ? 'សកម្មភាព' : 'Actions'}</th>
+                      <th style={{ padding: '12px 10px', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none', textAlign: 'center', width: 160 }}>{lang === 'km' ? 'សកម្មភាព' : 'Actions'}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -832,15 +947,28 @@ export default function PaymentWithStaffPage() {
                           <td style={{ padding: '12px 10px', fontWeight: 600, color: '#0f172a', border: 'none' }}>{h.driver?.nameKh || h.driver?.name || ''}</td>
                           <td style={{ padding: '12px 10px', fontWeight: 600, color: '#2f55a5', border: 'none' }}>{h.reference || ''}</td>
                           <td style={{ padding: '12px 10px', color: '#64748b', border: 'none' }}>{formatDateToDDMMYYYY(h.date)}</td>
-                          <td style={{ padding: '12px 10px', textAlign: 'right', fontWeight: 700, color: 'var(--success)', border: 'none' }}>${parseFloat(h.amount).toFixed(2)}</td>
+                          <td style={{ padding: '12px 10px', textAlign: 'right', fontWeight: 700, color: 'var(--success)', border: 'none' }}>
+                            {(() => {
+                              const isKHR = h.currency === 'KHR' || (!h.currency && (parseFloat(h.amount) >= 100 || (h.note && (h.note.includes('KHR') || h.note.includes('៛')))));
+                              return isKHR ? `${parseInt(h.amount).toLocaleString()} ៛` : `$${parseFloat(h.amount).toFixed(2)}`;
+                            })()}
+                          </td>
                           <td style={{ padding: '12px 10px', color: '#475569', border: 'none' }}>{h.note || ''}</td>
                           <td style={{ padding: '12px 10px', textAlign: 'center', border: 'none' }}>
-                            <button 
-                              onClick={() => handleDeletePayment(h.id)}
-                              style={{ background: '#ef4444', color: '#fff', border: 'none', borderRadius: 4, padding: '6px 12px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 600 }}
-                            >
-                              <MdDelete size={14} /> {lang === 'km' ? 'បង្វិលការទូទាត់' : 'Rollback'}
-                            </button>
+                            <div style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
+                              <button 
+                                onClick={() => handleEditPayment(h)}
+                                style={{ background: '#2563eb', color: '#fff', border: 'none', borderRadius: 4, padding: '6px 10px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 600 }}
+                              >
+                                {lang === 'km' ? 'កែប្រែ' : 'Edit'}
+                              </button>
+                              <button 
+                                onClick={() => handleDeletePayment(h.id)}
+                                style={{ background: '#ef4444', color: '#fff', border: 'none', borderRadius: 4, padding: '6px 10px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 600 }}
+                              >
+                                <MdDelete size={14} /> {lang === 'km' ? 'បង្វិល' : 'Rollback'}
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))
@@ -864,14 +992,26 @@ export default function PaymentWithStaffPage() {
         >
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <div className="form-group">
-              <label className="form-label">{lang === 'km' ? 'ចំនួនទឹកប្រាក់ ($)' : 'Amount ($)'}</label>
-              <input 
-                type="number" 
-                step="0.01" 
-                className="form-control" 
-                value={editAmount} 
-                onChange={e => setEditAmount(e.target.value)} 
-              />
+              <label className="form-label">{lang === 'km' ? 'ចំនួនទឹកប្រាក់' : 'Amount'}</label>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <input 
+                  type="number" 
+                  step={editCurrency === 'KHR' ? '100' : '0.01'} 
+                  className="form-control" 
+                  value={editAmount} 
+                  onChange={e => setEditAmount(e.target.value)} 
+                  style={{ flex: 1 }}
+                />
+                <select 
+                  className="form-control" 
+                  value={editCurrency} 
+                  onChange={e => setEditCurrency(e.target.value)}
+                  style={{ width: 100, fontWeight: 600 }}
+                >
+                  <option value="KHR">៛ (KHR)</option>
+                  <option value="USD">$ (USD)</option>
+                </select>
+              </div>
             </div>
             <div className="form-group">
               <label className="form-label">{lang === 'km' ? 'លេខយោង' : 'Reference'}</label>
@@ -981,6 +1121,7 @@ export default function PaymentWithStaffPage() {
               <th rowSpan={2} style={{ backgroundColor: '#244f96', padding: '6px 4px', textAlign: 'center', border: '1px solid #000', fontWeight: 'bold', color: '#fff', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>{lang === 'km' ? 'អាសយដ្ឋាន' : 'Address'}</th>
               <th colSpan={2} style={{ backgroundColor: '#244f96', padding: '6px 4px', textAlign: 'center', border: '1px solid #000', fontWeight: 'bold', color: '#fff', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>{lang === 'km' ? <>ទឹកប្រាក់ដើមមាន<br/>(ដុល្លារ / ខ្មែរ)</> : <>Original Amount<br/>(USD / KHR)</>}</th>
               <th rowSpan={2} style={{ backgroundColor: '#244f96', padding: '6px 4px', textAlign: 'center', border: '1px solid #000', fontWeight: 'bold', color: '#fff', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>{lang === 'km' ? 'សេវាដឹក' : 'Delivery Fee'}</th>
+              <th rowSpan={2} style={{ backgroundColor: '#244f96', padding: '6px 4px', textAlign: 'center', border: '1px solid #000', fontWeight: 'bold', color: '#fff', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>{lang === 'km' ? 'កម្រៃអ្នកដឹក' : 'Driver Fee'}</th>
               <th rowSpan={2} style={{ backgroundColor: '#244f96', padding: '6px 4px', textAlign: 'center', border: '1px solid #000', fontWeight: 'bold', color: '#fff', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>{lang === 'km' ? 'ស្ថានភាព' : 'Status'}</th>
               <th rowSpan={2} style={{ backgroundColor: '#244f96', padding: '6px 4px', textAlign: 'center', border: '1px solid #000', fontWeight: 'bold', color: '#fff', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>{lang === 'km' ? 'ផ្សេងៗ' : 'Remark'}</th>
             </tr>
@@ -996,13 +1137,14 @@ export default function PaymentWithStaffPage() {
             {printOrders.length > 0 && (
               <>
                 <tr>
-                  <td colSpan={11} style={{ backgroundColor: '#10b981', color: '#fff', fontWeight: 'bold', padding: '7px 10px', border: '1px solid #000', fontSize: 12, WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
+                  <td colSpan={12} style={{ backgroundColor: '#10b981', color: '#fff', fontWeight: 'bold', padding: '7px 10px', border: '1px solid #000', fontSize: 12, WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
                     {lang === 'km' ? 'អីវ៉ាន់ដឹកបានជោគជ័យ' : 'Successfully Delivered'} ({printOrders.length} {lang === 'km' ? 'កញ្ចប់' : 'parcels'})
                   </td>
                 </tr>
                 {printOrders.map((o, idx) => {
                   const isUSD = o.codCurrency === 'USD';
                   const codVal = parseFloat(o.cod || 0);
+                  const driverFeeVal = o.driverFee !== undefined && o.driverFee !== null ? parseFloat(o.driverFee) : 1000;
                   return (
                     <tr key={o.id}>
                       <td style={{ textAlign: 'center', padding: '6px 4px', border: '1px solid #000' }}>{idx + 1}</td>
@@ -1014,6 +1156,7 @@ export default function PaymentWithStaffPage() {
                       <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000' }}>{isUSD ? ('$ ' + codVal.toFixed(2)) : '$ 0'}</td>
                       <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000' }}>{!isUSD ? (codVal.toLocaleString() + ' ៛') : '0 ៛'}</td>
                       <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000' }}>$ {parseFloat(o.deliveryFee || 0).toFixed(2)}</td>
+                      <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000', fontWeight: 'bold', color: '#15803d' }}>{driverFeeVal.toLocaleString()} ៛</td>
                       <td style={{ padding: '6px 4px', border: '1px solid #000', textAlign: 'center', color: '#16a34a', fontWeight: 'bold' }}>{lang === 'km' ? 'ជោគជ័យ' : 'Delivered'}</td>
                       <td style={{ padding: '6px 4px', border: '1px solid #000', textAlign: 'center' }}>{o.note || ''}</td>
                     </tr>
@@ -1024,6 +1167,7 @@ export default function PaymentWithStaffPage() {
                   <td style={{ textAlign: 'right', fontWeight: 'bold', padding: '6px 4px', border: '1px solid #000' }}>$ {printCodUsd.toFixed(2)}</td>
                   <td style={{ textAlign: 'right', fontWeight: 'bold', padding: '6px 4px', border: '1px solid #000' }}>{printCodKhr.toLocaleString()} {lang === 'km' ? 'រៀល' : 'KHR'}</td>
                   <td style={{ textAlign: 'right', fontWeight: 'bold', padding: '6px 4px', border: '1px solid #000' }}>$ {printTotalFee.toFixed(2)}</td>
+                  <td style={{ textAlign: 'right', fontWeight: 'bold', padding: '6px 4px', border: '1px solid #000', color: '#15803d' }}>{printTotalDriverFee.toLocaleString()} ៛</td>
                   <td style={{ border: '1px solid #000' }}></td>
                   <td style={{ border: '1px solid #000' }}></td>
                 </tr>
@@ -1034,7 +1178,7 @@ export default function PaymentWithStaffPage() {
             {printInTransitOrders.length > 0 && (
               <>
                 <tr>
-                  <td colSpan={11} style={{ backgroundColor: '#f59e0b', color: '#000', fontWeight: 'bold', padding: '7px 10px', border: '1px solid #000', fontSize: 12, WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
+                  <td colSpan={12} style={{ backgroundColor: '#f59e0b', color: '#000', fontWeight: 'bold', padding: '7px 10px', border: '1px solid #000', fontSize: 12, WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
                     {lang === 'km' ? 'អីវ៉ាន់ដឹកបន្ត' : 'Failed / Carried Forward'} ({printInTransitOrders.length} {lang === 'km' ? 'កញ្ចប់' : 'parcels'})
                   </td>
                 </tr>
@@ -1069,6 +1213,7 @@ export default function PaymentWithStaffPage() {
                       <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000' }}>{isUSD ? ('$ ' + codVal.toFixed(2)) : '$ 0'}</td>
                       <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000' }}>{!isUSD ? (codVal.toLocaleString() + ' ៛') : '0'}</td>
                       <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000' }}>$ {parseFloat(o.deliveryFee || 0).toFixed(2)}</td>
+                      <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000', color: '#64748b' }}>0 ៛</td>
                       <td style={{ padding: '6px 4px', border: '1px solid #000', textAlign: 'center', color: '#ef4444', fontWeight: 'bold' }}>{statusLabel}</td>
                       <td style={{ padding: '6px 4px', border: '1px solid #000', textAlign: 'center' }}>{latestNote}</td>
                     </tr>
@@ -1081,7 +1226,7 @@ export default function PaymentWithStaffPage() {
             {printReturnedOrders.length > 0 && (
               <>
                 <tr>
-                  <td colSpan={11} style={{ backgroundColor: '#ef4444', color: '#fff', fontWeight: 'bold', padding: '7px 10px', border: '1px solid #000', fontSize: 12, WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
+                  <td colSpan={12} style={{ backgroundColor: '#ef4444', color: '#fff', fontWeight: 'bold', padding: '7px 10px', border: '1px solid #000', fontSize: 12, WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
                     {lang === 'km' ? 'អីវ៉ាន់ត្រឡប់ទៅហាង (Return)' : 'Returned to Shop (Return)'} ({printReturnedOrders.length} {lang === 'km' ? 'កញ្ចប់' : 'parcels'})
                   </td>
                 </tr>
@@ -1103,6 +1248,7 @@ export default function PaymentWithStaffPage() {
                       <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000' }}>{isUSD ? ('$ ' + codVal.toFixed(2)) : '$ 0'}</td>
                       <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000' }}>{!isUSD ? (codVal.toLocaleString() + ' ៛') : '0 ៛'}</td>
                       <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000' }}>$ 0.00</td>
+                      <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000', color: '#64748b' }}>0 ៛</td>
                       <td style={{ padding: '6px 4px', border: '1px solid #000', textAlign: 'center', color: '#ef4444', fontWeight: 'bold' }}>{lang === 'km' ? 'បង្វិលត្រឡប់' : 'Returned'}</td>
                       <td style={{ padding: '6px 4px', border: '1px solid #000', textAlign: 'left', color: '#7c3aed', fontSize: 10 }}>{latestNote}</td>
                     </tr>
@@ -1115,11 +1261,17 @@ export default function PaymentWithStaffPage() {
 
         {/* Financial summaries Box */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', marginTop: 20 }}>
-          <table className="summary-table" style={{ borderCollapse: 'collapse', fontSize: 11, width: '360px', border: '1px solid #000' }}>
+          <table className="summary-table" style={{ borderCollapse: 'collapse', fontSize: 11, width: '380px', border: '1px solid #000' }}>
             <tbody>
               <tr>
                 <td style={{ padding: '6px 12px', border: '1px solid #000', textAlign: 'right' }}>{lang === 'km' ? 'ប្រាក់ COD ទទួលបាន' : 'Total COD Collected'}</td>
                 <td style={{ padding: '6px 12px', border: '1px solid #000', fontWeight: 'bold', textAlign: 'right' }}>$ {printCodUsd.toFixed(2)}{printCodKhr > 0 ? ` / ${printCodKhr.toLocaleString()} ${lang === 'km' ? 'រៀល' : 'KHR'}` : (printCodUsd === 0 ? ` / 0 ${lang === 'km' ? 'រៀល' : 'KHR'}` : '')}</td>
+              </tr>
+              <tr style={{ background: '#f0fdf4' }}>
+                <td style={{ padding: '6px 12px', border: '1px solid #000', textAlign: 'right', fontWeight: 'bold', color: '#15803d' }}>{lang === 'km' ? 'សរុបកម្រៃអ្នកដឹកទទួលបាន' : 'Total Driver Commission'}</td>
+                <td style={{ padding: '6px 12px', border: '1px solid #000', fontWeight: 'bold', color: '#15803d', textAlign: 'right', fontSize: 12 }}>
+                  {printTotalDriverFee.toLocaleString()} ៛
+                </td>
               </tr>
               <tr style={{ background: '#f0fdf4' }}>
                 <td style={{ padding: '7px 12px', border: '1px solid #000', textAlign: 'right', fontWeight: 'bold', color: '#16a34a' }}>{lang === 'km' ? 'ប្រាក់អ្នកដឹកត្រូវប្រគល់ជូនក្រុមហ៊ុន (Net Return)' : 'Net COD Return to Company'}</td>

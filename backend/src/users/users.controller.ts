@@ -13,7 +13,7 @@ import {
   Query,
   Request,
 } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth, ApiOperation, ApiConsumes } from '@nestjs/swagger';
+import { ApiTags, ApiBearerAuth, ApiOperation, ApiConsumes, ApiQuery, ApiParam } from '@nestjs/swagger';
 import { UsersService } from './users.service';
 import { CreateUserDto, UpdateUserDto } from './dto/user.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -37,6 +37,11 @@ export class UsersController {
   @Get()
   @RequirePermissions('users.read')
   @ApiOperation({ summary: 'Get all users' })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiQuery({ name: 'search', required: false, type: String })
+  @ApiQuery({ name: 'tenantId', required: false, type: Number })
+  @ApiQuery({ name: 'tenantSubdomain', required: false, type: String })
   findAll(
     @Request() req: any,
     @Query('page') page?: string,
@@ -62,6 +67,7 @@ export class UsersController {
   @Get(':id')
   @RequirePermissions('users.read')
   @ApiOperation({ summary: 'Get user by ID' })
+  @ApiParam({ name: 'id', type: Number, description: 'User ID' })
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.usersService.findOne(id);
   }
@@ -90,6 +96,8 @@ export class UsersController {
 
   @Patch(':id')
   @RequirePermissions('users.update')
+  @ApiOperation({ summary: 'Update user' })
+  @ApiParam({ name: 'id', type: Number, description: 'User ID' })
   @LogActivity({ action: 'UPDATE_USER', entityName: 'User', description: 'Updated user/staff details' })
   @UseInterceptors(
     FileInterceptor('photo', createMulterOptions({ 
@@ -98,7 +106,6 @@ export class UsersController {
     }))
   )
   @ApiConsumes('multipart/form-data')
-  @ApiOperation({ summary: 'Update user' })
   async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateUserDto,
@@ -113,6 +120,7 @@ export class UsersController {
   @Delete(':id')
   @RequirePermissions('users.delete')
   @ApiOperation({ summary: 'Delete user' })
+  @ApiParam({ name: 'id', type: Number, description: 'User ID' })
   @LogActivity({ action: 'DELETE_USER', entityName: 'User', description: 'Deleted user/staff' })
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.usersService.remove(id);

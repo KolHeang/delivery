@@ -1,5 +1,5 @@
 import { Controller, Get, Post, Param, Body, Query, UsePipes, ValidationPipe } from '@nestjs/common';
-import { ApiTags, ApiOperation } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiQuery, ApiParam } from '@nestjs/swagger';
 import { TrackingService } from './tracking.service';
 import { TrackingGateway } from './tracking.gateway';
 import { LocationUpdateDto } from './dto/location-update.dto';
@@ -14,12 +14,14 @@ export class TrackingController {
 
   @Get('live/:code')
   @ApiOperation({ summary: 'Get live tracking data, destination, and driver GPS for a parcel' })
+  @ApiParam({ name: 'code', type: String, description: 'Parcel tracking code' })
   async getLiveTracking(@Param('code') code: string) {
     return this.trackingService.getLiveTrackingByCode(code);
   }
 
   @Get('fleet/live')
   @ApiOperation({ summary: 'Get all active online drivers with live GPS coordinates' })
+  @ApiQuery({ name: 'tenantId', required: false, type: Number })
   async getFleetLive(@Query('tenantId') tenantId?: string) {
     const tid = tenantId ? Number(tenantId) : undefined;
     const drivers = await this.trackingService.getAllLiveDrivers(tid);
@@ -33,6 +35,7 @@ export class TrackingController {
 
   @Post('fleet/simulate')
   @ApiOperation({ summary: 'Simulate live GPS movement for demo / testing' })
+  @ApiQuery({ name: 'tenantId', required: false, type: Number })
   async simulateFleet(@Query('tenantId') tenantId?: string) {
     const tid = tenantId ? Number(tenantId) : undefined;
     const simulated = await this.trackingService.simulatePhnomPenhDrivers(tid);
@@ -46,7 +49,7 @@ export class TrackingController {
 
   @Post('driver/location')
   @ApiOperation({ summary: 'HTTP fallback for driver live location updates (LocationUpdateDto)' })
-  async updateDriverLocationHttp(@Body() body: any) {
+  async updateDriverLocationHttp(@Body() body: LocationUpdateDto) {
     const lat = body.latitude !== undefined ? Number(body.latitude) : Number(body.lat);
     const lng = body.longitude !== undefined ? Number(body.longitude) : Number(body.lng);
     const driverId = Number(body.driverId);

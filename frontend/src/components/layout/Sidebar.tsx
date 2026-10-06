@@ -54,9 +54,10 @@ export default function Sidebar() {
       key: 'shops',
       label: t('manageShops'),
       icon: MdStorefront,
-      permission: 'merchants.read',
+      permission: 'merchants.read, branches.read',
       items: [
         { href: '/merchants', label: t('shopList'), permission: 'merchants.read' },
+        { href: '/merchants/branches', label: lang === 'km' ? 'បញ្ជីសាខា' : 'Branch List', permission: 'branches.read, merchants.read' },
       ],
     },
     {
@@ -108,6 +109,7 @@ export default function Sidebar() {
         { href: '/setting/role', label: t('permission'), permission: 'settings.role, roles.read' },
         { href: '/setting/organisation', label: t('organizationSetting'), permission: 'settings.organisation' },
         { href: '/setting/general', label: t('generalSettings'), permission: 'settings.general' },
+        { href: '/setting/firebase', label: lang === 'km' ? 'ការកំណត់ Firebase' : 'Firebase Settings', permission: 'settings.general, settings.manage' },
         { href: '/setting/telegram', label: lang === 'km' ? 'ការកំណត់ Telegram' : 'Telegram Settings', permission: 'settings.telegram, settings.general, settings.manage' },
         { href: '/setting/activity_log', label: t('activityLogs') || 'Activity Logs', permission: 'settings.activity_log' },
       ],

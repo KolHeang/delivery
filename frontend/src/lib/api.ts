@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { detectTenantSubdomain } from '@/lib/domain';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://new-delivery-api.rithyboth.work/api';
 
@@ -13,24 +14,7 @@ api.interceptors.request.use((config) => {
     const token = localStorage.getItem('access_token');
     if (token) config.headers.Authorization = `Bearer ${token}`;
 
-    const hostname = window.location.hostname;
-    const isIp = /^(\d{1,3}\.){3}\d{1,3}$/.test(hostname);
-    let detectedSubdomain: string | null = null;
-
-    if (!isIp) {
-      const parts = hostname.split('.');
-      if (parts.length > 1) {
-        const first = parts[0].toLowerCase();
-        if (first !== 'www' && first !== 'localhost' && first !== 'app' && first !== 'api') {
-          detectedSubdomain = first;
-        }
-      }
-    }
-
-    const searchParams = new URLSearchParams(window.location.search);
-    if (!detectedSubdomain && searchParams.get('tenant')) {
-      detectedSubdomain = searchParams.get('tenant');
-    }
+    const detectedSubdomain = detectTenantSubdomain();
 
     try {
       const rawUser = localStorage.getItem('user');

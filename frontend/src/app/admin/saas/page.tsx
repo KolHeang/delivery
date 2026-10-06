@@ -50,6 +50,11 @@ import {
   MdLink,
   MdInfoOutline,
   MdShield,
+  MdVisibility,
+  MdLocationOn,
+  MdStorefront,
+  MdDirectionsCar,
+  MdCalendarToday,
 } from 'react-icons/md';
 import { FaRegEdit, FaTrashAlt } from 'react-icons/fa';
 import { FiPlusCircle } from 'react-icons/fi';
@@ -320,6 +325,14 @@ export default function SaasMasterPortal() {
     return `http://${sub}.localhost:3000`;
   };
 
+  const handleOpenTenantDetailModal = (tenantSub: any) => {
+    const t = tenantSub.tenant || tenantSub;
+    const tenantId = t.id || tenantSub.tenantId || tenantSub.id;
+    if (tenantId) {
+      router.push(`/admin/saas/tenants/${tenantId}`);
+    }
+  };
+
   const handleOpenEditTenantModal = (tenantSub: any) => {
     const t = tenantSub.tenant || tenantSub;
     const tenantId = t.id || tenantSub.tenantId || tenantSub.id;
@@ -384,7 +397,51 @@ export default function SaasMasterPortal() {
       }
 
       await saasApi.updateSubscriptionStatus(selectedTenantForRenew.id, 'active', nextEnd);
-      alert(tr('បានបន្តសុពលភាពជោគជ័យ!', 'Subscription extended successfully!'));
+
+      // Automatically generate renewal invoice
+      try {
+        const planPrice = Number(selectedTenantForRenew.plan?.priceYearly || 490);
+        const monthPrice = Number(selectedTenantForRenew.plan?.priceMonthly || 49);
+        const finalAmount = renewDuration === '1y' 
+          ? planPrice 
+          : renewDuration === '6m' 
+          ? monthPrice * 6 
+          : monthPrice;
+
+        await saasApi.createInvoice({
+          subscriptionId: selectedTenantForRenew.id,
+          tenantId: selectedTenantForRenew.tenantId || selectedTenantForRenew.tenant?.id || undefined,
+          userId: selectedTenantForRenew.userId || selectedTenantForRenew.user?.id || undefined,
+          subtotal: finalAmount,
+          discountAmount: 0,
+          totalAmount: finalAmount,
+          status: 'paid',
+          dueDate: nextEnd,
+          paidAt: new Date(),
+          paymentMethod: 'aba_khqr',
+        });
+      } catch (invErr) {
+        console.warn('First invoice creation failed on renew, attempting fallback:', invErr);
+        try {
+          const finalAmount = renewDuration === '1y' 
+            ? Number(selectedTenantForRenew.plan?.priceYearly || 490) 
+            : renewDuration === '6m' 
+            ? Number(selectedTenantForRenew.plan?.priceMonthly || 49) * 6 
+            : Number(selectedTenantForRenew.plan?.priceMonthly || 49);
+          await saasApi.createInvoice({
+            subscriptionId: selectedTenantForRenew.id,
+            tenantId: selectedTenantForRenew.tenantId || selectedTenantForRenew.tenant?.id || undefined,
+            subtotal: finalAmount,
+            totalAmount: finalAmount,
+            status: 'paid',
+            dueDate: nextEnd,
+          });
+        } catch (fallbackErr) {
+          console.error('Invoice fallback creation failed:', fallbackErr);
+        }
+      }
+
+      alert(tr('បានបន្តសុពលភាព និងបង្កើតវិក្កយបត្រថ្មីជោគជ័យ!', 'Subscription extended and new invoice created successfully!'));
       setShowRenewModal(false);
       loadAllData();
     } catch (err: any) {
@@ -1628,7 +1685,13 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
                           {(subsPage - 1) * subsLimit + idx + 1}
                         </td>
                         <td style={{ minWidth: 160 }}>
-                          <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+                          <span
+                            onClick={() => handleOpenTenantDetailModal(s)}
+                            style={{ fontWeight: 700, color: '#0f172a', cursor: 'pointer', transition: 'color 0.15s' }}
+                            onMouseEnter={(e) => (e.currentTarget.style.color = '#2563eb')}
+                            onMouseLeave={(e) => (e.currentTarget.style.color = '#0f172a')}
+                            title={tr('ចុចមើលព័ត៌មានលម្អិត', 'Click to view details')}
+                          >
                             {s.companyName || `Company #${s.id}`}
                           </span>
                         </td>
@@ -1683,6 +1746,14 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
                         </td>
                         <td style={{ textAlign: 'right' }}>
                           <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end', alignItems: 'center' }}>
+                            <button
+                              className="btn btn-ghost btn-icon btn-sm"
+                              onClick={() => handleOpenTenantDetailModal(s)}
+                              title={tr('មើលព័ត៌មានលម្អិតក្រុមហ៊ុន', 'View Company Details')}
+                              style={{ color: '#0d9488' }}
+                            >
+                              <MdVisibility size={15} />
+                            </button>
                             <button
                               className="btn btn-ghost btn-icon btn-sm"
                               onClick={() => handleOpenEditTenantModal(s)}

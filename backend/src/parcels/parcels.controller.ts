@@ -11,7 +11,7 @@ import {
   Query,
   Request,
 } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
+import { ApiTags, ApiBearerAuth, ApiQuery, ApiOperation, ApiParam } from '@nestjs/swagger';
 import { ParcelsService } from './parcels.service';
 import {
   CreateParcelDto,
@@ -44,16 +44,17 @@ export class ParcelsController {
 
   @Get()
   @RequirePermissions('parcels.read')
-  @ApiQuery({ name: 'page', required: false })
-  @ApiQuery({ name: 'limit', required: false })
-  @ApiQuery({ name: 'search', required: false })
-  @ApiQuery({ name: 'status', required: false })
-  @ApiQuery({ name: 'driverId', required: false })
-  @ApiQuery({ name: 'merchantId', required: false })
-  @ApiQuery({ name: 'driverPaymentStatus', required: false })
-  @ApiQuery({ name: 'merchantPaymentStatus', required: false })
-  @ApiQuery({ name: 'startDate', required: false })
-  @ApiQuery({ name: 'endDate', required: false })
+  @ApiOperation({ summary: 'Get all parcels with filters and pagination' })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiQuery({ name: 'search', required: false, type: String })
+  @ApiQuery({ name: 'status', required: false, type: String })
+  @ApiQuery({ name: 'driverId', required: false, type: Number })
+  @ApiQuery({ name: 'merchantId', required: false, type: Number })
+  @ApiQuery({ name: 'driverPaymentStatus', required: false, type: String })
+  @ApiQuery({ name: 'merchantPaymentStatus', required: false, type: String })
+  @ApiQuery({ name: 'startDate', required: false, type: String })
+  @ApiQuery({ name: 'endDate', required: false, type: String })
   findAll(
     @Request() req: any,
     @Query('page') page?: string,
@@ -85,6 +86,7 @@ export class ParcelsController {
   /** Pending parcels with no driver — for direct delivery */
   @Get('unassigned')
   @RequirePermissions('parcels.read')
+  @ApiOperation({ summary: 'Get unassigned parcels' })
   findUnassigned(@Request() req: any) {
     return this.parcelsService.findUnassigned(this.getEffectiveTenantId(req));
   }
@@ -92,6 +94,7 @@ export class ParcelsController {
   /** Pending parcels waiting for pickup driver */
   @Get('pending-pickup')
   @RequirePermissions('parcels.read')
+  @ApiOperation({ summary: 'Get pending pickup parcels' })
   findPendingForPickup(@Request() req: any) {
     return this.parcelsService.findPendingForPickup(this.getEffectiveTenantId(req));
   }
@@ -99,18 +102,22 @@ export class ParcelsController {
   /** Parcels at warehouse waiting for delivery assignment */
   @Get('in-warehouse')
   @RequirePermissions('parcels.read')
+  @ApiOperation({ summary: 'Get parcels currently in warehouse' })
   findInWarehouse(@Request() req: any) {
     return this.parcelsService.findInWarehouse(this.getEffectiveTenantId(req));
   }
 
   @Get('stats')
   @RequirePermissions('parcels.read')
+  @ApiOperation({ summary: 'Get parcel counts and statistics' })
   getStats(@Request() req: any) {
     return this.parcelsService.getStats(this.getEffectiveTenantId(req));
   }
 
   @Get('tracking/:code')
   @RequirePermissions('parcels.read')
+  @ApiOperation({ summary: 'Look up parcel by tracking code' })
+  @ApiParam({ name: 'code', type: String, description: 'Tracking code' })
   findByTracking(@Param('code') code: string) {
     console.log('Tracking requested for code:', code);
     return this.parcelsService.findByTracking(code);
@@ -118,12 +125,17 @@ export class ParcelsController {
 
   @Get('phone/:phone')
   @RequirePermissions('parcels.read')
+  @ApiOperation({ summary: 'Look up parcels by receiver phone' })
+  @ApiParam({ name: 'phone', type: String, description: 'Receiver phone number' })
   findByPhone(@Param('phone') phone: string) {
     return this.parcelsService.findByPhone(phone);
   }
 
   @Get('pickup-requests')
   @RequirePermissions('parcels.read')
+  @ApiOperation({ summary: 'Get all pickup requests' })
+  @ApiQuery({ name: 'status', required: false, type: String })
+  @ApiQuery({ name: 'merchantId', required: false, type: Number })
   findAllPickupRequests(
     @Request() req: any,
     @Query('status') status?: string,
@@ -138,12 +150,16 @@ export class ParcelsController {
 
   @Get('pickup-requests/:id')
   @RequirePermissions('parcels.read')
+  @ApiOperation({ summary: 'Get pickup request by ID' })
+  @ApiParam({ name: 'id', type: Number, description: 'Pickup request ID' })
   findOnePickupRequest(@Param('id', ParseIntPipe) id: number) {
     return this.parcelsService.findPickupRequestById(id);
   }
 
   @Patch('pickup-requests/:id/assign-driver')
   @RequirePermissions('parcels.update')
+  @ApiOperation({ summary: 'Assign pickup driver to pickup request' })
+  @ApiParam({ name: 'id', type: Number, description: 'Pickup request ID' })
   assignPickupDriver(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: AssignRiderDto,
@@ -153,6 +169,8 @@ export class ParcelsController {
 
   @Post('pickup-requests/:id/parcels')
   @RequirePermissions('parcels.create')
+  @ApiOperation({ summary: 'Add a parcel to a pickup request' })
+  @ApiParam({ name: 'id', type: Number, description: 'Pickup request ID' })
   createParcelForRequest(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: CreateParcelDto,
@@ -162,6 +180,9 @@ export class ParcelsController {
 
   @Delete('pickup-requests/:id/parcels/:parcelId')
   @RequirePermissions('parcels.delete')
+  @ApiOperation({ summary: 'Delete a parcel from a pickup request' })
+  @ApiParam({ name: 'id', type: Number, description: 'Pickup request ID' })
+  @ApiParam({ name: 'parcelId', type: Number, description: 'Parcel ID' })
   deleteParcelFromRequest(
     @Param('id', ParseIntPipe) id: number,
     @Param('parcelId', ParseIntPipe) parcelId: number,
@@ -171,12 +192,15 @@ export class ParcelsController {
 
   @Get(':id')
   @RequirePermissions('parcels.read')
+  @ApiOperation({ summary: 'Get parcel by ID' })
+  @ApiParam({ name: 'id', type: Number, description: 'Parcel ID' })
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.parcelsService.findOne(id);
   }
 
   @Post()
   @RequirePermissions('parcels.create')
+  @ApiOperation({ summary: 'Create parcel' })
   @LogActivity({ action: 'CREATE_PARCEL', entityName: 'Parcel', description: 'Created new parcel' })
   create(@Body() dto: CreateParcelDto, @Request() req: any) {
     if (!dto.createdById && req?.user?.id) {
@@ -190,6 +214,8 @@ export class ParcelsController {
 
   @Patch(':id')
   @RequirePermissions('parcels.update')
+  @ApiOperation({ summary: 'Update parcel' })
+  @ApiParam({ name: 'id', type: Number, description: 'Parcel ID' })
   @LogActivity({ action: 'UPDATE_PARCEL', entityName: 'Parcel', description: 'Updated parcel details' })
   update(
     @Param('id', ParseIntPipe) id: number,
@@ -204,6 +230,8 @@ export class ParcelsController {
 
   @Patch(':id/status')
   @RequirePermissions('parcels.update')
+  @ApiOperation({ summary: 'Update parcel status' })
+  @ApiParam({ name: 'id', type: Number, description: 'Parcel ID' })
   @LogActivity({ action: 'UPDATE_PARCEL_STATUS', entityName: 'Parcel', description: 'Updated parcel status' })
   updateStatus(
     @Param('id', ParseIntPipe) id: number,
@@ -218,6 +246,8 @@ export class ParcelsController {
 
   @Post(':id/assign')
   @RequirePermissions('parcels.update')
+  @ApiOperation({ summary: 'Assign driver to parcel' })
+  @ApiParam({ name: 'id', type: Number, description: 'Parcel ID' })
   @LogActivity({ action: 'ASSIGN_DRIVER', entityName: 'Parcel', description: 'Assigned driver to parcel' })
   assignDriver(
     @Param('id', ParseIntPipe) id: number,
@@ -228,6 +258,8 @@ export class ParcelsController {
 
   @Post(':id/assign-pickup')
   @RequirePermissions('parcels.update')
+  @ApiOperation({ summary: 'Assign pickup driver to parcel' })
+  @ApiParam({ name: 'id', type: Number, description: 'Parcel ID' })
   @LogActivity({ action: 'ASSIGN_PICKUP', entityName: 'Parcel', description: 'Assigned pickup driver to parcel' })
   assignPickup(
     @Param('id', ParseIntPipe) id: number,
@@ -238,6 +270,8 @@ export class ParcelsController {
 
   @Post(':id/assign-delivery')
   @RequirePermissions('parcels.update')
+  @ApiOperation({ summary: 'Assign delivery driver to parcel' })
+  @ApiParam({ name: 'id', type: Number, description: 'Parcel ID' })
   @LogActivity({ action: 'ASSIGN_DELIVERY', entityName: 'Parcel', description: 'Assigned delivery driver to parcel' })
   assignDelivery(
     @Param('id', ParseIntPipe) id: number,
@@ -248,6 +282,8 @@ export class ParcelsController {
 
   @Delete(':id')
   @RequirePermissions('parcels.delete')
+  @ApiOperation({ summary: 'Delete parcel' })
+  @ApiParam({ name: 'id', type: Number, description: 'Parcel ID' })
   @LogActivity({ action: 'DELETE_PARCEL', entityName: 'Parcel', description: 'Deleted parcel' })
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.parcelsService.remove(id);

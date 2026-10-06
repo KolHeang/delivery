@@ -1,5 +1,5 @@
 import { Controller, Get, Post, Put, Delete, Body, Param, UseGuards, ParseIntPipe, Query, Req } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiProperty } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiProperty, ApiQuery, ApiParam } from '@nestjs/swagger';
 import { RolesService } from './roles.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { IsString, IsOptional, IsArray, IsNumber } from 'class-validator';
@@ -92,6 +92,8 @@ export class RolesController {
   @Get()
   @RequirePermissions('roles.read', 'settings.role', 'users.manage')
   @ApiOperation({ summary: 'Get all roles' })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
   findAllRoles(
     @Query('page') page?: string,
     @Query('limit') limit?: string,
@@ -106,6 +108,7 @@ export class RolesController {
   @Get(':id')
   @RequirePermissions('roles.read', 'settings.role', 'users.manage')
   @ApiOperation({ summary: 'Get role by ID' })
+  @ApiParam({ name: 'id', type: Number, description: 'Role ID' })
   findOneRole(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
     return this.rolesService.findOneRole(id, req.user?.tenantId);
   }
@@ -113,6 +116,7 @@ export class RolesController {
   @Put(':id')
   @RequirePermissions('roles.update', 'settings.role', 'users.manage')
   @ApiOperation({ summary: 'Update a role and its permissions' })
+  @ApiParam({ name: 'id', type: Number, description: 'Role ID' })
   updateRole(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateRoleDto, @Req() req: any) {
     return this.rolesService.updateRole(id, dto.name, dto.description, dto.permissionIds, req.user?.tenantId);
   }
@@ -120,6 +124,7 @@ export class RolesController {
   @Delete(':id')
   @RequirePermissions('roles.delete', 'settings.role', 'users.manage')
   @ApiOperation({ summary: 'Delete a role' })
+  @ApiParam({ name: 'id', type: Number, description: 'Role ID' })
   deleteRole(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
     return this.rolesService.deleteRole(id, req.user?.tenantId);
   }

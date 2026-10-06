@@ -5,20 +5,17 @@ import { useRouter } from 'next/navigation';
 import { isAuthenticated } from '@/lib/auth';
 import Sidebar from '@/components/layout/Sidebar';
 import Topbar from '@/components/layout/Topbar';
-import Modal from '@/components/ui/Modal';
 import Badge from '@/components/ui/Badge';
 import api from '@/lib/api';
-import { MdSearch, MdPerson, MdLocationOn } from 'react-icons/md';
+import { MdSearch, MdLocationOn, MdBusiness } from 'react-icons/md';
 import { FaTelegramPlane, FaRegEdit, FaTrashAlt } from 'react-icons/fa';
 import { FiPlusCircle } from 'react-icons/fi';
 import { useLanguage } from '@/lib/LanguageContext';
 import Pagination from '@/components/ui/Pagination';
 
-const empty = { name: '', nameKh: '', contact: '', phone: '', email: '', address: '', pricingTier: 'standard', zoneId: '' };
-
 export default function ShopsPage() {
   const router = useRouter();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const [items, setItems] = useState<any[]>([]);
   const [filtered, setFiltered] = useState<any[]>([]);
   const [search, setSearch] = useState('');
@@ -48,7 +45,7 @@ export default function ShopsPage() {
             search: debouncedSearch || undefined,
           },
         }),
-        api.get('/select/zones')
+        api.get('/select/zones'),
       ]);
       if (r.data && (r.data.results !== undefined || r.data.result !== undefined)) {
         setItems(r.data.results || r.data.result || []);
@@ -62,20 +59,40 @@ export default function ShopsPage() {
     setLoading(false);
   }, [currentPage, pageSize, debouncedSearch]);
 
-  useEffect(() => { if (!isAuthenticated()) { router.push('/'); return; } load(); }, [router, load]);
+  useEffect(() => {
+    if (!isAuthenticated()) {
+      router.push('/');
+      return;
+    }
+    load();
+  }, [router, load]);
 
   useEffect(() => {
     setFiltered(items);
   }, [items]);
 
-  const openCreate = () => { router.push('/merchants/create'); };
+  const openCreate = () => {
+    router.push('/merchants/create');
+  };
   const openEdit = (i: any) => {
     router.push(`/merchants/edit/${i.id}`);
   };
 
   const del = async (id: number) => {
     if (!confirm(t('confirm') || 'Delete this shop?')) return;
-    try { await api.delete(`/merchants/${id}`); await load(); } catch {}
+    try {
+      await api.delete(`/merchants/${id}`);
+      await load();
+    } catch {}
+  };
+
+  const handleBranchClick = (m: any) => {
+    const count = m.branches ? m.branches.length : 0;
+    if (count > 0) {
+      router.push(`/merchants/branches?merchantId=${m.id}`);
+    } else {
+      router.push(`/merchants/branches/create?merchantId=${m.id}`);
+    }
   };
 
   return (
@@ -88,14 +105,21 @@ export default function ShopsPage() {
             <div style={{ padding: '12px 16px' }}>
               <div className="search-input-wrapper">
                 <MdSearch className="search-icon" />
-                <input className="form-control search-input" placeholder={t('searchShops')} value={search} onChange={e => setSearch(e.target.value)} />
+                <input
+                  className="form-control search-input"
+                  placeholder={t('searchShops')}
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
               </div>
             </div>
           </div>
           <div className="card">
             <div className="card-header">
               <span className="card-title">🏪 {t('shopsListTitle')}</span>
-              <button className="btn btn-primary btn-sm" onClick={openCreate}><FiPlusCircle size={14} /> {t('addShop')}</button>
+              <button className="btn btn-primary btn-sm" onClick={openCreate}>
+                <FiPlusCircle size={14} /> {t('addShop')}
+              </button>
             </div>
             <div style={{ overflowX: 'auto' }}>
               <table>
@@ -128,19 +152,35 @@ export default function ShopsPage() {
                   ) : (
                     filtered.map((m: any, i) => {
                       const tg = m.telegram || m.telegramPhone;
-                      const hasDeliveryFee = m.deliveryFee != null && m.deliveryFee !== '' && !isNaN(Number(m.deliveryFee)) && Number(m.deliveryFee) > 0;
-                      
+                      const hasDeliveryFee =
+                        m.deliveryFee != null &&
+                        m.deliveryFee !== '' &&
+                        !isNaN(Number(m.deliveryFee)) &&
+                        Number(m.deliveryFee) > 0;
+                      const branchCount = m.branches ? m.branches.length : 0;
+
                       return (
                         <tr key={m.id}>
-                          <td style={{ color: 'var(--text-muted)', fontSize: 12 }}>{(currentPage - 1) * pageSize + i + 1}</td>
+                          <td style={{ color: 'var(--text-muted)', fontSize: 12 }}>
+                            {(currentPage - 1) * pageSize + i + 1}
+                          </td>
                           <td>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                              <div style={{
-                                width: 32, height: 32, borderRadius: '50%',
-                                background: '#e2e8f0', color: '#94a3b8',
-                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                fontSize: 18, flexShrink: 0, overflow: 'hidden'
-                              }}>
+                              <div
+                                style={{
+                                  width: 32,
+                                  height: 32,
+                                  borderRadius: '50%',
+                                  background: '#e2e8f0',
+                                  color: '#94a3b8',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  fontSize: 18,
+                                  flexShrink: 0,
+                                  overflow: 'hidden',
+                                }}
+                              >
                                 {m.photo ? (
                                   <img src={m.photo} alt={m.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                 ) : (
@@ -149,7 +189,9 @@ export default function ShopsPage() {
                               </div>
                               <div>
                                 <div style={{ fontWeight: 600 }}>{m.name}</div>
-                                {m.nameKh && m.nameKh !== m.name && <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{m.nameKh}</div>}
+                                {m.nameKh && m.nameKh !== m.name && (
+                                  <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{m.nameKh}</div>
+                                )}
                               </div>
                             </div>
                           </td>
@@ -160,7 +202,15 @@ export default function ShopsPage() {
                                 href={tg.startsWith('http') ? tg : `https://t.me/${tg.replace(/[^0-9a-zA-Z_+]/g, '')}`}
                                 target="_blank"
                                 rel="noreferrer"
-                                style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: '#0088cc', textDecoration: 'none', fontWeight: 500, fontSize: 12 }}
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: 4,
+                                  color: '#0088cc',
+                                  textDecoration: 'none',
+                                  fontWeight: 500,
+                                  fontSize: 12,
+                                }}
                               >
                                 <FaTelegramPlane size={14} /> {tg}
                               </a>
@@ -172,7 +222,15 @@ export default function ShopsPage() {
                                 href={m.mapsLocation}
                                 target="_blank"
                                 rel="noreferrer"
-                                style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--accent)', textDecoration: 'none', fontWeight: 500, fontSize: 12 }}
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: 4,
+                                  color: 'var(--accent)',
+                                  textDecoration: 'none',
+                                  fontWeight: 500,
+                                  fontSize: 12,
+                                }}
                               >
                                 <MdLocationOn size={14} /> {m.address || 'Maps'}
                               </a>
@@ -184,24 +242,78 @@ export default function ShopsPage() {
                             {hasDeliveryFee ? (
                               `$${Number(m.deliveryFee).toFixed(2)}`
                             ) : (
-                              <span style={{
-                                padding: '3px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600,
-                                background: m.pricingTier === 'premium' ? '#fef3c7' : m.pricingTier === 'standard' ? '#e0e7ff' : '#f1f5f9',
-                                color: m.pricingTier === 'premium' ? '#b45309' : m.pricingTier === 'standard' ? '#4338ca' : '#475569',
-                                textTransform: 'uppercase'
-                              }}>
+                              <span
+                                style={{
+                                  padding: '3px 8px',
+                                  borderRadius: 4,
+                                  fontSize: 11,
+                                  fontWeight: 600,
+                                  background:
+                                    m.pricingTier === 'premium'
+                                      ? '#fef3c7'
+                                      : m.pricingTier === 'standard'
+                                      ? '#e0e7ff'
+                                      : '#f1f5f9',
+                                  color:
+                                    m.pricingTier === 'premium'
+                                      ? '#b45309'
+                                      : m.pricingTier === 'standard'
+                                      ? '#4338ca'
+                                      : '#475569',
+                                  textTransform: 'uppercase',
+                                }}
+                              >
                                 {m.pricingTier || 'STANDARD'}
                               </span>
                             )}
                           </td>
-                          <td style={{ fontSize: 12 }}>{m.zone?.name || m.contact || ''}</td>
+                          <td>
+                            <button
+                              onClick={() => handleBranchClick(m)}
+                              className="btn btn-sm"
+                              style={{
+                                padding: '4px 10px',
+                                borderRadius: 16,
+                                fontSize: 11.5,
+                                fontWeight: 600,
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: 5,
+                                background: branchCount > 0 ? '#e0f2fe' : '#f1f5f9',
+                                color: branchCount > 0 ? '#0284c7' : '#64748b',
+                                border: `1px solid ${branchCount > 0 ? '#bae6fd' : '#e2e8f0'}`,
+                                cursor: 'pointer',
+                              }}
+                            >
+                              <MdBusiness size={14} />
+                              {branchCount > 0
+                                ? `${branchCount} ${lang === 'km' ? 'សាខា' : 'Branches'}`
+                                : `+ ${lang === 'km' ? 'ថែមសាខា' : 'Add Branch'}`}
+                            </button>
+                          </td>
                           <td>
                             <Badge status={m.active ? 'active' : 'inactive'} />
                           </td>
                           <td>
                             <div style={{ display: 'flex', gap: 4 }}>
-                              <button className="btn btn-ghost btn-icon btn-sm" onClick={() => openEdit(m)}><FaRegEdit size={14} /></button>
-                              <button className="btn btn-ghost btn-icon btn-sm" style={{ color: 'var(--danger)' }} onClick={() => del(m.id)}><FaTrashAlt size={13} /></button>
+                              <button
+                                title={lang === 'km' ? 'គ្រប់គ្រងសាខា' : 'Manage Branches'}
+                                className="btn btn-ghost btn-icon btn-sm"
+                                style={{ color: '#0284c7' }}
+                                onClick={() => handleBranchClick(m)}
+                              >
+                                <MdBusiness size={15} />
+                              </button>
+                              <button className="btn btn-ghost btn-icon btn-sm" onClick={() => openEdit(m)}>
+                                <FaRegEdit size={14} />
+                              </button>
+                              <button
+                                className="btn btn-ghost btn-icon btn-sm"
+                                style={{ color: 'var(--danger)' }}
+                                onClick={() => del(m.id)}
+                              >
+                                <FaTrashAlt size={13} />
+                              </button>
                             </div>
                           </td>
                         </tr>
@@ -223,7 +335,6 @@ export default function ShopsPage() {
           </div>
         </div>
       </div>
-
     </div>
   );
 }

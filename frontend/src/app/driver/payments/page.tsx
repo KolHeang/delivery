@@ -34,10 +34,11 @@ export default function DriverPaymentsPage() {
     delivered: 0,
     failed: 0,
     returned: 0,
-    feePerParcel: 0.0,
-    totalFee: 0.0,
-    deduction: 0.0,
-    netTotal: 0.0,
+    feePerParcel: 1000,
+    totalFee: 0,
+    deduction: 0,
+    netTotal: 0,
+    currency: "KHR",
     status: "Pending", // "Pending" | "Completed"
   });
 
@@ -83,16 +84,18 @@ export default function DriverPaymentsPage() {
         const d = dailyRes.data;
         const parcels = d.parcels || {};
         const fin = d.financial || {};
+        const isKhr = fin.currency === "KHR" || fin.feePerParcel >= 100 || fin.totalAmount >= 100;
         setDailyStats({
           total: Number(parcels.total) || 0,
           delivered: Number(parcels.delivered) || 0,
           failed: Number(parcels.failed) || 0,
           returned: Number(parcels.returned) || 0,
-          feePerParcel: Number(fin.feePerParcel) || 0.0,
-          totalFee: Number(fin.totalDeliveryFee) || 0.0,
-          deduction: Math.abs(Number(fin.adjustment) || 0.0),
-          netTotal: Number(fin.totalAmount) || 0.0,
-          status: d.invoiceStatus || (parcels.delivered > 0 ? "Completed" : "Pending"),
+          feePerParcel: Number(fin.feePerParcel) || 1000,
+          totalFee: Number(fin.totalDeliveryFee) || 0,
+          deduction: Math.abs(Number(fin.adjustment) || 0),
+          netTotal: Number(fin.totalAmount) || 0,
+          currency: isKhr ? "KHR" : (fin.currency || "KHR"),
+          status: fin.paymentStatus === 'Paid' ? "Completed" : (d.invoiceStatus || (parcels.delivered > 0 ? "Completed" : "Pending")),
         });
       } else if (taskRes?.data) {
         const taskList = Array.isArray(taskRes.data)
@@ -109,9 +112,9 @@ export default function DriverPaymentsPage() {
         ).length;
         const totalCount = taskList.length;
 
-        const fee = 1.0;
-        const subtotal = totalCount * fee;
-        const ded = failedCount > 0 ? failedCount * 0.5 : 0;
+        const fee = 1000;
+        const subtotal = deliveredCount * fee;
+        const ded = 0;
         const net = Math.max(0, subtotal - ded);
 
         setDailyStats({
@@ -119,10 +122,11 @@ export default function DriverPaymentsPage() {
           delivered: deliveredCount,
           failed: failedCount,
           returned: returnedCount,
-          feePerParcel: totalCount > 0 ? fee : 0.0,
+          feePerParcel: fee,
           totalFee: subtotal,
           deduction: ded,
           netTotal: net,
+          currency: "KHR",
           status: deliveredCount > 0 ? "Completed" : "Pending",
         });
       } else {
@@ -131,10 +135,11 @@ export default function DriverPaymentsPage() {
           delivered: 0,
           failed: 0,
           returned: 0,
-          feePerParcel: 0.0,
-          totalFee: 0.0,
-          deduction: 0.0,
-          netTotal: 0.0,
+          feePerParcel: 1000,
+          totalFee: 0,
+          deduction: 0,
+          netTotal: 0,
+          currency: "KHR",
           status: "Pending",
         });
       }
@@ -144,21 +149,25 @@ export default function DriverPaymentsPage() {
         const rawList = Array.isArray(paymentsRes.data)
           ? paymentsRes.data
           : paymentsRes.data?.result || paymentsRes.data?.data || [];
-        const formatted = rawList.map((item: any) => ({
-          id: item.reference || `INV-${item.id}`,
-          date: item.date
-            ? new Date(item.date).toLocaleDateString("en-US", {
-                weekday: "short",
-                day: "numeric",
-                month: "short",
-                year: "numeric",
-              })
-            : "N/A",
-          totalParcels: item.parcelCount || (item.parcelIds ? item.parcelIds.length : 0),
-          delivered: item.parcelCount || (item.parcelIds ? item.parcelIds.length : 0),
-          netAmount: Number(item.totalUSD || item.usdAmount || item.amount) || 0,
-          status: "Completed",
-        }));
+        const formatted = rawList.map((item: any) => {
+          const isKhr = item.currency === "KHR" || (!item.currency && (Number(item.amount) >= 100 || (item.note && (item.note.includes("KHR") || item.note.includes("៛")))));
+          return {
+            id: item.reference || `INV-${item.id}`,
+            date: item.date
+              ? new Date(item.date).toLocaleDateString("en-US", {
+                  weekday: "short",
+                  day: "numeric",
+                  month: "short",
+                  year: "numeric",
+                })
+              : "N/A",
+            totalParcels: item.parcelCount || (item.parcelIds ? item.parcelIds.length : 0),
+            delivered: item.parcelCount || (item.parcelIds ? item.parcelIds.length : 0),
+            netAmount: Number(item.amount) || 0,
+            currency: isKhr ? "KHR" : (item.currency || "USD"),
+            status: "Completed",
+          };
+        });
         setInvoices(formatted);
       } else {
         setInvoices([]);
@@ -449,21 +458,21 @@ export default function DriverPaymentsPage() {
             <div style={{ display: "flex", justifyContent: "space-between", color: "#475569" }}>
               <span>{t.deliveryFee}</span>
               <span style={{ fontWeight: "700", color: "#0f172a" }}>
-                ${dailyStats.feePerParcel.toFixed(2)}
+                {dailyStats.currency === "KHR" ? `${Number(dailyStats.feePerParcel).toLocaleString()} ៛` : `$${Number(dailyStats.feePerParcel).toFixed(2)}`}
               </span>
             </div>
 
             <div style={{ display: "flex", justifyContent: "space-between", color: "#475569" }}>
               <span>{t.totalFee}</span>
               <span style={{ fontWeight: "700", color: "#0f172a" }}>
-                ${dailyStats.totalFee.toFixed(2)}
+                {dailyStats.currency === "KHR" ? `${Number(dailyStats.totalFee).toLocaleString()} ៛` : `$${Number(dailyStats.totalFee).toFixed(2)}`}
               </span>
             </div>
 
             <div style={{ display: "flex", justifyContent: "space-between", color: "#475569" }}>
               <span>{t.deduction}</span>
               <span style={{ fontWeight: "700", color: "#ef4444" }}>
-                -${dailyStats.deduction.toFixed(2)}
+                {dailyStats.currency === "KHR" ? `-${Number(dailyStats.deduction).toLocaleString()} ៛` : `-$${Number(dailyStats.deduction).toFixed(2)}`}
               </span>
             </div>
           </div>
@@ -493,7 +502,7 @@ export default function DriverPaymentsPage() {
                   marginTop: "2px",
                 }}
               >
-                ${dailyStats.netTotal.toFixed(2)}
+                {dailyStats.currency === "KHR" ? `${Number(dailyStats.netTotal).toLocaleString()} ៛` : `$${Number(dailyStats.netTotal).toFixed(2)}`}
               </div>
             </div>
 
@@ -600,7 +609,7 @@ export default function DriverPaymentsPage() {
 
                   <div style={{ textAlign: "right" }}>
                     <div style={{ fontSize: "15px", fontWeight: "900", color: "#16a34a" }}>
-                      +${inv.netAmount.toFixed(2)}
+                      +{inv.currency === "KHR" ? `${Number(inv.netAmount).toLocaleString()} ៛` : `$${Number(inv.netAmount).toFixed(2)}`}
                     </div>
                   </div>
                 </div>

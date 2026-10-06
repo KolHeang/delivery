@@ -17,6 +17,7 @@ import {
   MdAssignmentReturn,
   MdAttachMoney,
   MdAccountBalanceWallet,
+  MdChevronRight,
 } from "react-icons/md";
 
 export default function DriverDashboardPage() {
@@ -92,7 +93,7 @@ export default function DriverDashboardPage() {
     }
   };
 
-  const displayTasks = tasks.slice(0, 4);
+  const displayTasks = tasks.slice(0, 5);
 
   if (loading) {
     return (
@@ -346,7 +347,7 @@ export default function DriverDashboardPage() {
                 const shopName = tItem.merchant?.name || tItem.merchantName || tItem.shopName || (lang === "km" ? "ហាង" : "Store");
                 const isDelivered = tItem.status === "delivered";
                 const isFailed = tItem.status === "failed";
-                const isTransit = tItem.status === "in-transit" || tItem.status === "picked-up" || tItem.status === "assigned";
+                const isTransit = tItem.status === "in-transit" || tItem.status === "picked-up" || tItem.status === "assigned" || tItem.status === "delivery";
 
                 return (
                   <div
@@ -354,37 +355,57 @@ export default function DriverDashboardPage() {
                     onClick={() => router.push(`/driver/tasks/${tItem.id || 1}`)}
                     style={{
                       backgroundColor: "#ffffff",
-                      borderRadius: "18px",
-                      padding: "14px 16px",
+                      borderRadius: "16px",
+                      padding: "12px 14px",
                       boxShadow: "0 2px 8px rgba(0,0,0,0.03)",
                       border: "1px solid #f1f5f9",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "space-between",
                       cursor: "pointer",
+                      transition: "transform 0.15s ease, box-shadow 0.15s ease",
                     }}
                   >
                     <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                      <div style={{ width: "40px", height: "40px", borderRadius: "12px", backgroundColor: "#eff6ff", display: "flex", alignItems: "center", justifyContent: "center", color: "#2563eb", flexShrink: 0 }}>
-                        <MdInventory2 size={22} />
+                      <div style={{
+                        width: "42px",
+                        height: "42px",
+                        borderRadius: "50%",
+                        backgroundColor: "#fffbeb",
+                        border: "1px solid #fef3c7",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: "20px",
+                        flexShrink: 0,
+                        boxShadow: "0 1px 4px rgba(245, 158, 11, 0.08)",
+                      }}>
+                        📦
                       </div>
                       <div>
-                        <div style={{ fontSize: "13.5px", fontWeight: "800", color: "#0f172a" }}>{code.startsWith("#") ? code : `#${code}`}</div>
-                        <div style={{ fontSize: "12px", color: "#64748b", fontWeight: "600", marginTop: "1px" }}>{shopName}</div>
+                        <div style={{ fontSize: "14px", fontWeight: "800", color: "#0f172a", letterSpacing: "-0.2px" }}>
+                          {code.startsWith("#") ? code : `#${code}`}
+                        </div>
+                        <div style={{ fontSize: "12px", color: "#64748b", fontWeight: "600", marginTop: "1px" }}>
+                          {shopName}
+                        </div>
                       </div>
                     </div>
 
-                    {/* Status Badge */}
-                    <span style={{
-                      fontSize: "11px",
-                      fontWeight: "800",
-                      padding: "5px 12px",
-                      borderRadius: "20px",
-                      backgroundColor: isDelivered ? "#dcfce7" : isFailed ? "#fee2e2" : isTransit ? "#dbeafe" : "#fef3c7",
-                      color: isDelivered ? "#15803d" : isFailed ? "#b91c1c" : isTransit ? "#1e40af" : "#b45309",
-                    }}>
-                      {isDelivered ? "Delivered" : isFailed ? "Failed" : isTransit ? "Delivery" : "Pending"}
-                    </span>
+                    {/* Status Badge & Chevron */}
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      <span style={{
+                        fontSize: "12px",
+                        fontWeight: "700",
+                        padding: "5px 14px",
+                        borderRadius: "16px",
+                        backgroundColor: isDelivered ? "#dcfce7" : isFailed ? "#fee2e2" : isTransit ? "#e0f2fe" : "#ffedd5",
+                        color: isDelivered ? "#16a34a" : isFailed ? "#ef4444" : isTransit ? "#0284c7" : "#ea580c",
+                      }}>
+                        {isDelivered ? "Delivered" : isFailed ? "Failed" : isTransit ? "Delivery" : "Pending"}
+                      </span>
+                      <MdChevronRight size={20} color="#64748b" />
+                    </div>
                   </div>
                 );
               })

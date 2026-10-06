@@ -32,23 +32,7 @@ export class CreateVehicleDto {
   @ApiProperty({ required: false }) @IsOptional() @IsNumber() @Type(() => Number) tenantId?: number;
 }
 
-export class UpdateVehicleDto {
-  @IsOptional() @IsString() plate?: string;
-  @IsOptional()
-  @Transform(({ value }) => value || undefined)
-  @IsIn(['motorbike', 'car', 'van', 'truck', 'tuk-tuk'])
-  type?: string;
-  @IsOptional() @IsString() brand?: string;
-  @IsOptional() @IsString() model?: string;
-  @IsOptional()
-  @IsNumber()
-  @Min(2000)
-  @Max(2030)
-  @Type(() => Number)
-  year?: number;
-  @IsOptional()
-  @Transform(({ value }) => value || undefined)
-  @IsIn(['active', 'maintenance', 'inactive'])
-  status?: string;
-  @IsOptional() @IsNumber() @Type(() => Number) tenantId?: number;
-}
+import { PartialType } from '@nestjs/swagger';
+
+export class UpdateVehicleDto extends PartialType(CreateVehicleDto) {}
+

@@ -6,7 +6,7 @@ import {
   IsNumber,
   Min,
 } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, PartialType } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
 
 export class CreateParcelDto {
@@ -40,6 +40,13 @@ export class CreateParcelDto {
   @Min(0)
   @Type(() => Number)
   deliveryFee?: number;
+
+  @ApiProperty({ default: 1000, required: false })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Type(() => Number)
+  driverFee?: number;
 
   @ApiProperty({ required: false }) @IsOptional() @IsString() note?: string;
   @ApiProperty({ required: false })
@@ -104,37 +111,56 @@ export class CreateParcelDto {
   @IsNumber()
   @Type(() => Number)
   tenantId?: number;
+
+  @ApiProperty({ required: false, description: 'Merchant Branch ID (optional)' })
+  @IsOptional()
+  @IsNumber()
+  @Type(() => Number)
+  branchId?: number;
 }
 
-export class UpdateParcelDto {
-  @IsOptional() @IsString() receiverName?: string;
-  @IsOptional() @IsString() receiverPhone?: string;
-  @IsOptional() @IsString() receiverAddress?: string;
-  @IsOptional() @IsNumber() @Min(0) @Type(() => Number) weight?: number;
-  @IsOptional() @IsEnum(['small', 'medium', 'large']) size?: string;
-  @IsOptional() @IsNumber() @Min(0) @Type(() => Number) cod?: number;
-  @IsOptional() @IsEnum(['USD', 'KHR']) codCurrency?: string;
-  @IsOptional() @IsNumber() @Min(0) @Type(() => Number) deliveryFee?: number;
-  @IsOptional() @IsString() note?: string;
-  @IsOptional() @IsNumber() @Type(() => Number) merchantId?: number;
-  @IsOptional() @IsNumber() @Type(() => Number) customerId?: number;
-  @IsOptional() @IsNumber() @Type(() => Number) zoneId?: number;
-  @IsOptional() @IsEnum(['pending', 'paid']) paymentStatus?: string;
-  @IsOptional() @IsString() status?: string;
-  @IsOptional() @IsString() paymentMethod?: string;
-  @IsOptional() @IsNumber() @Type(() => Number) driverId?: number;
-  @IsOptional() @IsNumber() @Type(() => Number) pickupDriverId?: number;
-  @IsOptional() @IsString() itemPhoto?: string;
-  @IsOptional() @IsString() qrCodeUrl?: string;
-  @IsOptional() proofPhotos?: string[];
-  @IsOptional() @IsString() signature?: string;
-  @IsOptional() @IsString() failedPhoto?: string;
-  @IsOptional() @IsString() createdAt?: string;
-  @IsOptional() @IsString() deliveredAt?: string;
-  @IsOptional() @IsNumber() @Type(() => Number) createdById?: number;
-  @IsOptional() @IsNumber() @Type(() => Number) updatedById?: number;
-  @IsOptional() @IsNumber() @Type(() => Number) tenantId?: number;
+export class UpdateParcelDto extends PartialType(CreateParcelDto) {
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsNumber()
+  @Type(() => Number)
+  driverId?: number;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  status?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  createdAt?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  note?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  proofPhotos?: string[];
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  failedPhoto?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  deliveredAt?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsNumber()
+  @Type(() => Number)
+  updatedById?: number;
 }
+
 
 export class UpdateParcelStatusDto {
   @ApiProperty({
@@ -175,11 +201,6 @@ export class UpdateParcelStatusDto {
   @IsOptional()
   @IsString()
   reason?: string;
-
-  @ApiProperty({ required: false })
-  @IsOptional()
-  @IsString()
-  signature?: string;
 
   @ApiProperty({ required: false, type: [String] })
   @IsOptional()

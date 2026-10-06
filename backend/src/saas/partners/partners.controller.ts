@@ -10,15 +10,24 @@ import {
   UseGuards,
   Request,
 } from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiQuery,
+  ApiParam,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { PartnersService } from './partners.service';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
-import { Partner } from './partner.entity';
+import { CreatePartnerDto, UpdatePartnerDto } from './dto/partner.dto';
 
+@ApiTags('SaaS - Partners')
 @Controller('saas/partners')
 export class PartnersController {
   constructor(private readonly partnersService: PartnersService) {}
 
   @Get('my-stats')
+  @ApiOperation({ summary: 'Get current partner dashboard statistics' })
   async getMyStats(@Request() req: any) {
     const userId = req.user?.id;
     if (!userId) {
@@ -39,12 +48,17 @@ export class PartnersController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @Get(':id/stats')
+  @ApiOperation({ summary: 'Get affiliate statistics by partner ID' })
+  @ApiParam({ name: 'id', description: 'Partner ID' })
   async getStats(@Param('id') id: number) {
     return this.partnersService.getStats(+id);
   }
 
   @Get('referral/:code')
+  @ApiOperation({ summary: 'Validate affiliate referral code' })
+  @ApiParam({ name: 'code', description: 'Referral code string' })
   async checkReferral(@Param('code') code: string) {
     const partner = await this.partnersService.findByReferralCode(code);
     if (!partner) {
@@ -61,6 +75,10 @@ export class PartnersController {
   }
 
   @Get()
+  @ApiOperation({ summary: 'Get all affiliate partners' })
+  @ApiQuery({ name: 'page', required: false, type: Number, description: 'Page number' })
+  @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Items per page' })
+  @ApiQuery({ name: 'search', required: false, type: String, description: 'Search name, email, or referral code' })
   async getAll(
     @Query('page') page?: string,
     @Query('limit') limit?: string,
@@ -74,21 +92,28 @@ export class PartnersController {
   }
 
   @Get(':id')
+  @ApiOperation({ summary: 'Get partner details by ID' })
+  @ApiParam({ name: 'id', description: 'Partner ID' })
   async getOne(@Param('id') id: number) {
     return this.partnersService.findById(+id);
   }
 
   @Post()
-  async create(@Body() body: Partial<Partner>) {
-    return this.partnersService.create(body);
+  @ApiOperation({ summary: 'Register a new affiliate partner' })
+  async create(@Body() body: CreatePartnerDto) {
+    return this.partnersService.create(body as any);
   }
 
   @Put(':id')
-  async update(@Param('id') id: number, @Body() body: Partial<Partner>) {
-    return this.partnersService.update(+id, body);
+  @ApiOperation({ summary: 'Update an affiliate partner' })
+  @ApiParam({ name: 'id', description: 'Partner ID' })
+  async update(@Param('id') id: number, @Body() body: UpdatePartnerDto) {
+    return this.partnersService.update(+id, body as any);
   }
 
   @Delete(':id')
+  @ApiOperation({ summary: 'Delete an affiliate partner' })
+  @ApiParam({ name: 'id', description: 'Partner ID' })
   async remove(@Param('id') id: number) {
     await this.partnersService.remove(+id);
     return { success: true, message: 'Partner removed successfully' };

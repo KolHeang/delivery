@@ -1,5 +1,5 @@
 import { Controller, Get, UseGuards, Query, Request } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiBearerAuth, ApiOperation, ApiQuery } from '@nestjs/swagger';
 import { DashboardService } from './dashboard.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
@@ -19,6 +19,9 @@ export class DashboardController {
   }
 
   @Get('stats')
+  @ApiOperation({ summary: 'Get overview dashboard stats' })
+  @ApiQuery({ name: 'startDate', required: false, type: String })
+  @ApiQuery({ name: 'endDate', required: false, type: String })
   getStats(
     @Request() req: any,
     @Query('startDate') startDate?: string,
@@ -32,6 +35,9 @@ export class DashboardController {
   }
 
   @Get('chart-data')
+  @ApiOperation({ summary: 'Get order and revenue chart data' })
+  @ApiQuery({ name: 'startDate', required: false, type: String })
+  @ApiQuery({ name: 'endDate', required: false, type: String })
   getChartData(
     @Request() req: any,
     @Query('startDate') startDate?: string,
@@ -45,6 +51,9 @@ export class DashboardController {
   }
 
   @Get('recent-orders')
+  @ApiOperation({ summary: 'Get recent delivery orders' })
+  @ApiQuery({ name: 'startDate', required: false, type: String })
+  @ApiQuery({ name: 'endDate', required: false, type: String })
   getRecentOrders(
     @Request() req: any,
     @Query('startDate') startDate?: string,
@@ -58,6 +67,9 @@ export class DashboardController {
   }
 
   @Get('top-drivers')
+  @ApiOperation({ summary: 'Get top performing drivers' })
+  @ApiQuery({ name: 'startDate', required: false, type: String })
+  @ApiQuery({ name: 'endDate', required: false, type: String })
   getTopDrivers(
     @Request() req: any,
     @Query('startDate') startDate?: string,

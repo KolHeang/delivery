@@ -810,6 +810,14 @@ tbody td {
   transform: none !important;
 }
 
+.text-danger {
+  color: var(--danger) !important;
+}
+
+.text-primary {
+  color: var(--accent) !important;
+}
+
 /* ============================================================
    FORMS
    ============================================================ */

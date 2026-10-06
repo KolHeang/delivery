@@ -4,7 +4,7 @@ import React from 'react';
 import { MdErrorOutline } from 'react-icons/md';
 
 interface FormFieldProps {
-  label?: string;
+  label?: React.ReactNode;
   required?: boolean;
   error?: string;
   helperText?: string;

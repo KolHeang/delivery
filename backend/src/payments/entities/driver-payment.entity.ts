@@ -32,6 +32,9 @@ export class DriverPayment {
   @Column('decimal', { precision: 10, scale: 2, default: 0 })
   amount: number;
 
+  @Column({ default: 'KHR', nullable: true })
+  currency: string;
+
   @Column({ type: 'date', default: () => 'CURRENT_DATE' })
   date: Date;
 

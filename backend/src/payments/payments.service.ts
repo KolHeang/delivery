@@ -31,6 +31,7 @@ export class PaymentsService {
     parcelIds?: number[],
     userId?: number,
     tenantId?: number,
+    currency: string = 'KHR',
   ) {
     const driver = await this.userRepo.findOne({
       where: { id: driverId },
@@ -40,6 +41,7 @@ export class PaymentsService {
     const payment = this.driverPaymentRepo.create({
       driverId,
       amount,
+      currency: currency || 'KHR',
       date,
       reference,
       note,
@@ -340,13 +342,14 @@ export class PaymentsService {
 
   async updateDriverPayment(
     id: number,
-    body: { amount?: number; note?: string; date?: Date; reference?: string },
+    body: { amount?: number; currency?: string; note?: string; date?: Date; reference?: string },
     userId?: number,
   ) {
     const payment = await this.driverPaymentRepo.findOne({ where: { id } });
     if (!payment) throw new NotFoundException('Payment record not found');
 
     if (body.amount !== undefined) payment.amount = parseFloat(body.amount as any);
+    if (body.currency !== undefined) payment.currency = body.currency;
     if (body.note !== undefined) payment.note = body.note;
     if (body.date !== undefined) payment.date = body.date;
     if (body.reference !== undefined) payment.reference = body.reference;

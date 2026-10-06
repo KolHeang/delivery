@@ -30,7 +30,10 @@ export class SaasInvoicesService {
       where,
       relations: {
         user: true,
-        subscription: true,
+        subscription: {
+          tenant: true,
+          plan: true,
+        },
         coupon: true,
         payments: true,
       },
@@ -97,15 +100,83 @@ export class SaasInvoicesService {
     return invoice;
   }
 
-  async create(data: Partial<SaasInvoice>): Promise<SaasInvoice> {
-    const count = await this.invoiceRepo.count();
-    const invoiceNumber = `INV-${new Date().getFullYear()}-${String(count + 1).padStart(5, '0')}`;
+  async create(data: Partial<SaasInvoice> & { tenantId?: number }): Promise<SaasInvoice> {
+    let resolvedSubscriptionId = data.subscriptionId;
+    let resolvedUserId = data.userId;
+
+    // 1. Resolve subscription if only tenantId provided
+    if (!resolvedSubscriptionId && data.tenantId) {
+      const sub = await this.invoiceRepo.manager.query(
+        'SELECT id, user_id FROM saas_subscriptions WHERE tenant_id = $1 ORDER BY id DESC LIMIT 1',
+        [data.tenantId],
+      );
+      if (sub && sub[0]) {
+        resolvedSubscriptionId = sub[0].id;
+        if (!resolvedUserId && sub[0].user_id) {
+          resolvedUserId = sub[0].user_id;
+        }
+      }
+    }
+
+    // 2. Resolve userId from subscription if not provided
+    if (!resolvedUserId && resolvedSubscriptionId) {
+      const sub = await this.invoiceRepo.manager.query(
+        'SELECT user_id FROM saas_subscriptions WHERE id = $1 LIMIT 1',
+        [resolvedSubscriptionId],
+      );
+      if (sub && sub[0]?.user_id) {
+        resolvedUserId = sub[0].user_id;
+      }
+    }
+
+    // 3. Fallback userId from users table
+    if (!resolvedUserId) {
+      const users = await this.invoiceRepo.manager.query('SELECT id FROM users ORDER BY id ASC LIMIT 1');
+      if (users && users[0]?.id) {
+        resolvedUserId = users[0].id;
+      } else {
+        resolvedUserId = 1;
+      }
+    }
+
+    // 4. Generate guaranteed unique invoice number
+    let invoiceNumber = data.invoiceNumber;
+    if (!invoiceNumber) {
+      const year = new Date().getFullYear();
+      let candidate = '';
+      let isUnique = false;
+      let attempts = 0;
+      while (!isUnique && attempts < 10) {
+        attempts++;
+        const rand = Math.floor(1000 + Math.random() * 9000);
+        const count = await this.invoiceRepo.count();
+        candidate = `INV-${year}-${String(count + attempts).padStart(4, '0')}-${rand}`;
+        const existing = await this.invoiceRepo.findOne({ where: { invoiceNumber: candidate } });
+        if (!existing) {
+          isUnique = true;
+          invoiceNumber = candidate;
+        }
+      }
+      if (!invoiceNumber) {
+        invoiceNumber = `INV-${year}-${Date.now()}`;
+      }
+    }
+
+    const { paymentMethod, planId, billingCycle, tenantId, ...invoiceFields } = data as any;
 
     const invoice = this.invoiceRepo.create({
-      ...data,
-      invoiceNumber: data.invoiceNumber || invoiceNumber,
-      status: data.status || 'pending',
-    });
+      ...invoiceFields,
+      subscriptionId: resolvedSubscriptionId,
+      userId: resolvedUserId,
+      invoiceNumber,
+      subtotal: Number(data.subtotal || data.totalAmount || 0),
+      totalAmount: Number(data.totalAmount || data.subtotal || 0),
+      discountAmount: Number(data.discountAmount || 0),
+      status: (data.status as any) || 'pending',
+      dueDate: data.dueDate ? new Date(data.dueDate) : new Date(),
+      paidAt: data.status === 'paid' ? (data.paidAt ? new Date(data.paidAt) : new Date()) : (data.paidAt ? new Date(data.paidAt) : undefined),
+    } as any) as unknown as SaasInvoice;
+
     return this.invoiceRepo.save(invoice);
   }
 

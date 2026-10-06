@@ -43,6 +43,30 @@ export default function BatchEntryPage() {
       .finally(() => setLoading(false));
   }, [router]);
 
+  const [merchantBranches, setMerchantBranches] = useState<any[]>([]);
+  const [selectedBranchId, setSelectedBranchId] = useState('');
+
+  useEffect(() => {
+    if (selectedMerchantId) {
+      api.get(`/merchants/${selectedMerchantId}/branches`)
+        .then(res => {
+          const list = Array.isArray(res.data) ? res.data : (res.data?.data || []);
+          setMerchantBranches(list);
+          const def = list.find((b: any) => b.isDefault);
+          if (def) setSelectedBranchId(def.id.toString());
+          else if (list.length > 0) setSelectedBranchId(list[0].id.toString());
+          else setSelectedBranchId('');
+        })
+        .catch(() => {
+          setMerchantBranches([]);
+          setSelectedBranchId('');
+        });
+    } else {
+      setMerchantBranches([]);
+      setSelectedBranchId('');
+    }
+  }, [selectedMerchantId]);
+
   useEffect(() => {
     const merchant = merchants.find(m => m.id.toString() === selectedMerchantId);
     if (merchant) {
@@ -150,6 +174,7 @@ export default function BatchEntryPage() {
 
         const basePayload = {
           merchantId: parseInt(selectedMerchantId),
+          branchId: selectedBranchId ? parseInt(selectedBranchId) : undefined,
           receiverName: r.receiverName,
           receiverPhone: r.receiverPhone,
           receiverAddress: r.receiverAddress,
@@ -248,6 +273,27 @@ export default function BatchEntryPage() {
                 </div>
                 {merchantError && <div className="form-error-text">{merchantError}</div>}
               </div>
+
+              {merchantBranches.length > 0 && (
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label" style={{ fontWeight: 600 }}>
+                    🏢 {lang === 'km' ? 'សាខាយកអីវ៉ាន់' : 'Pickup Branch'}
+                  </label>
+                  <select
+                    className="form-control"
+                    value={selectedBranchId}
+                    onChange={e => setSelectedBranchId(e.target.value)}
+                    style={{ height: 42, fontSize: 13.5, background: '#f0fdf4', borderColor: '#86efac' }}
+                  >
+                    <option value="">{lang === 'km' ? '-- ទីស្នាក់ការកណ្តាល (HQ) --' : '-- Main Store (HQ) --'}</option>
+                    {merchantBranches.map(b => (
+                      <option key={b.id} value={b.id}>
+                        {b.name} {b.code ? `[${b.code}]` : ''} {b.isDefault ? `⭐ (${lang === 'km' ? 'ដើម' : 'Default'})` : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               <DateInput
                 labelEn="Parcel Date"

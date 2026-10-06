@@ -393,23 +393,38 @@ export default function DriverPaymentDetailPage() {
 
               <div style={{ height: "1px", backgroundColor: "#e2e8f0", margin: "4px 0" }} />
 
-              <div
-                style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
-              >
-                <span style={{ color: "#64748b", fontWeight: "600" }}>ទឹកប្រាក់ដុល្លារ:</span>
-                <span style={{ fontWeight: "900", color: "#0f172a", fontSize: "16px" }}>
-                  $ {Number(p?.usdTotal ?? p?.amount ?? p?.totalAmount ?? 0).toFixed(2)}
-                </span>
-              </div>
+              {p?.currency === "KHR" || (!p?.currency && Number(p?.amount) >= 100) ? (
+                <div
+                  style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
+                >
+                  <span style={{ color: "#64748b", fontWeight: "600" }}>ទឹកប្រាក់ទូទាត់:</span>
+                  <span style={{ fontWeight: "900", color: "#16a34a", fontSize: "17px" }}>
+                    {Number(p?.amount).toLocaleString()} ៛
+                  </span>
+                </div>
+              ) : (
+                <>
+                  <div
+                    style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
+                  >
+                    <span style={{ color: "#64748b", fontWeight: "600" }}>ទឹកប្រាក់ដុល្លារ:</span>
+                    <span style={{ fontWeight: "900", color: "#0f172a", fontSize: "16px" }}>
+                      $ {Number(p?.usdTotal ?? p?.amount ?? p?.totalAmount ?? 0).toFixed(2)}
+                    </span>
+                  </div>
 
-              <div
-                style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
-              >
-                <span style={{ color: "#64748b", fontWeight: "600" }}>ទឹកប្រាក់រៀល:</span>
-                <span style={{ fontWeight: "900", color: "#581c87", fontSize: "16px" }}>
-                  {Number(p?.khrTotal ?? p?.totalKhr ?? 0).toLocaleString()} ៛
-                </span>
-              </div>
+                  {Number(p?.khrTotal ?? p?.totalKhr ?? 0) > 0 && (
+                    <div
+                      style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
+                    >
+                      <span style={{ color: "#64748b", fontWeight: "600" }}>ទឹកប្រាក់រៀល:</span>
+                      <span style={{ fontWeight: "900", color: "#581c87", fontSize: "16px" }}>
+                        {Number(p?.khrTotal ?? p?.totalKhr ?? 0).toLocaleString()} ៛
+                      </span>
+                    </div>
+                  )}
+                </>
+              )}
             </div>
 
             {/* Package-by-Package List ("បង្ហាញតាមកញ្ចប់") */}

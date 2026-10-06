@@ -10,11 +10,17 @@ import {
   UseGuards,
   Query,
 } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiBearerAuth, ApiOperation, ApiQuery, ApiParam } from '@nestjs/swagger';
 import { IncomesService } from './incomes.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/permissions.guard';
 import { RequirePermissions } from '../auth/permissions.decorator';
+import {
+  CreateIncomeTypeDto,
+  UpdateIncomeTypeDto,
+  CreateIncomeDto,
+  UpdateIncomeDto,
+} from './dto/income.dto';
 
 @ApiTags('Incomes')
 @ApiBearerAuth()
@@ -26,42 +32,43 @@ export class IncomesController {
   // Types
   @Post('types')
   @RequirePermissions('incomes.create')
-  createType(@Body() body: { name: string; description?: string }) {
+  @ApiOperation({ summary: 'Create income type' })
+  createType(@Body() body: CreateIncomeTypeDto) {
     return this.incomesService.createType(body.name, body.description);
   }
 
   @Get('types')
   @RequirePermissions('incomes.read')
+  @ApiOperation({ summary: 'Get all income types' })
   findTypes() {
     return this.incomesService.findTypes();
   }
 
   @Patch('types/:id')
   @RequirePermissions('incomes.update')
+  @ApiOperation({ summary: 'Update income type' })
+  @ApiParam({ name: 'id', type: Number, description: 'Income type ID' })
   updateType(
     @Param('id') id: string,
-    @Body() body: { name?: string; description?: string },
+    @Body() body: UpdateIncomeTypeDto,
   ) {
-    return this.incomesService.updateType(parseInt(id), body);
+    return this.incomesService.updateType(parseInt(id, 10), body);
   }
 
   @Delete('types/:id')
   @RequirePermissions('incomes.delete')
+  @ApiOperation({ summary: 'Delete income type' })
+  @ApiParam({ name: 'id', type: Number, description: 'Income type ID' })
   deleteType(@Param('id') id: string) {
-    return this.incomesService.deleteType(parseInt(id));
+    return this.incomesService.deleteType(parseInt(id, 10));
   }
 
   // Incomes
   @Post()
   @RequirePermissions('incomes.create')
+  @ApiOperation({ summary: 'Create income entry' })
   create(
-    @Body()
-    body: {
-      description: string;
-      amount: number;
-      date: Date;
-      typeId?: number;
-    },
+    @Body() body: CreateIncomeDto,
     @Req() req?: any,
   ) {
     return this.incomesService.create(
@@ -75,6 +82,9 @@ export class IncomesController {
 
   @Get()
   @RequirePermissions('incomes.read')
+  @ApiOperation({ summary: 'Get all incomes' })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
   findAll(
     @Query('page') page?: string,
     @Query('limit') limit?: string,
@@ -89,19 +99,25 @@ export class IncomesController {
 
   @Get(':id')
   @RequirePermissions('incomes.read')
+  @ApiOperation({ summary: 'Get income by ID' })
+  @ApiParam({ name: 'id', type: Number, description: 'Income ID' })
   findOne(@Param('id') id: string) {
-    return this.incomesService.findOne(parseInt(id));
+    return this.incomesService.findOne(parseInt(id, 10));
   }
 
   @Patch(':id')
   @RequirePermissions('incomes.update')
-  update(@Param('id') id: string, @Body() body: any) {
-    return this.incomesService.update(parseInt(id), body);
+  @ApiOperation({ summary: 'Update income entry' })
+  @ApiParam({ name: 'id', type: Number, description: 'Income ID' })
+  update(@Param('id') id: string, @Body() body: UpdateIncomeDto) {
+    return this.incomesService.update(parseInt(id, 10), body);
   }
 
   @Delete(':id')
   @RequirePermissions('incomes.delete')
+  @ApiOperation({ summary: 'Delete income entry' })
+  @ApiParam({ name: 'id', type: Number, description: 'Income ID' })
   remove(@Param('id') id: string) {
-    return this.incomesService.remove(parseInt(id));
+    return this.incomesService.remove(parseInt(id, 10));
   }
 }

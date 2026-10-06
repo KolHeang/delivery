@@ -1,5 +1,5 @@
 import { Controller, Get, Query, UseGuards, Request } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
+import { ApiTags, ApiBearerAuth, ApiQuery, ApiOperation } from '@nestjs/swagger';
 import { ReportsService } from './reports.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/permissions.guard';
@@ -36,6 +36,7 @@ export class ReportsController {
   }
 
   @Get('revenue')
+  @ApiOperation({ summary: 'Get revenue report by period' })
   @ApiQuery({ name: 'period', required: false, enum: ['daily', 'monthly'] })
   getRevenue(
     @Request() req: any,
@@ -45,16 +46,19 @@ export class ReportsController {
   }
 
   @Get('driver-performance')
+  @ApiOperation({ summary: 'Get driver performance report' })
   getDriverPerformance(@Request() req: any) {
     return this.reportsService.getDriverPerformance(this.getEffectiveTenantId(req));
   }
 
   @Get('parcel-summary')
+  @ApiOperation({ summary: 'Get overall parcel status summary report' })
   getParcelSummary(@Request() req: any) {
     return this.reportsService.getParcelSummary(this.getEffectiveTenantId(req));
   }
 
   @Get('shop-summary')
+  @ApiOperation({ summary: 'Get merchant shop activity summary' })
   @ApiQuery({ name: 'startDate', required: false })
   @ApiQuery({ name: 'endDate', required: false })
   @ApiQuery({ name: 'merchantId', required: false })
@@ -73,6 +77,7 @@ export class ReportsController {
   }
 
   @Get('pickup-summary')
+  @ApiOperation({ summary: 'Get pickup summary report' })
   @ApiQuery({ name: 'startDate', required: false })
   @ApiQuery({ name: 'endDate', required: false })
   @ApiQuery({ name: 'driverId', required: false })
@@ -94,6 +99,7 @@ export class ReportsController {
   }
 
   @Get('delivery-summary')
+  @ApiOperation({ summary: 'Get delivery summary report' })
   @ApiQuery({ name: 'startDate', required: false })
   @ApiQuery({ name: 'endDate', required: false })
   @ApiQuery({ name: 'driverId', required: false })
@@ -112,6 +118,7 @@ export class ReportsController {
   }
 
   @Get('delivery-daily')
+  @ApiOperation({ summary: 'Get daily delivery report' })
   @ApiQuery({ name: 'startDate', required: false })
   @ApiQuery({ name: 'endDate', required: false })
   @ApiQuery({ name: 'driverId', required: false })
@@ -133,6 +140,7 @@ export class ReportsController {
   }
 
   @Get('financial')
+  @ApiOperation({ summary: 'Get financial overview report' })
   @ApiQuery({ name: 'startDate', required: false })
   @ApiQuery({ name: 'endDate', required: false })
   getFinancial(

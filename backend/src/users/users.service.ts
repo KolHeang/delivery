@@ -9,6 +9,7 @@ import { Repository, ILike } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { User } from './entities/users.entity';
 import { Role } from '../roles/entities/role.entity';
+import { Vehicle } from '../vehicles/entities/vehicle.entity';
 import { CreateUserDto, UpdateUserDto } from './dto/user.dto';
 import { PaginatedResult } from '../interface/pagination.interface';
 
@@ -17,20 +18,26 @@ export class UsersService implements OnModuleInit {
   constructor(
     @InjectRepository(User) private readonly repo: Repository<User>,
     @InjectRepository(Role) private readonly roleRepo: Repository<Role>,
+    @InjectRepository(Vehicle) private readonly vehicleRepo: Repository<Vehicle>,
   ) { }
 
   async onModuleInit() {
+    try {
+      await this.repo.query(`
+        UPDATE users 
+        SET code = CASE WHEN is_driver = true THEN 'DRV-' || LPAD(id::text, 4, '0') ELSE 'STF-' || LPAD(id::text, 4, '0') END 
+        WHERE code IS NULL OR code = '';
+      `);
+    } catch (e) {
+      console.error('Failed to backfill user code:', e);
+    }
+
     try {
       await this.repo.query(`
         UPDATE users u 
         SET tenant_id = s.id, tenant_subdomain = s.subdomain 
         FROM saas_subscriptions s 
         WHERE u.id = s.user_id AND (u.tenant_id IS NULL OR u.tenant_subdomain IS NULL);
-      `);
-      await this.repo.query(`
-        UPDATE users 
-        SET code = CASE WHEN is_driver = true THEN 'DRV-' || LPAD(id::text, 4, '0') ELSE 'STF-' || LPAD(id::text, 4, '0') END 
-        WHERE code IS NULL OR code = '';
       `);
     } catch (e) {
       // ignore
@@ -160,6 +167,25 @@ export class UsersService implements OnModuleInit {
       code = `${prefix}-${String(nextId).padStart(4, '0')}`;
     }
 
+    let vehicleId = dto.vehicleId ? Number(dto.vehicleId) : null;
+    if (dto.vehiclePlate && dto.vehiclePlate.trim()) {
+      const plate = dto.vehiclePlate.trim();
+      let vehicle = await this.vehicleRepo.findOne({ where: { plate } });
+      if (!vehicle) {
+        vehicle = this.vehicleRepo.create({
+          plate,
+          type: (dto.vehicleType as any) || 'motorbike',
+          brand: dto.vehicleBrand || 'Unknown',
+          model: dto.vehicleModel || 'Unknown',
+          year: dto.vehicleYear ? Number(dto.vehicleYear) : new Date().getFullYear(),
+          status: 'active',
+          tenantId: dto.tenantId || tenantContext?.tenantId || 1,
+        });
+        vehicle = await this.vehicleRepo.save(vehicle);
+      }
+      vehicleId = vehicle.id;
+    }
+
     const payload: any = {
       ...dto,
       code,
@@ -171,12 +197,17 @@ export class UsersService implements OnModuleInit {
       joinDate: dto.joinDate && dto.joinDate.trim() !== '' ? dto.joinDate : null,
       dob: dto.dob && dto.dob.trim() !== '' ? dto.dob : null,
       zoneId: dto.zoneId ? Number(dto.zoneId) : null,
-      vehicleId: dto.vehicleId ? Number(dto.vehicleId) : null,
+      vehicleId,
       tenantId: dto.tenantId || tenantContext?.tenantId || 1,
       tenantSubdomain: dto.tenantSubdomain || tenantContext?.tenantSubdomain || null,
     };
     delete payload.role;
     delete payload.active;
+    delete payload.vehiclePlate;
+    delete payload.vehicleType;
+    delete payload.vehicleBrand;
+    delete payload.vehicleModel;
+    delete payload.vehicleYear;
 
     const user = this.repo.create(payload as User);
     const saved = await this.repo.save(user);
@@ -184,7 +215,7 @@ export class UsersService implements OnModuleInit {
   }
 
   async update(id: number, dto: UpdateUserDto): Promise<User> {
-    await this.findOne(id);
+    const existingUser = await this.findOne(id);
     const payload = { ...dto } as any;
 
     if (dto.password && dto.password.trim() !== '') {
@@ -209,9 +240,31 @@ export class UsersService implements OnModuleInit {
       payload.zoneId = dto.zoneId ? Number(dto.zoneId) : null;
     }
 
-    if (dto.vehicleId !== undefined) {
+    if (dto.vehiclePlate && dto.vehiclePlate.trim()) {
+      const plate = dto.vehiclePlate.trim();
+      let vehicle = await this.vehicleRepo.findOne({ where: { plate } });
+      if (!vehicle) {
+        vehicle = this.vehicleRepo.create({
+          plate,
+          type: (dto.vehicleType as any) || 'motorbike',
+          brand: dto.vehicleBrand || 'Unknown',
+          model: dto.vehicleModel || 'Unknown',
+          year: dto.vehicleYear ? Number(dto.vehicleYear) : new Date().getFullYear(),
+          status: 'active',
+          tenantId: existingUser.tenantId || 1,
+        });
+        vehicle = await this.vehicleRepo.save(vehicle);
+      }
+      payload.vehicleId = vehicle.id;
+    } else if (dto.vehicleId !== undefined) {
       payload.vehicleId = dto.vehicleId ? Number(dto.vehicleId) : null;
     }
+
+    delete payload.vehiclePlate;
+    delete payload.vehicleType;
+    delete payload.vehicleBrand;
+    delete payload.vehicleModel;
+    delete payload.vehicleYear;
 
     if (dto.isActive !== undefined) {
       payload.isActive = dto.isActive;

@@ -30,6 +30,7 @@ export default function DriverTasksPage() {
       setTasks(list);
     } catch (err) {
       console.error("Failed to load tasks", err);
+      setTasks([]);
     } finally {
       setLoading(false);
     }

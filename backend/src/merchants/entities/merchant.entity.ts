@@ -5,10 +5,12 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   ManyToOne,
+  OneToMany,
   JoinColumn,
 } from 'typeorm';
 import { Zone } from '../../zones/entities/zone.entity';
 import { Tenant } from '../../saas/entities/tenant.entity';
+import { MerchantBranch } from './merchant-branch.entity';
 
 export type PricingTier = 'basic' | 'standard' | 'premium';
 
@@ -44,6 +46,12 @@ export class Merchant {
 
   @Column({ nullable: true })
   address: string;
+
+  @Column('decimal', { precision: 10, scale: 7, nullable: true })
+  latitude: number;
+
+  @Column('decimal', { precision: 10, scale: 7, nullable: true })
+  longitude: number;
 
   @Column({ name: 'pricing_tier', default: 'standard' })
   pricingTier: PricingTier;
@@ -87,6 +95,9 @@ export class Merchant {
 
   @Column({ name: 'qr_image_usd', type: 'text', nullable: true, select: false })
   qrImageUsd: string;
+
+  @OneToMany(() => MerchantBranch, (branch) => branch.merchant)
+  branches: MerchantBranch[];
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;

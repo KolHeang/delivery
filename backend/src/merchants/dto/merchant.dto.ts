@@ -16,6 +16,8 @@ export class CreateMerchantDto {
   @ApiProperty() @IsNotEmpty() @IsString() phone: string;
   @ApiProperty({ required: false }) @IsOptional() @IsEmail() email?: string;
   @ApiProperty({ required: false }) @IsOptional() @IsString() address?: string;
+  @ApiProperty({ required: false }) @IsOptional() @IsNumber() @Type(() => Number) latitude?: number;
+  @ApiProperty({ required: false }) @IsOptional() @IsNumber() @Type(() => Number) longitude?: number;
   @ApiProperty({ enum: ['basic', 'standard', 'premium'], default: 'standard' })
   @IsOptional()
   @IsEnum(['basic', 'standard', 'premium'])
@@ -70,24 +72,6 @@ export class CreateMerchantDto {
   active?: boolean;
 }
 
-export class UpdateMerchantDto {
-  @IsOptional() @IsString() name?: string;
-  @IsOptional() @IsString() nameKh?: string;
-  @IsOptional() @IsString() contact?: string;
-  @IsOptional() @IsString() phone?: string;
-  @IsOptional() @IsEmail() email?: string;
-  @IsOptional() @IsString() address?: string;
-  @IsOptional() @IsEnum(['basic', 'standard', 'premium']) pricingTier?: string;
-  @IsOptional() @IsNumber() @Type(() => Number) zoneId?: number;
-  @IsOptional() @IsNumber() @Type(() => Number) balance?: number;
-  @IsOptional() active?: boolean;
-  @IsOptional() @IsNumber() @Type(() => Number) deliveryFee?: number;
-  @IsOptional() @IsNumber() @Type(() => Number) exchangeRate?: number;
-  @IsOptional() @IsString() note?: string;
-  @IsOptional() @IsString() telegram?: string;
-  @IsOptional() @IsString() qrLinkKhr?: string;
-  @IsOptional() @IsString() qrLinkUsd?: string;
-  @IsOptional() @IsString() qrImageKhr?: string;
-  @IsOptional() @IsString() qrImageUsd?: string;
-  @IsOptional() @IsString() photo?: string;
-}
+import { PartialType } from '@nestjs/swagger';
+
+export class UpdateMerchantDto extends PartialType(CreateMerchantDto) {}

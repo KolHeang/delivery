@@ -378,14 +378,15 @@ export class DriverService {
     if (dto.status === 'picked-up') updates.pickedUpAt = new Date();
     if (dto.status === 'delivered') {
       updates.deliveredAt = new Date();
+      updates.paymentStatus = (dto.paymentStatus as any) || 'paid';
       if (!parcel.driverPaymentStatus) {
         updates.driverPaymentStatus = 'unpaid';
       }
     }
     if (dto.status === 'in-warehouse') updates.warehouseAt = new Date();
     if (dto.paymentMethod) updates.paymentMethod = dto.paymentMethod;
+    if (dto.paymentStatus) updates.paymentStatus = dto.paymentStatus as any;
     if (dto.proofPhotos && dto.proofPhotos.length > 0) updates.proofPhotos = dto.proofPhotos;
-    if (dto.signature) updates.signature = dto.signature;
     if (dto.failedPhoto || dto.photo) updates.failedPhoto = dto.failedPhoto || dto.photo;
     if (finalNote !== undefined) updates.note = finalNote;
 
@@ -1047,8 +1048,16 @@ export class DriverService {
         `Pickup request not found or not assigned to you`,
       );
 
+    const proofPhoto = dto.pickupProofPhoto || (dto.pickupProofPhotos && dto.pickupProofPhotos.length > 0 ? dto.pickupProofPhotos[0] : undefined);
+    const proofPhotos = dto.pickupProofPhotos && dto.pickupProofPhotos.length > 0 ? dto.pickupProofPhotos : (dto.pickupProofPhoto ? [dto.pickupProofPhoto] : undefined);
+
     request.actualQuantity = dto.actualQuantity;
     request.status = 'picked-up';
+    request.pickedUpAt = new Date();
+    if (proofPhoto) request.pickupProofPhoto = proofPhoto;
+    if (proofPhotos) request.pickupProofPhotos = proofPhotos;
+    if (dto.driverNote) request.driverNote = dto.driverNote.trim();
+
     return this.pickupRequestRepo.save(request);
   }
 
@@ -1290,19 +1299,20 @@ export class DriverService {
             }
           }
         });
-      } else {
-        usd = parseFloat(p.amount as any) || 0;
       }
 
-      const totalUSD = Math.round((usd + khr / exchangeRate) * 100) / 100;
+      const amountVal = parseFloat(p.amount as any) || 0;
+      const isKhr = p.currency === 'KHR' || (!p.currency && (amountVal >= 100 || (p.note && (p.note.includes('KHR') || p.note.includes('៛')))));
 
       return {
         id: p.id,
         driverName: driver?.nameKh || driver?.name || 'Driver',
-        amount: parseFloat(p.amount as any) || 0,
+        amount: amountVal,
+        currency: isKhr ? 'KHR' : (p.currency || 'USD'),
         usdAmount: Math.round(usd * 100) / 100,
         khrAmount: Math.round(khr),
-        totalUSD: totalUSD > 0 ? totalUSD : parseFloat(p.amount as any) || 0,
+        totalUSD: isKhr ? Math.round((amountVal / exchangeRate) * 100) / 100 : amountVal,
+        totalKHR: isKhr ? amountVal : Math.round(amountVal * exchangeRate),
         date: p.date,
         reference: p.reference || `REF-${p.id}`,
         note: p.note,
@@ -1473,6 +1483,7 @@ export class DriverService {
         receiverPhone: o.receiverPhone,
         receiverAddress: o.receiverAddress,
         deliveryFee: parseFloat(o.deliveryFee as any) || 0,
+        driverFee: parseFloat(o.driverFee as any) || 1000,
         cod: codVal,
         codCurrency: o.codCurrency || 'USD',
         paymentStatus: o.paymentStatus,
@@ -1490,6 +1501,7 @@ export class DriverService {
         id: payment.id,
         driverName: driver?.nameKh || driver?.name || 'Driver',
         amount: parseFloat(payment.amount as any) || 0,
+        currency: payment.currency || (parseFloat(payment.amount as any) >= 100 ? 'KHR' : 'USD'),
         usdTotal: Math.round(usdTotal * 100) / 100,
         khrTotal: Math.round(khrTotal),
         date: payment.date,
@@ -1536,13 +1548,14 @@ export class DriverService {
     ).length;
     const totalParcels = parcels.length;
 
-    // Calculate delivery fee and COD from actual delivered parcels
+    // Calculate driver fee and COD from actual delivered parcels
     let totalCodUsd = 0;
     let totalCodKhr = 0;
-    let totalDeliveryFee = 0;
+    let totalDriverFee = 0;
 
     deliveredParcels.forEach((p) => {
-      totalDeliveryFee += parseFloat(p.deliveryFee as any) || 0;
+      const dFee = p.driverFee !== undefined && p.driverFee !== null ? parseFloat(p.driverFee as any) : 1000;
+      totalDriverFee += dFee;
       const codVal = parseFloat(p.cod as any) || 0;
       if (p.codCurrency === 'KHR') {
         totalCodKhr += codVal;
@@ -1553,10 +1566,10 @@ export class DriverService {
 
     const feePerParcel =
       deliveredCount > 0
-        ? Math.round((totalDeliveryFee / deliveredCount) * 100) / 100
-        : 0;
-    const adjustment = failedCount > 0 ? -(failedCount * 0.5) : 0;
-    const totalAmount = Math.max(0, totalDeliveryFee + adjustment);
+        ? Math.round(totalDriverFee / deliveredCount)
+        : 1000;
+    const adjustment = 0;
+    const totalAmount = totalDriverFee;
 
     const payment = await this.driverPaymentRepo.findOne({
       where: {
@@ -1565,11 +1578,11 @@ export class DriverService {
       },
     });
 
-    const riderCode = `RDR${String(driver.id).padStart(3, '0')}`;
+    const riderCode = `DRV-${String(driver.id).padStart(3, '0')}`;
 
     return {
       date: formattedDate,
-      invoiceStatus: deliveredCount > 0 ? 'Completed' : 'Pending',
+      invoiceStatus: payment ? 'Completed' : (deliveredCount > 0 ? 'Completed' : 'Pending'),
       rider: {
         name: driver.nameKh || driver.name || 'Driver',
         riderId: riderCode,
@@ -1583,13 +1596,13 @@ export class DriverService {
       },
       financial: {
         feePerParcel: feePerParcel,
-        totalDeliveryFee: totalDeliveryFee,
+        totalDeliveryFee: totalDriverFee,
         totalCodUsd: Math.round(totalCodUsd * 100) / 100,
         totalCodKhr: Math.round(totalCodKhr),
         totalCod: Math.round(totalCodUsd * 100) / 100,
         adjustment: adjustment,
         totalAmount: totalAmount,
-        currency: 'USD',
+        currency: 'KHR',
         paymentStatus: payment ? 'Paid' : 'Pending',
       },
     };

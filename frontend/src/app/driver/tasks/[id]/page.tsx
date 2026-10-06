@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import api from "@/lib/api";
 import { isAuthenticated, getUser } from "@/lib/auth";
@@ -44,10 +44,8 @@ export default function DriverTaskDetailPage() {
   const [confirmDeliveryOpen, setConfirmDeliveryOpen] = useState(false);
   const [deliveryProofPhotos, setDeliveryProofPhotos] = useState<string[]>([]);
   const [paymentStatus, setPaymentStatus] = useState<"cash" | "bank" | "already_paid">("cash");
+  const [selectedBank, setSelectedBank] = useState<"aba" | "acleda" | "wing" | "bakong">("aba");
   const [deliveryNote, setDeliveryNote] = useState("");
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const [isDrawing, setIsDrawing] = useState(false);
-  const [hasSignature, setHasSignature] = useState(false);
 
   // Screen 6: Report Failed Delivery Modal State
   const [reportFailedOpen, setReportFailedOpen] = useState(false);
@@ -91,20 +89,26 @@ export default function DriverTaskDetailPage() {
   }, [taskId]);
 
   // Status updates
-  const handleUpdateStatus = async (newStatus: string, remark?: string) => {
+  const handleUpdateStatus = async (newStatus: string, remark?: string, extra?: any) => {
     setUpdating(true);
     try {
-      await api.patch(`/mobile/driver/tasks/${taskId}/status`, {
+      const payload: any = {
         status: newStatus,
         note: remark,
-      });
-      setTask((prev: any) => ({ ...prev, status: newStatus }));
+        ...extra,
+      };
+      if (newStatus === 'delivered') {
+        payload.paymentStatus = 'paid';
+        payload.paymentMethod = paymentStatus === 'bank' ? `bank_${selectedBank}` : paymentStatus;
+      }
+      await api.patch(`/mobile/driver/tasks/${taskId}/status`, payload);
+      setTask((prev: any) => ({ ...prev, status: newStatus, ...(newStatus === 'delivered' ? { paymentStatus: 'paid' } : {}) }));
       setConfirmDeliveryOpen(false);
       setReportFailedOpen(false);
       setReturnParcelOpen(false);
     } catch (err: any) {
       alert(err.response?.data?.message || "Status updated locally");
-      setTask((prev: any) => ({ ...prev, status: newStatus }));
+      setTask((prev: any) => ({ ...prev, status: newStatus, ...(newStatus === 'delivered' ? { paymentStatus: 'paid' } : {}) }));
       setConfirmDeliveryOpen(false);
       setReportFailedOpen(false);
       setReturnParcelOpen(false);
@@ -113,49 +117,6 @@ export default function DriverTaskDetailPage() {
     }
   };
 
-  // Canvas Drawing for Signature Pad
-  const startDrawing = (e: any) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    const rect = canvas.getBoundingClientRect();
-    const x = (e.clientX || e.touches?.[0]?.clientX) - rect.left;
-    const y = (e.clientY || e.touches?.[0]?.clientY) - rect.top;
-    ctx.beginPath();
-    ctx.moveTo(x, y);
-    setIsDrawing(true);
-    setHasSignature(true);
-  };
-
-  const draw = (e: any) => {
-    if (!isDrawing) return;
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    const rect = canvas.getBoundingClientRect();
-    const x = (e.clientX || e.touches?.[0]?.clientX) - rect.left;
-    const y = (e.clientY || e.touches?.[0]?.clientY) - rect.top;
-    ctx.lineWidth = 2.5;
-    ctx.lineCap = "round";
-    ctx.strokeStyle = "#0f172a";
-    ctx.lineTo(x, y);
-    ctx.stroke();
-  };
-
-  const stopDrawing = () => {
-    setIsDrawing(false);
-  };
-
-  const clearSignature = () => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    setHasSignature(false);
-  };
 
   const handleSendMessage = () => {
     if (!chatInput.trim()) return;
@@ -585,27 +546,6 @@ export default function DriverTaskDetailPage() {
               </div>
             </div>
 
-            {/* Customer Signature (Optional) */}
-            <div style={{ marginBottom: "16px" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
-                <label style={{ fontSize: "12.5px", fontWeight: "800", color: "#0f172a" }}>Customer Signature (Optional)</label>
-                <button type="button" onClick={clearSignature} style={{ border: "none", background: "none", color: "#2563eb", fontSize: "11px", fontWeight: "700", cursor: "pointer" }}>Clear</button>
-              </div>
-              <div style={{ border: "1.5px solid #cbd5e1", borderRadius: "14px", backgroundColor: "#f8fafc", overflow: "hidden" }}>
-                <canvas
-                  ref={canvasRef}
-                  width={380}
-                  height={110}
-                  onMouseDown={startDrawing}
-                  onMouseMove={draw}
-                  onMouseUp={stopDrawing}
-                  onTouchStart={startDrawing}
-                  onTouchMove={draw}
-                  onTouchEnd={stopDrawing}
-                  style={{ width: "100%", height: "110px", display: "block", cursor: "crosshair" }}
-                />
-              </div>
-            </div>
 
             {/* Payment Status (Radio Selection) */}
             <div style={{ marginBottom: "16px" }}>
@@ -613,16 +553,137 @@ export default function DriverTaskDetailPage() {
                 Payment Status
               </label>
               <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                {[
-                  { key: "cash", label: "Cash Collected", icon: "💵" },
-                  { key: "bank", label: "Bank Payment", icon: "🏦" },
-                  { key: "already_paid", label: "Already Paid to Shop", icon: "🟣" },
-                ].map((opt) => (
-                  <label key={opt.key} style={{ display: "flex", alignItems: "center", gap: "10px", padding: "10px 14px", borderRadius: "12px", border: paymentStatus === opt.key ? "1.5px solid #2563eb" : "1.5px solid #e2e8f0", backgroundColor: paymentStatus === opt.key ? "#eff6ff" : "#ffffff", cursor: "pointer" }}>
-                    <input type="radio" name="paymentStatus" checked={paymentStatus === opt.key} onChange={() => setPaymentStatus(opt.key as any)} style={{ accentColor: "#2563eb" }} />
-                    <span style={{ fontSize: "13px", fontWeight: "700", color: "#0f172a" }}>{opt.icon} {opt.label}</span>
+                {/* Cash */}
+                <label style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: "10px",
+                  padding: "10px 14px",
+                  borderRadius: "12px",
+                  border: paymentStatus === "cash" ? "1.5px solid #16a34a" : "1.5px solid #e2e8f0",
+                  backgroundColor: paymentStatus === "cash" ? "#f0fdf4" : "#ffffff",
+                  cursor: "pointer",
+                }}>
+                  <span style={{ fontSize: "13px", fontWeight: "700", color: "#0f172a", display: "flex", alignItems: "center", gap: "8px" }}>
+                    💵 Cash Collected
+                  </span>
+                  <input type="radio" name="paymentStatus" checked={paymentStatus === "cash"} onChange={() => setPaymentStatus("cash")} style={{ accentColor: "#16a34a" }} />
+                </label>
+
+                {/* Bank Payment Container */}
+                <div style={{
+                  borderRadius: "12px",
+                  border: paymentStatus === "bank" ? "1.5px solid #2563eb" : "1.5px solid #e2e8f0",
+                  backgroundColor: paymentStatus === "bank" ? "#f0f7ff" : "#ffffff",
+                  overflow: "hidden",
+                  transition: "all 0.15s ease",
+                }}>
+                  <label style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    padding: "10px 14px",
+                    cursor: "pointer",
+                  }}>
+                    <div>
+                      <span style={{ fontSize: "13px", fontWeight: "700", color: "#0f172a", display: "flex", alignItems: "center", gap: "8px" }}>
+                        🏦 Bank Payment
+                      </span>
+                      {paymentStatus === "bank" && (
+                        <span style={{ fontSize: "11px", color: "#2563eb", fontWeight: "700", marginLeft: "28px" }}>
+                          ({selectedBank === "aba" ? "ABA Bank" : selectedBank === "acleda" ? "ACLEDA Bank" : selectedBank === "wing" ? "Wing Bank" : "Bakong / KHQR"})
+                        </span>
+                      )}
+                    </div>
+                    <input type="radio" name="paymentStatus" checked={paymentStatus === "bank"} onChange={() => setPaymentStatus("bank")} style={{ accentColor: "#2563eb" }} />
                   </label>
-                ))}
+
+                  {/* Sub Bank Selection Grid */}
+                  {paymentStatus === "bank" && (
+                    <div style={{
+                      padding: "0 12px 12px",
+                      display: "grid",
+                      gridTemplateColumns: "repeat(2, 1fr)",
+                      gap: "8px",
+                      borderTop: "1px solid #dbeafe",
+                      paddingTop: "10px",
+                      maxHeight: "220px",
+                      overflowY: "auto",
+                    }}>
+                      {[
+                        { id: "aba", name: "ABA Bank", sub: "ABA PAY / KHQR", color: "#005477", badgeBg: "#005477" },
+                        { id: "acleda", name: "ACLEDA Bank", sub: "Unity / KHQR", color: "#183c7d", badgeBg: "#183c7d" },
+                        { id: "wing", name: "Wing Bank", sub: "Wing KHQR", color: "#0f9d58", badgeBg: "#0f9d58" },
+                        { id: "bakong", name: "Bakong / KHQR", sub: "National KHQR", color: "#d32f2f", badgeBg: "#d32f2f" },
+                        { id: "canadia", name: "Canadia Bank", sub: "Canadia KHQR", color: "#cc1f2e", badgeBg: "#cc1f2e" },
+                        { id: "prince", name: "Prince Bank", sub: "Prince PAY", color: "#d39e00", badgeBg: "#d39e00" },
+                        { id: "chipmong", name: "Chip Mong Bank", sub: "CMB KHQR", color: "#0284c7", badgeBg: "#0284c7" },
+                        { id: "sathapana", name: "Sathapana Bank", sub: "SPN Mobile", color: "#0369a1", badgeBg: "#0369a1" },
+                        { id: "truemoney", name: "TrueMoney", sub: "TrueMoney", color: "#ea580c", badgeBg: "#ea580c" },
+                        { id: "jtrust", name: "J Trust Royal", sub: "J Trust KHQR", color: "#1e3a8a", badgeBg: "#1e3a8a" },
+                        { id: "other", name: "Other Bank / KHQR", sub: "Any KHQR", color: "#475569", badgeBg: "#475569" },
+                      ].map((b) => {
+                        const isSel = selectedBank === b.id;
+                        return (
+                          <div
+                            key={b.id}
+                            onClick={() => setSelectedBank(b.id as any)}
+                            style={{
+                              padding: "8px 10px",
+                              borderRadius: "10px",
+                              backgroundColor: isSel ? "#ffffff" : "#f8fafc",
+                              border: isSel ? `2px solid ${b.color}` : "1.5px solid #e2e8f0",
+                              boxShadow: isSel ? "0 2px 6px rgba(0,0,0,0.06)" : "none",
+                              cursor: "pointer",
+                              display: "flex",
+                              flexDirection: "column",
+                              gap: "2px",
+                              transition: "all 0.15s ease",
+                            }}
+                          >
+                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                              <span style={{ fontSize: "9px", fontWeight: "800", padding: "1px 5px", borderRadius: "4px", backgroundColor: b.badgeBg, color: "#ffffff" }}>
+                                {b.id.toUpperCase()}
+                              </span>
+                              <div style={{
+                                width: "12px",
+                                height: "12px",
+                                borderRadius: "50%",
+                                border: isSel ? `3.5px solid ${b.color}` : "1.5px solid #cbd5e1",
+                                backgroundColor: isSel ? "#ffffff" : "transparent",
+                              }} />
+                            </div>
+                            <div style={{ fontSize: "11px", fontWeight: "800", color: "#0f172a", marginTop: "3px" }}>
+                              {b.name}
+                            </div>
+                            <div style={{ fontSize: "9px", color: "#64748b", fontWeight: "500" }}>
+                              {b.sub}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* Already Paid */}
+                <label style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: "10px",
+                  padding: "10px 14px",
+                  borderRadius: "12px",
+                  border: paymentStatus === "already_paid" ? "1.5px solid #9333ea" : "1.5px solid #e2e8f0",
+                  backgroundColor: paymentStatus === "already_paid" ? "#faf5ff" : "#ffffff",
+                  cursor: "pointer",
+                }}>
+                  <span style={{ fontSize: "13px", fontWeight: "700", color: "#0f172a", display: "flex", alignItems: "center", gap: "8px" }}>
+                    🟣 Already Paid to Shop
+                  </span>
+                  <input type="radio" name="paymentStatus" checked={paymentStatus === "already_paid"} onChange={() => setPaymentStatus("already_paid")} style={{ accentColor: "#9333ea" }} />
+                </label>
               </div>
             </div>
 
@@ -642,7 +703,11 @@ export default function DriverTaskDetailPage() {
             <button
               type="button"
               disabled={updating}
-              onClick={() => handleUpdateStatus("delivered", deliveryNote)}
+              onClick={() => {
+                const bankLabel = selectedBank === "aba" ? "ABA Bank" : selectedBank === "acleda" ? "ACLEDA Bank" : selectedBank === "wing" ? "Wing Bank" : "Bakong/KHQR";
+                const payPrefix = paymentStatus === "bank" ? `[Bank: ${bankLabel}]` : paymentStatus === "cash" ? "[Cash]" : "[Already Paid]";
+                handleUpdateStatus("delivered", deliveryNote ? `${payPrefix} ${deliveryNote}` : payPrefix);
+              }}
               style={{ width: "100%", padding: "14px", borderRadius: "14px", border: "none", backgroundColor: "#2563eb", color: "#ffffff", fontSize: "14.5px", fontWeight: "800", cursor: "pointer", boxShadow: "0 4px 14px rgba(37, 99, 235, 0.35)" }}
             >
               {updating ? "Saving..." : "Confirm Delivery"}

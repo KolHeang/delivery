@@ -172,22 +172,25 @@ export default function StaffPage() {
                             {(currentPage - 1) * pageSize + idx + 1}
                           </td>
                           <td>
-                            {d.code ? (
-                              <span style={{
-                                backgroundColor: '#f1f5f9',
-                                color: '#475569',
-                                fontWeight: 700,
-                                fontSize: '12px',
-                                padding: '3px 8px',
-                                borderRadius: '6px',
-                                border: '1px solid #e2e8f0',
-                                display: 'inline-block'
-                              }}>
-                                {d.code}
-                              </span>
-                            ) : (
-                              <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>—</span>
-                            )}
+                            {(() => {
+                              const code = d.code || (d.isDriver || d.role === 'driver' || d.roleRelation?.name === 'driver'
+                                ? `DRV-${String(d.id).padStart(4, '0')}`
+                                : `STF-${String(d.id).padStart(4, '0')}`);
+                              return (
+                                <span style={{
+                                  backgroundColor: '#f1f5f9',
+                                  color: '#475569',
+                                  fontWeight: 700,
+                                  fontSize: '12px',
+                                  padding: '3px 8px',
+                                  borderRadius: '6px',
+                                  border: '1px solid #e2e8f0',
+                                  display: 'inline-block'
+                                }}>
+                                  {code}
+                                </span>
+                              );
+                            })()}
                           </td>
                           <td>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>

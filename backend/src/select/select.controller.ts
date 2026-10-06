@@ -6,7 +6,7 @@ import {
   UseGuards,
   ParseIntPipe,
 } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
+import { ApiTags, ApiBearerAuth, ApiOperation, ApiQuery } from '@nestjs/swagger';
 import { SelectService } from './select.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
@@ -54,6 +54,7 @@ export class SelectController {
 
   @Get('subzones')
   @ApiOperation({ summary: 'Get subzones list for dropdown' })
+  @ApiQuery({ name: 'zoneId', required: false, type: Number })
   getSubzones(@Query('zoneId') zoneId?: string) {
     const id = zoneId ? parseInt(zoneId, 10) : undefined;
     return this.selectService.getSubzones(id);

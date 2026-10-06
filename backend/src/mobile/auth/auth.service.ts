@@ -22,12 +22,21 @@ export class AuthService {
     private readonly jwtService: JwtService,
   ) { }
 
-  async driverLogin(phoneOrEmail: string, password: string) {
+  async driverLogin(identifier: string, password: string) {
+    if (!identifier || !password) {
+      throw new UnauthorizedException('Identifier and password are required');
+    }
+
+    const cleanId = identifier.trim();
+
     const user = await this.userRepo
       .createQueryBuilder('user')
       .leftJoinAndSelect('user.roleRelation', 'roleRelation')
       .addSelect('user.password')
-      .where('(user.email = :id OR user.phone = :id)', { id: phoneOrEmail })
+      .where(
+        '(LOWER(user.email) = LOWER(:id) OR user.phone = :id OR LOWER(user.code) = LOWER(:id))',
+        { id: cleanId },
+      )
       .andWhere('user.isDriver = true')
       .getOne();
 
@@ -64,6 +73,7 @@ export class AuthService {
       refresh_token,
       user: {
         id: user.id,
+        code: user.code,
         name: user.name,
         nameKh: user.nameKh,
         phone: user.phone,

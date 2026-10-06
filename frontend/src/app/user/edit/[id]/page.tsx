@@ -21,7 +21,12 @@ const emptyForm = {
   salary: '',
   password: '',
   dob: '',
-  gender: ''
+  gender: '',
+  vehicleSelect: 'none', // 'new' | 'none' | vehicleId
+  vehicleId: '',
+  vehiclePlate: '',
+  vehicleType: 'motorbike',
+  vehicleBrandModel: '',
 };
 
 export default function EditStaffPage() {
@@ -31,6 +36,7 @@ export default function EditStaffPage() {
 
   const [zones, setZones] = useState<any[]>([]);
   const [roles, setRoles] = useState<any[]>([]);
+  const [vehicles, setVehicles] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [form, setForm] = useState(emptyForm);
@@ -46,10 +52,11 @@ export default function EditStaffPage() {
     }
     const load = async () => {
       try {
-        const [z, userRes, r] = await Promise.all([
+        const [z, userRes, r, v] = await Promise.all([
           api.get('/select/zones'),
           api.get(`/users/${params.id}`),
-          api.get('/select/roles')
+          api.get('/select/roles'),
+          api.get('/select/vehicles')
         ]);
         setZones(Array.isArray(z.data) ? z.data : (z.data?.result || []));
         const rawRoles = Array.isArray(r.data) ? r.data : (r.data?.result || []);
@@ -57,9 +64,27 @@ export default function EditStaffPage() {
           new Map(rawRoles.map((item: any) => [item.name.toLowerCase(), item])).values()
         );
         setRoles(uniqueRoles);
+        setVehicles(Array.isArray(v.data) ? v.data : (v.data?.result || []));
 
         const i = userRes.data;
         if (i) {
+          let vSelect = 'none';
+          let vId = '';
+          let vPlate = '';
+          let vType = 'motorbike';
+          let vBrandModel = '';
+
+          if (i.vehicle) {
+            vSelect = String(i.vehicle.id);
+            vId = String(i.vehicle.id);
+            vPlate = i.vehicle.plate || '';
+            vType = i.vehicle.type || 'motorbike';
+            vBrandModel = `${i.vehicle.brand || ''} ${i.vehicle.model || ''}`.trim();
+          } else if (i.vehicleId) {
+            vSelect = String(i.vehicleId);
+            vId = String(i.vehicleId);
+          }
+
           setForm({
             code: i.code || '',
             name: i.name,
@@ -73,7 +98,12 @@ export default function EditStaffPage() {
             salary: i.salary !== undefined && i.salary !== null ? i.salary.toString() : '',
             password: '',
             dob: i.dob || '',
-            gender: i.gender || ''
+            gender: i.gender || '',
+            vehicleSelect: vSelect,
+            vehicleId: vId,
+            vehiclePlate: vPlate,
+            vehicleType: vType,
+            vehicleBrandModel: vBrandModel,
           });
           if (i.photo) {
             setPhotoPreview(i.photo);
@@ -148,7 +178,22 @@ export default function EditStaffPage() {
       formData.append('role', form.role);
       if (selectedRole?.id) formData.append('roleId', selectedRole.id.toString());
       formData.append('active', form.active.toString());
-      if (form.role === 'driver' && form.zoneId) formData.append('zoneId', form.zoneId);
+      if (form.role === 'driver') {
+        if (form.zoneId) formData.append('zoneId', form.zoneId);
+        if (form.vehicleSelect === 'new' && form.vehiclePlate.trim()) {
+          formData.append('vehiclePlate', form.vehiclePlate.trim());
+          formData.append('vehicleType', form.vehicleType || 'motorbike');
+          if (form.vehicleBrandModel.trim()) {
+            const parts = form.vehicleBrandModel.trim().split(' ');
+            formData.append('vehicleBrand', parts[0]);
+            formData.append('vehicleModel', parts.slice(1).join(' ') || parts[0]);
+          }
+        } else if (form.vehicleSelect !== 'new' && form.vehicleSelect !== 'none' && form.vehicleId) {
+          formData.append('vehicleId', form.vehicleId);
+        } else if (form.vehicleSelect === 'none') {
+          formData.append('vehicleId', '');
+        }
+      }
       if (form.joinDate) formData.append('joinDate', form.joinDate);
       if (form.salary) formData.append('salary', form.salary);
       if (form.dob) formData.append('dob', form.dob);
@@ -418,6 +463,117 @@ export default function EditStaffPage() {
                     </label>
                   </div>
                 </div>
+
+                {/* Vehicle Section - Shown when role is driver */}
+                {form.role === 'driver' && (
+                  <>
+                    <div className="form-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '18px' }}>
+                      <div className="form-group">
+                        <label className="form-label" style={{ fontWeight: 600 }}>
+                          {lang === 'km' ? 'យានយន្ត' : 'Vehicle'}
+                        </label>
+                        <select
+                          className="form-control"
+                          value={form.vehicleSelect}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            if (val === 'new') {
+                              setForm(p => ({
+                                ...p,
+                                vehicleSelect: 'new',
+                                vehicleId: '',
+                                vehiclePlate: '',
+                                vehicleType: 'motorbike',
+                                vehicleBrandModel: '',
+                              }));
+                            } else if (val === 'none') {
+                              setForm(p => ({
+                                ...p,
+                                vehicleSelect: 'none',
+                                vehicleId: '',
+                                vehiclePlate: '',
+                                vehicleType: 'motorbike',
+                                vehicleBrandModel: '',
+                              }));
+                            } else {
+                              const selected = vehicles.find((v: any) => String(v.id) === String(val));
+                              setForm(p => ({
+                                ...p,
+                                vehicleSelect: val,
+                                vehicleId: String(val),
+                                vehiclePlate: selected?.plate || '',
+                                vehicleType: selected?.type || 'motorbike',
+                                vehicleBrandModel: selected ? `${selected.brand || ''} ${selected.model || ''}`.trim() : '',
+                              }));
+                            }
+                          }}
+                        >
+                          <option value="new">{lang === 'km' ? '+ ចុះឈ្មោះយានយន្តថ្មី' : '+ Register New Vehicle'}</option>
+                          <option value="none">{lang === 'km' ? '-- គ្មានយានយន្ត --' : '-- No Vehicle --'}</option>
+                          {vehicles.length > 0 && (
+                            <optgroup label={lang === 'km' ? 'យានយន្តដែលមានស្រាប់' : 'Existing Vehicles'}>
+                              {vehicles.map((v: any) => (
+                                <option key={v.id} value={v.id}>
+                                  {v.plate} - {v.brand} {v.model} ({v.type})
+                                </option>
+                              ))}
+                            </optgroup>
+                          )}
+                        </select>
+                      </div>
+
+                      {form.vehicleSelect !== 'none' ? (
+                        <div className="form-group">
+                          <label className="form-label" style={{ fontWeight: 600 }}>
+                            {lang === 'km' ? 'ស្លាកលេខយានយន្ត' : 'Plate Number'}
+                          </label>
+                          <input
+                            className="form-control"
+                            value={form.vehiclePlate}
+                            onChange={f('vehiclePlate')}
+                            disabled={form.vehicleSelect !== 'new'}
+                            placeholder="e.g. 1AB-1234"
+                          />
+                        </div>
+                      ) : <div></div>}
+                    </div>
+
+                    {form.vehicleSelect !== 'none' && (
+                      <div className="form-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '18px' }}>
+                        <div className="form-group">
+                          <label className="form-label" style={{ fontWeight: 600 }}>
+                            {lang === 'km' ? 'ប្រភេទយានយន្ត' : 'Vehicle Type'}
+                          </label>
+                          <select
+                            className="form-control"
+                            value={form.vehicleType}
+                            onChange={f('vehicleType')}
+                            disabled={form.vehicleSelect !== 'new'}
+                          >
+                            <option value="motorbike">{lang === 'km' ? 'ម៉ូតូ (Motorbike)' : 'Motorbike'}</option>
+                            <option value="car">{lang === 'km' ? 'រថយន្ត (Car)' : 'Car'}</option>
+                            <option value="van">{lang === 'km' ? 'រថយន្តវ៉ាន់ (Van)' : 'Van'}</option>
+                            <option value="truck">{lang === 'km' ? 'រថយន្តដឹក (Truck)' : 'Truck'}</option>
+                            <option value="tuk-tuk">{lang === 'km' ? 'កង់បី / ផាសអាប់ (Tuk-Tuk)' : 'Tuk-Tuk'}</option>
+                          </select>
+                        </div>
+
+                        <div className="form-group">
+                          <label className="form-label" style={{ fontWeight: 600 }}>
+                            {lang === 'km' ? 'ម៉ាក និង ម៉ូឌែល' : 'Brand & Model'}
+                          </label>
+                          <input
+                            className="form-control"
+                            value={form.vehicleBrandModel}
+                            onChange={f('vehicleBrandModel')}
+                            disabled={form.vehicleSelect !== 'new'}
+                            placeholder="e.g. Honda Dream 125"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
 
                 {/* Form Buttons */}
                 <div style={{ marginTop: 32, paddingTop: 20, borderTop: '1px solid var(--border)', display: 'flex', gap: 14, justifyContent: 'flex-end' }}>

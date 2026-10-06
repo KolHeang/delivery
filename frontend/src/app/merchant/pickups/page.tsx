@@ -16,6 +16,8 @@ import {
   MdSchedule,
   MdStorefront,
   MdInventory2,
+  MdPhotoCamera,
+  MdClose,
 } from "react-icons/md";
 
 const fmtDate = (d?: string | null) => {
@@ -56,6 +58,7 @@ export default function MerchantPickupsPage() {
   const [requests, setRequests] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<"active" | "done">("active");
+  const [previewModalImg, setPreviewModalImg] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -410,6 +413,112 @@ export default function MerchantPickupsPage() {
                   </div>
                 )}
 
+                {/* Package Photos Preview */}
+                {(r.photo || (r.photos && r.photos.length > 0)) && (
+                  <div style={{ padding: "0 16px 12px" }}>
+                    <div style={{ fontSize: 11, color: "#64748b", fontWeight: 700, marginBottom: 6, display: "flex", alignItems: "center", gap: 4 }}>
+                      <MdPhotoCamera size={13} color="#7e22ce" /> រូបថតទំនិញ / កញ្ចប់៖
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, overflowX: "auto", paddingBottom: 2 }}>
+                      {(r.photos && r.photos.length > 0 ? r.photos : [r.photo]).map((imgSrc: string, i: number) => (
+                        <div
+                          key={i}
+                          onClick={() => setPreviewModalImg(imgSrc)}
+                          style={{
+                            width: 58,
+                            height: 58,
+                            borderRadius: 12,
+                            overflow: "hidden",
+                            border: "1.5px solid #e9d5ff",
+                            boxShadow: "0 2px 6px rgba(0,0,0,0.06)",
+                            cursor: "pointer",
+                            position: "relative",
+                            flexShrink: 0,
+                            background: "#000",
+                          }}
+                        >
+                          <img
+                            src={imgSrc}
+                            alt={`Goods ${i + 1}`}
+                            style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Driver Pickup Proof Photos */}
+                {(r.pickupProofPhoto || (r.pickupProofPhotos && r.pickupProofPhotos.length > 0)) && (
+                  <div style={{ padding: "0 16px 12px" }}>
+                    <div style={{ fontSize: 11, color: "#166534", fontWeight: 700, marginBottom: 6, display: "flex", alignItems: "center", gap: 4 }}>
+                      <MdCheckCircle size={13} color="#16a34a" /> ភស្តុតាងអ្នកដឹកបានថតពេលទទួលយក (Driver Pickup Proof)៖
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, overflowX: "auto", paddingBottom: 2 }}>
+                      {(r.pickupProofPhotos && r.pickupProofPhotos.length > 0 ? r.pickupProofPhotos : [r.pickupProofPhoto]).map((imgSrc: string, i: number) => (
+                        <div
+                          key={i}
+                          onClick={() => setPreviewModalImg(imgSrc)}
+                          style={{
+                            width: 58,
+                            height: 58,
+                            borderRadius: 12,
+                            overflow: "hidden",
+                            border: "1.5px solid #86efac",
+                            boxShadow: "0 2px 6px rgba(0,0,0,0.06)",
+                            cursor: "pointer",
+                            position: "relative",
+                            flexShrink: 0,
+                            background: "#000",
+                          }}
+                        >
+                          <img
+                            src={imgSrc}
+                            alt={`Pickup Proof ${i + 1}`}
+                            style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Pickup Note */}
+                {r.note && (
+                  <div
+                    style={{
+                      padding: "8px 16px",
+                      fontSize: 12,
+                      color: "#475569",
+                      background: "#faf5ff",
+                      borderTop: "1px dashed #f3e8ff",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 6,
+                    }}
+                  >
+                    <span style={{ fontWeight: 700, color: "#7e22ce" }}>ចំណាំពីហាង៖</span> {r.note}
+                  </div>
+                )}
+
+                {/* Driver Note */}
+                {r.driverNote && (
+                  <div
+                    style={{
+                      padding: "8px 16px",
+                      fontSize: 12,
+                      color: "#166534",
+                      background: "#f0fdf4",
+                      borderTop: "1px dashed #bbf7d0",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 6,
+                    }}
+                  >
+                    <span style={{ fontWeight: 700, color: "#15803d" }}>ចំណាំពីអ្នកដឹក៖</span> {r.driverNote}
+                  </div>
+                )}
+
                 {/* Store Pickup Address */}
                 {r.pickupAddress && (
                   <div
@@ -436,6 +545,62 @@ export default function MerchantPickupsPage() {
           })
         )}
       </div>
+
+      {/* Lightbox / Zoom Modal */}
+      {previewModalImg && (
+        <div
+          onClick={() => setPreviewModalImg(null)}
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.85)",
+            zIndex: 9999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 20,
+            backdropFilter: "blur(4px)",
+          }}
+        >
+          <div
+            style={{
+              position: "relative",
+              maxWidth: "92vw",
+              maxHeight: "85vh",
+              borderRadius: 16,
+              overflow: "hidden",
+              boxShadow: "0 10px 40px rgba(0,0,0,0.5)",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <img
+              src={previewModalImg}
+              alt="Enlarged"
+              style={{ maxWidth: "100%", maxHeight: "85vh", objectFit: "contain", display: "block" }}
+            />
+            <button
+              onClick={() => setPreviewModalImg(null)}
+              style={{
+                position: "absolute",
+                top: 12,
+                right: 12,
+                width: 36,
+                height: 36,
+                borderRadius: "50%",
+                background: "rgba(0,0,0,0.6)",
+                border: "none",
+                color: "#fff",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <MdClose size={22} />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

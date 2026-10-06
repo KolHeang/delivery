@@ -14,6 +14,7 @@ import {
   MdSignalCellularAlt,
   MdWifi,
   MdBatteryFull,
+  MdPerson,
 } from 'react-icons/md';
 
 const driverLoginTranslations = {
@@ -21,9 +22,12 @@ const driverLoginTranslations = {
     brandName: 'E-Express',
     tagline: 'Your Delivery Partner',
     values: 'Fast • Safe • Reliable',
-    phoneLabel: 'Phone Number',
-    phonePlaceholder: '012 345 678',
-    phoneRequired: 'Please enter phone number',
+    identifierLabel: 'Email, Phone, or Driver Code',
+    identifierPlaceholder: 'Email, phone, or driver code',
+    identifierRequired: 'Please enter email, phone, or driver code',
+    phoneLabel: 'Email, Phone, or Driver Code',
+    phonePlaceholder: 'Email, phone, or driver code',
+    phoneRequired: 'Please enter email, phone, or driver code',
     passwordLabel: 'Password',
     passwordPlaceholder: '••••••••',
     passwordRequired: 'Please enter password',
@@ -33,16 +37,19 @@ const driverLoginTranslations = {
     loginBtn: 'Login',
     loggingIn: 'Logging in...',
     or: 'or',
-    useFingerprint: 'Use Fingerprint',
+    useFingerprint: 'Demo Driver Login',
     errorMsg: 'Invalid credentials or driver account not found',
   },
   km: {
     brandName: 'E-Express',
     tagline: 'Your Delivery Partner',
     values: 'លឿន • សុវត្ថិភាព • ទុកចិត្តបាន',
-    phoneLabel: 'លេខទូរស័ព្ទ',
-    phonePlaceholder: '012 345 678',
-    phoneRequired: 'សូមបញ្ចូលលេខទូរស័ព្ទ',
+    identifierLabel: 'អ៊ីមែល លេខទូរស័ព្ទ ឬកូដអ្នកដឹក',
+    identifierPlaceholder: 'បញ្ចូលអ៊ីមែល លេខទូរស័ព្ទ ឬកូដអ្នកដឹក',
+    identifierRequired: 'សូមបញ្ចូលអ៊ីមែល លេខទូរស័ព្ទ ឬកូដអ្នកដឹក',
+    phoneLabel: 'អ៊ីមែល លេខទូរស័ព្ទ ឬកូដអ្នកដឹក',
+    phonePlaceholder: 'បញ្ចូលអ៊ីមែល លេខទូរស័ព្ទ ឬកូដអ្នកដឹក',
+    phoneRequired: 'សូមបញ្ចូលអ៊ីមែល លេខទូរស័ព្ទ ឬកូដអ្នកដឹក',
     passwordLabel: 'ពាក្យសម្ងាត់',
     passwordPlaceholder: '••••••••',
     passwordRequired: 'សូមបញ្ចូលពាក្យសម្ងាត់',
@@ -52,17 +59,17 @@ const driverLoginTranslations = {
     loginBtn: 'ចូលប្រព័ន្ធ (Login)',
     loggingIn: 'កំពុងចូលប្រព័ន្ធ...',
     or: 'ឬ',
-    useFingerprint: 'ស្កេនក្រយៅដៃ (Fingerprint)',
-    errorMsg: 'លេខទូរស័ព្ទ ឬលេខសម្ងាត់មិនត្រឹមត្រូវ',
+    useFingerprint: 'គណនីសាកល្បងអ្នកដឹក (Demo)',
+    errorMsg: 'ព័ត៌មានគណនី ឬលេខសម្ងាត់មិនត្រឹមត្រូវ',
   }
 };
 
 export default function DriverLoginPage() {
   const router = useRouter();
   const { lang, setLang } = useLanguage();
-  const [form, setForm] = useState({ phone: '', password: '' });
+  const [form, setForm] = useState({ identifier: '', password: '' });
   const [rememberMe, setRememberMe] = useState(true);
-  const [errors, setErrors] = useState<{ phone?: string; password?: string }>({});
+  const [errors, setErrors] = useState<{ identifier?: string; password?: string }>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -92,10 +99,10 @@ export default function DriverLoginPage() {
     e.preventDefault();
     if (loading) return;
 
-    const newErrors: { phone?: string; password?: string } = {};
-    const phoneVal = form.phone.trim();
-    if (!phoneVal) {
-      newErrors.phone = t.phoneRequired;
+    const newErrors: { identifier?: string; password?: string } = {};
+    const idVal = form.identifier.trim();
+    if (!idVal) {
+      newErrors.identifier = t.identifierRequired;
     }
 
     if (!form.password) {
@@ -114,7 +121,10 @@ export default function DriverLoginPage() {
     setLoading(true);
     try {
       const res = await api.post('/mobile/auth/driver/login', {
-        phone: form.phone.trim(),
+        identifier: idVal,
+        phone: idVal,
+        email: idVal,
+        code: idVal,
         password: form.password,
       });
       setAuth(res.data.access_token, res.data.user);
@@ -127,8 +137,9 @@ export default function DriverLoginPage() {
   };
 
   const handleFingerprint = () => {
-    setForm({ phone: '012345678', password: 'password123' });
+    setForm({ identifier: '012345678', password: 'password123' });
     setError('');
+    setErrors({});
   };
 
   return (
@@ -327,67 +338,89 @@ export default function DriverLoginPage() {
           )}
 
           <form onSubmit={handleSubmit} noValidate style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            {/* Phone Input with Icon */}
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '10px',
-              padding: '12px 14px',
-              borderRadius: '14px',
-              border: errors.phone ? '1.5px solid #ef4444' : '1.5px solid #e2e8f0',
-              backgroundColor: '#f8fafc',
-            }}>
-              <MdPhone size={20} color="#64748b" />
-              <input
-                type="tel"
-                value={form.phone}
-                onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                placeholder={t.phonePlaceholder}
-                style={{
-                  flex: 1,
-                  border: 'none',
-                  outline: 'none',
-                  backgroundColor: 'transparent',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  color: '#0f172a',
-                }}
-              />
+            {/* Identifier Input (Email, Phone, or Driver Code) with Icon */}
+            <div>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                padding: '12px 14px',
+                borderRadius: '14px',
+                border: errors.identifier ? '1.5px solid #ef4444' : '1.5px solid #e2e8f0',
+                backgroundColor: '#f8fafc',
+              }}>
+                <MdPerson size={20} color="#64748b" />
+                <input
+                  type="text"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  value={form.identifier}
+                  onChange={(e) => {
+                    setForm({ ...form, identifier: e.target.value });
+                    if (errors.identifier) setErrors({ ...errors, identifier: undefined });
+                  }}
+                  placeholder={t.identifierPlaceholder}
+                  style={{
+                    flex: 1,
+                    border: 'none',
+                    outline: 'none',
+                    backgroundColor: 'transparent',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    color: '#0f172a',
+                  }}
+                />
+              </div>
+              {errors.identifier && (
+                <div style={{ fontSize: '11.5px', color: '#ef4444', marginTop: '4px', marginLeft: '6px', fontWeight: '600' }}>
+                  {errors.identifier}
+                </div>
+              )}
             </div>
 
             {/* Password Input with Lock & Eye */}
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '10px',
-              padding: '12px 14px',
-              borderRadius: '14px',
-              border: errors.password ? '1.5px solid #ef4444' : '1.5px solid #e2e8f0',
-              backgroundColor: '#f8fafc',
-            }}>
-              <MdLock size={20} color="#64748b" />
-              <input
-                type={showPassword ? 'text' : 'password'}
-                value={form.password}
-                onChange={(e) => setForm({ ...form, password: e.target.value })}
-                placeholder={t.passwordPlaceholder}
-                style={{
-                  flex: 1,
-                  border: 'none',
-                  outline: 'none',
-                  backgroundColor: 'transparent',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  color: '#0f172a',
-                }}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#64748b', display: 'flex' }}
-              >
-                {showPassword ? <MdVisibilityOff size={20} /> : <MdVisibility size={20} />}
-              </button>
+            <div>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                padding: '12px 14px',
+                borderRadius: '14px',
+                border: errors.password ? '1.5px solid #ef4444' : '1.5px solid #e2e8f0',
+                backgroundColor: '#f8fafc',
+              }}>
+                <MdLock size={20} color="#64748b" />
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={form.password}
+                  onChange={(e) => {
+                    setForm({ ...form, password: e.target.value });
+                    if (errors.password) setErrors({ ...errors, password: undefined });
+                  }}
+                  placeholder={t.passwordPlaceholder}
+                  style={{
+                    flex: 1,
+                    border: 'none',
+                    outline: 'none',
+                    backgroundColor: 'transparent',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    color: '#0f172a',
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#64748b', display: 'flex' }}
+                >
+                  {showPassword ? <MdVisibilityOff size={20} /> : <MdVisibility size={20} />}
+                </button>
+              </div>
+              {errors.password && (
+                <div style={{ fontSize: '11.5px', color: '#ef4444', marginTop: '4px', marginLeft: '6px', fontWeight: '600' }}>
+                  {errors.password}
+                </div>
+              )}
             </div>
 
             {/* Remember Me & Forgot Password Row */}

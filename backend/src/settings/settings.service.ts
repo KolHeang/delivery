@@ -1,9 +1,11 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, IsNull } from 'typeorm';
 import { Organisation } from './entities/organisation.entity';
 import { GeneralSetting } from './entities/general-setting.entity';
+import { FirebaseCredential } from './entities/firebase-credential.entity';
 import { Tenant } from '../saas/entities/tenant.entity';
+import { CreateFirebaseCredentialDto, UpdateFirebaseCredentialDto } from './dto/firebase-credential.dto';
 
 @Injectable()
 export class SettingsService {
@@ -11,6 +13,8 @@ export class SettingsService {
     @InjectRepository(Organisation) private orgRepo: Repository<Organisation>,
     @InjectRepository(GeneralSetting)
     private settingRepo: Repository<GeneralSetting>,
+    @InjectRepository(FirebaseCredential)
+    private firebaseRepo: Repository<FirebaseCredential>,
     @InjectRepository(Tenant)
     private tenantRepo: Repository<Tenant>,
   ) {}
@@ -138,5 +142,53 @@ export class SettingsService {
       }
     }
     return this.settingRepo.save(setting);
+  }
+
+  // ── Firebase Credential CRUD Methods ──
+  async getFirebaseConfig(tenantId?: number, tenantSubdomain?: string) {
+    const list = await this.firebaseRepo.find({
+      order: { updatedAt: 'DESC' },
+      take: 1,
+    });
+    return list.length > 0 ? list[0] : null;
+  }
+
+  async getAllFirebaseConfigs() {
+    return this.firebaseRepo.find({ order: { createdAt: 'DESC' } });
+  }
+
+  async getFirebaseConfigById(id: string) {
+    const cred = await this.firebaseRepo.findOne({ where: { id } });
+    if (!cred) {
+      throw new NotFoundException('Firebase configuration not found');
+    }
+    return cred;
+  }
+
+  async createFirebaseConfig(dto: CreateFirebaseCredentialDto) {
+    const newCred = this.firebaseRepo.create(dto);
+    return this.firebaseRepo.save(newCred);
+  }
+
+  async saveFirebaseConfig(dto: CreateFirebaseCredentialDto) {
+    const newCred = this.firebaseRepo.create(dto);
+    return this.firebaseRepo.save(newCred);
+  }
+
+  async updateFirebaseConfig(id: string, dto: UpdateFirebaseCredentialDto) {
+    const cred = await this.getFirebaseConfigById(id);
+    Object.assign(cred, dto);
+    return this.firebaseRepo.save(cred);
+  }
+
+  async deleteFirebaseConfig(id?: string) {
+    if (id) {
+      return this.firebaseRepo.delete(id);
+    }
+    const all = await this.firebaseRepo.find();
+    if (all.length > 0) {
+      return this.firebaseRepo.remove(all);
+    }
+    return { success: true };
   }
 }

@@ -6,6 +6,8 @@ import { RefreshTokenDto } from '../../auth/dto/refresh-token.dto';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { SaveDeviceTokenDto } from './dto/save-device-token.dto';
 
+import { DriverLoginDto, MerchantLoginDto } from './dto/mobile-login.dto';
+
 @ApiTags('Mobile Auth')
 @Controller('mobile/auth')
 export class AuthController {
@@ -19,15 +21,14 @@ export class AuthController {
 
   @Post('driver/login')
   @ApiOperation({ summary: 'Driver login' })
-  driverLogin(@Body() dto: any) {
-    const identifier = dto.phone || dto.email || dto.username;
-    return this.authService.driverLogin(identifier, dto.password);
+  driverLogin(@Body() dto: DriverLoginDto) {
+    return this.authService.driverLogin(dto.identifier, dto.password);
   }
 
   @Post('merchant/login')
   @ApiOperation({ summary: 'Merchant login' })
-  merchantLogin(@Body() dto: any) {
-    const identifier = dto.phone || dto.email || dto.username;
+  merchantLogin(@Body() dto: MerchantLoginDto) {
+    const identifier = dto.phone;
     return this.authService.merchantLogin(identifier, dto.password);
   }
 

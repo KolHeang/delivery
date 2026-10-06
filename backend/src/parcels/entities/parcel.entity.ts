@@ -10,6 +10,7 @@ import {
   OneToMany,
 } from 'typeorm';
 import { Merchant } from '../../merchants/entities/merchant.entity';
+import { MerchantBranch } from '../../merchants/entities/merchant-branch.entity';
 import { Customer } from '../../customers/entities/customer.entity';
 import { User } from '../../users/entities/users.entity';
 import { Zone } from '../../zones/entities/zone.entity';
@@ -80,6 +81,14 @@ export class Parcel {
   })
   deliveryFee: number;
 
+  @Column('decimal', {
+    name: 'driver_fee',
+    precision: 10,
+    scale: 2,
+    default: 1000,
+  })
+  driverFee: number;
+
   @Column({ name: 'payment_status', default: 'pending' })
   paymentStatus: PaymentStatus;
 
@@ -107,9 +116,6 @@ export class Parcel {
   @Column({ name: 'proof_photos', type: 'json', nullable: true })
   proofPhotos: string[];
 
-  @Column({ name: 'signature_url', type: 'text', nullable: true })
-  signature: string;
-
   @Column({ name: 'failed_photo', type: 'text', nullable: true })
   failedPhoto: string;
 
@@ -125,6 +131,13 @@ export class Parcel {
 
   @Column({ name: 'merchant_id', nullable: true })
   merchantId: number;
+
+  @ManyToOne(() => MerchantBranch, { nullable: true, eager: true })
+  @JoinColumn({ name: 'branch_id' })
+  branch: MerchantBranch;
+
+  @Column({ name: 'branch_id', nullable: true })
+  branchId: number;
 
   @ManyToOne(() => Customer, { nullable: true, eager: true })
   @JoinColumn({ name: 'customer_id' })

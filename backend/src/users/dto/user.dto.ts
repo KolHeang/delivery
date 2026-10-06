@@ -68,15 +68,44 @@ export class CreateUserDto {
 
   @ApiProperty({ required: false })
   @IsOptional()
+  @Transform(({ value }) => (value === '' || value === null || value === undefined ? undefined : Number(value)))
   @IsNumber()
   @Type(() => Number)
   zoneId?: number;
 
   @ApiProperty({ required: false })
   @IsOptional()
+  @Transform(({ value }) => (value === '' || value === null || value === undefined ? undefined : Number(value)))
   @IsNumber()
   @Type(() => Number)
   vehicleId?: number;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  vehiclePlate?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  vehicleType?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  vehicleBrand?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  vehicleModel?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @Transform(({ value }) => (value === '' || value === null || value === undefined ? undefined : Number(value)))
+  @IsNumber()
+  @Type(() => Number)
+  vehicleYear?: number;
 
   @ApiProperty({ required: false })
   @IsOptional()
@@ -156,59 +185,7 @@ export class CreateUserDto {
   tenantSubdomain?: string;
 }
 
-export class UpdateUserDto {
-  @IsOptional() @IsString() code?: string;
-  @IsOptional() @IsString() name?: string;
-  @IsOptional() @IsEmail() email?: string;
-  @IsOptional() @MinLength(6) password?: string;
-  @IsOptional() @IsNumber() @Type(() => Number) roleId?: number;
-  @IsOptional() @IsString() role?: string;
-  @IsOptional()
-  @Transform(({ value }) => {
-    if (value === 'true') return true;
-    if (value === 'false') return false;
-    return value;
-  })
-  @IsBoolean()
-  isActive?: boolean;
+import { PartialType } from '@nestjs/swagger';
 
-  @IsOptional()
-  @Transform(({ value }) => {
-    if (value === 'true') return true;
-    if (value === 'false') return false;
-    return value;
-  })
-  @IsBoolean()
-  active?: boolean;
+export class UpdateUserDto extends PartialType(CreateUserDto) {}
 
-  @IsOptional()
-  @Transform(({ value }) => {
-    if (value === 'true') return true;
-    if (value === 'false') return false;
-    return value;
-  })
-  @IsBoolean()
-  isStaff?: boolean;
-
-  @IsOptional()
-  @Transform(({ value }) => {
-    if (value === 'true') return true;
-    if (value === 'false') return false;
-    return value;
-  })
-  @IsBoolean()
-  isDriver?: boolean;
-
-  @IsOptional() @IsString() nameKh?: string;
-  @IsOptional() @IsString() phone?: string;
-  @IsOptional() @IsNumber() @Min(0) @Max(5) @Type(() => Number) rating?: number;
-  @IsOptional() @IsNumber() @Type(() => Number) zoneId?: number;
-  @IsOptional() @IsNumber() @Type(() => Number) vehicleId?: number;
-  @IsOptional() @IsString() joinDate?: string;
-  @IsOptional() @IsNumber() @Type(() => Number) salary?: number;
-  @IsOptional() @IsString() photo?: string;
-  @IsOptional() @IsString() dob?: string;
-  @IsOptional() @IsString() gender?: string;
-  @IsOptional() @IsNumber() @Type(() => Number) tenantId?: number;
-  @IsOptional() @IsString() tenantSubdomain?: string;
-}

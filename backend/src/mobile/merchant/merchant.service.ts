@@ -449,11 +449,18 @@ export class MerchantService {
     const merchant = await this.merchantRepo.findOne({ where: { id: merchantId } });
     if (!merchant) throw new NotFoundException('Merchant not found');
 
+    const photo = dto.photo || (dto.photos && dto.photos.length > 0 ? dto.photos[0] : undefined);
+    const photos = dto.photos && dto.photos.length > 0 ? dto.photos : (dto.photo ? [dto.photo] : undefined);
+
     const pickupRequest = this.pickupRequestRepo.create({
       merchantId,
+      branchId: dto.branchId || undefined,
       declaredQuantity: dto.declaredQuantity,
       pickupAddress: dto.pickupAddress || merchant.address || '',
       pickupTime: new Date(dto.pickupTime),
+      photo,
+      photos,
+      note: dto.note?.trim() || undefined,
       status: 'pending',
     });
 
@@ -484,7 +491,7 @@ export class MerchantService {
   async getPickupRequests(merchantId: number) {
     return this.pickupRequestRepo.find({
       where: { merchantId },
-      relations: { pickupDriver: true },
+      relations: { pickupDriver: true, branch: true },
       order: { createdAt: 'DESC' },
     });
   }
@@ -492,7 +499,7 @@ export class MerchantService {
   async getPickupRequest(merchantId: number, id: number) {
     const request = await this.pickupRequestRepo.findOne({
       where: { id, merchantId },
-      relations: { pickupDriver: true, parcels: true },
+      relations: { pickupDriver: true, parcels: true, branch: true },
     });
     if (!request) throw new NotFoundException(`Pickup request #${id} not found`);
     return request;

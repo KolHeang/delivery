@@ -11,7 +11,7 @@ import {
   ParseIntPipe,
   Query,
 } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiBearerAuth, ApiOperation, ApiQuery, ApiParam } from '@nestjs/swagger';
 import { VehiclesService } from './vehicles.service';
 import { CreateVehicleDto, UpdateVehicleDto } from './dto/vehicle.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -27,6 +27,9 @@ export class VehiclesController {
 
   @Get()
   @RequirePermissions('vehicles.read')
+  @ApiOperation({ summary: 'Get all vehicles' })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
   findAll(
     @Query('page') page?: string,
     @Query('limit') limit?: string,
@@ -41,12 +44,15 @@ export class VehiclesController {
 
   @Get(':id')
   @RequirePermissions('vehicles.read')
+  @ApiOperation({ summary: 'Get vehicle by ID' })
+  @ApiParam({ name: 'id', type: Number, description: 'Vehicle ID' })
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.vehiclesService.findOne(id);
   }
 
   @Post()
   @RequirePermissions('vehicles.create')
+  @ApiOperation({ summary: 'Create vehicle' })
   create(@Body() dto: CreateVehicleDto, @Req() req?: any) {
     if (req?.user?.tenantId) {
       (dto as any).tenantId = req.user.tenantId;
@@ -56,6 +62,8 @@ export class VehiclesController {
 
   @Patch(':id')
   @RequirePermissions('vehicles.update')
+  @ApiOperation({ summary: 'Update vehicle' })
+  @ApiParam({ name: 'id', type: Number, description: 'Vehicle ID' })
   update(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateVehicleDto,
@@ -65,6 +73,8 @@ export class VehiclesController {
 
   @Delete(':id')
   @RequirePermissions('vehicles.delete')
+  @ApiOperation({ summary: 'Delete vehicle' })
+  @ApiParam({ name: 'id', type: Number, description: 'Vehicle ID' })
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.vehiclesService.remove(id);
   }

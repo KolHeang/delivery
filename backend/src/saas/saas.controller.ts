@@ -10,7 +10,7 @@ import {
   UseGuards,
   ParseIntPipe,
 } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
+import { ApiTags, ApiBearerAuth, ApiOperation, ApiQuery, ApiParam } from '@nestjs/swagger';
 import { SaasService } from './saas.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
@@ -37,6 +37,7 @@ export class SaasController {
   // ── Tenants ──
   @Get('tenants/lookup/:slug')
   @ApiOperation({ summary: 'Lookup tenant public info by subdomain slug' })
+  @ApiParam({ name: 'slug', type: String, description: 'Tenant subdomain slug' })
   getTenantBySlug(@Param('slug') slug: string) {
     return this.saasService.getTenantBySlug(slug);
   }
@@ -53,6 +54,7 @@ export class SaasController {
   @ApiBearerAuth()
   @Get('tenants/:id')
   @ApiOperation({ summary: 'Get tenant details by ID' })
+  @ApiParam({ name: 'id', type: Number, description: 'Tenant ID' })
   getTenantById(@Param('id', ParseIntPipe) id: number) {
     return this.saasService.getTenantById(id);
   }
@@ -75,6 +77,7 @@ export class SaasController {
   @ApiBearerAuth()
   @Patch('tenants/:id')
   @ApiOperation({ summary: 'Update tenant information' })
+  @ApiParam({ name: 'id', type: Number, description: 'Tenant ID' })
   updateTenant(@Param('id', ParseIntPipe) id: number, @Body() body: any) {
     return this.saasService.updateTenant(id, body);
   }
@@ -83,6 +86,7 @@ export class SaasController {
   @ApiBearerAuth()
   @Delete('tenants/:id')
   @ApiOperation({ summary: 'Suspend / Soft-delete tenant' })
+  @ApiParam({ name: 'id', type: Number, description: 'Tenant ID' })
   deleteTenant(@Param('id', ParseIntPipe) id: number) {
     return this.saasService.deleteTenant(id);
   }
@@ -91,6 +95,7 @@ export class SaasController {
   @ApiBearerAuth()
   @Patch('tenants/:id/reactivate')
   @ApiOperation({ summary: 'Reactivate suspended tenant' })
+  @ApiParam({ name: 'id', type: Number, description: 'Tenant ID' })
   reactivateTenant(@Param('id', ParseIntPipe) id: number) {
     return this.saasService.reactivateTenant(id);
   }
@@ -100,6 +105,7 @@ export class SaasController {
   @ApiBearerAuth()
   @Get('subscriptions')
   @ApiOperation({ summary: 'Get platform subscriptions' })
+  @ApiQuery({ name: 'tenantId', required: false, type: Number })
   getSubscriptions(@Query('tenantId') tenantId?: string) {
     return this.saasService.getSubscriptions(tenantId ? +tenantId : undefined);
   }
@@ -108,6 +114,7 @@ export class SaasController {
   @ApiBearerAuth()
   @Get('invoices')
   @ApiOperation({ summary: 'Get SaaS platform invoices' })
+  @ApiQuery({ name: 'tenantId', required: false, type: Number })
   getTenantInvoices(@Query('tenantId') tenantId?: string) {
     return this.saasService.getTenantInvoices(tenantId ? +tenantId : undefined);
   }
@@ -116,6 +123,7 @@ export class SaasController {
 
   @Get('domains/resolve')
   @ApiOperation({ summary: 'Dynamic domain resolver for tenant workspaces' })
+  @ApiQuery({ name: 'domain', required: true, type: String })
   resolveDomain(@Query('domain') domain: string) {
     return this.saasService.resolveDomain(domain);
   }
@@ -124,6 +132,7 @@ export class SaasController {
   @ApiBearerAuth()
   @Get('domains')
   @ApiOperation({ summary: 'List tenant domains' })
+  @ApiQuery({ name: 'tenantId', required: false, type: Number })
   getDomains(@Query('tenantId') tenantId?: string) {
     return this.saasService.getDomains(tenantId ? +tenantId : undefined);
   }
@@ -140,6 +149,7 @@ export class SaasController {
   @ApiBearerAuth()
   @Patch('domains/:id/primary')
   @ApiOperation({ summary: 'Set domain as primary for tenant' })
+  @ApiParam({ name: 'id', type: Number, description: 'Domain ID' })
   setPrimaryDomain(@Param('id', ParseIntPipe) id: number) {
     return this.saasService.setPrimaryDomain(id);
   }
@@ -148,6 +158,7 @@ export class SaasController {
   @ApiBearerAuth()
   @Patch('domains/:id/verify')
   @ApiOperation({ summary: 'Verify domain DNS and SSL' })
+  @ApiParam({ name: 'id', type: Number, description: 'Domain ID' })
   verifyDomain(@Param('id', ParseIntPipe) id: number) {
     return this.saasService.verifyDomain(id);
   }
@@ -156,6 +167,7 @@ export class SaasController {
   @ApiBearerAuth()
   @Delete('domains/:id')
   @ApiOperation({ summary: 'Delete a domain' })
+  @ApiParam({ name: 'id', type: Number, description: 'Domain ID' })
   deleteDomain(@Param('id', ParseIntPipe) id: number) {
     return this.saasService.deleteDomain(id);
   }

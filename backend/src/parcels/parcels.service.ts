@@ -59,6 +59,7 @@ export class ParcelsService {
     const qb = this.repo
       .createQueryBuilder('parcel')
       .leftJoinAndSelect('parcel.merchant', 'merchant')
+      .leftJoinAndSelect('parcel.branch', 'branch')
       .leftJoinAndSelect('parcel.driver', 'driver')
       .leftJoinAndSelect('parcel.pickupDriver', 'pickupDriver')
       .leftJoinAndSelect('parcel.customer', 'customer')
@@ -152,6 +153,7 @@ export class ParcelsService {
     const item = await this.repo
       .createQueryBuilder('parcel')
       .leftJoinAndSelect('parcel.merchant', 'merchant')
+      .leftJoinAndSelect('parcel.branch', 'branch')
       .leftJoinAndSelect('parcel.driver', 'driver')
       .leftJoinAndSelect('parcel.pickupDriver', 'pickupDriver')
       .leftJoinAndSelect('parcel.customer', 'customer')
@@ -169,6 +171,7 @@ export class ParcelsService {
     const item = await this.repo
       .createQueryBuilder('parcel')
       .leftJoinAndSelect('parcel.merchant', 'merchant')
+      .leftJoinAndSelect('parcel.branch', 'branch')
       .leftJoinAndSelect('parcel.driver', 'driver')
       .leftJoinAndSelect('parcel.pickupDriver', 'pickupDriver')
       .leftJoinAndSelect('parcel.customer', 'customer')
@@ -291,6 +294,9 @@ export class ParcelsService {
         dto.deliveryFee = 0;
       }
     }
+    if (dto.driverFee === undefined || dto.driverFee === null) {
+      dto.driverFee = 1000;
+    }
     const parcel = this.repo.create(dto as any) as any as Parcel;
     if (parcel.status === 'picked-up' && !parcel.pickedUpAt) {
       parcel.pickedUpAt = new Date();
@@ -359,9 +365,13 @@ export class ParcelsService {
     const updates: Partial<Parcel> = { status: dto.status as any };
     if (dto.status === 'picked-up') updates.pickedUpAt = new Date();
     if (dto.status === 'in-warehouse') updates.warehouseAt = new Date();
-    if (dto.status === 'delivered') updates.deliveredAt = new Date();
+    if (dto.status === 'delivered') {
+      updates.deliveredAt = new Date();
+      updates.paymentStatus = (dto.paymentStatus as any) || 'paid';
+    }
+    if (dto.paymentMethod) updates.paymentMethod = dto.paymentMethod;
+    if (dto.paymentStatus) updates.paymentStatus = dto.paymentStatus as any;
     if (dto.proofPhotos && dto.proofPhotos.length > 0) updates.proofPhotos = dto.proofPhotos;
-    if (dto.signature) updates.signature = dto.signature;
     if (dto.failedPhoto || dto.photo) updates.failedPhoto = dto.failedPhoto || dto.photo;
     if (finalNote !== undefined) updates.note = finalNote;
 
@@ -490,7 +500,7 @@ export class ParcelsService {
     if (query?.tenantId) where.tenantId = query.tenantId;
     return this.pickupRequestRepo.find({
       where,
-      relations: { merchant: true, pickupDriver: true, parcels: true },
+      relations: { merchant: true, pickupDriver: true, parcels: true, branch: true },
       order: { createdAt: 'DESC' },
     });
   }
@@ -498,7 +508,7 @@ export class ParcelsService {
   async findPickupRequestById(id: number) {
     const request = await this.pickupRequestRepo.findOne({
       where: { id },
-      relations: { merchant: true, pickupDriver: true, parcels: true },
+      relations: { merchant: true, pickupDriver: true, parcels: true, branch: true },
     });
     if (!request) throw new NotFoundException(`Pickup request #${id} not found`);
     return request;
@@ -537,6 +547,7 @@ export class ParcelsService {
     const parcel = this.repo.create({
       ...dto,
       merchantId: request.merchantId,
+      branchId: dto.branchId || request.branchId || undefined,
       pickupRequestId: id,
       pickupDriverId: request.pickupDriverId || undefined,
       status: 'in-warehouse',

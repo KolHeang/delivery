@@ -16,6 +16,7 @@ import {
   ApiOperation,
   ApiBody,
   ApiQuery,
+  ApiParam,
 } from '@nestjs/swagger';
 import { DriverService } from './driver.service';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
@@ -73,6 +74,7 @@ export class DriverController {
   @ApiOperation({
     summary: 'Scan QR code / tracking code to look up parcel details',
   })
+  @ApiParam({ name: 'code', type: String, description: 'Tracking or QR code' })
   scanParcelByCode(@Request() req: any, @Param('code') code: string) {
     return this.driverService.scanParcel(req.user.id, code);
   }
@@ -189,12 +191,14 @@ export class DriverController {
 
   @Get('tasks/:id')
   @ApiOperation({ summary: 'Get task detail by ID for driver' })
+  @ApiParam({ name: 'id', type: Number, description: 'Task / Parcel ID' })
   getTaskDetail(@Request() req: any, @Param('id', ParseIntPipe) id: number) {
     return this.driverService.getTaskDetail(req.user.id, id);
   }
 
   @Patch('tasks/:id/status')
   @ApiOperation({ summary: 'Update task status' })
+  @ApiParam({ name: 'id', type: Number, description: 'Task / Parcel ID' })
   updateStatus(
     @Request() req: any,
     @Param('id', ParseIntPipe) id: number,
@@ -290,6 +294,7 @@ export class DriverController {
 
   @Patch('pickup-requests/:id/pickup')
   @ApiOperation({ summary: 'Confirm pickup with actual quantity' })
+  @ApiParam({ name: 'id', type: Number, description: 'Pickup request ID' })
   confirmPickup(
     @Request() req: any,
     @Param('id', ParseIntPipe) id: number,

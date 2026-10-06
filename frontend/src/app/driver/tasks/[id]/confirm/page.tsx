@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef, use } from 'react';
+import { useEffect, useState, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { isAuthenticated } from '@/lib/auth';
 import api from '@/lib/api';
@@ -23,12 +23,11 @@ const confirmTranslations = {
     title: 'Confirm Delivery',
     proofRequired: 'Delivery Proof (Required)',
     addPhoto: 'Add Photo',
-    signatureOptional: 'Customer Signature (Optional)',
-    clear: 'Clear',
     paymentStatus: 'Payment Status',
     cashCollected: 'Cash Collected',
     bankPayment: 'Bank Payment',
     alreadyPaid: 'Already Paid to Shop',
+    selectBank: 'Select Bank',
     noteOptional: 'Note (Optional)',
     notePlaceholder: 'Add note...',
     btnConfirm: 'Confirm Delivery',
@@ -42,12 +41,11 @@ const confirmTranslations = {
     title: 'បញ្ជាក់ការដឹកជញ្ជូន',
     proofRequired: 'ភស្តុតាងប្រគល់អីវ៉ាន់ ចាំបាច់',
     addPhoto: 'ថតរូប / បន្ថែមរូប',
-    signatureOptional: 'ហត្ថលេខាអតិថិជន',
-    clear: 'លុប',
     paymentStatus: 'ស្ថានភាពទូទាត់ប្រាក់',
     cashCollected: 'បានប្រមូលប្រាក់សុទ្ធ',
     bankPayment: 'ទូទាត់តាមធនាគារ',
     alreadyPaid: 'បានទូទាត់ទៅហាងរួច',
+    selectBank: 'ជ្រើសរើសធនាគារ',
     noteOptional: 'ចំណាំបន្ថែម',
     notePlaceholder: 'បញ្ចូលចំណាំ...',
     btnConfirm: 'បញ្ជាក់ការដឹកជញ្ជូនរួចរាល់',
@@ -74,12 +72,8 @@ export default function ConfirmDeliveryPage({ params }: { params: Promise<{ id: 
   // Form states
   const [proofPhotos, setProofPhotos] = useState<string[]>([]);
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'bank' | 'already_paid'>('cash');
+  const [selectedBank, setSelectedBank] = useState<'aba' | 'acleda' | 'wing' | 'bakong'>('aba');
   const [note, setNote] = useState('');
-
-  // Signature canvas
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const [isDrawing, setIsDrawing] = useState(false);
-  const [hasSignature, setHasSignature] = useState(false);
 
   const t = confirmTranslations[lang as 'en' | 'km'] || confirmTranslations.en;
 
@@ -101,54 +95,6 @@ export default function ConfirmDeliveryPage({ params }: { params: Promise<{ id: 
     };
     loadParcel();
   }, [taskId]);
-
-  // Canvas drawing handlers
-  const startDrawing = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    setIsDrawing(true);
-    setHasSignature(true);
-    const rect = canvas.getBoundingClientRect();
-    const x = 'touches' in e ? e.touches[0].clientX - rect.left : e.clientX - rect.left;
-    const y = 'touches' in e ? e.touches[0].clientY - rect.top : e.clientY - rect.top;
-
-    ctx.beginPath();
-    ctx.moveTo(x, y);
-  };
-
-  const draw = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
-    if (!isDrawing) return;
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    const rect = canvas.getBoundingClientRect();
-    const x = 'touches' in e ? e.touches[0].clientX - rect.left : e.clientX - rect.left;
-    const y = 'touches' in e ? e.touches[0].clientY - rect.top : e.clientY - rect.top;
-
-    ctx.lineWidth = 2.5;
-    ctx.lineCap = 'round';
-    ctx.strokeStyle = '#0f172a';
-    ctx.lineTo(x, y);
-    ctx.stroke();
-  };
-
-  const stopDrawing = () => {
-    setIsDrawing(false);
-  };
-
-  const clearSignature = () => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    setHasSignature(false);
-  };
 
   const handleAddPhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -178,16 +124,15 @@ export default function ConfirmDeliveryPage({ params }: { params: Promise<{ id: 
     setSubmitting(true);
     setError('');
     try {
-      let signatureData = '';
-      if (canvasRef.current && hasSignature) {
-        signatureData = canvasRef.current.toDataURL('image/png');
-      }
+      const bankLabel = selectedBank === 'aba' ? 'ABA Bank' : selectedBank === 'acleda' ? 'ACLEDA Bank' : selectedBank === 'wing' ? 'Wing Bank' : 'Bakong/KHQR';
+      const paymentDetail = paymentMethod === 'bank' ? `Bank Payment (${bankLabel})` : paymentMethod === 'cash' ? 'Cash Collected' : 'Already Paid to Shop';
 
       await api.patch(`/mobile/driver/tasks/${taskId}/status`, {
         status: 'delivered',
-        note: note ? `[Payment: ${paymentMethod}] ${note}` : `Payment: ${paymentMethod}`,
-        paymentMethod,
-        signature: signatureData || undefined,
+        paymentStatus: 'paid',
+        note: note ? `[${paymentDetail}] ${note}` : `[${paymentDetail}]`,
+        paymentMethod: paymentMethod === 'bank' ? `bank_${selectedBank}` : paymentMethod,
+        bankName: paymentMethod === 'bank' ? bankLabel : undefined,
         proofPhotos,
       });
 
@@ -334,7 +279,7 @@ export default function ConfirmDeliveryPage({ params }: { params: Promise<{ id: 
             </div>
             <div>
               <div style={{ fontSize: '13.5px', fontWeight: '800', color: '#0f172a' }}>
-                #{parcel?.trackingCode || 'EX00123456'}
+                {parcel?.trackingCode ? (parcel.trackingCode.startsWith('#') ? parcel.trackingCode : `#${parcel.trackingCode}`) : `#${parcel?.code || parcel?.id || ''}`}
               </div>
               <div style={{ fontSize: '12px', color: '#64748b' }}>
                 {merchantName}
@@ -451,61 +396,7 @@ export default function ConfirmDeliveryPage({ params }: { params: Promise<{ id: 
           </div>
         </div>
 
-        {/* Section 2: Customer Signature (Optional) */}
-        <div style={{
-          backgroundColor: '#ffffff',
-          borderRadius: '20px',
-          padding: '18px 16px',
-          border: '1px solid #e2e8f0',
-        }}>
-          <div style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            marginBottom: '12px',
-          }}>
-            <span style={{ fontSize: '13.5px', fontWeight: '800', color: '#0f172a' }}>
-              {t.signatureOptional}
-            </span>
-            <button
-              type="button"
-              onClick={clearSignature}
-              style={{
-                background: 'none',
-                border: 'none',
-                color: '#1e60ff',
-                fontSize: '12px',
-                fontWeight: '700',
-                cursor: 'pointer',
-              }}
-            >
-              {t.clear}
-            </button>
-          </div>
-
-          <div style={{
-            border: '1.5px solid #e2e8f0',
-            borderRadius: '14px',
-            backgroundColor: '#f8fafc',
-            overflow: 'hidden',
-          }}>
-            <canvas
-              ref={canvasRef}
-              width={340}
-              height={120}
-              onMouseDown={startDrawing}
-              onMouseMove={draw}
-              onMouseUp={stopDrawing}
-              onMouseLeave={stopDrawing}
-              onTouchStart={startDrawing}
-              onTouchMove={draw}
-              onTouchEnd={stopDrawing}
-              style={{ width: '100%', height: '120px', display: 'block', touchAction: 'none' }}
-            />
-          </div>
-        </div>
-
-        {/* Section 3: Payment Status */}
+        {/* Section 2: Payment Status */}
         <div style={{
           backgroundColor: '#ffffff',
           borderRadius: '20px',
@@ -557,41 +448,128 @@ export default function ConfirmDeliveryPage({ params }: { params: Promise<{ id: 
           </label>
 
           {/* Option 2: Bank Payment */}
-          <label style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '12px 14px',
+          <div style={{
             borderRadius: '14px',
-            backgroundColor: paymentMethod === 'bank' ? '#eff6ff' : '#f8fafc',
+            backgroundColor: paymentMethod === 'bank' ? '#f0f7ff' : '#f8fafc',
             border: paymentMethod === 'bank' ? '1.5px solid #93c5fd' : '1px solid #e2e8f0',
-            cursor: 'pointer',
+            overflow: 'hidden',
+            transition: 'all 0.2s ease',
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <div style={{
-                width: '32px',
-                height: '32px',
-                borderRadius: '10px',
-                backgroundColor: '#eff6ff',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#2563eb',
-              }}>
-                <MdAccountBalance size={18} />
+            <label style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '12px 14px',
+              cursor: 'pointer',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '10px',
+                  backgroundColor: '#eff6ff',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#2563eb',
+                }}>
+                  <MdAccountBalance size={18} />
+                </div>
+                <div>
+                  <span style={{ fontSize: '13.5px', fontWeight: '700', color: '#1e293b' }}>
+                    {t.bankPayment}
+                  </span>
+                  {paymentMethod === 'bank' && (
+                    <span style={{ fontSize: '11px', color: '#2563eb', fontWeight: '700', marginLeft: '8px' }}>
+                      ({selectedBank === 'aba' ? 'ABA Bank' : selectedBank === 'acleda' ? 'ACLEDA Bank' : selectedBank === 'wing' ? 'Wing Bank' : 'Bakong / KHQR'})
+                    </span>
+                  )}
+                </div>
               </div>
-              <span style={{ fontSize: '13.5px', fontWeight: '700', color: '#1e293b' }}>
-                {t.bankPayment}
-              </span>
-            </div>
-            <input
-              type="radio"
-              name="payment"
-              checked={paymentMethod === 'bank'}
-              onChange={() => setPaymentMethod('bank')}
-              style={{ accentColor: '#1e60ff', width: '18px', height: '18px' }}
-            />
-          </label>
+              <input
+                type="radio"
+                name="payment"
+                checked={paymentMethod === 'bank'}
+                onChange={() => setPaymentMethod('bank')}
+                style={{ accentColor: '#1e60ff', width: '18px', height: '18px' }}
+              />
+            </label>
+
+            {/* Bank Options Selector when Bank Payment is active */}
+            {paymentMethod === 'bank' && (
+              <div style={{
+                padding: '0 14px 14px',
+                display: 'grid',
+                gridTemplateColumns: 'repeat(2, 1fr)',
+                gap: '8px',
+                borderTop: '1px solid #dbeafe',
+                paddingTop: '12px',
+                maxHeight: '260px',
+                overflowY: 'auto',
+              }}>
+                {[
+                  { id: 'aba', name: 'ABA Bank', sub: 'ABA PAY / KHQR', color: '#005477', badgeBg: '#005477', badgeText: '#ffffff' },
+                  { id: 'acleda', name: 'ACLEDA Bank', sub: 'ACLEDA Unity / KHQR', color: '#183c7d', badgeBg: '#183c7d', badgeText: '#ffffff' },
+                  { id: 'wing', name: 'Wing Bank', sub: 'Wing KHQR', color: '#0f9d58', badgeBg: '#0f9d58', badgeText: '#ffffff' },
+                  { id: 'bakong', name: 'Bakong / KHQR', sub: 'National KHQR', color: '#d32f2f', badgeBg: '#d32f2f', badgeText: '#ffffff' },
+                  { id: 'canadia', name: 'Canadia Bank', sub: 'Canadia KHQR', color: '#cc1f2e', badgeBg: '#cc1f2e', badgeText: '#ffffff' },
+                  { id: 'prince', name: 'Prince Bank', sub: 'Prince PAY', color: '#d39e00', badgeBg: '#d39e00', badgeText: '#ffffff' },
+                  { id: 'chipmong', name: 'Chip Mong Bank', sub: 'CMB KHQR', color: '#0284c7', badgeBg: '#0284c7', badgeText: '#ffffff' },
+                  { id: 'sathapana', name: 'Sathapana Bank', sub: 'SPN Mobile', color: '#0369a1', badgeBg: '#0369a1', badgeText: '#ffffff' },
+                  { id: 'truemoney', name: 'TrueMoney', sub: 'TrueMoney Wallet', color: '#ea580c', badgeBg: '#ea580c', badgeText: '#ffffff' },
+                  { id: 'jtrust', name: 'J Trust Royal', sub: 'J Trust KHQR', color: '#1e3a8a', badgeBg: '#1e3a8a', badgeText: '#ffffff' },
+                  { id: 'other', name: 'Other Bank / KHQR', sub: 'Any KHQR', color: '#475569', badgeBg: '#475569', badgeText: '#ffffff' },
+                ].map((b) => {
+                  const isSel = selectedBank === b.id;
+                  return (
+                    <div
+                      key={b.id}
+                      onClick={() => setSelectedBank(b.id as any)}
+                      style={{
+                        padding: '9px 10px',
+                        borderRadius: '10px',
+                        backgroundColor: isSel ? '#ffffff' : '#f8fafc',
+                        border: isSel ? `2px solid ${b.color}` : '1.5px solid #e2e8f0',
+                        boxShadow: isSel ? '0 2px 8px rgba(0,0,0,0.08)' : 'none',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '2px',
+                        transition: 'all 0.15s ease',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <span style={{
+                          fontSize: '9.5px',
+                          fontWeight: '800',
+                          padding: '2px 5px',
+                          borderRadius: '4px',
+                          backgroundColor: b.badgeBg,
+                          color: b.badgeText,
+                          letterSpacing: '0.3px',
+                        }}>
+                          {b.id.toUpperCase()}
+                        </span>
+                        <div style={{
+                          width: '13px',
+                          height: '13px',
+                          borderRadius: '50%',
+                          border: isSel ? `4px solid ${b.color}` : '1.5px solid #cbd5e1',
+                          backgroundColor: isSel ? '#ffffff' : 'transparent',
+                        }} />
+                      </div>
+                      <div style={{ fontSize: '11.5px', fontWeight: '800', color: '#0f172a', marginTop: '3px' }}>
+                        {b.name}
+                      </div>
+                      <div style={{ fontSize: '9.5px', color: '#64748b', fontWeight: '500' }}>
+                        {b.sub}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
 
           {/* Option 3: Already Paid to Shop */}
           <label style={{

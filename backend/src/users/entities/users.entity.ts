@@ -46,6 +46,10 @@ export class User {
   @AfterLoad()
   populateRole() {
     this.role = this.roleRelation?.name || 'staff';
+    if (!this.code && this.id) {
+      const prefix = this.isDriver || this.role === 'driver' ? 'DRV' : 'STF';
+      this.code = `${prefix}-${String(this.id).padStart(4, '0')}`;
+    }
   }
 
   @Column({ name: 'role_id', nullable: true })

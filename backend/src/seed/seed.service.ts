@@ -259,6 +259,12 @@ export class SeedService {
       { name: 'merchants.update', description: 'កែប្រែព័ត៌មានហាង (Update merchant shops)' },
       { name: 'merchants.delete', description: 'លុបហាងទំនិញ (Delete merchant shops)' },
 
+      // Merchant Branches
+      { name: 'branches.create', description: 'បង្កើតសាខាហាងថ្មី (Create merchant branches)' },
+      { name: 'branches.read', description: 'មើលបញ្ជីសាខាហាង (View merchant branches)' },
+      { name: 'branches.update', description: 'កែប្រែព័ត៌មានសាខា (Update merchant branches)' },
+      { name: 'branches.delete', description: 'លុបសាខាហាង (Delete merchant branches)' },
+
       // Zones
       { name: 'zones.create', description: 'បង្កើតតំបន់ដឹកជញ្ជូន (Create delivery zones)' },
       { name: 'zones.read', description: 'មើលបញ្ជីតំបន់ដឹក (View delivery zones)' },

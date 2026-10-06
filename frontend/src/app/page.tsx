@@ -8,19 +8,19 @@ export default function RootPage() {
   const router = useRouter();
 
   useEffect(() => {
-    if (isAuthenticated()) {
+    if (typeof window !== 'undefined' && localStorage.getItem('saas_admin')) {
+      router.replace('/admin/saas');
+    } else if (isAuthenticated()) {
       const user = getUser();
       if (user?.role === 'driver') {
         router.replace('/driver/tasks');
       } else if (user?.role === 'merchant') {
         router.replace('/merchant/orders');
-      } else if (typeof window !== 'undefined' && localStorage.getItem('saas_admin')) {
-        router.replace('/admin/saas');
       } else {
         router.replace('/dashboard');
       }
     } else {
-      router.replace('/auth');
+      router.replace('/admin/saas/login');
     }
   }, [router]);
 

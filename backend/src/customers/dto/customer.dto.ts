@@ -10,10 +10,6 @@ export class CreateCustomerDto {
   @ApiProperty({ required: false }) @IsOptional() @IsNumber() @Type(() => Number) tenantId?: number;
 }
 
-export class UpdateCustomerDto {
-  @IsOptional() @IsString() name?: string;
-  @IsOptional() @IsString() phone?: string;
-  @IsOptional() @IsEmail() email?: string;
-  @IsOptional() @IsString() address?: string;
-  @IsOptional() @IsNumber() @Type(() => Number) tenantId?: number;
-}
+import { PartialType } from '@nestjs/swagger';
+
+export class UpdateCustomerDto extends PartialType(CreateCustomerDto) {}

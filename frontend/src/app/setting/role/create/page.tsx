@@ -20,6 +20,7 @@ const PERM_GROUP_TO_PLAN_FEATURE: Record<string, string> = {
   orders: 'delivery',
   zones: 'delivery',
   merchants: 'shops',
+  branches: 'shops',
   users: 'staff',
   drivers: 'staff',
   vehicles: 'staff',

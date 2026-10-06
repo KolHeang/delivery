@@ -55,6 +55,7 @@ export default function PickupRequestsPage() {
   const [statusFilter, setStatus]     = useState('');
   const [pageSize, setPageSize]       = useState(20);
   const [currentPage, setCurrentPage] = useState(1);
+  const [previewModalImg, setPreviewModalImg] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -212,8 +213,37 @@ export default function PickupRequestsPage() {
                             </code>
                           </td>
                           <td style={{ padding: '12px 10px', border: 'none' }}>
-                            <div style={{ fontWeight: 600, fontSize: 13, color: '#0f172a' }}>{r.merchant?.nameKh || r.merchant?.name || ''}</div>
-                            {r.merchant?.phone && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>📞 {r.merchant.phone}</div>}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                              {(r.photo || r.photos?.[0]) ? (
+                                <div
+                                  onClick={() => setPreviewModalImg(r.photo || r.photos[0])}
+                                  style={{
+                                    width: 44,
+                                    height: 44,
+                                    borderRadius: 10,
+                                    overflow: 'hidden',
+                                    border: '1.5px solid #dbeafe',
+                                    flexShrink: 0,
+                                    cursor: 'pointer',
+                                    position: 'relative',
+                                    background: '#000',
+                                    boxShadow: '0 2px 6px rgba(0,0,0,0.08)',
+                                  }}
+                                  title="ចុចដើម្បីពង្រីករូបភាព (Click to zoom)"
+                                >
+                                  <img
+                                    src={r.photo || r.photos[0]}
+                                    alt="Goods"
+                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                  />
+                                </div>
+                              ) : null}
+                              <div>
+                                <div style={{ fontWeight: 600, fontSize: 13, color: '#0f172a' }}>{r.merchant?.nameKh || r.merchant?.name || ''}</div>
+                                {r.merchant?.phone && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>📞 {r.merchant.phone}</div>}
+                                {r.note && <div style={{ fontSize: 11, color: '#7c3aed', marginTop: 2, maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={r.note}>📝 {r.note}</div>}
+                              </div>
+                            </div>
                           </td>
                           <td style={{ padding: '12px 10px', border: 'none' }}>
                             <div style={{ fontSize: 12, maxWidth: 180, wordBreak: 'break-word', lineHeight: 1.4, color: '#475569' }}>
@@ -222,8 +252,35 @@ export default function PickupRequestsPage() {
                           </td>
                           <td style={{ padding: '12px 10px', border: 'none' }}>
                             {r.pickupDriver ? (
-                              <div>
-                                <div style={{ fontWeight: 600, fontSize: 13, color: '#0f172a' }}>{r.pickupDriver.nameKh || r.pickupDriver.name}</div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                {(r.pickupProofPhoto || r.pickupProofPhotos?.[0]) ? (
+                                  <div
+                                    onClick={() => setPreviewModalImg(r.pickupProofPhoto || r.pickupProofPhotos[0])}
+                                    style={{
+                                      width: 38,
+                                      height: 38,
+                                      borderRadius: 8,
+                                      overflow: 'hidden',
+                                      border: '1.5px solid #86efac',
+                                      flexShrink: 0,
+                                      cursor: 'pointer',
+                                      position: 'relative',
+                                      background: '#000',
+                                      boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
+                                    }}
+                                    title="ភស្តុតាងទៅយក (Pickup Proof) — ចុចមើល"
+                                  >
+                                    <img
+                                      src={r.pickupProofPhoto || r.pickupProofPhotos[0]}
+                                      alt="Proof"
+                                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                    />
+                                  </div>
+                                ) : null}
+                                <div>
+                                  <div style={{ fontWeight: 600, fontSize: 13, color: '#0f172a' }}>{r.pickupDriver.nameKh || r.pickupDriver.name}</div>
+                                  {r.driverNote && <div style={{ fontSize: 11, color: '#16a34a', marginTop: 1, maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={r.driverNote}>💬 {r.driverNote}</div>}
+                                </div>
                               </div>
                             ) : (
                               <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>—</span>
@@ -293,6 +350,62 @@ export default function PickupRequestsPage() {
           </div>
         </div>
       </div>
+
+      {/* Lightbox / Zoom Modal */}
+      {previewModalImg && (
+        <div
+          onClick={() => setPreviewModalImg(null)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.85)',
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 20,
+            backdropFilter: 'blur(4px)',
+          }}
+        >
+          <div
+            style={{
+              position: 'relative',
+              maxWidth: '92vw',
+              maxHeight: '85vh',
+              borderRadius: 16,
+              overflow: 'hidden',
+              boxShadow: '0 10px 40px rgba(0,0,0,0.5)',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <img
+              src={previewModalImg}
+              alt="Enlarged Goods"
+              style={{ maxWidth: '100%', maxHeight: '85vh', objectFit: 'contain', display: 'block' }}
+            />
+            <button
+              onClick={() => setPreviewModalImg(null)}
+              style={{
+                position: 'absolute',
+                top: 12,
+                right: 12,
+                width: 36,
+                height: 36,
+                borderRadius: '50%',
+                background: 'rgba(0,0,0,0.6)',
+                border: 'none',
+                color: '#fff',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <MdClose size={22} />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

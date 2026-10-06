@@ -10,7 +10,7 @@ import {
   Param,
   ParseIntPipe,
 } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth, ApiOperation, ApiQuery } from '@nestjs/swagger';
+import { ApiTags, ApiBearerAuth, ApiOperation, ApiQuery, ApiParam } from '@nestjs/swagger';
 import { MerchantService } from './merchant.service';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { CreateParcelDto } from '../../parcels/dto/parcel.dto';
@@ -58,8 +58,8 @@ export class MerchantController {
   @ApiOperation({ summary: 'Get merchant parcels with optional search, status, and pagination' })
   @ApiQuery({ name: 'status', required: false })
   @ApiQuery({ name: 'search', required: false })
-  @ApiQuery({ name: 'page', required: false })
-  @ApiQuery({ name: 'limit', required: false })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
   @ApiQuery({ name: 'startDate', required: false })
   @ApiQuery({ name: 'endDate', required: false })
   getParcels(
@@ -83,12 +83,14 @@ export class MerchantController {
 
   @Get('parcels/:id')
   @ApiOperation({ summary: 'Get single parcel details with events and driver info' })
+  @ApiParam({ name: 'id', type: Number, description: 'Parcel ID' })
   getParcelById(@Request() req: any, @Param('id', ParseIntPipe) id: number) {
     return this.merchantService.getParcelById(req.user.id, id);
   }
 
   @Patch('parcels/:id/cancel')
   @ApiOperation({ summary: 'Cancel a pending parcel' })
+  @ApiParam({ name: 'id', type: Number, description: 'Parcel ID' })
   cancelParcel(
     @Request() req: any,
     @Param('id', ParseIntPipe) id: number,
@@ -124,8 +126,8 @@ export class MerchantController {
   @Get('settlements')
   @ApiOperation({ summary: 'Get COD settlements and payout report history' })
   @ApiQuery({ name: 'status', required: false, enum: ['paid', 'unpaid'] })
-  @ApiQuery({ name: 'page', required: false })
-  @ApiQuery({ name: 'limit', required: false })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
   getSettlements(
     @Request() req: any,
     @Query('status') status?: 'paid' | 'unpaid',
@@ -141,6 +143,7 @@ export class MerchantController {
 
   @Get('settlements/:id')
   @ApiOperation({ summary: 'Get COD settlement receipt detail by ID or reference' })
+  @ApiParam({ name: 'id', type: String, description: 'Settlement ID or reference' })
   getSettlementById(@Request() req: any, @Param('id') id: string) {
     return this.merchantService.getSettlementById(req.user.id, id);
   }
@@ -159,12 +162,14 @@ export class MerchantController {
 
   @Get('pickup-requests/:id')
   @ApiOperation({ summary: 'Get details of a specific pickup request' })
+  @ApiParam({ name: 'id', type: Number, description: 'Pickup request ID' })
   getPickupRequest(@Request() req: any, @Param('id', ParseIntPipe) id: number) {
     return this.merchantService.getPickupRequest(req.user.id, id);
   }
 
   @Patch('pickup-requests/:id/cancel')
   @ApiOperation({ summary: 'Cancel a pending pickup request' })
+  @ApiParam({ name: 'id', type: Number, description: 'Pickup request ID' })
   cancelPickupRequest(@Request() req: any, @Param('id', ParseIntPipe) id: number) {
     return this.merchantService.cancelPickupRequest(req.user.id, id);
   }

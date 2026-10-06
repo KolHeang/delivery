@@ -11,7 +11,7 @@ import {
   UseGuards,
   ParseIntPipe,
 } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
+import { ApiTags, ApiBearerAuth, ApiOperation, ApiQuery, ApiParam } from '@nestjs/swagger';
 import { TelegramService } from './telegram.service';
 import {
   CreateTelegramConfigDto,
@@ -40,6 +40,7 @@ export class TelegramController {
 
   @ApiOperation({ summary: 'Get all Telegram configurations with optional merchant filter' })
   @RequirePermissions('settings.telegram', 'settings.general', 'settings.manage', 'merchants.read')
+  @ApiQuery({ name: 'merchantId', required: false, type: Number })
   @Get('configs')
   findAllConfigs(@Query('merchantId') merchantId?: string, @Req() req?: any) {
     const tenantId = req?.user?.tenantId;
@@ -51,6 +52,7 @@ export class TelegramController {
 
   @ApiOperation({ summary: 'Get a single Telegram configuration by ID' })
   @RequirePermissions('settings.telegram', 'settings.general', 'settings.manage')
+  @ApiParam({ name: 'id', type: Number, description: 'Telegram config ID' })
   @Get('configs/:id')
   findOneConfig(@Param('id', ParseIntPipe) id: number) {
     return this.telegramService.findOneConfig(id);
@@ -58,6 +60,7 @@ export class TelegramController {
 
   @ApiOperation({ summary: 'Update Telegram configuration' })
   @RequirePermissions('settings.telegram', 'settings.general', 'settings.manage')
+  @ApiParam({ name: 'id', type: Number, description: 'Telegram config ID' })
   @Patch('configs/:id')
   updateConfig(
     @Param('id', ParseIntPipe) id: number,
@@ -68,6 +71,7 @@ export class TelegramController {
 
   @ApiOperation({ summary: 'Delete Telegram configuration' })
   @RequirePermissions('settings.telegram', 'settings.general', 'settings.manage')
+  @ApiParam({ name: 'id', type: Number, description: 'Telegram config ID' })
   @Delete('configs/:id')
   removeConfig(@Param('id', ParseIntPipe) id: number) {
     return this.telegramService.removeConfig(id);
@@ -95,6 +99,7 @@ export class TelegramController {
 
   @ApiOperation({ summary: 'Get Telegram notification logs' })
   @RequirePermissions('settings.telegram', 'settings.general', 'settings.manage')
+  @ApiQuery({ name: 'limit', required: false, type: Number })
   @Get('logs')
   getLogs(@Query('limit') limit?: string, @Req() req?: any) {
     const tenantId = req?.user?.tenantId;
@@ -103,6 +108,8 @@ export class TelegramController {
 
   @ApiOperation({ summary: 'Get Telegram logs for a specific merchant' })
   @RequirePermissions('settings.telegram', 'settings.general', 'settings.manage', 'merchants.read')
+  @ApiParam({ name: 'merchantId', type: Number, description: 'Merchant ID' })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
   @Get('logs/merchant/:merchantId')
   getMerchantLogs(
     @Param('merchantId', ParseIntPipe) merchantId: number,

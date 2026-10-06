@@ -83,6 +83,7 @@ export default function PickupRequestDetailPage() {
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError]   = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+  const [previewModalImg, setPreviewModalImg] = useState<string | null>(null);
 
   /* ── batch entry state ── */
   const [entryTab, setEntryTab]               = useState<'single' | 'batch'>('single');
@@ -379,6 +380,7 @@ export default function PickupRequestDetailPage() {
                     <InfoRow label={t('scheduledAt')} value={formatDate(request.pickupTime)} />
                     <InfoRow label={t('pickedUpAt')} value={formatDate(request.pickedUpAt)} />
                     <InfoRow label={t('note')} value={request.note || '—'} />
+                    {request.driverNote && <InfoRow label="Driver Note" value={<span style={{ color: '#16a34a' }}>{request.driverNote}</span>} />}
                   </div>
 
                   {/* Driver */}
@@ -419,6 +421,68 @@ export default function PickupRequestDetailPage() {
                       </div>
                     </div>
                   </div>
+
+                  {/* Package / Goods Photos */}
+                  {(request.photo || (request.photos && request.photos.length > 0)) && (
+                    <div style={{ flex: '1 1 200px' }}>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>
+                        Package Photo(s)
+                      </div>
+                      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                        {(request.photos && request.photos.length > 0 ? request.photos : [request.photo]).map((src: string, idx: number) => (
+                          <div
+                            key={idx}
+                            onClick={() => setPreviewModalImg(src)}
+                            style={{
+                              width: 68,
+                              height: 68,
+                              borderRadius: 12,
+                              overflow: 'hidden',
+                              border: '1.5px solid #dbeafe',
+                              cursor: 'pointer',
+                              boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+                              position: 'relative',
+                              background: '#000',
+                            }}
+                            title="Click to view"
+                          >
+                            <img src={src} alt={`Goods ${idx + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Driver Pickup Proof Photos */}
+                  {(request.pickupProofPhoto || (request.pickupProofPhotos && request.pickupProofPhotos.length > 0)) && (
+                    <div style={{ flex: '1 1 200px' }}>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: '#16a34a', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>
+                        📸 Pickup Proof Photo(s)
+                      </div>
+                      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                        {(request.pickupProofPhotos && request.pickupProofPhotos.length > 0 ? request.pickupProofPhotos : [request.pickupProofPhoto]).map((src: string, idx: number) => (
+                          <div
+                            key={idx}
+                            onClick={() => setPreviewModalImg(src)}
+                            style={{
+                              width: 68,
+                              height: 68,
+                              borderRadius: 12,
+                              overflow: 'hidden',
+                              border: '1.5px solid #86efac',
+                              cursor: 'pointer',
+                              boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+                              position: 'relative',
+                              background: '#000',
+                            }}
+                            title="Click to view driver proof"
+                          >
+                            <img src={src} alt={`Proof ${idx + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -844,6 +908,62 @@ export default function PickupRequestDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* Lightbox / Zoom Modal */}
+      {previewModalImg && (
+        <div
+          onClick={() => setPreviewModalImg(null)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.85)',
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 20,
+            backdropFilter: 'blur(4px)',
+          }}
+        >
+          <div
+            style={{
+              position: 'relative',
+              maxWidth: '92vw',
+              maxHeight: '85vh',
+              borderRadius: 16,
+              overflow: 'hidden',
+              boxShadow: '0 10px 40px rgba(0,0,0,0.5)',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <img
+              src={previewModalImg}
+              alt="Enlarged Goods"
+              style={{ maxWidth: '100%', maxHeight: '85vh', objectFit: 'contain', display: 'block' }}
+            />
+            <button
+              onClick={() => setPreviewModalImg(null)}
+              style={{
+                position: 'absolute',
+                top: 12,
+                right: 12,
+                width: 36,
+                height: 36,
+                borderRadius: '50%',
+                background: 'rgba(0,0,0,0.6)',
+                border: 'none',
+                color: '#fff',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <MdClose size={22} />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

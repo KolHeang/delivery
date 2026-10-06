@@ -21,10 +21,30 @@ export class CreatePickupRequestDto {
   @IsString()
   pickupAddress?: string;
 
+  @ApiProperty({ required: false, description: 'Optional Merchant Branch ID' })
+  @IsOptional()
+  @IsNumber()
+  @Type(() => Number)
+  branchId?: number;
+
   @ApiProperty()
   @IsNotEmpty()
   @IsString()
   pickupTime: string;
+
+  @ApiProperty({ required: false, description: 'Package photo (base64 or URL)' })
+  @IsOptional()
+  @IsString()
+  photo?: string;
+
+  @ApiProperty({ required: false, description: 'List of package photos' })
+  @IsOptional()
+  photos?: string[];
+
+  @ApiProperty({ required: false, description: 'Optional pickup instructions or note' })
+  @IsOptional()
+  @IsString()
+  note?: string;
 }
 
 export class ConfirmPickupDto {
@@ -34,6 +54,20 @@ export class ConfirmPickupDto {
   @Min(0)
   @Type(() => Number)
   actualQuantity: number;
+
+  @ApiProperty({ required: false, description: 'Pickup proof photo taken by driver' })
+  @IsOptional()
+  @IsString()
+  pickupProofPhoto?: string;
+
+  @ApiProperty({ required: false, description: 'List of pickup proof photos taken by driver' })
+  @IsOptional()
+  pickupProofPhotos?: string[];
+
+  @ApiProperty({ required: false, description: 'Driver note upon pickup' })
+  @IsOptional()
+  @IsString()
+  driverNote?: string;
 }
 
 export class AssignRiderDto {

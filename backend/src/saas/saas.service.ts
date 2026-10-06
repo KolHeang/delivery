@@ -54,7 +54,13 @@ export class SaasService {
   async getTenantById(id: number) {
     const tenant = await this.tenantRepo.findOne({
       where: { id },
-      relations: { plan: true, domains: true, subscriptions: true },
+      relations: {
+        plan: true,
+        domains: true,
+        subscriptions: {
+          invoices: true,
+        },
+      },
     });
     if (!tenant) throw new NotFoundException('Tenant not found');
     const adminUser = await this.userRepo.findOne({

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { isAuthenticated } from "@/lib/auth";
 import Sidebar from "@/components/layout/Sidebar";
@@ -8,15 +8,22 @@ import Topbar from "@/components/layout/Topbar";
 import api from "@/lib/api";
 import { useLanguage } from "@/lib/LanguageContext";
 import { useSettings } from "@/lib/SettingsContext";
+import LocationMapModal from "@/components/ui/LocationMapModal";
+import { MdArrowBack, MdSave, MdMap } from "react-icons/md";
 
 export default function EditShopPage() {
   const router = useRouter();
   const params = useParams();
-  const { t } = useLanguage();
+  const { lang } = useLanguage();
   const { khrRate } = useSettings();
   const [loading, setLoading] = useState(true);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
+  const [isMapOpen, setIsMapOpen] = useState(false);
+  const [zones, setZones] = useState<any[]>([]);
+
+  const photoInputRef = useRef<HTMLInputElement | null>(null);
+
   const [form, setForm] = useState({
     name: "",
     nameKh: "",
@@ -24,6 +31,8 @@ export default function EditShopPage() {
     phone: "",
     email: "",
     address: "",
+    latitude: "",
+    longitude: "",
     pricingTier: "standard",
     zoneId: "",
     deliveryFee: "0",
@@ -44,11 +53,8 @@ export default function EditShopPage() {
     }
   }, [khrRate]);
 
-  const [zones, setZones] = useState<any[]>([]);
   const [qrKhrFile, setQrKhrFile] = useState<File | null>(null);
   const [qrUsdFile, setQrUsdFile] = useState<File | null>(null);
-  const [qrKhrPreview, setQrKhrPreview] = useState<string>("");
-  const [qrUsdPreview, setQrUsdPreview] = useState<string>("");
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string>("");
 
@@ -76,6 +82,8 @@ export default function EditShopPage() {
             phone: shop.phone || "",
             email: shop.email || "",
             address: shop.address || "",
+            latitude: shop.latitude ? String(shop.latitude) : "",
+            longitude: shop.longitude ? String(shop.longitude) : "",
             pricingTier: shop.pricingTier || "standard",
             zoneId: shop.zoneId ? shop.zoneId.toString() : "",
             deliveryFee: shop.deliveryFee ? shop.deliveryFee.toString() : "0",
@@ -89,12 +97,9 @@ export default function EditShopPage() {
             qrLinkKhr: shop.qrLinkKhr || "",
             qrLinkUsd: shop.qrLinkUsd || "",
           });
-          if (shop.qrImageKhr) setQrKhrPreview(shop.qrImageKhr);
-          if (shop.qrImageUsd) setQrUsdPreview(shop.qrImageUsd);
           if (shop.photo) setPhotoPreview(shop.photo);
         }
       } catch (err) {
-        console.error("Failed to load shop details", err);
         alert("Failed to load shop details.");
         router.push("/merchants");
       }
@@ -115,42 +120,17 @@ export default function EditShopPage() {
     }
   };
 
-  const handleFileChange =
-    (field: "qrImageKhr" | "qrImageUsd") => (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      if (!file) return;
-      if (field === "qrImageKhr") {
-        setQrKhrFile(file);
-        setQrKhrPreview(URL.createObjectURL(file));
-      } else {
-        setQrUsdFile(file);
-        setQrUsdPreview(URL.createObjectURL(file));
-      }
-    };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const errs: Record<string, string> = {};
-    if (!form.name.trim()) {
-      errs.name = "សូមបំពេញឈ្មោះហាង (Shop Name)";
+    if (!form.name.trim()) errs.name = lang === "km" ? "សូមបញ្ចូលឈ្មោះហាង" : "Please enter shop name";
+    if (!form.phone.trim()) errs.phone = lang === "km" ? "សូមបញ្ចូលលេខទូរស័ព្ទ" : "Please enter phone number";
+    if (form.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
+      errs.email = lang === "km" ? "សូមបំពេញអ៊ីម៉ែលត្រឹមត្រូវ" : "Invalid email";
     }
-    if (!form.phone.trim()) {
-      errs.phone = "សូមបំពេញលេខទូរស័ព្ទ";
-    }
-    if (!form.email.trim()) {
-      errs.email = "សូមបំពេញអ៊ីម៉ែល";
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
-      errs.email = "សូមបំពេញអ៊ីម៉ែលត្រឹមត្រូវ";
-    }
-    if (!form.address.trim()) {
-      errs.address = "សូមបំពេញអាសយដ្ឋាន";
-    }
-    if (!form.deliveryFee) {
-      errs.deliveryFee = "សូមបំពេញតម្លៃសេវាដឹក";
-    }
-    if (!form.exchangeRate) {
-      errs.exchangeRate = "សូមបំពេញអត្រាប្តូរប្រាក់";
-    }
+    if (!form.address.trim()) errs.address = lang === "km" ? "សូមបញ្ចូលអាសយដ្ឋាន" : "Please enter address";
+    if (!form.deliveryFee) errs.deliveryFee = lang === "km" ? "សូមបញ្ចូលថ្លៃដឹក" : "Please enter fee";
+    if (!form.exchangeRate) errs.exchangeRate = lang === "km" ? "សូមបញ្ចូលអត្រាប្តូរប្រាក់" : "Please enter rate";
 
     if (Object.keys(errs).length > 0) {
       setErrors(errs);
@@ -167,6 +147,8 @@ export default function EditShopPage() {
       formData.append("phone", form.phone);
       formData.append("email", form.email);
       formData.append("address", form.address);
+      if (form.latitude) formData.append("latitude", form.latitude);
+      if (form.longitude) formData.append("longitude", form.longitude);
       formData.append("pricingTier", form.pricingTier);
       if (form.zoneId) formData.append("zoneId", form.zoneId);
       formData.append("deliveryFee", form.deliveryFee);
@@ -176,20 +158,12 @@ export default function EditShopPage() {
       formData.append("qrLinkKhr", form.qrLinkKhr);
       formData.append("qrLinkUsd", form.qrLinkUsd);
 
-      if (qrKhrFile) {
-        formData.append("qrImageKhr", qrKhrFile);
-      }
-      if (qrUsdFile) {
-        formData.append("qrImageUsd", qrUsdFile);
-      }
-      if (photoFile) {
-        formData.append("photo", photoFile);
-      }
+      if (qrKhrFile) formData.append("qrImageKhr", qrKhrFile);
+      if (qrUsdFile) formData.append("qrImageUsd", qrUsdFile);
+      if (photoFile) formData.append("photo", photoFile);
 
       await api.patch(`/merchants/${params.id}`, formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
+        headers: { "Content-Type": "multipart/form-data" },
       });
       router.push("/merchants");
     } catch (err: any) {
@@ -198,84 +172,203 @@ export default function EditShopPage() {
     setSaving(false);
   };
 
-  if (loading)
+  if (loading) {
     return (
       <div className="app-layout">
         <Sidebar />
         <div className="main-content">
-          <div className="loading-wrapper">
-            <div className="spinner" />
-          </div>
+          <div className="loading-wrapper"><div className="spinner" /></div>
         </div>
       </div>
     );
+  }
 
   return (
     <div className="app-layout">
       <Sidebar />
       <div className="main-content">
-        <Topbar title={t("editShop")} subtitle="កែប្រែព័ត៌មាន និងការកំណត់របស់ហាងទំនិញ" />
+        <Topbar
+          title={lang === "km" ? "🏪 កែប្រែព័ត៌មានហាង" : "🏪 Edit Merchant"}
+          subtitle={form.name ? `${lang === "km" ? "ហាង" : "Shop"}: ${form.name}` : "Update shop"}
+        />
+
         <div className="page-content">
           <div className="card">
-            <div className="card-header">
-              <span className="card-title">{t("editShop")}</span>
+            {/* Header */}
+            <div className="card-header" style={{ display: "flex", alignItems: "center", gap: 10, padding: "14px 20px" }}>
+              <button
+                type="button"
+                onClick={() => router.push("/merchants")}
+                className="btn btn-ghost btn-icon btn-sm"
+              >
+                <MdArrowBack size={18} />
+              </button>
+              <span className="card-title" style={{ fontSize: 16, fontWeight: 700 }}>
+                {lang === "km" ? "កែប្រែហាង" : "Edit Merchant"} {form.name ? `- ${form.name}` : ""}
+              </span>
             </div>
-            <div className="card-body">
-              <form onSubmit={handleSubmit} noValidate>
-                {/* Shop Photo Upload */}
-                <div className="form-row" style={{ alignItems: "center", marginBottom: 20 }}>
+
+            <div className="card-body" style={{ padding: "20px 24px" }}>
+              <form noValidate onSubmit={handleSubmit}>
+                {/* Logo & Basic Info Header */}
+                <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 20 }}>
+                  <input
+                    ref={photoInputRef}
+                    type="file"
+                    accept="image/*"
+                    style={{ display: "none" }}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        setPhotoFile(file);
+                        setPhotoPreview(URL.createObjectURL(file));
+                      }
+                    }}
+                  />
                   <div
-                    className="form-group"
-                    style={{ display: "flex", alignItems: "center", gap: 16 }}
+                    onClick={() => photoInputRef.current?.click()}
+                    style={{
+                      width: 60,
+                      height: 60,
+                      borderRadius: "50%",
+                      background: "#f1f5f9",
+                      border: "1px solid #cbd5e1",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      cursor: "pointer",
+                      overflow: "hidden",
+                      flexShrink: 0,
+                    }}
                   >
-                    <div
-                      style={{
-                        width: 70,
-                        height: 70,
-                        borderRadius: "50%",
-                        border: "2px dashed var(--border)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        overflow: "hidden",
-                        background: "var(--card-bg)",
-                      }}
+                    {photoPreview ? (
+                      <img src={photoPreview} alt="Logo" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    ) : (
+                      <span style={{ fontSize: 24 }}>🏪</span>
+                    )}
+                  </div>
+                  <div>
+                    <button
+                      type="button"
+                      onClick={() => photoInputRef.current?.click()}
+                      className="btn btn-outline btn-sm"
+                      style={{ fontSize: 12, padding: "4px 12px" }}
                     >
-                      {photoPreview ? (
-                        <img
-                          src={photoPreview}
-                          alt="Preview"
-                          style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                        />
-                      ) : (
-                        <span style={{ fontSize: 28, color: "var(--text-muted)" }}>🏪</span>
-                      )}
-                    </div>
-                    <div>
-                      <label className="form-label" style={{ marginBottom: 4 }}>
-                        {t("profilePhoto")}
-                      </label>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) {
-                            setPhotoFile(file);
-                            setPhotoPreview(URL.createObjectURL(file));
-                          }
+                      {photoPreview ? (lang === "km" ? "ប្តូររូប Logo" : "Change Logo") : (lang === "km" ? "ដាក់រូប Logo" : "Upload Logo")}
+                    </button>
+                    {photoPreview && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPhotoFile(null);
+                          setPhotoPreview("");
                         }}
-                        style={{ fontSize: 13 }}
-                      />
-                    </div>
+                        className="btn btn-ghost btn-sm"
+                        style={{ color: "#ef4444", fontSize: 12, marginLeft: 8 }}
+                      >
+                        {lang === "km" ? "លុប" : "Remove"}
+                      </button>
+                    )}
                   </div>
                 </div>
 
-                {/* Row 1: Delivery Fee & Exchange Rate */}
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
-                  <div className="form-group">
-                    <label className="form-label">
-                      {t("deliveryFee")} <span style={{ color: '#ef4444' }}>*</span>
+                {/* Section: ព័ត៌មានហាង */}
+                <div style={{ borderBottom: "1px solid #e2e8f0", paddingBottom: 6, marginBottom: 16, fontWeight: 700, fontSize: 13.5, color: "#334155" }}>
+                  {lang === "km" ? "ព័ត៌មានទូទៅ" : "General Info"}
+                </div>
+
+                {/* Row 1: Name EN, Name KH */}
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 16, marginBottom: 14 }}>
+                  <div>
+                    <label className="form-label" style={{ fontWeight: 600, fontSize: 13 }}>
+                      {lang === "km" ? "ឈ្មោះហាង (English)" : "Shop Name"} <span style={{ color: "var(--danger)" }}>*</span>
+                    </label>
+                    <input
+                      className={`form-control ${errors.name ? "is-invalid" : ""}`}
+                      placeholder="e.g. Zando Shop"
+                      value={form.name}
+                      onChange={(e) => handleFieldChange("name", e.target.value)}
+                    />
+                    {errors.name && <div className="form-error-text" style={{ color: "var(--danger)", fontSize: 12, marginTop: 3 }}>{errors.name}</div>}
+                  </div>
+                  <div>
+                    <label className="form-label" style={{ fontWeight: 600, fontSize: 13 }}>
+                      {lang === "km" ? "ឈ្មោះជាភាសាខ្មែរ" : "Khmer Name"}
+                    </label>
+                    <input
+                      className="form-control"
+                      placeholder="ឧ. ហាង ហ្សានដូ"
+                      value={form.nameKh}
+                      onChange={(e) => handleFieldChange("nameKh", e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                {/* Row 2: Phone, Contact */}
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 16, marginBottom: 14 }}>
+                  <div>
+                    <label className="form-label" style={{ fontWeight: 600, fontSize: 13 }}>
+                      {lang === "km" ? "លេខទូរស័ព្ទ" : "Phone"} <span style={{ color: "var(--danger)" }}>*</span>
+                    </label>
+                    <input
+                      className={`form-control ${errors.phone ? "is-invalid" : ""}`}
+                      placeholder="012 345 678"
+                      value={form.phone}
+                      onChange={(e) => handleFieldChange("phone", e.target.value)}
+                    />
+                    {errors.phone && <div className="form-error-text" style={{ color: "var(--danger)", fontSize: 12, marginTop: 3 }}>{errors.phone}</div>}
+                  </div>
+                  <div>
+                    <label className="form-label" style={{ fontWeight: 600, fontSize: 13 }}>
+                      {lang === "km" ? "អ្នកទំនាក់ទំនង / ម្ចាស់ហាង" : "Contact Person"}
+                    </label>
+                    <input
+                      className="form-control"
+                      placeholder={lang === "km" ? "ឈ្មោះអ្នកចាត់ការ" : "Manager Name"}
+                      value={form.contact}
+                      onChange={(e) => handleFieldChange("contact", e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                {/* Row 3: Email, Telegram */}
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 16, marginBottom: 18 }}>
+                  <div>
+                    <label className="form-label" style={{ fontWeight: 600, fontSize: 13 }}>
+                      {lang === "km" ? "អ៊ីមែល" : "Email"}
+                    </label>
+                    <input
+                      type="email"
+                      className={`form-control ${errors.email ? "is-invalid" : ""}`}
+                      placeholder="shop@example.com"
+                      value={form.email}
+                      onChange={(e) => handleFieldChange("email", e.target.value)}
+                    />
+                    {errors.email && <div className="form-error-text" style={{ color: "var(--danger)", fontSize: 12, marginTop: 3 }}>{errors.email}</div>}
+                  </div>
+                  <div>
+                    <label className="form-label" style={{ fontWeight: 600, fontSize: 13 }}>
+                      {lang === "km" ? "Telegram" : "Telegram"}
+                    </label>
+                    <input
+                      className="form-control"
+                      placeholder="@username"
+                      value={form.telegram}
+                      onChange={(e) => handleFieldChange("telegram", e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                {/* Section: ទីតាំង និងតម្លៃដឹក */}
+                <div style={{ borderBottom: "1px solid #e2e8f0", paddingBottom: 6, marginBottom: 16, fontWeight: 700, fontSize: 13.5, color: "#334155" }}>
+                  {lang === "km" ? "ទីតាំង និងការកំណត់សេវា" : "Location & Pricing"}
+                </div>
+
+                {/* Row 4: Delivery Fee, Exchange Rate */}
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 16, marginBottom: 14 }}>
+                  <div>
+                    <label className="form-label" style={{ fontWeight: 600, fontSize: 13 }}>
+                      {lang === "km" ? "ថ្លៃដឹកគោល ($)" : "Fee ($)"} <span style={{ color: "var(--danger)" }}>*</span>
                     </label>
                     <input
                       type="number"
@@ -284,13 +377,11 @@ export default function EditShopPage() {
                       value={form.deliveryFee}
                       onChange={(e) => handleFieldChange("deliveryFee", e.target.value)}
                     />
-                    {errors.deliveryFee && (
-                      <div className="form-error-text">{errors.deliveryFee}</div>
-                    )}
+                    {errors.deliveryFee && <div className="form-error-text" style={{ color: "var(--danger)", fontSize: 12, marginTop: 3 }}>{errors.deliveryFee}</div>}
                   </div>
-                  <div className="form-group">
-                    <label className="form-label">
-                      {t("exchangeRate")} <span style={{ color: '#ef4444' }}>*</span>
+                  <div>
+                    <label className="form-label" style={{ fontWeight: 600, fontSize: 13 }}>
+                      {lang === "km" ? "អត្រាប្តូរប្រាក់ (៛)" : "Rate (KHR)"} <span style={{ color: "var(--danger)" }}>*</span>
                     </label>
                     <input
                       type="number"
@@ -298,229 +389,142 @@ export default function EditShopPage() {
                       value={form.exchangeRate}
                       onChange={(e) => handleFieldChange("exchangeRate", e.target.value)}
                     />
-                    {errors.exchangeRate && (
-                      <div className="form-error-text">{errors.exchangeRate}</div>
-                    )}
+                    {errors.exchangeRate && <div className="form-error-text" style={{ color: "var(--danger)", fontSize: 12, marginTop: 3 }}>{errors.exchangeRate}</div>}
                   </div>
                 </div>
 
-                {/* Section 2: Shop Info */}
-                <div
-                  style={{
-                    background: "#f8fafc",
-                    border: "1px solid var(--border)",
-                    padding: "10px 16px",
-                    fontWeight: "bold",
-                    fontSize: 13,
-                    color: "#334155",
-                    margin: "20px 0 16px",
-                    borderRadius: 6,
-                  }}
-                >
-                  {t("shopInfo")}
-                </div>
-
-                {/* Row 2: Name, Phone, Email, Address */}
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
-                  <div className="form-group">
-                    <label className="form-label">
-                      {t("name")} <span style={{ color: '#ef4444' }}>*</span>
-                    </label>
-                    <input
-                      type="text"
-                      className={`form-control ${errors.name ? "is-invalid" : ""}`}
-                      placeholder="e.g. Zando Shop"
-                      value={form.name}
-                      onChange={(e) => handleFieldChange("name", e.target.value)}
-                    />
-                    {errors.name && <div className="form-error-text">{errors.name}</div>}
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">
-                      {t("phone")} <span style={{ color: '#ef4444' }}>*</span>
-                    </label>
-                    <input
-                      type="text"
-                      className={`form-control ${errors.phone ? "is-invalid" : ""}`}
-                      placeholder="e.g. 012-100-200"
-                      value={form.phone}
-                      onChange={(e) => handleFieldChange("phone", e.target.value)}
-                    />
-                    {errors.phone && <div className="form-error-text">{errors.phone}</div>}
-                  </div>
-                </div>
-
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
-                  <div className="form-group">
-                    <label className="form-label">
-                      {t("email")} <span style={{ color: '#ef4444' }}>*</span>
-                    </label>
-                    <input
-                      type="email"
-                      className={`form-control ${errors.email ? "is-invalid" : ""}`}
-                      placeholder="e.g. zando@shop.com"
-                      value={form.email}
-                      onChange={(e) => handleFieldChange("email", e.target.value)}
-                    />
-                    {errors.email && <div className="form-error-text">{errors.email}</div>}
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">
-                      {t("address")} <span style={{ color: '#ef4444' }}>*</span>
-                    </label>
+                {/* Row 5: Address with single Map button */}
+                <div style={{ marginBottom: 18 }}>
+                  <label className="form-label" style={{ fontWeight: 600, fontSize: 13 }}>
+                    {lang === "km" ? "អាសយដ្ឋាន" : "Address"} <span style={{ color: "var(--danger)" }}>*</span>
+                  </label>
+                  <div style={{ display: "flex", gap: 8 }}>
                     <input
                       type="text"
                       className={`form-control ${errors.address ? "is-invalid" : ""}`}
-                      placeholder="Full address..."
+                      placeholder={lang === "km" ? "បញ្ចូលអាសយដ្ឋាន ឬចុចជ្រើសរើសលើផែនទី..." : "Enter address or select on map..."}
                       value={form.address}
                       onChange={(e) => handleFieldChange("address", e.target.value)}
+                      style={{ flex: 1 }}
                     />
-                    {errors.address && (
-                      <div className="form-error-text">{errors.address}</div>
-                    )}
+                    <button
+                      type="button"
+                      onClick={() => setIsMapOpen(true)}
+                      className="btn btn-outline"
+                      style={{
+                        whiteSpace: "nowrap",
+                        fontWeight: 600,
+                        fontSize: 13,
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 6,
+                        color: "#2563eb",
+                        borderColor: "#2563eb",
+                      }}
+                    >
+                      <MdMap size={18} />
+                      {lang === "km" ? "រើសលើផែនទី" : "Pick on Map"}
+                    </button>
+                  </div>
+                  {errors.address && (
+                    <div className="form-error-text" style={{ color: "var(--danger)", fontSize: 12, marginTop: 3 }}>
+                      {errors.address}
+                    </div>
+                  )}
+                  {form.latitude && form.longitude && (
+                    <div style={{ fontSize: 11.5, color: "#16a34a", marginTop: 4 }}>
+                      📍 GPS: {Number(form.latitude).toFixed(5)}, {Number(form.longitude).toFixed(5)}
+                    </div>
+                  )}
+                </div>
+
+                {/* Section: ការទូទាត់ QR Code */}
+                <div style={{ borderBottom: "1px solid #e2e8f0", paddingBottom: 6, marginBottom: 16, fontWeight: 700, fontSize: 13.5, color: "#334155" }}>
+                  {lang === "km" ? "គណនីទូទាត់ (QR Code)" : "Payment QR"}
+                </div>
+
+                {/* Row 6: QR KHR & QR USD */}
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 16, marginBottom: 18 }}>
+                  <div>
+                    <label className="form-label" style={{ fontWeight: 600, fontSize: 13 }}>
+                      🇰🇭 {lang === "km" ? "KHQR ប្រាក់រៀល" : "KHR QR"}
+                    </label>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="form-control"
+                      style={{ fontSize: 13, padding: 6, marginBottom: 6 }}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) setQrKhrFile(file);
+                      }}
+                    />
+                    <input
+                      className="form-control"
+                      placeholder="Link QR KHR (Optional)"
+                      value={form.qrLinkKhr}
+                      onChange={(e) => handleFieldChange("qrLinkKhr", e.target.value)}
+                      style={{ fontSize: 13 }}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="form-label" style={{ fontWeight: 600, fontSize: 13 }}>
+                      💵 {lang === "km" ? "KHQR ប្រាក់ដុល្លារ" : "USD QR"}
+                    </label>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="form-control"
+                      style={{ fontSize: 13, padding: 6, marginBottom: 6 }}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) setQrUsdFile(file);
+                      }}
+                    />
+                    <input
+                      className="form-control"
+                      placeholder="Link QR USD (Optional)"
+                      value={form.qrLinkUsd}
+                      onChange={(e) => handleFieldChange("qrLinkUsd", e.target.value)}
+                      style={{ fontSize: 13 }}
+                    />
                   </div>
                 </div>
 
-                {/* Row 3: Note */}
-                <div className="form-group">
-                  <label className="form-label">{t("note")}</label>
+                {/* Row 7: Note */}
+                <div style={{ marginBottom: 20 }}>
+                  <label className="form-label" style={{ fontWeight: 600, fontSize: 13 }}>
+                    {lang === "km" ? "ចំណាំផ្សេងៗ" : "Notes"}
+                  </label>
                   <textarea
                     className="form-control"
                     rows={2}
-                    placeholder="Enter notes..."
+                    placeholder={lang === "km" ? "ចំណាំផ្សេងៗ..." : "Notes..."}
                     value={form.note}
-                    onChange={(e) => setForm({ ...form, note: e.target.value })}
+                    onChange={(e) => handleFieldChange("note", e.target.value)}
+                    style={{ fontSize: 13.5 }}
                   />
                 </div>
 
-                {/* Section 3: Bank Info */}
-                <div
-                  style={{
-                    background: "#f8fafc",
-                    border: "1px solid var(--border)",
-                    padding: "10px 16px",
-                    fontWeight: "bold",
-                    fontSize: 13,
-                    color: "#334155",
-                    margin: "20px 0 16px",
-                    borderRadius: 6,
-                  }}
-                >
-                  {t("bankInfo")}
-                </div>
-
-                {/* Row 4: Telegram, Link QR KHR, Link QR USD */}
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 20 }}>
-                  <div className="form-group">
-                    <label className="form-label">{t("telegramLabel")}</label>
-                    <input
-                      type="text"
-                      className="form-control"
-                      placeholder="@tuyravey99"
-                      value={form.telegram}
-                      onChange={(e) => setForm({ ...form, telegram: e.target.value })}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">{t("qrLinkKhr")}</label>
-                    <input
-                      type="text"
-                      className="form-control"
-                      placeholder="Link..."
-                      value={form.qrLinkKhr}
-                      onChange={(e) => setForm({ ...form, qrLinkKhr: e.target.value })}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">{t("qrLinkUsd")}</label>
-                    <input
-                      type="text"
-                      className="form-control"
-                      placeholder="Link..."
-                      value={form.qrLinkUsd}
-                      onChange={(e) => setForm({ ...form, qrLinkUsd: e.target.value })}
-                    />
-                  </div>
-                </div>
-
-                {/* Row 5: QR KHR and USD file uploads */}
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
-                  <div className="form-group">
-                    <label className="form-label">{t("qrFileKhr")}</label>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        className="form-control"
-                        onChange={handleFileChange("qrImageKhr")}
-                      />
-                      {qrKhrPreview && (
-                        <img
-                          src={qrKhrPreview}
-                          alt="QR KHR Preview"
-                          style={{
-                            width: 80,
-                            height: 80,
-                            objectFit: "contain",
-                            border: "1px solid #ddd",
-                            borderRadius: 4,
-                          }}
-                        />
-                      )}
-                    </div>
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">{t("qrFileUsd")}</label>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        className="form-control"
-                        onChange={handleFileChange("qrImageUsd")}
-                      />
-                      {qrUsdPreview && (
-                        <img
-                          src={qrUsdPreview}
-                          alt="QR USD Preview"
-                          style={{
-                            width: 80,
-                            height: 80,
-                            objectFit: "contain",
-                            border: "1px solid #ddd",
-                            borderRadius: 4,
-                          }}
-                        />
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Bottom Buttons */}
-                <div
-                  style={{ marginTop: 24, display: "flex", gap: 12, justifyContent: "flex-end" }}
-                >
+                {/* Actions */}
+                <div style={{ display: "flex", gap: 12, justifyContent: "flex-end", paddingTop: 14, borderTop: "1px solid #e2e8f0" }}>
                   <button
                     type="button"
-                    className="btn btn-cancel"
-                    style={{ background: '#dc2626', color: '#ffffff', border: '1px solid #dc2626', fontWeight: 700 }}
+                    className="btn btn-secondary"
                     onClick={() => router.push("/merchants")}
+                    disabled={saving}
                   >
-                    {t("cancel")}
+                    {lang === "km" ? "បោះបង់" : "Cancel"}
                   </button>
                   <button
                     type="submit"
                     className="btn btn-primary"
-                    style={{
-                      background: "#2563eb",
-                      color: "#ffffff",
-                      border: "1px solid #2563eb",
-                      padding: "10px 24px",
-                      borderRadius: 6,
-                      fontWeight: "bold",
-                    }}
                     disabled={saving}
+                    style={{ background: "#2563eb", display: "inline-flex", alignItems: "center", gap: 6, fontWeight: 700 }}
                   >
-                    {saving ? t("saving") : t("save")}
+                    <MdSave size={18} />
+                    {saving ? (lang === "km" ? "កំពុងរក្សាទុក..." : "Saving...") : (lang === "km" ? "រក្សាទុកការកែប្រែ" : "Update Merchant")}
                   </button>
                 </div>
               </form>
@@ -528,6 +532,30 @@ export default function EditShopPage() {
           </div>
         </div>
       </div>
+
+      <LocationMapModal
+        isOpen={isMapOpen}
+        onClose={() => setIsMapOpen(false)}
+        initialAddress={form.address}
+        initialLat={form.latitude ? parseFloat(form.latitude) : undefined}
+        initialLng={form.longitude ? parseFloat(form.longitude) : undefined}
+        lang={lang}
+        onSelect={({ address, lat, lng }) => {
+          setForm((prev) => ({
+            ...prev,
+            address,
+            latitude: String(lat),
+            longitude: String(lng),
+          }));
+          if (errors.address) {
+            setErrors((prev) => {
+              const next = { ...prev };
+              delete next.address;
+              return next;
+            });
+          }
+        }}
+      />
     </div>
   );
 }

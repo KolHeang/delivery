@@ -35,16 +35,10 @@ export class CreateZoneDto {
   @ApiProperty({ required: false }) @IsOptional() @IsNumber() @Type(() => Number) tenantId?: number;
 }
 
-export class UpdateZoneDto {
-  @IsOptional() @IsString() name?: string;
-  @IsOptional() @IsString() code?: string;
-  @IsOptional() @IsNumber() @Min(0) @Type(() => Number) price?: number;
-  @IsOptional() @IsString() description?: string;
-  @IsOptional() @IsBoolean() active?: boolean;
-  @IsOptional() @IsNumber() @Type(() => Number) driverId?: number;
-  @IsOptional() @IsString() branch?: string;
-  @IsOptional() @IsNumber() @Type(() => Number) tenantId?: number;
-}
+import { PartialType } from '@nestjs/swagger';
+
+export class UpdateZoneDto extends PartialType(CreateZoneDto) {}
+
 
 export class CreateSubZoneDto {
   @ApiProperty() @IsNotEmpty() @IsString() name: string;

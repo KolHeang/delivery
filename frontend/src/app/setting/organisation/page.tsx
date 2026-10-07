@@ -7,16 +7,18 @@ import Sidebar from '@/components/layout/Sidebar';
 import Topbar from '@/components/layout/Topbar';
 import api from '@/lib/api';
 import { useLanguage } from '@/lib/LanguageContext';
+import { useTenant } from '@/lib/TenantContext';
 
 export default function OrganisationSettingsPage() {
   const router = useRouter();
   const { t, lang } = useLanguage();
+  const { tenant, isTenant } = useTenant();
   const [form, setForm] = useState({
-    name: 'EBS Digital Solutions',
-    phone: '+855 78 000 000',
-    email: 'info@ebs.com',
-    website: 'https://ebs.com',
-    address: 'Phnom Penh, Cambodia',
+    name: '',
+    phone: '',
+    email: '',
+    website: '',
+    address: '',
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -28,10 +30,14 @@ export default function OrganisationSettingsPage() {
       try {
         const res = await api.get('/settings/organisation');
         if (res.data) {
+          const defaultName = (isTenant && (!res.data.name || res.data.name === 'EBS Digital Solutions'))
+            ? (tenant?.companyName || res.data.name || '')
+            : (res.data.name || '');
+
           setForm({
-            name: res.data.name || '',
-            phone: res.data.phone || '',
-            email: res.data.email || '',
+            name: defaultName,
+            phone: res.data.phone || (tenant?.phone || ''),
+            email: res.data.email || (tenant?.email || ''),
             website: res.data.website || '',
             address: res.data.address || '',
           });
@@ -40,7 +46,7 @@ export default function OrganisationSettingsPage() {
       setLoading(false);
     };
     load();
-  }, [router]);
+  }, [router, tenant?.companyName, isTenant]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,6 +55,8 @@ export default function OrganisationSettingsPage() {
     try {
       await api.post('/settings/organisation', form);
       if (typeof window !== 'undefined') {
+        const cacheKey = tenant?.subdomain ? `app-org-settings-${tenant.subdomain}` : 'app-org-settings';
+        localStorage.setItem(cacheKey, JSON.stringify(form));
         localStorage.setItem('app-org-settings', JSON.stringify(form));
         window.dispatchEvent(new Event('org-settings-updated'));
       }

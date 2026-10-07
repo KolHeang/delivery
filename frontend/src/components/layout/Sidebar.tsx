@@ -178,7 +178,8 @@ export default function Sidebar() {
   useEffect(() => {
     const updateOrg = () => {
       try {
-        const cached = localStorage.getItem('app-org-settings');
+        const cacheKey = tenant?.subdomain ? `app-org-settings-${tenant.subdomain}` : 'app-org-settings';
+        const cached = localStorage.getItem(cacheKey) || (!isTenant ? localStorage.getItem('app-org-settings') : null);
         if (cached) {
           const parsed = JSON.parse(cached);
           if (parsed?.name) setOrgName(parsed.name);
@@ -190,16 +191,20 @@ export default function Sidebar() {
       if (res.data?.name) {
         setOrgName(res.data.name);
         if (typeof window !== 'undefined') {
-          localStorage.setItem('app-org-settings', JSON.stringify(res.data));
+          const cacheKey = tenant?.subdomain ? `app-org-settings-${tenant.subdomain}` : 'app-org-settings';
+          localStorage.setItem(cacheKey, JSON.stringify(res.data));
         }
       }
     }).catch(() => {});
 
     window.addEventListener('org-settings-updated', updateOrg);
     return () => window.removeEventListener('org-settings-updated', updateOrg);
-  }, []);
+  }, [tenant?.subdomain, isTenant]);
 
-  const activeCompanyName = orgName || tenant?.companyName || subscription?.companyName;
+  const activeCompanyName = 
+    (isTenant && tenant?.companyName && (!orgName || orgName === 'EBS Digital Solutions'))
+      ? tenant.companyName
+      : (orgName && orgName !== 'EBS Digital Solutions' ? orgName : (tenant?.companyName || subscription?.companyName || orgName));
   const activeSubdomain = tenant?.subdomain || subscription?.subdomain;
 
   return (
@@ -233,7 +238,7 @@ export default function Sidebar() {
           </span>
           <span style={{
             fontSize: 11,
-            color: activeSubdomain ? '#93c5fd' : 'rgba(255,255,255,0.65)',
+            color: 'rgba(255,255,255,0.65)',
             fontWeight: 600,
             marginTop: 2,
             letterSpacing: '0.2px',
@@ -241,7 +246,7 @@ export default function Sidebar() {
             textOverflow: 'ellipsis',
             overflow: 'hidden'
           }}>
-            {activeSubdomain ? `${activeSubdomain}${typeof window !== 'undefined' ? (window.location.hostname.includes('rithyboth.work') ? '.new-delivery.rithyboth.work' : (window.location.hostname.includes('localhost') ? '.localhost' : '.new-delivery.rithyboth.work')) : '.new-delivery.rithyboth.work'}` : (lang === 'km' ? 'ប្រព័ន្ធដឹកជញ្ជូន' : 'Delivery System')}
+            {lang === 'km' ? 'ប្រព័ន្ធដឹកជញ្ជូន' : 'Delivery System'}
           </span>
         </div>
       </div>

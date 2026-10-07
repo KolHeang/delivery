@@ -35,7 +35,32 @@ export class SettingsService {
     let org: Organisation | null = null;
     if (resolvedTenantId) {
       org = await this.orgRepo.findOne({ where: { tenantId: resolvedTenantId } });
+      const tenant = await this.tenantRepo.findOne({ where: { id: resolvedTenantId } });
+      if (!org) {
+        if (tenant) {
+          org = this.orgRepo.create({
+            name: tenant.name || 'Delivery Solutions',
+            phone: tenant.phone || '+855 78 000 000',
+            email: tenant.email || 'info@delivery.com',
+            website: `https://${tenant.slug}.new-delivery.rithyboth.work`,
+            address: tenant.address || 'Phnom Penh, Cambodia',
+            tenantId: resolvedTenantId,
+          });
+          org = await this.orgRepo.save(org);
+          return org;
+        }
+      } else if (org.name === 'EBS Digital Solutions' && tenant && tenant.name && tenant.name !== 'EBS Digital Solutions') {
+        org.name = tenant.name;
+        if (tenant.phone) org.phone = tenant.phone;
+        if (tenant.email) org.email = tenant.email;
+        if (tenant.address) org.address = tenant.address;
+        org = await this.orgRepo.save(org);
+        return org;
+      } else {
+        return org;
+      }
     }
+
     if (!org) {
       org = await this.orgRepo.findOne({ where: { tenantId: IsNull() } });
     }
@@ -62,15 +87,19 @@ export class SettingsService {
     let org: Organisation | null = null;
     if (resolvedTenantId) {
       org = await this.orgRepo.findOne({ where: { tenantId: resolvedTenantId } });
+      const tenant = await this.tenantRepo.findOne({ where: { id: resolvedTenantId } });
       if (!org) {
         org = this.orgRepo.create({
           tenantId: resolvedTenantId,
-          name: attrs.name || 'EBS Digital Solutions',
-          phone: attrs.phone || '+855 78 000 000',
-          email: attrs.email || 'info@ebs.com',
+          name: attrs.name || tenant?.name || 'Delivery Solutions',
+          phone: attrs.phone || tenant?.phone || '+855 78 000 000',
+          email: attrs.email || tenant?.email || 'info@delivery.com',
           website: attrs.website || 'https://ebs.com',
-          address: attrs.address || 'Phnom Penh, Cambodia',
+          address: attrs.address || tenant?.address || 'Phnom Penh, Cambodia',
         });
+      }
+      if (attrs.name) {
+        await this.tenantRepo.update({ id: resolvedTenantId }, { name: attrs.name });
       }
     } else {
       org = await this.getOrganisation();

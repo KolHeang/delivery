@@ -29,6 +29,7 @@ import { FaRegEdit } from 'react-icons/fa';
 import { FiPlusCircle } from 'react-icons/fi';
 import { SaasCloudIcon } from '@/components/ui/SaasCloudIcon';
 import { printInvoicePdf } from '@/lib/invoice-pdf';
+import { getTenantWorkspaceUrl } from '@/lib/domain';
 
 const FlagKm = ({ size = 20 }: { size?: number }) => (
   <svg width={size} height={Math.round(size * 0.67)} viewBox="0 0 900 600" style={{ borderRadius: 3, display: 'inline-block', verticalAlign: 'middle', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }}>
@@ -228,19 +229,7 @@ export default function TenantDetailPage() {
 
   const getWorkspaceUrl = (sub: string) => {
     if (!sub) return '';
-    if (typeof window !== 'undefined') {
-      const hostname = window.location.hostname;
-      const port = window.location.port ? `:${window.location.port}` : '';
-      const protocol = window.location.protocol;
-      if (hostname.includes('localhost') || hostname === '127.0.0.1') {
-        return `${protocol}//${sub}.localhost${port}`;
-      } else {
-        const parts = hostname.split('.');
-        const rootDomain = parts.length > 2 ? parts.slice(-2).join('.') : hostname;
-        return `${protocol}//${sub}.${rootDomain}${port}`;
-      }
-    }
-    return `http://${sub}.localhost:3000`;
+    return getTenantWorkspaceUrl(sub);
   };
 
   const workspaceUrl = getWorkspaceUrl(subdomain);

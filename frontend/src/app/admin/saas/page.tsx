@@ -63,6 +63,7 @@ import { FlagKm, FlagEn } from '@/components/ui/Flags';
 import { SaasCloudIcon } from '@/components/ui/SaasCloudIcon';
 import Pagination from '@/components/ui/Pagination';
 import DateInput from '@/components/ui/DateInput';
+import { getTenantWorkspaceUrl } from '@/lib/domain';
 
 export default function SaasMasterPortal() {
   const router = useRouter();
@@ -308,21 +309,7 @@ export default function SaasMasterPortal() {
 
   const getTenantWorkspaceBaseUrl = (subdomain?: string) => {
     if (!subdomain) return '';
-    const sub = subdomain.toLowerCase().trim();
-    if (typeof window !== 'undefined') {
-      const hostname = window.location.hostname;
-      const port = window.location.port ? `:${window.location.port}` : '';
-      const protocol = window.location.protocol;
-
-      if (hostname.includes('localhost') || hostname === '127.0.0.1') {
-        return `${protocol}//${sub}.localhost${port}`;
-      } else {
-        const parts = hostname.split('.');
-        const rootDomain = parts.length > 2 ? parts.slice(-2).join('.') : hostname;
-        return `${protocol}//${sub}.${rootDomain}${port}`;
-      }
-    }
-    return `http://${sub}.localhost:3000`;
+    return getTenantWorkspaceUrl(subdomain);
   };
 
   const handleOpenTenantDetailModal = (tenantSub: any) => {

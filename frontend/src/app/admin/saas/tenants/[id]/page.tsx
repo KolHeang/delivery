@@ -24,53 +24,43 @@ import {
   MdGroup,
   MdLocalOffer,
   MdAttachMoney,
+  MdPayments,
+  MdLanguage,
+  MdEmail,
+  MdPhone,
+  MdLocationOn,
+  MdCalendarToday,
+  MdCreditCard,
+  MdKeyboardArrowDown,
+  MdLogout,
+  MdPerson,
 } from 'react-icons/md';
 import { FaRegEdit } from 'react-icons/fa';
-import { FiPlusCircle } from 'react-icons/fi';
+import { FiPlusCircle, FiCopy, FiCheck, FiExternalLink, FiClock, FiFileText, FiRefreshCw, FiArrowLeft, FiGlobe } from 'react-icons/fi';
 import { SaasCloudIcon } from '@/components/ui/SaasCloudIcon';
+import { FlagKm, FlagEn } from '@/components/ui/Flags';
+import { useLanguage } from '@/lib/LanguageContext';
 import { printInvoicePdf } from '@/lib/invoice-pdf';
 import { getTenantWorkspaceUrl } from '@/lib/domain';
-
-const FlagKm = ({ size = 20 }: { size?: number }) => (
-  <svg width={size} height={Math.round(size * 0.67)} viewBox="0 0 900 600" style={{ borderRadius: 3, display: 'inline-block', verticalAlign: 'middle', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }}>
-    <rect width="900" height="600" fill="#032EA6" />
-    <rect y="150" width="900" height="300" fill="#ED1B24" />
-    <g fill="#ffffff">
-      <path d="M450 200 L460 235 L475 235 L475 295 L425 295 L425 235 L440 235 Z" />
-      <path d="M380 235 L390 255 L405 255 L405 295 L355 295 L355 255 L370 255 Z" />
-      <path d="M520 235 L530 255 L545 255 L545 295 L495 295 L495 255 L510 255 Z" />
-      <rect x="330" y="295" width="240" height="65" />
-      <rect x="310" y="360" width="280" height="40" />
-    </g>
-  </svg>
-);
-
-const FlagEn = ({ size = 20 }: { size?: number }) => (
-  <svg width={size} height={Math.round(size * 0.67)} viewBox="0 0 60 30" style={{ borderRadius: 3, display: 'inline-block', verticalAlign: 'middle', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }}>
-    <clipPath id="s"><path d="M0,0 v30 h60 v-30 z"/></clipPath>
-    <clipPath id="t"><path d="M30,15 h30 v15 z v15 h-30 z h-30 v-15 z v-15 h30 z"/></clipPath>
-    <g clipPath="url(#s)">
-      <path d="M0,0 v30 h60 v-30 z" fill="#012169"/>
-      <path d="M0,0 L60,30 M60,0 L0,30" stroke="#fff" strokeWidth="6"/>
-      <path d="M0,0 L60,30 M60,0 L0,30" clipPath="url(#t)" stroke="#C8102E" strokeWidth="4"/>
-      <path d="M30,0 v30 M0,15 h60" stroke="#fff" strokeWidth="10"/>
-      <path d="M30,0 v30 M0,15 h60" stroke="#C8102E" strokeWidth="6"/>
-    </g>
-  </svg>
-);
 
 export default function TenantDetailPage() {
   const router = useRouter();
   const params = useParams();
   const tenantId = Number(params.id);
 
-  const [lang, setLang] = useState<'km' | 'en'>('km');
+  const { lang, setLang } = useLanguage();
   const [tenant, setTenant] = useState<any>(null);
   const [plans, setPlans] = useState<Plan[]>([]);
   const [invoices, setInvoices] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const [showProfileDropdown, setShowProfileDropdown] = useState(false);
+
+  const handleLogout = () => {
+    clearAuth();
+    router.push('/admin/saas/login');
+  };
 
   // Invoices Filter & Search State
   const [activeDetailTab, setActiveDetailTab] = useState<'invoices' | 'company' | 'quotas'>('invoices');
@@ -414,11 +404,12 @@ export default function TenantDetailPage() {
   };
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: '#f8fafc', fontFamily: "'Kantumruy Pro', 'Inter', sans-serif" }}>
-      {/* 1. MASTER SAAS SIDEBAR */}
+    <div style={{ display: 'flex', minHeight: '100vh', background: '#f8fafc', fontFamily: "'Kantumruy Pro', 'Inter', sans-serif", width: '100%', maxWidth: '100vw', overflowX: 'hidden' }}>
+      {/* 1. DEDICATED SAAS MASTER SIDEBAR */}
       <aside
         style={{
           width: 260,
+          minWidth: 260,
           background: '#2b529a',
           color: '#ffffff',
           display: 'flex',
@@ -428,9 +419,10 @@ export default function TenantDetailPage() {
           bottom: 0,
           left: 0,
           zIndex: 90,
-          boxShadow: '4px 0 20px rgba(0,0,0,0.08)',
+          boxShadow: '4px 0 20px rgba(0,0,0,0.1)',
         }}
       >
+        {/* Brand Header */}
         <div style={{ height: 64, padding: '0 20px', display: 'flex', alignItems: 'center', gap: 12, borderBottom: '1px solid rgba(255,255,255,0.12)', boxSizing: 'border-box' }}>
           <div
             style={{
@@ -441,7 +433,7 @@ export default function TenantDetailPage() {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              boxShadow: '0 4px 14px rgba(0,0,0,0.15)',
+              boxShadow: '0 4px 14px rgba(0,0,0,0.18)',
               padding: 2,
               boxSizing: 'border-box',
               flexShrink: 0,
@@ -459,9 +451,10 @@ export default function TenantDetailPage() {
           </div>
         </div>
 
-        <nav style={{ padding: '16px 12px', flex: 1, overflowY: 'auto' }}>
-          <div style={{ padding: '0 12px 6px', fontSize: 10.5, fontWeight: 800, color: '#bfdbfe', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
-            {tr('ម៉ឺនុយមេ', 'MAIN NAVIGATION')}
+        {/* Sidebar Nav Items */}
+        <div style={{ padding: '16px 12px', display: 'flex', flexDirection: 'column', gap: 6, flex: 1, overflowY: 'auto' }}>
+          <div style={{ fontSize: 11, fontWeight: 800, color: '#93c5fd', padding: '8px 12px', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
+            {tr('ម៉ឺនុយមេ', 'Main Menu')}
           </div>
 
           <Link
@@ -470,15 +463,18 @@ export default function TenantDetailPage() {
               display: 'flex',
               alignItems: 'center',
               gap: 12,
+              width: '100%',
               padding: '11px 16px',
               borderRadius: 10,
+              border: 'none',
+              background: 'transparent',
+              color: '#ffffff',
               fontSize: 14,
               fontWeight: 600,
-              color: '#ffffff',
               textDecoration: 'none',
-              marginBottom: 4,
-              borderLeft: '4px solid transparent',
               transition: 'all 0.15s',
+              borderLeft: '4px solid transparent',
+              boxSizing: 'border-box',
             }}
           >
             <MdDashboard size={20} color="#bfdbfe" />
@@ -491,17 +487,18 @@ export default function TenantDetailPage() {
               display: 'flex',
               alignItems: 'center',
               gap: 12,
+              width: '100%',
               padding: '11px 16px',
               borderRadius: 10,
-              fontSize: 14,
-              fontWeight: 900,
+              border: 'none',
               background: 'rgba(255, 255, 255, 0.18)',
               color: '#ffffff',
+              fontSize: 14,
+              fontWeight: 900,
               textDecoration: 'none',
-              marginBottom: 4,
-              borderLeft: '4px solid #ffffff',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
               transition: 'all 0.15s',
+              borderLeft: '4px solid #ffffff',
+              boxSizing: 'border-box',
             }}
           >
             <MdBusiness size={20} color="#ffffff" />
@@ -514,15 +511,18 @@ export default function TenantDetailPage() {
               display: 'flex',
               alignItems: 'center',
               gap: 12,
+              width: '100%',
               padding: '11px 16px',
               borderRadius: 10,
+              border: 'none',
+              background: 'transparent',
+              color: '#ffffff',
               fontSize: 14,
               fontWeight: 600,
-              color: '#ffffff',
               textDecoration: 'none',
-              marginBottom: 4,
-              borderLeft: '4px solid transparent',
               transition: 'all 0.15s',
+              borderLeft: '4px solid transparent',
+              boxSizing: 'border-box',
             }}
           >
             <MdReceiptLong size={20} color="#bfdbfe" />
@@ -535,15 +535,18 @@ export default function TenantDetailPage() {
               display: 'flex',
               alignItems: 'center',
               gap: 12,
+              width: '100%',
               padding: '11px 16px',
               borderRadius: 10,
+              border: 'none',
+              background: 'transparent',
+              color: '#ffffff',
               fontSize: 14,
               fontWeight: 600,
-              color: '#ffffff',
               textDecoration: 'none',
-              marginBottom: 4,
-              borderLeft: '4px solid transparent',
               transition: 'all 0.15s',
+              borderLeft: '4px solid transparent',
+              boxSizing: 'border-box',
             }}
           >
             <MdGroup size={20} color="#bfdbfe" />
@@ -556,15 +559,18 @@ export default function TenantDetailPage() {
               display: 'flex',
               alignItems: 'center',
               gap: 12,
+              width: '100%',
               padding: '11px 16px',
               borderRadius: 10,
+              border: 'none',
+              background: 'transparent',
+              color: '#ffffff',
               fontSize: 14,
               fontWeight: 600,
-              color: '#ffffff',
               textDecoration: 'none',
-              marginBottom: 4,
-              borderLeft: '4px solid transparent',
               transition: 'all 0.15s',
+              borderLeft: '4px solid transparent',
+              boxSizing: 'border-box',
             }}
           >
             <MdWorkspacePremium size={20} color="#bfdbfe" />
@@ -577,15 +583,18 @@ export default function TenantDetailPage() {
               display: 'flex',
               alignItems: 'center',
               gap: 12,
+              width: '100%',
               padding: '11px 16px',
               borderRadius: 10,
+              border: 'none',
+              background: 'transparent',
+              color: '#ffffff',
               fontSize: 14,
               fontWeight: 600,
-              color: '#ffffff',
               textDecoration: 'none',
-              marginBottom: 4,
-              borderLeft: '4px solid transparent',
               transition: 'all 0.15s',
+              borderLeft: '4px solid transparent',
+              boxSizing: 'border-box',
             }}
           >
             <MdLocalOffer size={20} color="#bfdbfe" />
@@ -598,232 +607,330 @@ export default function TenantDetailPage() {
               display: 'flex',
               alignItems: 'center',
               gap: 12,
+              width: '100%',
               padding: '11px 16px',
               borderRadius: 10,
+              border: 'none',
+              background: 'transparent',
+              color: '#ffffff',
               fontSize: 14,
               fontWeight: 600,
-              color: '#ffffff',
               textDecoration: 'none',
-              marginBottom: 4,
-              borderLeft: '4px solid transparent',
               transition: 'all 0.15s',
+              borderLeft: '4px solid transparent',
+              boxSizing: 'border-box',
             }}
           >
             <MdAttachMoney size={20} color="#bfdbfe" />
             <span>{tr('ដៃគូសហការ', 'Affiliate Partners')}</span>
           </Link>
-        </nav>
-
-        <div style={{ padding: '16px 14px', borderTop: '1px solid rgba(255,255,255,0.12)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ width: 36, height: 36, borderRadius: '50%', background: '#1d4ed8', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800 }}>
-              {user?.name?.[0]?.toUpperCase() || 'A'}
-            </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {user?.name || 'Super Admin'}
-              </div>
-              <div style={{ fontSize: 11, color: '#93c5fd' }}>
-                {user?.role || 'Master Super Admin'}
-              </div>
-            </div>
-          </div>
         </div>
       </aside>
 
-      {/* 2. MAIN CONTENT AREA */}
-      <div style={{ marginLeft: 260, flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-        {/* Top Header / Breadcrumb */}
+      {/* 2. MAIN CONTENT AREA WITH DEDICATED TOPBAR */}
+      <div style={{ flex: 1, marginLeft: 260, minWidth: 0, maxWidth: 'calc(100vw - 260px)', display: 'flex', flexDirection: 'column', minHeight: '100vh', overflowX: 'hidden' }}>
+        {/* Dedicated SaaS Master Topbar / Navbar */}
         <header
           style={{
             height: 64,
-            background: '#ffffff',
-            borderBottom: '1px solid #e2e8f0',
-            padding: '0 32px',
+            background: '#2b529a',
+            borderBottom: '1px solid rgba(255, 255, 255, 0.12)',
+            padding: '0 28px',
             display: 'flex',
+            justifyContent: 'flex-end',
             alignItems: 'center',
-            justifyContent: 'space-between',
             position: 'sticky',
             top: 0,
             zIndex: 80,
+            boxShadow: '0 4px 16px rgba(0,0,0,0.06)',
+            width: '100%',
+            boxSizing: 'border-box',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <Link
-              href="/admin/saas?tab=tenants"
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+            {/* Language Switcher Button */}
+            <button
+              onClick={() => setLang(lang === 'en' ? 'km' : 'en')}
+              title={tr('ប្តូរភាសា (Switch Language)', 'Switch Language')}
               style={{
-                display: 'inline-flex',
+                display: 'flex',
                 alignItems: 'center',
-                gap: 6,
-                color: '#2563eb',
-                textDecoration: 'none',
+                gap: 8,
+                height: 38,
+                padding: '0 14px',
+                borderRadius: 10,
+                border: '1px solid rgba(255, 255, 255, 0.25)',
+                background: 'rgba(255, 255, 255, 0.15)',
+                color: '#ffffff',
                 fontSize: 13,
-                fontWeight: 700,
-                padding: '6px 12px',
-                borderRadius: 8,
-                background: '#eff6ff',
-                border: '1px solid #bfdbfe',
+                fontWeight: 800,
+                cursor: 'pointer',
+                transition: 'all 0.15s',
               }}
             >
-              <MdArrowBack size={16} />
-              <span>{tr('ត្រឡប់ក្រោយ', 'Back to Companies')}</span>
-            </Link>
+              {lang === 'km' ? (
+                <>
+                  <FlagKm size={22} />
+                  <span>ភាសាខ្មែរ</span>
+                </>
+              ) : (
+                <>
+                  <FlagEn size={22} />
+                  <span>English</span>
+                </>
+              )}
+            </button>
 
-            <span style={{ color: '#cbd5e1' }}>/</span>
-            <span style={{ fontSize: 13.5, color: '#0f172a', fontWeight: 700 }}>
-              {tenant?.name || tr('ព័ត៌មានលម្អិតក្រុមហ៊ុន', 'Company Details')}
-            </span>
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div style={{ display: 'flex', alignItems: 'center', background: '#f1f5f9', padding: '3px 4px', borderRadius: 8, border: '1px solid #e2e8f0' }}>
+            {/* User Profile Dropdown */}
+            <div style={{ position: 'relative', paddingLeft: 14, borderLeft: '1px solid rgba(255, 255, 255, 0.2)' }}>
               <button
-                type="button"
-                onClick={() => setLang('km')}
+                onClick={() => setShowProfileDropdown(!showProfileDropdown)}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: 5,
-                  padding: '4px 8px',
-                  borderRadius: 6,
-                  border: 'none',
-                  background: lang === 'km' ? '#fff' : 'transparent',
-                  color: lang === 'km' ? '#2563eb' : '#64748b',
-                  fontWeight: lang === 'km' ? 700 : 500,
-                  fontSize: 12,
+                  gap: 10,
+                  background: showProfileDropdown ? 'rgba(255, 255, 255, 0.18)' : 'rgba(255, 255, 255, 0.08)',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  borderRadius: 12,
+                  padding: '6px 12px',
                   cursor: 'pointer',
-                  boxShadow: lang === 'km' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+                  transition: 'all 0.15s',
+                  textAlign: 'left',
                 }}
               >
-                <FlagKm size={14} /> ខ្មែរ
+                <div
+                  style={{
+                    width: 34,
+                    height: 34,
+                    borderRadius: '50%',
+                    background: 'linear-gradient(135deg, #3b82f6, #6366f1)',
+                    color: '#ffffff',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontWeight: 900,
+                    fontSize: 14,
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                  }}
+                >
+                  {user?.name ? user.name.charAt(0).toUpperCase() : 'M'}
+                </div>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 900, color: '#ffffff', lineHeight: 1.2 }}>{user?.name || 'Master Super Admin'}</div>
+                  <div style={{ fontSize: 11, color: '#bfdbfe', fontWeight: 600 }}>{user?.email || 'superadmin@gmail.com'}</div>
+                </div>
+                <MdKeyboardArrowDown
+                  size={20}
+                  color="#ffffff"
+                  style={{
+                    marginLeft: 4,
+                    transform: showProfileDropdown ? 'rotate(180deg)' : 'rotate(0deg)',
+                    transition: 'transform 0.2s',
+                  }}
+                />
               </button>
-              <button
-                type="button"
-                onClick={() => setLang('en')}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 5,
-                  padding: '4px 8px',
-                  borderRadius: 6,
-                  border: 'none',
-                  background: lang === 'en' ? '#fff' : 'transparent',
-                  color: lang === 'en' ? '#2563eb' : '#64748b',
-                  fontWeight: lang === 'en' ? 700 : 500,
-                  fontSize: 12,
-                  cursor: 'pointer',
-                  boxShadow: lang === 'en' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
-                }}
-              >
-                <FlagEn size={14} /> EN
-              </button>
+
+              {/* Dropdown Menu Card */}
+              {showProfileDropdown && (
+                <>
+                  <div
+                    onClick={() => setShowProfileDropdown(false)}
+                    style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 90 }}
+                  />
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: 'calc(100% + 8px)',
+                      right: 0,
+                      width: 250,
+                      background: '#ffffff',
+                      borderRadius: 16,
+                      boxShadow: '0 14px 35px -4px rgba(0,0,0,0.22), 0 4px 12px rgba(0,0,0,0.08)',
+                      border: '1px solid #e2e8f0',
+                      padding: '8px',
+                      zIndex: 95,
+                    }}
+                  >
+                    <div style={{ padding: '10px 12px', borderBottom: '1px solid #f1f5f9' }}>
+                      <div style={{ fontSize: 13.5, fontWeight: 900, color: '#0f172a' }}>{user?.name || 'Master Super Admin'}</div>
+                      <div style={{ fontSize: 11.5, color: '#64748b', marginTop: 1 }}>{user?.email || 'superadmin@gmail.com'}</div>
+                      <span
+                        style={{
+                          display: 'inline-block',
+                          marginTop: 6,
+                          background: '#eff6ff',
+                          color: '#2563eb',
+                          fontSize: 10.5,
+                          fontWeight: 800,
+                          padding: '2px 8px',
+                          borderRadius: 6,
+                          border: '1px solid #dbeafe',
+                        }}
+                      >
+                        👑 {tr('Super Admin ពេញសិទ្ធិ', 'Full Super Admin')}
+                      </span>
+                    </div>
+
+                    <div style={{ padding: '6px 4px 2px' }}>
+                      <button
+                        onClick={() => {
+                          setShowProfileDropdown(false);
+                          handleLogout();
+                        }}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 10,
+                          width: '100%',
+                          padding: '9px 12px',
+                          border: 'none',
+                          background: '#fef2f2',
+                          color: '#dc2626',
+                          fontSize: 13,
+                          fontWeight: 800,
+                          borderRadius: 10,
+                          cursor: 'pointer',
+                          textAlign: 'left',
+                          transition: 'all 0.15s',
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = '#dc2626';
+                          e.currentTarget.style.color = '#ffffff';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = '#fef2f2';
+                          e.currentTarget.style.color = '#dc2626';
+                        }}
+                      >
+                        <MdLogout size={18} />
+                        <span>{tr('ចាកចេញ', 'Logout')}</span>
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </header>
 
-        {/* Page Content - 100% Full Width */}
-        <div style={{ padding: '24px 32px 80px', width: '100%', boxSizing: 'border-box' }}>
+        {/* 3. DYNAMIC CONTENT BODY */}
+        <main style={{ flex: 1, padding: '24px 28px 80px', width: '100%', maxWidth: '100%', minWidth: 0, boxSizing: 'border-box' }}>
+          {/* Breadcrumbs & Page Header */}
+          <div style={{ marginBottom: 20 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+              <Link
+                href="/admin/saas?tab=tenants"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  color: '#2563eb',
+                  textDecoration: 'none',
+                  fontSize: 13,
+                  fontWeight: 700,
+                  padding: '4px 10px',
+                  borderRadius: 8,
+                  background: 'rgba(37, 99, 235, 0.08)',
+                  border: '1px solid rgba(37, 99, 235, 0.15)',
+                  transition: 'all 0.15s',
+                }}
+              >
+                <FiArrowLeft size={14} />
+                <span>{tr('ត្រឡប់ក្រោយ', 'Back')}</span>
+              </Link>
+              <span style={{ color: '#cbd5e1', fontSize: 13 }}>/</span>
+              <span style={{ fontSize: 13, color: '#64748b', fontWeight: 600 }}>
+                {tr('ក្រុមហ៊ុនទាំងអស់', 'All Companies')}
+              </span>
+              <span style={{ color: '#cbd5e1', fontSize: 13 }}>/</span>
+              <span style={{ fontSize: 13, color: '#0f172a', fontWeight: 800 }}>
+                {tenant?.name || tr('ព័ត៌មានលម្អិតក្រុមហ៊ុន', 'Company Details')}
+              </span>
+            </div>
+            <h1 style={{ fontSize: 22, fontWeight: 900, color: '#0f172a', margin: '0 0 4px', letterSpacing: '-0.3px' }}>
+              {tenant?.name || tr('ព័ត៌មានលម្អិតក្រុមហ៊ុន', 'Company Details')}
+            </h1>
+            <p style={{ fontSize: 13, color: '#64748b', margin: 0 }}>
+              {tr('គ្រប់គ្រង Workspace Subdomains គណនី Admin និងប្រវត្តិវិក្កយបត្រ', 'Manage workspace subdomains, admin accounts, and billing invoices')}
+            </p>
+          </div>
           {loading ? (
-            <div style={{ textAlign: 'center', padding: '80px 0', color: '#64748b' }}>
+            <div style={{ textAlign: 'center', padding: '100px 0', color: '#64748b' }}>
               <div style={{ fontSize: 32, marginBottom: 12 }}>⏳</div>
-              <div style={{ fontSize: 15, fontWeight: 600 }}>{tr('កំពុងទាញយកទិន្នន័យក្រុមហ៊ុន...', 'Loading company details...')}</div>
+              <div style={{ fontSize: 14, fontWeight: 600 }}>{tr('កំពុងទាញយកទិន្នន័យក្រុមហ៊ុន...', 'Loading company details...')}</div>
             </div>
           ) : !tenant ? (
-            <div style={{ textAlign: 'center', padding: '80px 0', color: '#ef4444' }}>
+            <div style={{ textAlign: 'center', padding: '100px 0', color: '#ef4444' }}>
               <div style={{ fontSize: 16, fontWeight: 700 }}>{tr('រកមិនឃើញក្រុមហ៊ុននេះទេ', 'Company not found')}</div>
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-              {/* 1. Hero Header Banner with Integrated Workspace Link */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+              {/* 1. HERO HEADER CARD — CLEAN, SOPHISTICATED, EXECUTIVE SAAS */}
               <div
                 style={{
-                  background: 'linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%)',
-                  borderRadius: 20,
-                  padding: '24px 28px',
-                  color: '#ffffff',
-                  boxShadow: '0 8px 24px -4px rgba(37, 99, 235, 0.25)',
+                  background: '#ffffff',
+                  borderRadius: 16,
+                  padding: '22px 26px',
+                  border: '1px solid #e2e8f0',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
                   flexWrap: 'wrap',
-                  gap: 20,
+                  gap: 18,
                   width: '100%',
                   boxSizing: 'border-box',
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 18, minWidth: 280 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 16, minWidth: 280 }}>
                   <div
                     style={{
-                      width: 62,
-                      height: 62,
-                      borderRadius: 16,
-                      background: 'rgba(255, 255, 255, 0.2)',
-                      border: '2px solid rgba(255, 255, 255, 0.35)',
-                      backdropFilter: 'blur(10px)',
+                      width: 54,
+                      height: 54,
+                      borderRadius: 14,
+                      background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
+                      color: '#ffffff',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      fontSize: 26,
-                      fontWeight: 900,
-                      color: '#ffffff',
+                      fontSize: 22,
+                      fontWeight: 800,
+                      boxShadow: '0 3px 10px rgba(37, 99, 235, 0.2)',
                       flexShrink: 0,
+                      overflow: 'hidden',
                     }}
                   >
                     {tenant.logo ? (
-                      <img src={tenant.logo} alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 14 }} />
+                      <img src={tenant.logo} alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     ) : (
-                      (tenant.name || '🏢').charAt(0).toUpperCase()
+                      (tenant.name || 'C').charAt(0).toUpperCase()
                     )}
                   </div>
 
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                      <h1 style={{ fontSize: 23, fontWeight: 900, margin: 0, color: '#ffffff', letterSpacing: '-0.02em' }}>
+                      <h1 style={{ fontSize: 20, fontWeight: 800, margin: 0, color: '#0f172a', letterSpacing: '-0.02em' }}>
                         {tenant.name}
                       </h1>
                       <span
                         style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 5,
                           fontSize: 11,
-                          fontWeight: 800,
-                          padding: '3px 9px',
+                          fontWeight: 700,
+                          padding: '2.5px 8px',
                           borderRadius: 20,
-                          background: tenant.status === 'active' ? '#10b981' : '#f59e0b',
-                          color: '#ffffff',
+                          background: tenant.status === 'active' ? '#ecfdf5' : '#fffbeb',
+                          color: tenant.status === 'active' ? '#047857' : '#b45309',
+                          border: `1px solid ${tenant.status === 'active' ? '#a7f3d0' : '#fde68a'}`,
                           textTransform: 'uppercase',
                         }}
                       >
-                        ● {tenant.status || 'ACTIVE'}
+                        <span style={{ width: 6, height: 6, borderRadius: '50%', background: tenant.status === 'active' ? '#10b981' : '#f59e0b' }} />
+                        {tenant.status || 'ACTIVE'}
                       </span>
                     </div>
-
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 6, fontSize: 12.5, opacity: 0.95, flexWrap: 'wrap' }}>
-                      <span>🏢 ID: #{tenant.id}</span>
-                      <span>🏷️ Code: <strong>{tenant.code || `TNT-${tenant.id}`}</strong></span>
-                      <span>💎 Plan: <strong>{currentPlan.name || 'Professional'}</strong></span>
-                    </div>
-
-                    {/* Integrated Quick Subdomain Link */}
-                    {workspaceUrl && (
-                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 8, background: 'rgba(0, 0, 0, 0.2)', padding: '3px 10px', borderRadius: 8, fontSize: 12 }}>
-                        <span>🌐</span>
-                        <a
-                          href={`${workspaceUrl}/auth`}
-                          target="_blank"
-                          rel="noreferrer"
-                          style={{ color: '#93c5fd', textDecoration: 'none', fontWeight: 700 }}
-                        >
-                          {workspaceUrl}
-                        </a>
-                        <button
-                          type="button"
-                          onClick={() => handleCopy(`${workspaceUrl}/auth`, 'heroUrl')}
-                          style={{ border: 'none', background: 'transparent', color: '#ffffff', cursor: 'pointer', padding: '0 2px', display: 'flex' }}
-                          title={tr('ចម្លង Portal Link', 'Copy Portal Link')}
-                        >
-                          {copiedKey === 'heroUrl' ? <MdCheck size={13} color="#4ade80" /> : <MdContentCopy size={13} />}
-                        </button>
-                      </div>
-                    )}
                   </div>
                 </div>
 
@@ -832,20 +939,21 @@ export default function TenantDetailPage() {
                   <Link
                     href={`/admin/saas/tenants/edit/${tenant.id}`}
                     style={{
-                      padding: '9px 14px',
-                      borderRadius: 9,
-                      background: 'rgba(255, 255, 255, 0.16)',
-                      border: '1.5px solid rgba(255, 255, 255, 0.3)',
-                      color: '#ffffff',
+                      padding: '8px 14px',
+                      borderRadius: 8,
+                      background: '#ffffff',
+                      border: '1px solid #cbd5e1',
+                      color: '#334155',
                       fontSize: 12.5,
-                      fontWeight: 700,
+                      fontWeight: 600,
                       textDecoration: 'none',
                       display: 'flex',
                       alignItems: 'center',
                       gap: 6,
+                      transition: 'all 0.15s',
                     }}
                   >
-                    <FaRegEdit size={14} />
+                    <FaRegEdit size={13} color="#64748b" />
                     <span>{tr('កែប្រែក្រុមហ៊ុន', 'Edit Company')}</span>
                   </Link>
 
@@ -853,20 +961,21 @@ export default function TenantDetailPage() {
                     type="button"
                     onClick={handleOpenRenewModal}
                     style={{
-                      padding: '9px 14px',
-                      borderRadius: 9,
-                      background: 'rgba(255, 255, 255, 0.16)',
-                      border: '1.5px solid rgba(255, 255, 255, 0.3)',
-                      color: '#ffffff',
+                      padding: '8px 14px',
+                      borderRadius: 8,
+                      background: '#ffffff',
+                      border: '1px solid #cbd5e1',
+                      color: '#334155',
                       fontSize: 12.5,
-                      fontWeight: 700,
+                      fontWeight: 600,
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
                       gap: 6,
+                      transition: 'all 0.15s',
                     }}
                   >
-                    <MdAutorenew size={15} />
+                    <MdAutorenew size={16} color="#64748b" />
                     <span>{tr('បន្តសុពលភាព', 'Extend Validity')}</span>
                   </button>
 
@@ -874,18 +983,19 @@ export default function TenantDetailPage() {
                     type="button"
                     onClick={handleOpenCreateInvoice}
                     style={{
-                      padding: '9px 15px',
-                      borderRadius: 9,
-                      background: '#10b981',
+                      padding: '8px 15px',
+                      borderRadius: 8,
+                      background: '#2563eb',
                       border: 'none',
                       color: '#ffffff',
                       fontSize: 12.5,
-                      fontWeight: 800,
+                      fontWeight: 700,
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
                       gap: 6,
-                      boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)',
+                      boxShadow: '0 2px 6px rgba(37, 99, 235, 0.25)',
+                      transition: 'all 0.15s',
                     }}
                   >
                     <FiPlusCircle size={15} />
@@ -898,111 +1008,113 @@ export default function TenantDetailPage() {
                       target="_blank"
                       rel="noreferrer"
                       style={{
-                        padding: '9px 15px',
-                        borderRadius: 9,
-                        background: '#ffffff',
-                        color: '#1e3a8a',
+                        padding: '8px 14px',
+                        borderRadius: 8,
+                        background: '#0f172a',
+                        color: '#ffffff',
                         fontSize: 12.5,
-                        fontWeight: 900,
+                        fontWeight: 700,
                         textDecoration: 'none',
                         display: 'flex',
                         alignItems: 'center',
                         gap: 6,
-                        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                        boxShadow: '0 2px 6px rgba(15, 23, 42, 0.15)',
+                        transition: 'all 0.15s',
                       }}
                     >
-                      <MdOpenInNew size={15} />
+                      <FiExternalLink size={14} />
                       <span>{tr('បើក Workspace ↗', 'Open Portal ↗')}</span>
                     </a>
                   )}
                 </div>
               </div>
 
-              {/* 2. Four KPI Metric Cards */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14, width: '100%' }}>
+              {/* 2. FOUR KPI METRIC CARDS — CLEAN, UNIFORM */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: 14, width: '100%' }}>
                 {/* Metric 1: Plan Tier */}
-                <div style={{ background: '#ffffff', borderRadius: 14, padding: '18px 20px', border: '1px solid #e2e8f0', boxShadow: '0 2px 6px rgba(0,0,0,0.02)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <div style={{ width: 40, height: 40, borderRadius: 10, background: '#eff6ff', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>
-                      💎
+                <div style={{ background: '#ffffff', borderRadius: 14, padding: '18px 20px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ fontSize: 11.5, color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                      {tr('កញ្ចប់គម្រោង', 'Plan Tier')}
                     </div>
-                    <div>
-                      <div style={{ fontSize: 11.5, color: '#64748b', fontWeight: 700 }}>{tr('កញ្ចប់គម្រោង (Plan Tier)', 'Plan Tier')}</div>
-                      <div style={{ fontSize: 17, fontWeight: 900, color: '#0f172a', marginTop: 2 }}>
-                        {currentPlan.name || 'Professional'}
-                      </div>
+                    <div style={{ width: 34, height: 34, borderRadius: 8, background: '#eff6ff', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <MdWorkspacePremium size={18} />
                     </div>
                   </div>
-                  <div style={{ fontSize: 12, color: '#059669', fontWeight: 700, marginTop: 8 }}>
+                  <div style={{ fontSize: 18, fontWeight: 800, color: '#0f172a', marginTop: 8 }}>
+                    {currentPlan.name || 'Professional'}
+                  </div>
+                  <div style={{ fontSize: 12, color: '#2563eb', fontWeight: 600, marginTop: 6 }}>
                     ${activeSub?.billingCycle === 'yearly' ? (currentPlan.priceYearly || 490) : (currentPlan.priceMonthly || 49)} / {activeSub?.billingCycle === 'yearly' ? tr('ឆ្នាំ', 'Year') : tr('ខែ', 'Month')}
                   </div>
                 </div>
 
                 {/* Metric 2: Validity */}
-                <div style={{ background: '#ffffff', borderRadius: 14, padding: '18px 20px', border: '1px solid #e2e8f0', boxShadow: '0 2px 6px rgba(0,0,0,0.02)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <div style={{ width: 40, height: 40, borderRadius: 10, background: '#ecfdf5', color: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>
-                      ⏳
+                <div style={{ background: '#ffffff', borderRadius: 14, padding: '18px 20px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ fontSize: 11.5, color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                      {tr('ថ្ងៃផុតកំណត់', 'Expires On')}
                     </div>
-                    <div>
-                      <div style={{ fontSize: 11.5, color: '#64748b', fontWeight: 700 }}>{tr('ថ្ងៃផុតកំណត់ (Expires On)', 'Expires On')}</div>
-                      <div style={{ fontSize: 15, fontWeight: 900, color: '#0f172a', marginTop: 2 }}>
-                        {formatDate(activeSub?.currentPeriodEnd)}
-                      </div>
+                    <div style={{ width: 34, height: 34, borderRadius: 8, background: '#fef3c7', color: '#d97706', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <MdAccessTime size={18} />
                     </div>
                   </div>
-                  <div style={{ marginTop: 8 }}>
+                  <div style={{ fontSize: 18, fontWeight: 800, color: '#0f172a', marginTop: 8 }}>
+                    {formatDate(activeSub?.currentPeriodEnd)}
+                  </div>
+                  <div style={{ marginTop: 6 }}>
                     {daysRemaining !== null ? (
                       <span
                         style={{
                           fontSize: 11,
-                          fontWeight: 800,
+                          fontWeight: 700,
                           padding: '2px 8px',
                           borderRadius: 12,
-                          background: daysRemaining > 30 ? '#dcfce7' : daysRemaining > 7 ? '#fef3c7' : '#fee2e2',
-                          color: daysRemaining > 30 ? '#15803d' : daysRemaining > 7 ? '#b45309' : '#b91c1c',
+                          background: daysRemaining > 30 ? '#ecfdf5' : daysRemaining > 7 ? '#fffbeb' : '#fef2f2',
+                          color: daysRemaining > 30 ? '#047857' : daysRemaining > 7 ? '#b45309' : '#b91c1c',
+                          border: `1px solid ${daysRemaining > 30 ? '#a7f3d0' : daysRemaining > 7 ? '#fde68a' : '#fecaca'}`,
                         }}
                       >
                         {daysRemaining > 0 ? tr(`នៅសល់ ${daysRemaining} ថ្ងៃ`, `${daysRemaining} days left`) : tr('ផុតកំណត់', 'Expired')}
                       </span>
                     ) : (
-                      <span style={{ fontSize: 11.5, color: '#64748b' }}>-</span>
+                      <span style={{ fontSize: 12, color: '#64748b' }}>-</span>
                     )}
                   </div>
                 </div>
 
                 {/* Metric 3: Total Paid Revenue */}
-                <div style={{ background: '#ffffff', borderRadius: 14, padding: '18px 20px', border: '1px solid #e2e8f0', boxShadow: '0 2px 6px rgba(0,0,0,0.02)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <div style={{ width: 40, height: 40, borderRadius: 10, background: '#f0fdf4', color: '#16a34a', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>
-                      💰
+                <div style={{ background: '#ffffff', borderRadius: 14, padding: '18px 20px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ fontSize: 11.5, color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                      {tr('ចំណូលបានបង់សរុប', 'Total Paid')}
                     </div>
-                    <div>
-                      <div style={{ fontSize: 11.5, color: '#64748b', fontWeight: 700 }}>{tr('ចំណូលបានបង់សរុប (Total Paid)', 'Total Paid')}</div>
-                      <div style={{ fontSize: 18, fontWeight: 900, color: '#16a34a', marginTop: 2 }}>
-                        ${totalPaidRevenue.toFixed(2)}
-                      </div>
+                    <div style={{ width: 34, height: 34, borderRadius: 8, background: '#ecfdf5', color: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <MdPayments size={18} />
                     </div>
                   </div>
-                  <div style={{ fontSize: 11.5, color: '#64748b', marginTop: 8 }}>
+                  <div style={{ fontSize: 20, fontWeight: 800, color: '#059669', marginTop: 8 }}>
+                    ${totalPaidRevenue.toFixed(2)}
+                  </div>
+                  <div style={{ fontSize: 12, color: '#64748b', marginTop: 6 }}>
                     {invoices.filter((i) => i.status === 'paid').length} {tr('វិក្កយបត្របានបង់រួច', 'paid invoices')}
                   </div>
                 </div>
 
                 {/* Metric 4: Total Invoices */}
-                <div style={{ background: '#ffffff', borderRadius: 14, padding: '18px 20px', border: '1px solid #e2e8f0', boxShadow: '0 2px 6px rgba(0,0,0,0.02)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <div style={{ width: 40, height: 40, borderRadius: 10, background: '#fdf4ff', color: '#c026d3', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>
-                      🧾
+                <div style={{ background: '#ffffff', borderRadius: 14, padding: '18px 20px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ fontSize: 11.5, color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                      {tr('វិក្កយបត្រទាំងអស់', 'Invoices')}
                     </div>
-                    <div>
-                      <div style={{ fontSize: 11.5, color: '#64748b', fontWeight: 700 }}>{tr('វិក្កយបត្រទាំងអស់ (Invoices)', 'Invoices')}</div>
-                      <div style={{ fontSize: 18, fontWeight: 900, color: '#0f172a', marginTop: 2 }}>
-                        {invoices.length}
-                      </div>
+                    <div style={{ width: 34, height: 34, borderRadius: 8, background: '#f5f3ff', color: '#7c3aed', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <MdReceiptLong size={18} />
                     </div>
                   </div>
-                  <div style={{ fontSize: 11.5, color: pendingInvoicesCount > 0 ? '#d97706' : '#64748b', fontWeight: 700, marginTop: 8 }}>
+                  <div style={{ fontSize: 20, fontWeight: 800, color: '#0f172a', marginTop: 8 }}>
+                    {invoices.length}
+                  </div>
+                  <div style={{ fontSize: 12, color: pendingInvoicesCount > 0 ? '#b45309' : '#059669', fontWeight: 600, marginTop: 6 }}>
                     {pendingInvoicesCount > 0
                       ? tr(`⚠️ មិនទាន់បង់: ${pendingInvoicesCount}`, `⚠️ Pending: ${pendingInvoicesCount}`)
                       : tr('✓ គ្មានបំណុលនៅសល់', '✓ All settled')}
@@ -1010,17 +1122,16 @@ export default function TenantDetailPage() {
                 </div>
               </div>
 
-              {/* 3. MODERN TAB NAVIGATION BAR */}
+              {/* 3. MODERN SEGMENTED TAB BAR */}
               <div
                 style={{
-                  display: 'flex',
+                  display: 'inline-flex',
                   alignItems: 'center',
-                  gap: 8,
-                  background: '#ffffff',
-                  padding: 6,
-                  borderRadius: 14,
+                  gap: 4,
+                  background: '#f1f5f9',
+                  padding: 4,
+                  borderRadius: 10,
                   border: '1px solid #e2e8f0',
-                  boxShadow: '0 2px 6px rgba(0,0,0,0.02)',
                   width: 'fit-content',
                   maxWidth: '100%',
                   overflowX: 'auto',
@@ -1033,28 +1144,28 @@ export default function TenantDetailPage() {
                     display: 'flex',
                     alignItems: 'center',
                     gap: 8,
-                    padding: '10px 18px',
-                    borderRadius: 10,
+                    padding: '8px 16px',
+                    borderRadius: 8,
                     border: 'none',
                     cursor: 'pointer',
-                    fontSize: 13,
-                    fontWeight: activeDetailTab === 'invoices' ? 800 : 600,
+                    fontSize: 12.5,
+                    fontWeight: activeDetailTab === 'invoices' ? 700 : 600,
                     transition: 'all 0.15s ease',
-                    background: activeDetailTab === 'invoices' ? '#2563eb' : 'transparent',
-                    color: activeDetailTab === 'invoices' ? '#ffffff' : '#64748b',
-                    boxShadow: activeDetailTab === 'invoices' ? '0 4px 12px rgba(37, 99, 235, 0.25)' : 'none',
+                    background: activeDetailTab === 'invoices' ? '#ffffff' : 'transparent',
+                    color: activeDetailTab === 'invoices' ? '#0f172a' : '#64748b',
+                    boxShadow: activeDetailTab === 'invoices' ? '0 1px 3px rgba(0,0,0,0.06)' : 'none',
                   }}
                 >
-                  <MdReceiptLong size={18} />
+                  <MdReceiptLong size={16} color={activeDetailTab === 'invoices' ? '#2563eb' : '#64748b'} />
                   <span>{tr('ប្រវត្តិបង់លុយ និងវិក្កយបត្រ', 'Payment & Invoices')}</span>
                   <span
                     style={{
                       fontSize: 11,
-                      fontWeight: 800,
+                      fontWeight: 700,
                       padding: '2px 7px',
                       borderRadius: 10,
-                      background: activeDetailTab === 'invoices' ? 'rgba(255,255,255,0.25)' : '#e2e8f0',
-                      color: activeDetailTab === 'invoices' ? '#ffffff' : '#475569',
+                      background: activeDetailTab === 'invoices' ? '#eff6ff' : '#e2e8f0',
+                      color: activeDetailTab === 'invoices' ? '#2563eb' : '#64748b',
                     }}
                   >
                     {invoices.length}
@@ -1068,19 +1179,19 @@ export default function TenantDetailPage() {
                     display: 'flex',
                     alignItems: 'center',
                     gap: 8,
-                    padding: '10px 18px',
-                    borderRadius: 10,
+                    padding: '8px 16px',
+                    borderRadius: 8,
                     border: 'none',
                     cursor: 'pointer',
-                    fontSize: 13,
-                    fontWeight: activeDetailTab === 'company' ? 800 : 600,
+                    fontSize: 12.5,
+                    fontWeight: activeDetailTab === 'company' ? 700 : 600,
                     transition: 'all 0.15s ease',
-                    background: activeDetailTab === 'company' ? '#2563eb' : 'transparent',
-                    color: activeDetailTab === 'company' ? '#ffffff' : '#64748b',
-                    boxShadow: activeDetailTab === 'company' ? '0 4px 12px rgba(37, 99, 235, 0.25)' : 'none',
+                    background: activeDetailTab === 'company' ? '#ffffff' : 'transparent',
+                    color: activeDetailTab === 'company' ? '#0f172a' : '#64748b',
+                    boxShadow: activeDetailTab === 'company' ? '0 1px 3px rgba(0,0,0,0.06)' : 'none',
                   }}
                 >
-                  <MdBusiness size={18} />
+                  <MdBusiness size={16} color={activeDetailTab === 'company' ? '#2563eb' : '#64748b'} />
                   <span>{tr('ព័ត៌មានក្រុមហ៊ុន & Admin', 'Company & Admin Profile')}</span>
                 </button>
 
@@ -1091,19 +1202,19 @@ export default function TenantDetailPage() {
                     display: 'flex',
                     alignItems: 'center',
                     gap: 8,
-                    padding: '10px 18px',
-                    borderRadius: 10,
+                    padding: '8px 16px',
+                    borderRadius: 8,
                     border: 'none',
                     cursor: 'pointer',
-                    fontSize: 13,
-                    fontWeight: activeDetailTab === 'quotas' ? 800 : 600,
+                    fontSize: 12.5,
+                    fontWeight: activeDetailTab === 'quotas' ? 700 : 600,
                     transition: 'all 0.15s ease',
-                    background: activeDetailTab === 'quotas' ? '#2563eb' : 'transparent',
-                    color: activeDetailTab === 'quotas' ? '#ffffff' : '#64748b',
-                    boxShadow: activeDetailTab === 'quotas' ? '0 4px 12px rgba(37, 99, 235, 0.25)' : 'none',
+                    background: activeDetailTab === 'quotas' ? '#ffffff' : 'transparent',
+                    color: activeDetailTab === 'quotas' ? '#0f172a' : '#64748b',
+                    boxShadow: activeDetailTab === 'quotas' ? '0 1px 3px rgba(0,0,0,0.06)' : 'none',
                   }}
                 >
-                  <MdSpeed size={18} />
+                  <MdSpeed size={16} color={activeDetailTab === 'quotas' ? '#2563eb' : '#64748b'} />
                   <span>{tr('ដែនកំណត់ធនធានប្រព័ន្ធ', 'Plan Quotas & Features')}</span>
                 </button>
               </div>
@@ -1114,12 +1225,12 @@ export default function TenantDetailPage() {
                 <div
                   style={{
                     background: '#ffffff',
-                    borderRadius: 18,
-                    padding: '24px 26px',
+                    borderRadius: 16,
                     border: '1px solid #e2e8f0',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.02)',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
                     width: '100%',
                     boxSizing: 'border-box',
+                    overflow: 'hidden',
                   }}
                 >
                   <div
@@ -1129,35 +1240,17 @@ export default function TenantDetailPage() {
                       justifyContent: 'space-between',
                       flexWrap: 'wrap',
                       gap: 12,
-                      marginBottom: 20,
-                      paddingBottom: 16,
+                      padding: '18px 22px',
                       borderBottom: '1px solid #f1f5f9',
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <div
-                        style={{
-                          width: 42,
-                          height: 42,
-                          borderRadius: 12,
-                          background: '#ecfdf5',
-                          color: '#059669',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontSize: 22,
-                        }}
-                      >
-                        💳
-                      </div>
-                      <div>
-                        <h2 style={{ fontSize: 17, fontWeight: 900, color: '#0f172a', margin: 0 }}>
-                          {tr('ប្រវត្តិបង់លុយ និងវិក្កយបត្រ (Payment & Invoices History)', 'Payment & Invoice History')}
-                        </h2>
-                        <p style={{ fontSize: 12.5, color: '#64748b', margin: '3px 0 0' }}>
-                          {tr('តាមដានរាល់ប្រតិបត្តិការបង់ប្រាក់ និងវិក្កយបត្ររបស់ក្រុមហ៊ុននេះ', 'Track all payment transactions and invoices issued to this company')}
-                        </p>
-                      </div>
+                    <div>
+                      <h2 style={{ fontSize: 15, fontWeight: 800, color: '#0f172a', margin: 0 }}>
+                        {tr('ប្រវត្តិបង់លុយ និងវិក្កយបត្រ', 'Payment & Invoice History')}
+                      </h2>
+                      <p style={{ fontSize: 12, color: '#64748b', margin: '3px 0 0' }}>
+                        {tr('តាមដានរាល់ប្រតិបត្តិការបង់ប្រាក់ និងវិក្កយបត្ររបស់ក្រុមហ៊ុននេះ', 'Track all payment transactions and invoices issued to this company')}
+                      </p>
                     </div>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
@@ -1166,30 +1259,31 @@ export default function TenantDetailPage() {
                         value={invoiceStatusFilter}
                         onChange={(e) => setInvoiceStatusFilter(e.target.value as any)}
                         style={{
-                          padding: '8px 14px',
+                          padding: '7px 12px',
                           borderRadius: 8,
-                          border: '1.5px solid #cbd5e1',
-                          fontSize: 12.5,
+                          border: '1px solid #cbd5e1',
+                          fontSize: 12,
                           outline: 'none',
                           background: '#ffffff',
+                          color: '#334155',
                           fontWeight: 600,
                           cursor: 'pointer',
                         }}
                       >
                         <option value="all">{tr('ស្ថានភាពទាំងអស់', 'All Statuses')}</option>
-                        <option value="paid">{tr('បង់រួច (PAID)', 'Paid')}</option>
-                        <option value="pending">{tr('មិនទាន់បង់ (PENDING)', 'Pending')}</option>
+                        <option value="paid">{tr('បង់រួច', 'Paid')}</option>
+                        <option value="pending">{tr('មិនទាន់បង់', 'Pending')}</option>
                       </select>
 
                       {/* Search */}
-                      <div style={{ display: 'flex', alignItems: 'center', background: '#f8fafc', border: '1.5px solid #cbd5e1', borderRadius: 8, padding: '6px 12px', width: 200 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: 8, padding: '5px 10px', width: 200 }}>
                         <MdSearch size={16} color="#64748b" />
                         <input
                           type="text"
                           placeholder={tr('ស្វែងរកវិក្កយបត្រ...', 'Search invoice...')}
                           value={invoiceSearch}
                           onChange={(e) => setInvoiceSearch(e.target.value)}
-                          style={{ border: 'none', background: 'transparent', outline: 'none', paddingLeft: 6, fontSize: 12.5, width: '100%' }}
+                          style={{ border: 'none', background: 'transparent', outline: 'none', paddingLeft: 6, fontSize: 12, width: '100%', color: '#0f172a' }}
                         />
                       </div>
 
@@ -1197,13 +1291,13 @@ export default function TenantDetailPage() {
                         type="button"
                         onClick={handleOpenCreateInvoice}
                         style={{
-                          padding: '8px 16px',
+                          padding: '7px 14px',
                           borderRadius: 8,
                           border: 'none',
                           background: '#2563eb',
                           color: '#ffffff',
-                          fontSize: 12.5,
-                          fontWeight: 800,
+                          fontSize: 12,
+                          fontWeight: 700,
                           cursor: 'pointer',
                           display: 'flex',
                           alignItems: 'center',
@@ -1217,39 +1311,39 @@ export default function TenantDetailPage() {
                     </div>
                   </div>
 
-                  {/* Table */}
+                  {/* Table — Clean, Light Slate Header */}
                   <div style={{ overflowX: 'auto', width: '100%', WebkitOverflowScrolling: 'touch' }}>
-                    <table style={{ width: '100%', minWidth: 840, borderCollapse: 'collapse', textAlign: 'left', fontSize: 13 }}>
+                    <table style={{ width: '100%', minWidth: 840, borderCollapse: 'collapse', textAlign: 'left', fontSize: 12.5 }}>
                       <thead>
-                        <tr style={{ background: '#2f55a5', color: '#ffffff' }}>
-                          <th style={{ padding: '12px 14px', textAlign: 'center', width: 44, borderRadius: '8px 0 0 0' }}>{tr('ល.រ', 'No.')}</th>
-                          <th style={{ padding: '12px 14px' }}>{tr('លេខវិក្កយបត្រ', 'Invoice No.')}</th>
-                          <th style={{ padding: '12px 14px' }}>{tr('ថ្ងៃចេញវិក្កយបត្រ', 'Issued Date')}</th>
-                          <th style={{ padding: '12px 14px' }}>{tr('ថ្ងៃផុតកំណត់', 'Due Date')}</th>
-                          <th style={{ padding: '12px 14px' }}>{tr('តម្លៃដើម', 'Subtotal')}</th>
-                          <th style={{ padding: '12px 14px' }}>{tr('បញ្ចុះតម្លៃ', 'Discount')}</th>
-                          <th style={{ padding: '12px 14px' }}>{tr('ទឹកប្រាក់សរុប', 'Total Amount')}</th>
-                          <th style={{ padding: '12px 14px' }}>{tr('ស្ថានភាព', 'Status')}</th>
-                          <th style={{ padding: '12px 14px', textAlign: 'right', borderRadius: '0 8px 0 0' }}>{tr('សកម្មភាព', 'Action')}</th>
+                        <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#64748b' }}>
+                          <th style={{ padding: '11px 14px', textAlign: 'center', width: 44, fontSize: 11.5, fontWeight: 700, letterSpacing: '0.03em' }}>{tr('ល.រ', 'No.')}</th>
+                          <th style={{ padding: '11px 14px', fontSize: 11.5, fontWeight: 700, letterSpacing: '0.03em' }}>{tr('លេខវិក្កយបត្រ', 'Invoice No.')}</th>
+                          <th style={{ padding: '11px 14px', fontSize: 11.5, fontWeight: 700, letterSpacing: '0.03em' }}>{tr('ថ្ងៃចេញវិក្កយបត្រ', 'Issued Date')}</th>
+                          <th style={{ padding: '11px 14px', fontSize: 11.5, fontWeight: 700, letterSpacing: '0.03em' }}>{tr('ថ្ងៃផុតកំណត់', 'Due Date')}</th>
+                          <th style={{ padding: '11px 14px', fontSize: 11.5, fontWeight: 700, letterSpacing: '0.03em' }}>{tr('តម្លៃដើម', 'Subtotal')}</th>
+                          <th style={{ padding: '11px 14px', fontSize: 11.5, fontWeight: 700, letterSpacing: '0.03em' }}>{tr('បញ្ចុះតម្លៃ', 'Discount')}</th>
+                          <th style={{ padding: '11px 14px', fontSize: 11.5, fontWeight: 700, letterSpacing: '0.03em' }}>{tr('ទឹកប្រាក់សរុប', 'Total Amount')}</th>
+                          <th style={{ padding: '11px 14px', fontSize: 11.5, fontWeight: 700, letterSpacing: '0.03em' }}>{tr('ស្ថានភាព', 'Status')}</th>
+                          <th style={{ padding: '11px 14px', textAlign: 'right', fontSize: 11.5, fontWeight: 700, letterSpacing: '0.03em' }}>{tr('សកម្មភាព', 'Action')}</th>
                         </tr>
                       </thead>
                       <tbody>
                         {filteredInvoices.length === 0 ? (
                           <tr>
-                            <td colSpan={9} style={{ textAlign: 'center', padding: '50px 0', color: '#64748b' }}>
-                              <div style={{ fontSize: 28, marginBottom: 8 }}>📄</div>
-                              <div style={{ fontWeight: 600 }}>{tr('មិនមានប្រវត្តិបង់លុយ ឬវិក្កយបត្រនៅឡើយទេ', 'No payment history or invoices found for this company')}</div>
+                            <td colSpan={9} style={{ textAlign: 'center', padding: '60px 0', color: '#64748b' }}>
+                              <div style={{ fontSize: 26, marginBottom: 8 }}>📄</div>
+                              <div style={{ fontWeight: 600, fontSize: 13 }}>{tr('មិនមានប្រវត្តិបង់លុយ ឬវិក្កយបត្រនៅឡើយទេ', 'No payment history or invoices found for this company')}</div>
                               <button
                                 type="button"
                                 onClick={handleOpenCreateInvoice}
                                 style={{
                                   marginTop: 14,
-                                  padding: '8px 16px',
+                                  padding: '7px 14px',
                                   borderRadius: 8,
                                   border: '1px solid #bfdbfe',
                                   background: '#eff6ff',
                                   color: '#1d4ed8',
-                                  fontSize: 12.5,
+                                  fontSize: 12,
                                   fontWeight: 700,
                                   cursor: 'pointer',
                                 }}
@@ -1265,45 +1359,49 @@ export default function TenantDetailPage() {
                               style={{
                                 borderBottom: '1px solid #f1f5f9',
                                 transition: 'background 0.15s',
-                                background: idx % 2 === 0 ? '#ffffff' : '#f8fafc',
+                                background: '#ffffff',
                               }}
-                              onMouseEnter={(e) => (e.currentTarget.style.background = '#f1f5f9')}
-                              onMouseLeave={(e) => (e.currentTarget.style.background = idx % 2 === 0 ? '#ffffff' : '#f8fafc')}
+                              onMouseEnter={(e) => (e.currentTarget.style.background = '#f8fafc')}
+                              onMouseLeave={(e) => (e.currentTarget.style.background = '#ffffff')}
                             >
-                              <td style={{ padding: '12px 14px', textAlign: 'center', color: '#64748b' }}>
+                              <td style={{ padding: '12px 14px', textAlign: 'center', color: '#94a3b8', fontSize: 12 }}>
                                 {idx + 1}
                               </td>
-                              <td style={{ padding: '12px 14px', fontWeight: 800, color: '#2563eb', fontFamily: 'monospace' }}>
+                              <td style={{ padding: '12px 14px', fontWeight: 700, color: '#2563eb', fontFamily: 'monospace', fontSize: 12.5 }}>
                                 {inv.invoiceNumber || `INV-${inv.id}`}
                               </td>
-                              <td style={{ padding: '12px 14px', color: '#334155' }}>
+                              <td style={{ padding: '12px 14px', color: '#475569' }}>
                                 {formatDate(inv.createdAt)}
                               </td>
-                              <td style={{ padding: '12px 14px', color: '#334155', fontWeight: 600 }}>
+                              <td style={{ padding: '12px 14px', color: '#475569', fontWeight: 600 }}>
                                 {formatDate(inv.dueDate || inv.subscription?.currentPeriodEnd)}
                               </td>
                               <td style={{ padding: '12px 14px', color: '#64748b' }}>
                                 ${Number(inv.subtotal || inv.totalAmount || inv.amount || 0).toFixed(2)}
                               </td>
-                              <td style={{ padding: '12px 14px', color: '#059669', fontWeight: 700 }}>
+                              <td style={{ padding: '12px 14px', color: '#059669', fontWeight: 600 }}>
                                 -${Number(inv.discountAmount || 0).toFixed(2)}
                               </td>
-                              <td style={{ padding: '12px 14px', fontWeight: 900, color: '#0f172a', fontSize: 14 }}>
+                              <td style={{ padding: '12px 14px', fontWeight: 800, color: '#0f172a', fontSize: 13.5 }}>
                                 ${Number(inv.totalAmount || inv.amount || 0).toFixed(2)}
                               </td>
                               <td style={{ padding: '12px 14px' }}>
                                 <span
                                   style={{
                                     fontSize: 11,
-                                    fontWeight: 800,
+                                    fontWeight: 700,
                                     padding: '3px 8px',
                                     borderRadius: 14,
-                                    textTransform: 'uppercase',
-                                    background: inv.status === 'paid' ? '#dcfce7' : inv.status === 'pending' ? '#fef3c7' : '#fee2e2',
-                                    color: inv.status === 'paid' ? '#15803d' : inv.status === 'pending' ? '#b45309' : '#b91c1c',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: 5,
+                                    background: inv.status === 'paid' ? '#ecfdf5' : inv.status === 'pending' ? '#fffbeb' : '#fef2f2',
+                                    color: inv.status === 'paid' ? '#047857' : inv.status === 'pending' ? '#b45309' : '#b91c1c',
+                                    border: `1px solid ${inv.status === 'paid' ? '#a7f3d0' : inv.status === 'pending' ? '#fde68a' : '#fecaca'}`,
                                   }}
                                 >
-                                  ● {inv.status === 'paid' ? tr('បង់រួច (PAID)', 'PAID') : inv.status.toUpperCase()}
+                                  <span style={{ width: 5, height: 5, borderRadius: '50%', background: inv.status === 'paid' ? '#10b981' : inv.status === 'pending' ? '#f59e0b' : '#ef4444' }} />
+                                  {inv.status === 'paid' ? tr('បង់រួច', 'PAID') : inv.status.toUpperCase()}
                                 </span>
                               </td>
                               <td style={{ padding: '12px 14px', textAlign: 'right' }}>
@@ -1313,11 +1411,11 @@ export default function TenantDetailPage() {
                                       type="button"
                                       onClick={() => handleMarkInvoicePaid(inv.id)}
                                       style={{
-                                        padding: '5px 10px',
+                                        padding: '5px 9px',
                                         borderRadius: 6,
-                                        border: 'none',
-                                        background: '#059669',
-                                        color: '#ffffff',
+                                        border: '1px solid #a7f3d0',
+                                        background: '#ecfdf5',
+                                        color: '#047857',
                                         fontSize: 11.5,
                                         fontWeight: 700,
                                         cursor: 'pointer',
@@ -1334,21 +1432,22 @@ export default function TenantDetailPage() {
                                       tenant,
                                     })}
                                     style={{
-                                      padding: '5px 10px',
+                                      padding: '5px 9px',
                                       borderRadius: 6,
-                                      border: '1px solid #cbd5e1',
+                                      border: '1px solid #e2e8f0',
                                       background: '#ffffff',
-                                      color: '#1e40af',
-                                      fontSize: 12,
-                                      fontWeight: 700,
+                                      color: '#334155',
+                                      fontSize: 11.5,
+                                      fontWeight: 600,
                                       cursor: 'pointer',
                                       display: 'inline-flex',
                                       alignItems: 'center',
                                       gap: 4,
+                                      transition: 'all 0.15s',
                                     }}
                                     title={tr('បោះពុម្ពជា PDF', 'Print / Download PDF')}
                                   >
-                                    <MdDownload size={14} /> PDF
+                                    <MdDownload size={14} color="#64748b" /> PDF
                                   </button>
                                 </div>
                               </td>
@@ -1363,48 +1462,50 @@ export default function TenantDetailPage() {
 
               {/* === TAB 2: COMPANY & ADMIN PROFILE === */}
               {activeDetailTab === 'company' && (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: 20, width: '100%' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: 16, width: '100%' }}>
                   {/* Left Column: Workspace Portal & Company Details */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                     {/* Card: Workspace Portal Link */}
                     {workspaceUrl && (
                       <div
                         style={{
-                          background: 'linear-gradient(180deg, #eff6ff 0%, #ffffff 100%)',
+                          background: '#ffffff',
                           borderRadius: 16,
-                          padding: '20px 22px',
-                          border: '1.5px solid #bfdbfe',
-                          boxShadow: '0 2px 8px rgba(37, 99, 235, 0.05)',
+                          padding: '18px 20px',
+                          border: '1px solid #e2e8f0',
+                          boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
                         }}
                       >
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <span style={{ fontSize: 20 }}>🌐</span>
-                            <span style={{ fontSize: 14, fontWeight: 800, color: '#1e40af' }}>
+                            <div style={{ width: 30, height: 30, borderRadius: 8, background: '#eff6ff', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <FiGlobe size={16} />
+                            </div>
+                            <span style={{ fontSize: 13.5, fontWeight: 700, color: '#0f172a' }}>
                               {tr('Workspace Subdomain & Login Portal', 'Workspace Portal')}
                             </span>
                           </div>
-                          <span style={{ fontSize: 10.5, fontWeight: 800, background: '#dbeafe', color: '#1d4ed8', padding: '2px 8px', borderRadius: 10 }}>
+                          <span style={{ fontSize: 10.5, fontWeight: 700, background: '#ecfdf5', color: '#047857', border: '1px solid #a7f3d0', padding: '2px 8px', borderRadius: 10 }}>
                             ACTIVE
                           </span>
                         </div>
 
-                        <div style={{ background: '#ffffff', borderRadius: 8, padding: '10px 14px', border: '1px solid #cbd5e1', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+                        <div style={{ background: '#f8fafc', borderRadius: 8, padding: '9px 12px', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
                           <a
                             href={`${workspaceUrl}/auth`}
                             target="_blank"
                             rel="noreferrer"
-                            style={{ fontSize: 13, fontWeight: 700, color: '#2563eb', textDecoration: 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 300 }}
+                            style={{ fontSize: 12.5, fontWeight: 600, color: '#2563eb', textDecoration: 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 300 }}
                           >
                             {workspaceUrl}
                           </a>
                           <button
                             type="button"
                             onClick={() => handleCopy(`${workspaceUrl}/auth`, 'tabPortal')}
-                            style={{ border: 'none', background: '#f1f5f9', borderRadius: 6, padding: '5px 8px', cursor: 'pointer', display: 'flex', flexShrink: 0 }}
+                            style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: 6, padding: '4px 6px', cursor: 'pointer', display: 'flex', flexShrink: 0 }}
                             title={tr('ចម្លង Link', 'Copy Link')}
                           >
-                            {copiedKey === 'tabPortal' ? <MdCheck size={14} color="#16a34a" /> : <MdContentCopy size={14} color="#64748b" />}
+                            {copiedKey === 'tabPortal' ? <FiCheck size={13} color="#16a34a" /> : <FiCopy size={13} color="#64748b" />}
                           </button>
                         </div>
 
@@ -1418,29 +1519,31 @@ export default function TenantDetailPage() {
                             justifyContent: 'center',
                             gap: 6,
                             width: '100%',
-                            padding: '10px',
-                            borderRadius: 9,
-                            background: '#2563eb',
+                            padding: '9px',
+                            borderRadius: 8,
+                            background: '#0f172a',
                             color: '#ffffff',
-                            fontWeight: 800,
-                            fontSize: 13,
+                            fontWeight: 700,
+                            fontSize: 12.5,
                             textDecoration: 'none',
-                            boxShadow: '0 2px 6px rgba(37, 99, 235, 0.25)',
                             boxSizing: 'border-box',
+                            transition: 'all 0.15s',
                           }}
                         >
-                          <MdOpenInNew size={16} />
+                          <FiExternalLink size={14} />
                           <span>{tr('ចូលប្រើប្រាស់ Workspace', 'Launch Workspace')}</span>
                         </a>
                       </div>
                     )}
 
                     {/* Card: Company Profile Details */}
-                    <div style={{ background: '#ffffff', borderRadius: 16, padding: '22px 24px', border: '1px solid #e2e8f0', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, paddingBottom: 12, borderBottom: '1px solid #f1f5f9' }}>
+                    <div style={{ background: '#ffffff', borderRadius: 16, padding: '20px 22px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, paddingBottom: 10, borderBottom: '1px solid #f1f5f9' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <MdBusiness size={20} color="#2563eb" />
-                          <span style={{ fontSize: 15, fontWeight: 800, color: '#0f172a' }}>
+                          <div style={{ width: 30, height: 30, borderRadius: 8, background: '#eff6ff', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <MdBusiness size={16} />
+                          </div>
+                          <span style={{ fontSize: 14, fontWeight: 800, color: '#0f172a' }}>
                             {tr('ព័ត៌មានក្រុមហ៊ុនទូទៅ', 'Company Profile')}
                           </span>
                         </div>
@@ -1448,7 +1551,7 @@ export default function TenantDetailPage() {
                           href={`/admin/saas/tenants/edit/${tenant.id}`}
                           style={{
                             fontSize: 12,
-                            fontWeight: 700,
+                            fontWeight: 600,
                             color: '#2563eb',
                             textDecoration: 'none',
                             display: 'flex',
@@ -1461,15 +1564,15 @@ export default function TenantDetailPage() {
                         </Link>
                       </div>
 
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, fontSize: 13 }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 11, fontSize: 12.5 }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                           <span style={{ color: '#64748b' }}>{tr('ឈ្មោះក្រុមហ៊ុន', 'Company Name')}</span>
                           <strong style={{ color: '#0f172a' }}>{tenant.name}</strong>
                         </div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                           <span style={{ color: '#64748b' }}>{tr('កូដក្រុមហ៊ុន', 'Tenant Code')}</span>
-                          <span style={{ background: '#f1f5f9', padding: '2px 8px', borderRadius: 6, fontWeight: 700, color: '#334155', fontSize: 12 }}>
-                            {tenant.code || `TNT-${tenant.id}`}
+                          <span style={{ background: '#f8fafc', border: '1px solid #e2e8f0', padding: '2px 8px', borderRadius: 6, fontWeight: 700, color: '#334155', fontSize: 12, fontFamily: 'monospace' }}>
+                            {tenant.code || `TENANT-${tenant.id}`}
                           </span>
                         </div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -1482,7 +1585,7 @@ export default function TenantDetailPage() {
                                 onClick={() => handleCopy(tenant.phone, 'phone')}
                                 style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: 2, display: 'flex' }}
                               >
-                                {copiedKey === 'phone' ? <MdCheck size={13} color="#16a34a" /> : <MdContentCopy size={13} color="#94a3b8" />}
+                                {copiedKey === 'phone' ? <FiCheck size={12} color="#16a34a" /> : <FiCopy size={12} color="#94a3b8" />}
                               </button>
                             )}
                           </div>
@@ -1497,7 +1600,7 @@ export default function TenantDetailPage() {
                                 onClick={() => handleCopy(tenant.email, 'email')}
                                 style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: 2, display: 'flex' }}
                               >
-                                {copiedKey === 'email' ? <MdCheck size={13} color="#16a34a" /> : <MdContentCopy size={13} color="#94a3b8" />}
+                                {copiedKey === 'email' ? <FiCheck size={12} color="#16a34a" /> : <FiCopy size={12} color="#94a3b8" />}
                               </button>
                             )}
                           </div>
@@ -1515,17 +1618,19 @@ export default function TenantDetailPage() {
                   </div>
 
                   {/* Right Column: Tenant Admin Account & Plan Summary */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                     {/* Card: Tenant Admin Account */}
-                    <div style={{ background: '#ffffff', borderRadius: 16, padding: '22px 24px', border: '1px solid #e2e8f0', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, paddingBottom: 12, borderBottom: '1px solid #f1f5f9' }}>
-                        <MdAdminPanelSettings size={20} color="#7c3aed" />
-                        <span style={{ fontSize: 15, fontWeight: 800, color: '#0f172a' }}>
+                    <div style={{ background: '#ffffff', borderRadius: 16, padding: '20px 22px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14, paddingBottom: 10, borderBottom: '1px solid #f1f5f9' }}>
+                        <div style={{ width: 30, height: 30, borderRadius: 8, background: '#f5f3ff', color: '#7c3aed', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <MdAdminPanelSettings size={18} />
+                        </div>
+                        <span style={{ fontSize: 14, fontWeight: 800, color: '#0f172a' }}>
                           {tr('គណនី Admin ប្រព័ន្ធ', 'Tenant Administrator')}
                         </span>
                       </div>
 
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, fontSize: 13 }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 11, fontSize: 12.5 }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                           <span style={{ color: '#64748b' }}>{tr('ឈ្មោះអ្នកគ្រប់គ្រង', 'Admin Name')}</span>
                           <strong style={{ color: '#0f172a' }}>{adminUser.name || 'Company Administrator'}</strong>
@@ -1534,7 +1639,7 @@ export default function TenantDetailPage() {
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                           <span style={{ color: '#64748b' }}>{tr('អ៊ីមែល Login', 'Login Email')}</span>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                            <span style={{ color: '#1e40af', fontWeight: 700, fontSize: 12.5 }}>{adminEmail}</span>
+                            <span style={{ color: '#2563eb', fontWeight: 600 }}>{adminEmail}</span>
                             <button
                               type="button"
                               onClick={() => handleCopy(adminEmail, 'adminEmail')}
@@ -1549,7 +1654,7 @@ export default function TenantDetailPage() {
                               }}
                               title={tr('ចម្លង Email', 'Copy Email')}
                             >
-                              {copiedKey === 'adminEmail' ? <MdCheck size={13} color="#16a34a" /> : <MdContentCopy size={13} color="#64748b" />}
+                              {copiedKey === 'adminEmail' ? <FiCheck size={12} color="#16a34a" /> : <FiCopy size={12} color="#64748b" />}
                             </button>
                           </div>
                         </div>
@@ -1561,21 +1666,21 @@ export default function TenantDetailPage() {
 
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                           <span style={{ color: '#64748b' }}>{tr('តួនាទី', 'Assigned Role')}</span>
-                          <span style={{ background: '#ede9fe', color: '#6d28d9', padding: '3px 8px', borderRadius: 6, fontWeight: 700, fontSize: 12 }}>
+                          <span style={{ background: '#f5f3ff', color: '#6d28d9', border: '1px solid #ddd6fe', padding: '2px 8px', borderRadius: 6, fontWeight: 700, fontSize: 11.5 }}>
                             {adminUser.role || 'COMPANY ADMIN'}
                           </span>
                         </div>
 
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                           <span style={{ color: '#64748b' }}>{tr('ស្ថានភាព', 'Status')}</span>
-                          <span style={{ color: '#16a34a', fontWeight: 700 }}>● {tr('ដំណើរការធម្មតា', 'Active')}</span>
+                          <span style={{ color: '#059669', fontWeight: 700 }}>● {tr('ដំណើរការធម្មតា', 'Active')}</span>
                         </div>
                       </div>
                     </div>
 
                     {/* Quick Subscription Overview Card */}
-                    <div style={{ background: '#f8fafc', borderRadius: 16, padding: '20px 22px', border: '1px solid #e2e8f0' }}>
-                      <div style={{ fontSize: 13.5, fontWeight: 800, color: '#0f172a', marginBottom: 10 }}>
+                    <div style={{ background: '#f8fafc', borderRadius: 16, padding: '18px 20px', border: '1px solid #e2e8f0' }}>
+                      <div style={{ fontSize: 13, fontWeight: 800, color: '#0f172a', marginBottom: 10 }}>
                         {tr('ព័ត៌មានកញ្ចប់សេវាបច្ចុប្បន្ន', 'Current Subscription Plan')}
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, fontSize: 12.5 }}>
@@ -1590,7 +1695,7 @@ export default function TenantDetailPage() {
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12.5 }}>
                         <span style={{ color: '#64748b' }}>{tr('កាលបរិច្ឆេទផុតកំណត់', 'Expiry Date')}</span>
-                        <span style={{ color: '#d97706', fontWeight: 700 }}>{formatDate(activeSub?.currentPeriodEnd)}</span>
+                        <span style={{ color: '#b45309', fontWeight: 700 }}>{formatDate(activeSub?.currentPeriodEnd)}</span>
                       </div>
                     </div>
                   </div>
@@ -1599,35 +1704,29 @@ export default function TenantDetailPage() {
 
               {/* === TAB 3: PLAN QUOTAS & SPECS === */}
               {activeDetailTab === 'quotas' && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 20, width: '100%' }}>
-                  {/* Quotas grid tiles */}
-                  <div style={{ background: '#ffffff', borderRadius: 18, padding: '24px 26px', border: '1px solid #e2e8f0', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, paddingBottom: 16, borderBottom: '1px solid #f1f5f9' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <div style={{ width: 42, height: 42, borderRadius: 12, background: '#fef3c7', color: '#d97706', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22 }}>
-                          ⚡
-                        </div>
-                        <div>
-                          <h2 style={{ fontSize: 17, fontWeight: 900, color: '#0f172a', margin: 0 }}>
-                            {tr('ដែនកំណត់ធនធានប្រព័ន្ធ (Plan Quotas & System Limits)', 'Plan Quotas & System Limits')}
-                          </h2>
-                          <p style={{ margin: '3px 0 0', fontSize: 12.5, color: '#64748b' }}>
-                            {tr(`អនុញ្ញាតសម្រាប់កញ្ចប់សេវា ${currentPlan.name || 'Professional'}`, `Allowed quota limits for ${currentPlan.name || 'Professional'} plan`)}
-                          </p>
-                        </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 16, width: '100%' }}>
+                  <div style={{ background: '#ffffff', borderRadius: 16, padding: '22px 24px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18, paddingBottom: 14, borderBottom: '1px solid #f1f5f9' }}>
+                      <div>
+                        <h2 style={{ fontSize: 15, fontWeight: 800, color: '#0f172a', margin: 0 }}>
+                          {tr('ដែនកំណត់ធនធានប្រព័ន្ធ', 'Plan Quotas & System Limits')}
+                        </h2>
+                        <p style={{ margin: '3px 0 0', fontSize: 12, color: '#64748b' }}>
+                          {tr(`អនុញ្ញាតសម្រាប់កញ្ចប់សេវា ${currentPlan.name || 'Professional'}`, `Allowed quota limits for ${currentPlan.name || 'Professional'} plan`)}
+                        </p>
                       </div>
 
                       <button
                         type="button"
                         onClick={handleOpenRenewModal}
                         style={{
-                          padding: '8px 16px',
+                          padding: '7px 14px',
                           borderRadius: 8,
                           border: 'none',
                           background: '#2563eb',
                           color: '#ffffff',
-                          fontSize: 12.5,
-                          fontWeight: 800,
+                          fontSize: 12,
+                          fontWeight: 700,
                           cursor: 'pointer',
                           display: 'flex',
                           alignItems: 'center',
@@ -1635,43 +1734,43 @@ export default function TenantDetailPage() {
                           boxShadow: '0 2px 6px rgba(37, 99, 235, 0.25)',
                         }}
                       >
-                        <MdAutorenew size={16} />
+                        <MdAutorenew size={15} />
                         <span>{tr('បន្តសុពលភាព / ដំឡើងកញ្ចប់', 'Renew / Extend Quota')}</span>
                       </button>
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 14 }}>
-                      <div style={{ background: '#f8fafc', borderRadius: 14, padding: '16px 18px', border: '1px solid #e2e8f0', textAlign: 'center' }}>
-                        <div style={{ fontSize: 12, color: '#64748b', fontWeight: 700 }}>{tr('បុគ្គលិក Users', 'Staff Users')}</div>
-                        <div style={{ fontSize: 22, fontWeight: 900, color: '#0f172a', marginTop: 4 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 }}>
+                      <div style={{ background: '#f8fafc', borderRadius: 12, padding: '16px', border: '1px solid #e2e8f0', textAlign: 'center' }}>
+                        <div style={{ fontSize: 11.5, color: '#64748b', fontWeight: 600 }}>{tr('បុគ្គលិក', 'Staff Users')}</div>
+                        <div style={{ fontSize: 20, fontWeight: 800, color: '#0f172a', marginTop: 4 }}>
                           {currentPlan.maxUsers || tr('មិនកំណត់', 'Unlimited')}
                         </div>
                       </div>
 
-                      <div style={{ background: '#f8fafc', borderRadius: 14, padding: '16px 18px', border: '1px solid #e2e8f0', textAlign: 'center' }}>
-                        <div style={{ fontSize: 12, color: '#64748b', fontWeight: 700 }}>{tr('អ្នកដឹក Drivers', 'Drivers')}</div>
-                        <div style={{ fontSize: 22, fontWeight: 900, color: '#0f172a', marginTop: 4 }}>
+                      <div style={{ background: '#f8fafc', borderRadius: 12, padding: '16px', border: '1px solid #e2e8f0', textAlign: 'center' }}>
+                        <div style={{ fontSize: 11.5, color: '#64748b', fontWeight: 600 }}>{tr('អ្នកដឹកជញ្ជូន', 'Drivers')}</div>
+                        <div style={{ fontSize: 20, fontWeight: 800, color: '#0f172a', marginTop: 4 }}>
                           {currentPlan.maxDrivers || tr('មិនកំណត់', 'Unlimited')}
                         </div>
                       </div>
 
-                      <div style={{ background: '#f8fafc', borderRadius: 14, padding: '16px 18px', border: '1px solid #e2e8f0', textAlign: 'center' }}>
-                        <div style={{ fontSize: 12, color: '#64748b', fontWeight: 700 }}>{tr('ដៃគូ Merchants', 'Merchants')}</div>
-                        <div style={{ fontSize: 22, fontWeight: 900, color: '#0f172a', marginTop: 4 }}>
+                      <div style={{ background: '#f8fafc', borderRadius: 12, padding: '16px', border: '1px solid #e2e8f0', textAlign: 'center' }}>
+                        <div style={{ fontSize: 11.5, color: '#64748b', fontWeight: 600 }}>{tr('ហាងដៃគូ', 'Merchants')}</div>
+                        <div style={{ fontSize: 20, fontWeight: 800, color: '#0f172a', marginTop: 4 }}>
                           {currentPlan.maxMerchants || tr('មិនកំណត់', 'Unlimited')}
                         </div>
                       </div>
 
-                      <div style={{ background: '#f8fafc', borderRadius: 14, padding: '16px 18px', border: '1px solid #e2e8f0', textAlign: 'center' }}>
-                        <div style={{ fontSize: 12, color: '#64748b', fontWeight: 700 }}>{tr('ការបញ្ជាទិញ/ខែ', 'Orders / Month')}</div>
-                        <div style={{ fontSize: 22, fontWeight: 900, color: '#0f172a', marginTop: 4 }}>
+                      <div style={{ background: '#f8fafc', borderRadius: 12, padding: '16px', border: '1px solid #e2e8f0', textAlign: 'center' }}>
+                        <div style={{ fontSize: 11.5, color: '#64748b', fontWeight: 600 }}>{tr('ការបញ្ជាទិញ/ខែ', 'Orders / Month')}</div>
+                        <div style={{ fontSize: 20, fontWeight: 800, color: '#0f172a', marginTop: 4 }}>
                           {currentPlan.maxOrdersPerMonth || tr('មិនកំណត់', 'Unlimited')}
                         </div>
                       </div>
 
-                      <div style={{ background: '#f8fafc', borderRadius: 14, padding: '16px 18px', border: '1px solid #e2e8f0', textAlign: 'center' }}>
-                        <div style={{ fontSize: 12, color: '#64748b', fontWeight: 700 }}>{tr('យានយន្ត Vehicles', 'Vehicles')}</div>
-                        <div style={{ fontSize: 22, fontWeight: 900, color: '#0f172a', marginTop: 4 }}>
+                      <div style={{ background: '#f8fafc', borderRadius: 12, padding: '16px', border: '1px solid #e2e8f0', textAlign: 'center' }}>
+                        <div style={{ fontSize: 11.5, color: '#64748b', fontWeight: 600 }}>{tr('យានយន្ត', 'Vehicles')}</div>
+                        <div style={{ fontSize: 20, fontWeight: 800, color: '#0f172a', marginTop: 4 }}>
                           {currentPlan.maxVehicles || tr('មិនកំណត់', 'Unlimited')}
                         </div>
                       </div>
@@ -1681,7 +1780,7 @@ export default function TenantDetailPage() {
               )}
             </div>
           )}
-        </div>
+        </main>
       </div>
 
       {/* RENEW SUBSCRIPTION MODAL */}
@@ -1692,8 +1791,8 @@ export default function TenantDetailPage() {
             position: 'fixed',
             inset: 0,
             zIndex: 9999,
-            background: 'rgba(15, 23, 42, 0.6)',
-            backdropFilter: 'blur(5px)',
+            background: 'rgba(15, 23, 42, 0.5)',
+            backdropFilter: 'blur(4px)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -1704,23 +1803,24 @@ export default function TenantDetailPage() {
             onClick={(e) => e.stopPropagation()}
             style={{
               background: '#ffffff',
-              borderRadius: 20,
+              borderRadius: 16,
               width: '100%',
-              maxWidth: 480,
-              boxShadow: '0 25px 70px -12px rgba(15, 23, 42, 0.35)',
+              maxWidth: 460,
+              boxShadow: '0 20px 40px -12px rgba(15, 23, 42, 0.25)',
               overflow: 'hidden',
+              border: '1px solid #e2e8f0',
             }}
           >
-            <div style={{ padding: '20px 24px', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ padding: '18px 22px', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <div style={{ width: 38, height: 38, borderRadius: 10, background: '#eff6ff', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>
-                  <MdAutorenew size={20} />
+                <div style={{ width: 34, height: 34, borderRadius: 8, background: '#eff6ff', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <MdAutorenew size={18} />
                 </div>
                 <div>
-                  <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: '#0f172a' }}>
+                  <h3 style={{ margin: 0, fontSize: 15, fontWeight: 800, color: '#0f172a' }}>
                     {tr('បន្តសុពលភាពក្រុមហ៊ុន', 'Extend Subscription Validity')}
                   </h3>
-                  <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>
+                  <div style={{ fontSize: 11.5, color: '#64748b', marginTop: 1 }}>
                     {tenant?.name}
                   </div>
                 </div>
@@ -1728,22 +1828,22 @@ export default function TenantDetailPage() {
               <button
                 type="button"
                 onClick={() => setShowRenewModal(false)}
-                style={{ border: 'none', background: 'transparent', fontSize: 18, color: '#64748b', cursor: 'pointer' }}
+                style={{ border: 'none', background: 'transparent', fontSize: 18, color: '#94a3b8', cursor: 'pointer' }}
               >
                 ✕
               </button>
             </div>
 
-            <div style={{ padding: '22px 24px' }}>
-              <div style={{ fontSize: 13, color: '#334155', marginBottom: 12, fontWeight: 600 }}>
+            <div style={{ padding: '20px 22px' }}>
+              <div style={{ fontSize: 12.5, color: '#334155', marginBottom: 10, fontWeight: 600 }}>
                 {tr('ជ្រើសរើសរយៈពេលបន្ត៖', 'Select Extension Duration:')}
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 14 }}>
                 {[
-                  { key: '1y', label: tr('១ ឆ្នាំ (+1 Year)', '+1 Year') },
-                  { key: '6m', label: tr('៦ ខែ (+6 Months)', '+6 Months') },
-                  { key: '1m', label: tr('១ ខែ (+1 Month)', '+1 Month') },
+                  { key: '1y', label: tr('១ ឆ្នាំ', '+1 Year') },
+                  { key: '6m', label: tr('៦ ខែ', '+6 Months') },
+                  { key: '1m', label: tr('១ ខែ', '+1 Month') },
                   { key: 'custom', label: tr('កំណត់ថ្ងៃខ្លួនឯង', 'Custom Date') },
                 ].map((opt) => (
                   <button
@@ -1751,14 +1851,15 @@ export default function TenantDetailPage() {
                     type="button"
                     onClick={() => handleSelectDuration(opt.key as any)}
                     style={{
-                      padding: '11px',
-                      borderRadius: 10,
-                      border: renewDuration === opt.key ? '2px solid #2563eb' : '1.5px solid #cbd5e1',
+                      padding: '9px',
+                      borderRadius: 8,
+                      border: renewDuration === opt.key ? '1.5px solid #2563eb' : '1px solid #cbd5e1',
                       background: renewDuration === opt.key ? '#eff6ff' : '#ffffff',
                       color: renewDuration === opt.key ? '#1d4ed8' : '#334155',
                       fontWeight: 700,
-                      fontSize: 13,
+                      fontSize: 12,
                       cursor: 'pointer',
+                      transition: 'all 0.15s',
                     }}
                   >
                     {opt.label}
@@ -1767,85 +1868,85 @@ export default function TenantDetailPage() {
               </div>
 
               {renewDuration === 'custom' && (
-                <div style={{ marginBottom: 16 }}>
-                  <label style={{ display: 'block', fontSize: 12.5, fontWeight: 700, color: '#334155', marginBottom: 6 }}>
-                    {tr('ថ្ងៃផុតកំណត់ថ្មី (New Expiration Date)', 'New Expiration Date')}
+                <div style={{ marginBottom: 14 }}>
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#334155', marginBottom: 5 }}>
+                    {tr('ថ្ងៃផុតកំណត់ថ្មី', 'New Expiration Date')}
                   </label>
                   <input
                     type="date"
                     value={customEndDate}
                     onChange={(e) => setCustomEndDate(e.target.value)}
-                    style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1.5px solid #cbd5e1', fontSize: 13, outline: 'none', boxSizing: 'border-box' }}
+                    style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid #cbd5e1', fontSize: 12.5, outline: 'none', boxSizing: 'border-box' }}
                   />
                 </div>
               )}
 
               {/* Invoice Generation Box */}
-              <div style={{ background: '#f8fafc', borderRadius: 14, padding: '16px', border: '1.5px solid #e2e8f0', marginTop: 12, marginBottom: 16 }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: renewCreateInvoice ? 12 : 0 }}>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontWeight: 800, fontSize: 13, color: '#0f172a', margin: 0 }}>
+              <div style={{ background: '#f8fafc', borderRadius: 12, padding: '14px', border: '1px solid #e2e8f0', marginTop: 10, marginBottom: 14 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: renewCreateInvoice ? 10 : 0 }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 7, cursor: 'pointer', fontWeight: 700, fontSize: 12.5, color: '#0f172a', margin: 0 }}>
                     <input
                       type="checkbox"
                       checked={renewCreateInvoice}
                       onChange={(e) => setRenewCreateInvoice(e.target.checked)}
-                      style={{ width: 17, height: 17, accentColor: '#2563eb', cursor: 'pointer' }}
+                      style={{ width: 16, height: 16, accentColor: '#2563eb', cursor: 'pointer' }}
                     />
-                    <span>🧾 {tr('បង្កើតវិក្កយបត្រថ្មី (Generate Invoice)', 'Generate New Invoice')}</span>
+                    <span>{tr('បង្កើតវិក្កយបត្រថ្មី', 'Generate New Invoice')}</span>
                   </label>
-                  <span style={{ fontSize: 11, background: renewCreateInvoice ? '#dcfce7' : '#f1f5f9', color: renewCreateInvoice ? '#15803d' : '#64748b', padding: '3px 9px', borderRadius: 12, fontWeight: 800 }}>
+                  <span style={{ fontSize: 10.5, background: renewCreateInvoice ? '#ecfdf5' : '#f1f5f9', color: renewCreateInvoice ? '#047857' : '#64748b', border: `1px solid ${renewCreateInvoice ? '#a7f3d0' : '#e2e8f0'}`, padding: '2px 8px', borderRadius: 10, fontWeight: 700 }}>
                     {renewCreateInvoice ? tr('✓ បង្កើតស្វ័យប្រវត្តិ', '✓ Enabled') : tr('✕ មិនបង្កើត', '✕ Off')}
                   </span>
                 </div>
 
                 {renewCreateInvoice && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12, paddingTop: 10, borderTop: '1px dashed #cbd5e1' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10, paddingTop: 10, borderTop: '1px dashed #cbd5e1' }}>
                     {/* Amount */}
                     <div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                        <label style={{ fontSize: 12, fontWeight: 700, color: '#475569' }}>
-                          {tr('ទឹកប្រាក់វិក្កយបត្រ ($)', 'Invoice Amount ($)')}
+                        <label style={{ fontSize: 11.5, fontWeight: 600, color: '#475569' }}>
+                          {tr('ទឹកប្រាក់វិក្កយបត្រ', 'Invoice Amount ($)')}
                         </label>
-                        <span style={{ fontSize: 11, color: '#64748b', fontWeight: 600 }}>
+                        <span style={{ fontSize: 11, color: '#64748b' }}>
                           Plan: {currentPlan.name || 'Professional'}
                         </span>
                       </div>
                       <div style={{ position: 'relative' }}>
-                        <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', fontWeight: 800, color: '#64748b' }}>$</span>
+                        <span style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', fontWeight: 700, color: '#64748b', fontSize: 13 }}>$</span>
                         <input
                           type="number"
                           step="0.01"
                           min="0"
                           value={renewAmount}
                           onChange={(e) => setRenewAmount(parseFloat(e.target.value) || 0)}
-                          style={{ width: '100%', padding: '9px 12px 9px 28px', borderRadius: 8, border: '1.5px solid #cbd5e1', fontSize: 14, fontWeight: 800, outline: 'none', boxSizing: 'border-box' }}
+                          style={{ width: '100%', padding: '8px 10px 8px 24px', borderRadius: 7, border: '1px solid #cbd5e1', fontSize: 13, fontWeight: 700, outline: 'none', boxSizing: 'border-box' }}
                         />
                       </div>
                     </div>
 
                     {/* Status & Payment Method */}
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                       <div>
-                        <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#475569', marginBottom: 4 }}>
+                        <label style={{ display: 'block', fontSize: 11.5, fontWeight: 600, color: '#475569', marginBottom: 3 }}>
                           {tr('ស្ថានភាពវិក្កយបត្រ', 'Invoice Status')}
                         </label>
                         <select
                           value={renewInvoiceStatus}
                           onChange={(e) => setRenewInvoiceStatus(e.target.value as any)}
-                          style={{ width: '100%', padding: '9px 10px', borderRadius: 8, border: '1.5px solid #cbd5e1', fontSize: 12.5, fontWeight: 700, outline: 'none', background: '#fff', cursor: 'pointer' }}
+                          style={{ width: '100%', padding: '7px 8px', borderRadius: 7, border: '1px solid #cbd5e1', fontSize: 12, fontWeight: 600, outline: 'none', background: '#fff', cursor: 'pointer' }}
                         >
-                          <option value="paid">{tr('បង់រួច (PAID)', 'PAID')}</option>
-                          <option value="pending">{tr('មិនទាន់បង់ (PENDING)', 'PENDING')}</option>
+                          <option value="paid">{tr('បង់រួច', 'PAID')}</option>
+                          <option value="pending">{tr('មិនទាន់បង់', 'PENDING')}</option>
                         </select>
                       </div>
 
                       <div>
-                        <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#475569', marginBottom: 4 }}>
+                        <label style={{ display: 'block', fontSize: 11.5, fontWeight: 600, color: '#475569', marginBottom: 3 }}>
                           {tr('វិធីសាស្ត្រទូទាត់', 'Payment Method')}
                         </label>
                         <select
                           value={renewPaymentMethod}
                           onChange={(e) => setRenewPaymentMethod(e.target.value)}
-                          style={{ width: '100%', padding: '9px 10px', borderRadius: 8, border: '1.5px solid #cbd5e1', fontSize: 12.5, fontWeight: 700, outline: 'none', background: '#fff', cursor: 'pointer' }}
+                          style={{ width: '100%', padding: '7px 8px', borderRadius: 7, border: '1px solid #cbd5e1', fontSize: 12, fontWeight: 600, outline: 'none', background: '#fff', cursor: 'pointer' }}
                         >
                           <option value="aba_khqr">KHQR / ABA Bank</option>
                           <option value="bank_transfer">{tr('ផ្ទេរប្រាក់ធនាគារ', 'Bank Transfer')}</option>
@@ -1857,11 +1958,11 @@ export default function TenantDetailPage() {
                 )}
               </div>
 
-              <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
+              <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
                 <button
                   type="button"
                   onClick={() => setShowRenewModal(false)}
-                  style={{ flex: 1, padding: '11px', borderRadius: 10, border: '1px solid #e2e8f0', background: '#fff', color: '#64748b', fontWeight: 700, cursor: 'pointer' }}
+                  style={{ flex: 1, padding: '9px', borderRadius: 8, border: '1px solid #e2e8f0', background: '#fff', color: '#64748b', fontWeight: 600, fontSize: 12.5, cursor: 'pointer' }}
                 >
                   {tr('បោះបង់', 'Cancel')}
                 </button>
@@ -1869,7 +1970,7 @@ export default function TenantDetailPage() {
                   type="button"
                   disabled={renewing}
                   onClick={handleConfirmRenew}
-                  style={{ flex: 2, padding: '11px', borderRadius: 10, border: 'none', background: '#2563eb', color: '#fff', fontWeight: 800, cursor: renewing ? 'not-allowed' : 'pointer' }}
+                  style={{ flex: 2, padding: '9px', borderRadius: 8, border: 'none', background: '#2563eb', color: '#fff', fontWeight: 700, fontSize: 12.5, cursor: renewing ? 'not-allowed' : 'pointer' }}
                 >
                   {renewing ? tr('កំពុងបន្ត...', 'Extending...') : tr('បញ្ជាក់ការបន្ត', 'Confirm Renewal')}
                 </button>
@@ -1887,8 +1988,8 @@ export default function TenantDetailPage() {
             position: 'fixed',
             inset: 0,
             zIndex: 9999,
-            background: 'rgba(15, 23, 42, 0.6)',
-            backdropFilter: 'blur(5px)',
+            background: 'rgba(15, 23, 42, 0.5)',
+            backdropFilter: 'blur(4px)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -1899,23 +2000,24 @@ export default function TenantDetailPage() {
             onClick={(e) => e.stopPropagation()}
             style={{
               background: '#ffffff',
-              borderRadius: 20,
+              borderRadius: 16,
               width: '100%',
-              maxWidth: 480,
-              boxShadow: '0 25px 70px -12px rgba(15, 23, 42, 0.35)',
+              maxWidth: 460,
+              boxShadow: '0 20px 40px -12px rgba(15, 23, 42, 0.25)',
               overflow: 'hidden',
+              border: '1px solid #e2e8f0',
             }}
           >
-            <div style={{ padding: '20px 24px', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ padding: '18px 22px', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <div style={{ width: 38, height: 38, borderRadius: 10, background: '#ecfdf5', color: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>
-                  <MdReceiptLong size={20} />
+                <div style={{ width: 34, height: 34, borderRadius: 8, background: '#eff6ff', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <MdReceiptLong size={18} />
                 </div>
                 <div>
-                  <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: '#0f172a' }}>
+                  <h3 style={{ margin: 0, fontSize: 15, fontWeight: 800, color: '#0f172a' }}>
                     {tr('ចេញវិក្កយបត្រថ្មីជូនក្រុមហ៊ុន', 'Issue New Invoice')}
                   </h3>
-                  <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>
+                  <div style={{ fontSize: 11.5, color: '#64748b', marginTop: 1 }}>
                     {tenant?.name}
                   </div>
                 </div>
@@ -1923,17 +2025,17 @@ export default function TenantDetailPage() {
               <button
                 type="button"
                 onClick={() => setShowCreateInvoiceModal(false)}
-                style={{ border: 'none', background: 'transparent', fontSize: 18, color: '#64748b', cursor: 'pointer' }}
+                style={{ border: 'none', background: 'transparent', fontSize: 18, color: '#94a3b8', cursor: 'pointer' }}
               >
                 ✕
               </button>
             </div>
 
-            <form onSubmit={handleCreateInvoiceSubmit} style={{ padding: '22px 24px' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <form onSubmit={handleCreateInvoiceSubmit} style={{ padding: '20px 22px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: 12.5, fontWeight: 700, color: '#334155', marginBottom: 6 }}>
-                    {tr('វដ្តទូទាត់ (Billing Cycle)', 'Billing Cycle')}
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#334155', marginBottom: 5 }}>
+                    {tr('វដ្តទូទាត់', 'Billing Cycle')}
                   </label>
                   <select
                     value={invoiceForm.billingCycle}
@@ -1942,16 +2044,16 @@ export default function TenantDetailPage() {
                       const price = cycle === 'yearly' ? Number(currentPlan.priceYearly || 490) : Number(currentPlan.priceMonthly || 49);
                       setInvoiceForm((prev) => ({ ...prev, billingCycle: cycle, amount: price }));
                     }}
-                    style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1.5px solid #cbd5e1', fontSize: 13, outline: 'none', background: '#fff', fontWeight: 600 }}
+                    style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #cbd5e1', fontSize: 12.5, outline: 'none', background: '#fff', fontWeight: 600 }}
                   >
-                    <option value="monthly">{tr('ប្រចាំខែ (Monthly)', 'Monthly')}</option>
-                    <option value="yearly">{tr('ប្រចាំឆ្នាំ (Yearly)', 'Yearly')}</option>
+                    <option value="monthly">{tr('ប្រចាំខែ', 'Monthly')}</option>
+                    <option value="yearly">{tr('ប្រចាំឆ្នាំ', 'Yearly')}</option>
                   </select>
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', fontSize: 12.5, fontWeight: 700, color: '#334155', marginBottom: 6 }}>
-                    {tr('ទឹកប្រាក់សរុប (USD)', 'Total Amount (USD)')} *
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#334155', marginBottom: 5 }}>
+                    {tr('ទឹកប្រាក់សរុប', 'Total Amount (USD)')} *
                   </label>
                   <input
                     type="number"
@@ -1959,36 +2061,36 @@ export default function TenantDetailPage() {
                     required
                     value={invoiceForm.amount}
                     onChange={(e) => setInvoiceForm({ ...invoiceForm, amount: parseFloat(e.target.value) || 0 })}
-                    style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1.5px solid #cbd5e1', fontSize: 14, fontWeight: 800, outline: 'none', boxSizing: 'border-box' }}
+                    style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #cbd5e1', fontSize: 13.5, fontWeight: 800, outline: 'none', boxSizing: 'border-box' }}
                   />
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', fontSize: 12.5, fontWeight: 700, color: '#334155', marginBottom: 6 }}>
-                    {tr('ថ្ងៃផុតកំណត់បង់ប្រាក់ (Due Date)', 'Due Date')} *
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#334155', marginBottom: 5 }}>
+                    {tr('ថ្ងៃផុតកំណត់បង់ប្រាក់', 'Due Date')} *
                   </label>
                   <input
                     type="date"
                     required
                     value={invoiceForm.dueDate}
                     onChange={(e) => setInvoiceForm({ ...invoiceForm, dueDate: e.target.value })}
-                    style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1.5px solid #cbd5e1', fontSize: 13, outline: 'none', boxSizing: 'border-box' }}
+                    style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #cbd5e1', fontSize: 12.5, outline: 'none', boxSizing: 'border-box' }}
                   />
                 </div>
               </div>
 
-              <div style={{ display: 'flex', gap: 10, marginTop: 22 }}>
+              <div style={{ display: 'flex', gap: 8, marginTop: 18 }}>
                 <button
                   type="button"
                   onClick={() => setShowCreateInvoiceModal(false)}
-                  style={{ flex: 1, padding: '11px', borderRadius: 10, border: '1px solid #e2e8f0', background: '#fff', color: '#64748b', fontWeight: 700, cursor: 'pointer' }}
+                  style={{ flex: 1, padding: '9px', borderRadius: 8, border: '1px solid #e2e8f0', background: '#fff', color: '#64748b', fontWeight: 600, fontSize: 12.5, cursor: 'pointer' }}
                 >
                   {tr('បោះបង់', 'Cancel')}
                 </button>
                 <button
                   type="submit"
                   disabled={creatingInvoice}
-                  style={{ flex: 2, padding: '11px', borderRadius: 10, border: 'none', background: '#059669', color: '#fff', fontWeight: 800, cursor: creatingInvoice ? 'not-allowed' : 'pointer' }}
+                  style={{ flex: 2, padding: '9px', borderRadius: 8, border: 'none', background: '#2563eb', color: '#fff', fontWeight: 700, fontSize: 12.5, cursor: creatingInvoice ? 'not-allowed' : 'pointer' }}
                 >
                   {creatingInvoice ? tr('កំពុងបង្កើត...', 'Creating...') : tr('ចេញវិក្កយបត្រ', 'Issue Invoice')}
                 </button>

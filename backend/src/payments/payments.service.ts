@@ -8,6 +8,7 @@ import { Merchant } from '../merchants/entities/merchant.entity';
 import { Parcel } from '../parcels/entities/parcel.entity';
 import { Organisation } from '../settings/entities/organisation.entity';
 import { TelegramService } from '../telegram/telegram.service';
+import { FirebaseService } from '../firebase/firebase.service';
 
 @Injectable()
 export class PaymentsService {
@@ -19,6 +20,7 @@ export class PaymentsService {
     @InjectRepository(Parcel) private parcelRepo: Repository<Parcel>,
     @InjectRepository(Organisation) private orgRepo: Repository<Organisation>,
     private readonly telegramService: TelegramService,
+    private readonly firebaseService: FirebaseService,
   ) { }
 
   // Driver Payments
@@ -173,6 +175,18 @@ export class PaymentsService {
         `របាយការណ៍លម្អិត ចុចត្រង់នេះ: <a href="${telegramReport.detailUrl || ''}">Click Detail</a>`;
 
       await this.telegramService.notifyMerchant(merchantId, 'PAYMENT_SETTLEMENT', text);
+    }
+
+    try {
+      await this.firebaseService.sendToMerchant(merchantId, {
+        title: 'ការទូទាត់ប្រាក់ COD បានបញ្ចប់ 💰',
+        body: `ការទូទាត់ប្រាក់ #${saved.reference || saved.id} សរុប $${parseFloat(amount as any || 0).toFixed(2)} បានទូទាត់រួចរាល់`,
+        type: 'payment_settlement',
+        data: { settlementId: saved.id, reference: saved.reference },
+        tenantId,
+      });
+    } catch (e) {
+      // Continue
     }
 
     return saved;

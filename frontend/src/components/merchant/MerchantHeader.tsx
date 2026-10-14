@@ -1,14 +1,17 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { MdNotifications } from "react-icons/md";
 import { useRouter } from "next/navigation";
+import api from "@/lib/api";
+import { isAuthenticated } from "@/lib/auth";
 
 interface MerchantHeaderProps {
   merchantName?: string;
   branchName?: string;
   phoneOrCode?: string;
   hasUnreadNotifications?: boolean;
+  unreadCount?: number;
   onNotificationClick?: () => void;
 }
 
@@ -16,10 +19,32 @@ export default function MerchantHeader({
   merchantName = "He Coffee",
   branchName = "សាខាកណ្តាល",
   phoneOrCode = "012 345 678",
-  hasUnreadNotifications = false,
+  hasUnreadNotifications,
+  unreadCount,
   onNotificationClick,
 }: MerchantHeaderProps) {
   const router = useRouter();
+  const [internalUnread, setInternalUnread] = useState(0);
+
+  useEffect(() => {
+    if (unreadCount !== undefined) {
+      setInternalUnread(unreadCount);
+      return;
+    }
+    if (isAuthenticated()) {
+      api
+        .get("/mobile/merchant/notifications/unread-count")
+        .then((res) => {
+          if (res?.data?.unreadCount !== undefined) {
+            setInternalUnread(res.data.unreadCount);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [unreadCount]);
+
+  const activeCount = unreadCount !== undefined ? unreadCount : internalUnread;
+  const showBadge = hasUnreadNotifications !== undefined ? hasUnreadNotifications : activeCount > 0;
 
   return (
     <header
@@ -122,7 +147,7 @@ export default function MerchantHeader({
 
       {/* Right: Purple Bell Icon */}
       <button
-        onClick={onNotificationClick || (() => router.push("/merchant/profile"))}
+        onClick={onNotificationClick || (() => router.push("/merchant/notifications"))}
         aria-label="Notifications"
         style={{
           background: "none",
@@ -136,18 +161,29 @@ export default function MerchantHeader({
         }}
       >
         <MdNotifications size={26} color="#581c87" />
-        {hasUnreadNotifications && (
+        {showBadge && (
           <span
             style={{
               position: "absolute",
-              top: "8px",
-              right: "8px",
-              width: "7px",
-              height: "7px",
-              borderRadius: "50%",
+              top: "4px",
+              right: "4px",
+              minWidth: activeCount > 0 ? "18px" : "8px",
+              height: activeCount > 0 ? "18px" : "8px",
+              padding: activeCount > 0 ? "0 4px" : "0",
+              borderRadius: "10px",
               backgroundColor: "#ef4444",
+              color: "#ffffff",
+              fontSize: "10px",
+              fontWeight: "800",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              border: "1.5px solid #ffffff",
+              lineHeight: 1,
             }}
-          />
+          >
+            {activeCount > 0 ? (activeCount > 99 ? "99+" : activeCount) : ""}
+          </span>
         )}
       </button>
     </header>

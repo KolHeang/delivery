@@ -15,6 +15,7 @@ import { DeviceToken } from '../auth/entities/device-token.entity';
 import { Zone } from '../zones/entities/zone.entity';
 import { ParcelMessage } from '../parcels/entities/parcel-message.entity';
 import { DriverNotification } from './driver/entities/driver-notification.entity';
+import { MerchantNotification } from './merchant/entities/merchant-notification.entity';
 import { MinioModule } from '../minio/minio.mudule';
 
 import { AuthController } from './auth/auth.controller';
@@ -40,6 +41,7 @@ import { UploadController } from './upload/upload.controller';
       Zone,
       ParcelMessage,
       DriverNotification,
+      MerchantNotification,
     ]),
     MinioModule,
     JwtModule.registerAsync({

@@ -25,6 +25,7 @@ export default function MerchantDashboardPage() {
   const [data, setData] = useState<any>(null);
   const [merchant, setMerchant] = useState<any>(null);
   const [orders, setOrders] = useState<any[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
   const t = {
@@ -44,14 +45,18 @@ export default function MerchantDashboardPage() {
 
   const loadDashboard = async () => {
     try {
-      const [dashRes, profRes, parcelRes] = await Promise.all([
+      const [dashRes, profRes, parcelRes, notifRes] = await Promise.all([
         api.get("/mobile/merchant/dashboard").catch(() => null),
         api.get("/mobile/merchant/profile").catch(() => null),
         api.get("/mobile/merchant/parcels?limit=20").catch(() => null),
+        api.get("/mobile/merchant/notifications/unread-count").catch(() => null),
       ]);
 
       if (dashRes?.data) setData(dashRes.data);
       if (profRes?.data) setMerchant(profRes.data);
+      if (notifRes?.data?.unreadCount !== undefined) {
+        setUnreadCount(notifRes.data.unreadCount);
+      }
       if (parcelRes?.data) {
         const list = Array.isArray(parcelRes.data)
           ? parcelRes.data
@@ -180,10 +185,11 @@ export default function MerchantDashboardPage() {
 
         {/* Right Notification Icon */}
         <button
-          onClick={() => alert("No new notifications")}
+          onClick={() => router.push("/merchant/notifications")}
+          aria-label="Notifications"
           style={{
-            width: "38px",
-            height: "38px",
+            width: "40px",
+            height: "40px",
             borderRadius: "50%",
             backgroundColor: "#f8fafc",
             border: "1px solid #e2e8f0",
@@ -193,21 +199,34 @@ export default function MerchantDashboardPage() {
             color: "#475569",
             cursor: "pointer",
             position: "relative",
+            transition: "all 0.2s ease",
           }}
         >
-          <MdNotifications size={20} />
-          <span
-            style={{
-              position: "absolute",
-              top: "8px",
-              right: "8px",
-              width: "8px",
-              height: "8px",
-              borderRadius: "50%",
-              backgroundColor: "#ef4444",
-              border: "1.5px solid #ffffff",
-            }}
-          />
+          <MdNotifications size={22} color="#581c87" />
+          {unreadCount > 0 && (
+            <span
+              style={{
+                position: "absolute",
+                top: "-2px",
+                right: "-2px",
+                minWidth: "18px",
+                height: "18px",
+                padding: "0 4px",
+                borderRadius: "10px",
+                backgroundColor: "#ef4444",
+                color: "#ffffff",
+                fontSize: "10px",
+                fontWeight: "800",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                border: "2px solid #ffffff",
+                boxShadow: "0 2px 4px rgba(239, 68, 68, 0.4)",
+              }}
+            >
+              {unreadCount > 99 ? "99+" : unreadCount}
+            </span>
+          )}
         </button>
       </div>
 

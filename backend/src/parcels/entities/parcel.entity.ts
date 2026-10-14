@@ -116,8 +116,14 @@ export class Parcel {
   @Column({ name: 'proof_photos', type: 'json', nullable: true })
   proofPhotos: string[];
 
+  @Column({ name: 'signature_url', type: 'text', nullable: true })
+  signatureUrl: string;
+
   @Column({ name: 'failed_photo', type: 'text', nullable: true })
   failedPhoto: string;
+
+  @Column({ name: 'return_photo', type: 'text', nullable: true })
+  returnPhoto: string;
 
   @Column({ name: 'item_photo', type: 'text', nullable: true })
   itemPhoto: string;

@@ -14,6 +14,9 @@ import { PickupRequest } from '../../parcels/entities/pickup-request.entity';
 import { ConfirmPickupDto } from '../../parcels/dto/pickup-request.dto';
 import { DriverPayment } from '../../payments/entities/driver-payment.entity';
 
+import { ParcelMessage } from '../../parcels/entities/parcel-message.entity';
+import { DriverNotification } from './entities/driver-notification.entity';
+
 @Injectable()
 export class DriverService {
   constructor(
@@ -25,6 +28,10 @@ export class DriverService {
     private readonly pickupRequestRepo: Repository<PickupRequest>,
     @InjectRepository(DriverPayment)
     private readonly driverPaymentRepo: Repository<DriverPayment>,
+    @InjectRepository(ParcelMessage)
+    private readonly messageRepo: Repository<ParcelMessage>,
+    @InjectRepository(DriverNotification)
+    private readonly notificationRepo: Repository<DriverNotification>,
   ) {}
 
   async getProfile(driverId: number) {
@@ -387,7 +394,9 @@ export class DriverService {
     if (dto.paymentMethod) updates.paymentMethod = dto.paymentMethod;
     if (dto.paymentStatus) updates.paymentStatus = dto.paymentStatus as any;
     if (dto.proofPhotos && dto.proofPhotos.length > 0) updates.proofPhotos = dto.proofPhotos;
+    if (dto.signatureUrl) updates.signatureUrl = dto.signatureUrl;
     if (dto.failedPhoto || dto.photo) updates.failedPhoto = dto.failedPhoto || dto.photo;
+    if (dto.returnPhoto) updates.returnPhoto = dto.returnPhoto;
     if (finalNote !== undefined) updates.note = finalNote;
 
     await this.parcelRepo.update(parcelId, updates);
@@ -1605,6 +1614,164 @@ export class DriverService {
         currency: 'KHR',
         paymentStatus: payment ? 'Paid' : 'Pending',
       },
+    };
+  }
+
+  // ===================== PARCEL CHAT =====================
+  async getParcelMessages(driverId: number, parcelId: number) {
+    const parcel = await this.parcelRepo.findOne({
+      where: [
+        { id: parcelId, driverId },
+        { id: parcelId, pickupDriverId: driverId },
+      ],
+      relations: { merchant: true },
+    });
+    if (!parcel) {
+      throw new NotFoundException('Parcel not found or not assigned to you');
+    }
+
+    const messages = await this.messageRepo.find({
+      where: { parcelId },
+      order: { createdAt: 'ASC' },
+    });
+
+    // Mark merchant/other messages as read for this driver
+    await this.messageRepo
+      .createQueryBuilder()
+      .update(ParcelMessage)
+      .set({ isRead: true })
+      .where('parcelId = :parcelId AND senderType != :senderType AND isRead = false', {
+        parcelId,
+        senderType: 'driver',
+      })
+      .execute();
+
+    return {
+      parcel: {
+        id: parcel.id,
+        trackingCode: parcel.trackingCode,
+        status: parcel.status,
+        merchant: parcel.merchant
+          ? {
+              id: parcel.merchant.id,
+              name: parcel.merchant.nameKh || parcel.merchant.name,
+              phone: parcel.merchant.phone,
+              photo: parcel.merchant.photo,
+            }
+          : null,
+      },
+      messages,
+    };
+  }
+
+  async sendParcelMessage(
+    driverId: number,
+    parcelId: number,
+    dto: { message: string; attachmentUrl?: string },
+  ) {
+    if (!dto.message && !dto.attachmentUrl) {
+      throw new BadRequestException('Message or attachment is required');
+    }
+
+    const parcel = await this.parcelRepo.findOne({
+      where: [
+        { id: parcelId, driverId },
+        { id: parcelId, pickupDriverId: driverId },
+      ],
+      relations: { merchant: true },
+    });
+    if (!parcel) {
+      throw new NotFoundException('Parcel not found or not assigned to you');
+    }
+
+    const driver = await this.userRepo.findOne({ where: { id: driverId } });
+    if (!driver) throw new NotFoundException('Driver not found');
+
+    const msg = this.messageRepo.create({
+      tenantId: parcel.tenantId,
+      parcelId,
+      senderType: 'driver',
+      senderId: driverId,
+      senderName: driver.nameKh || driver.name || 'Driver',
+      senderAvatar: driver.photo,
+      message: dto.message || '',
+      attachmentUrl: dto.attachmentUrl || undefined,
+      isRead: false,
+    });
+
+    const saved = await this.messageRepo.save(msg);
+    return saved;
+  }
+
+  // ===================== DRIVER NOTIFICATIONS =====================
+  async getNotifications(driverId: number, page: number = 1, limit: number = 20) {
+    const p = Math.max(1, page || 1);
+    const l = Math.max(1, Math.min(100, limit || 20));
+
+    const [items, total] = await this.notificationRepo.findAndCount({
+      where: { driverId },
+      order: { createdAt: 'DESC' },
+      skip: (p - 1) * l,
+      take: l,
+    });
+
+    const unreadCount = await this.notificationRepo.count({
+      where: { driverId, isRead: false },
+    });
+
+    return {
+      items,
+      total,
+      unreadCount,
+      page: p,
+      limit: l,
+      totalPages: Math.ceil(total / l),
+    };
+  }
+
+  async getUnreadNotificationCount(driverId: number) {
+    const count = await this.notificationRepo.count({
+      where: { driverId, isRead: false },
+    });
+    return { unreadCount: count };
+  }
+
+  async markNotificationAsRead(driverId: number, notificationId: number) {
+    await this.notificationRepo.update(
+      { id: notificationId, driverId },
+      { isRead: true },
+    );
+    return { success: true };
+  }
+
+  async markAllNotificationsAsRead(driverId: number) {
+    await this.notificationRepo.update(
+      { driverId, isRead: false },
+      { isRead: true },
+    );
+    return { success: true };
+  }
+
+  // ===================== REASONS (FAILURE & RETURN) =====================
+  getReasons() {
+    return {
+      failureReasons: [
+        'Customer not at home',
+        'Wrong address',
+        'Customer refused',
+        'Phone unreachable',
+        'Item damaged / broken',
+        'Customer requested to reschedule',
+        'Other',
+      ],
+      returnReasons: [
+        'Customer rejected',
+        'Wrong or damaged item',
+        'Unable to contact customer',
+        'Delivery address unreachable',
+        'Merchant requested recall',
+        'Other',
+      ],
     };
   }
 }

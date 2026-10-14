@@ -338,4 +338,93 @@ export class DriverController {
   getDailyPayment(@Request() req: any, @Query('date') date?: string) {
     return this.driverService.getDailyDeliveryInvoice(req.user.id, date);
   }
+
+  // ===================== REASONS (FAILURE & RETURN) =====================
+  @Get('reasons')
+  @ApiOperation({ summary: 'Get delivery failure and return reasons for mobile app' })
+  getReasons() {
+    return this.driverService.getReasons();
+  }
+
+  // ===================== PARCEL CHAT =====================
+  @Get('tasks/:id/chat')
+  @ApiOperation({ summary: 'Get parcel chat messages between rider and merchant' })
+  @ApiParam({ name: 'id', type: Number, description: 'Task / Parcel ID' })
+  getParcelChat(@Request() req: any, @Param('id', ParseIntPipe) id: number) {
+    return this.driverService.getParcelMessages(req.user.id, id);
+  }
+
+  @Get('tasks/:id/messages')
+  @ApiOperation({ summary: 'Alias for parcel chat messages' })
+  @ApiParam({ name: 'id', type: Number, description: 'Task / Parcel ID' })
+  getParcelMessages(@Request() req: any, @Param('id', ParseIntPipe) id: number) {
+    return this.driverService.getParcelMessages(req.user.id, id);
+  }
+
+  @Post('tasks/:id/chat')
+  @ApiOperation({ summary: 'Send a chat message or photo for a parcel' })
+  @ApiParam({ name: 'id', type: Number, description: 'Task / Parcel ID' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        message: { type: 'string' },
+        attachmentUrl: { type: 'string' },
+      },
+      required: ['message'],
+    },
+  })
+  sendParcelChat(
+    @Request() req: any,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: { message: string; attachmentUrl?: string },
+  ) {
+    return this.driverService.sendParcelMessage(req.user.id, id, dto);
+  }
+
+  @Post('tasks/:id/messages')
+  @ApiOperation({ summary: 'Alias for sending parcel chat message' })
+  @ApiParam({ name: 'id', type: Number, description: 'Task / Parcel ID' })
+  sendParcelMessage(
+    @Request() req: any,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: { message: string; attachmentUrl?: string },
+  ) {
+    return this.driverService.sendParcelMessage(req.user.id, id, dto);
+  }
+
+  // ===================== DRIVER NOTIFICATIONS =====================
+  @Get('notifications')
+  @ApiOperation({ summary: 'Get driver notifications' })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  getNotifications(
+    @Request() req: any,
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
+  ) {
+    return this.driverService.getNotifications(req.user.id, page, limit);
+  }
+
+  @Get('notifications/unread-count')
+  @ApiOperation({ summary: 'Get driver unread notifications count' })
+  getUnreadNotificationCount(@Request() req: any) {
+    return this.driverService.getUnreadNotificationCount(req.user.id);
+  }
+
+  @Patch('notifications/:id/read')
+  @ApiOperation({ summary: 'Mark specific notification as read' })
+  @ApiParam({ name: 'id', type: Number, description: 'Notification ID' })
+  markNotificationAsRead(
+    @Request() req: any,
+    @Param('id', ParseIntPipe) id: number,
+  ) {
+    return this.driverService.markNotificationAsRead(req.user.id, id);
+  }
+
+  @Post('notifications/read-all')
+  @ApiOperation({ summary: 'Mark all notifications as read' })
+  markAllNotificationsAsRead(@Request() req: any) {
+    return this.driverService.markAllNotificationsAsRead(req.user.id);
+  }
 }

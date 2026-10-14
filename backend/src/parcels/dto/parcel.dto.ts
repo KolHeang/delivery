@@ -147,7 +147,17 @@ export class UpdateParcelDto extends PartialType(CreateParcelDto) {
   @ApiProperty({ required: false })
   @IsOptional()
   @IsString()
+  signatureUrl?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
   failedPhoto?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  returnPhoto?: string;
 
   @ApiProperty({ required: false })
   @IsOptional()
@@ -209,7 +219,17 @@ export class UpdateParcelStatusDto {
   @ApiProperty({ required: false })
   @IsOptional()
   @IsString()
+  signatureUrl?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
   failedPhoto?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  returnPhoto?: string;
 
   @ApiProperty({ required: false })
   @IsOptional()

@@ -10,7 +10,7 @@ import {
   Param,
   ParseIntPipe,
 } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth, ApiOperation, ApiQuery, ApiParam } from '@nestjs/swagger';
+import { ApiTags, ApiBearerAuth, ApiOperation, ApiQuery, ApiParam, ApiBody } from '@nestjs/swagger';
 import { MerchantService } from './merchant.service';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { CreateParcelDto } from '../../parcels/dto/parcel.dto';
@@ -172,5 +172,52 @@ export class MerchantController {
   @ApiParam({ name: 'id', type: Number, description: 'Pickup request ID' })
   cancelPickupRequest(@Request() req: any, @Param('id', ParseIntPipe) id: number) {
     return this.merchantService.cancelPickupRequest(req.user.id, id);
+  }
+
+  // ===================== PARCEL CHAT =====================
+  @Get('orders/:id/chat')
+  @ApiOperation({ summary: 'Get parcel chat messages between merchant and rider' })
+  @ApiParam({ name: 'id', type: Number, description: 'Order / Parcel ID' })
+  getParcelChat(@Request() req: any, @Param('id', ParseIntPipe) id: number) {
+    return this.merchantService.getParcelMessages(req.user.id, id);
+  }
+
+  @Get('orders/:id/messages')
+  @ApiOperation({ summary: 'Alias for parcel chat messages' })
+  @ApiParam({ name: 'id', type: Number, description: 'Order / Parcel ID' })
+  getParcelMessages(@Request() req: any, @Param('id', ParseIntPipe) id: number) {
+    return this.merchantService.getParcelMessages(req.user.id, id);
+  }
+
+  @Post('orders/:id/chat')
+  @ApiOperation({ summary: 'Send a chat message or photo to the rider for an order' })
+  @ApiParam({ name: 'id', type: Number, description: 'Order / Parcel ID' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        message: { type: 'string' },
+        attachmentUrl: { type: 'string' },
+      },
+      required: ['message'],
+    },
+  })
+  sendParcelChat(
+    @Request() req: any,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: { message: string; attachmentUrl?: string },
+  ) {
+    return this.merchantService.sendParcelMessage(req.user.id, id, dto);
+  }
+
+  @Post('orders/:id/messages')
+  @ApiOperation({ summary: 'Alias for sending parcel chat message' })
+  @ApiParam({ name: 'id', type: Number, description: 'Order / Parcel ID' })
+  sendParcelMessage(
+    @Request() req: any,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: { message: string; attachmentUrl?: string },
+  ) {
+    return this.merchantService.sendParcelMessage(req.user.id, id, dto);
   }
 }

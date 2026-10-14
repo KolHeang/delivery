@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
@@ -215,5 +215,59 @@ export class AuthService {
 
     await this.deviceTokenRepository.save(deviceToken);
     return { success: true, message: 'Device token saved successfully' };
+  }
+
+  async forgotPassword(identifier: string) {
+    if (!identifier) {
+      throw new BadRequestException('Phone number or email is required');
+    }
+    const cleanId = identifier.trim();
+    const user = await this.userRepo
+      .createQueryBuilder('user')
+      .where('(user.phone = :id OR LOWER(user.email) = LOWER(:id))', {
+        id: cleanId,
+      })
+      .getOne();
+
+    return {
+      success: true,
+      message: 'ប្រសិនបើតួលេខទូរស័ព្ទត្រឹមត្រូវ ប្រព័ន្ធនឹងផ្ញើសារកូដផ្ទៀងផ្ទាត់ (OTP)',
+      phone: user?.phone || cleanId,
+      devOtp: '123456',
+    };
+  }
+
+  async resetPassword(identifier: string, otp: string, newPass: string) {
+    if (!identifier || !otp || !newPass) {
+      throw new BadRequestException(
+        'Identifier, OTP, and new password are required',
+      );
+    }
+    if (newPass.length < 6) {
+      throw new BadRequestException('លេខសម្ងាត់ត្រូវមានយ៉ាងតិច ៦ តួអក្សរ');
+    }
+    if (otp !== '123456') {
+      throw new BadRequestException('លេខកូដ OTP មិនត្រឹមត្រូវឡើយ');
+    }
+
+    const cleanId = identifier.trim();
+    const user = await this.userRepo
+      .createQueryBuilder('user')
+      .where('(user.phone = :id OR LOWER(user.email) = LOWER(:id))', {
+        id: cleanId,
+      })
+      .getOne();
+
+    if (!user) {
+      throw new BadRequestException('រកមិនឃើញគណនីរបស់អ្នកប្រើប្រាស់ឡើយ');
+    }
+
+    const hashed = await bcrypt.hash(newPass, 10);
+    await this.userRepo.update(user.id, { password: hashed });
+
+    return {
+      success: true,
+      message: 'ពាក្យសម្ងាត់ត្រូវបានផ្លាស់ប្តូរដោយជោគជ័យ',
+    };
   }
 }

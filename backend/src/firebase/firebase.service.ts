@@ -1,7 +1,7 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { initializeApp, getApps, cert, App } from 'firebase-admin/app';
+import { initializeApp, getApps, cert, deleteApp, App } from 'firebase-admin/app';
 import { getMessaging } from 'firebase-admin/messaging';
 import { DeviceToken } from '../auth/entities/device-token.entity';
 import { FirebaseCredential } from '../settings/entities/firebase-credential.entity';
@@ -28,7 +28,7 @@ export class FirebaseService implements OnModuleInit {
     await this.initializeFirebase();
   }
 
-  async initializeFirebase(): Promise<boolean> {
+  async initializeFirebase(tenantId?: number): Promise<boolean> {
     const apps = getApps();
     if (apps.length > 0) {
       this.firebaseApp = apps[0];
@@ -36,7 +36,40 @@ export class FirebaseService implements OnModuleInit {
     }
 
     try {
-      // 1. Try Environment Variables
+
+
+      // 1. FIRST PRIORITY: Try Database Table Credentials (firebase_credentials)
+      const targetTenantId = tenantId || (process.env.FIREBASE_TENANT_ID ? Number(process.env.FIREBASE_TENANT_ID) : undefined);
+      let cred = targetTenantId
+        ? await this.credentialRepo.findOne({
+            where: { tenantId: targetTenantId },
+            order: { createdAt: 'DESC' },
+          })
+        : null;
+
+      if (!cred) {
+        cred = await this.credentialRepo.findOne({
+          where: {},
+          order: { createdAt: 'DESC' },
+        });
+      }
+
+      if (cred && cred.projectId && cred.clientEmail && cred.privateKey) {
+        const key = cred.privateKey.replace(/\\n/g, '\n');
+        this.firebaseApp = initializeApp({
+          credential: cert({
+            projectId: cred.projectId,
+            clientEmail: cred.clientEmail,
+            privateKey: key,
+          }),
+        });
+        this.logger.log(
+          `Firebase Admin initialized successfully from database table (firebase_credentials) [tenantId: ${cred.tenantId || 'global'}, projectId: ${cred.projectId}]`,
+        );
+        return true;
+      }
+
+      // 2. SECOND PRIORITY (Fallback): Try Environment Variables (.env)
       const projectId = process.env.FIREBASE_PROJECT_ID;
       const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
       const privateKey = process.env.FIREBASE_PRIVATE_KEY
@@ -51,33 +84,31 @@ export class FirebaseService implements OnModuleInit {
             privateKey,
           }),
         });
-        this.logger.log('Firebase Admin initialized successfully from environment variables');
+        this.logger.log('Firebase Admin initialized from environment variables (.env fallback)');
         return true;
       }
 
-      // 2. Try Database Credentials
-      const cred = await this.credentialRepo.findOne({
-        where: {},
-        order: { createdAt: 'DESC' },
-      });
-
-      if (cred && cred.projectId && cred.clientEmail && cred.privateKey) {
-        const key = cred.privateKey.replace(/\\n/g, '\n');
-        this.firebaseApp = initializeApp({
-          credential: cert({
-            projectId: cred.projectId,
-            clientEmail: cred.clientEmail,
-            privateKey: key,
-          }),
-        });
-        this.logger.log('Firebase Admin initialized successfully from database settings');
-        return true;
-      }
-
-      this.logger.warn('Firebase credentials not configured yet. Push notifications will be skipped until configured in Settings.');
+      this.logger.warn('Firebase credentials not found in database table or .env. Push notifications will be skipped.');
       return false;
     } catch (error: any) {
       this.logger.error('Failed to initialize Firebase Admin', error?.message || String(error));
+      return false;
+    }
+  }
+
+  /**
+   * Reload Firebase Admin instance dynamically when database table credentials change
+   */
+  async reloadFirebase(tenantId?: number): Promise<boolean> {
+    try {
+      const apps = getApps();
+      for (const app of apps) {
+        await deleteApp(app);
+      }
+      this.firebaseApp = null;
+      return this.initializeFirebase(tenantId);
+    } catch (e: any) {
+      this.logger.error('Failed to reload Firebase Admin', e?.message);
       return false;
     }
   }

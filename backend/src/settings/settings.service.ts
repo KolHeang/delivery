@@ -6,6 +6,7 @@ import { GeneralSetting } from './entities/general-setting.entity';
 import { FirebaseCredential } from './entities/firebase-credential.entity';
 import { Tenant } from '../saas/entities/tenant.entity';
 import { CreateFirebaseCredentialDto, UpdateFirebaseCredentialDto } from './dto/firebase-credential.dto';
+import { FirebaseService } from '../firebase/firebase.service';
 
 @Injectable()
 export class SettingsService {
@@ -17,6 +18,7 @@ export class SettingsService {
     private firebaseRepo: Repository<FirebaseCredential>,
     @InjectRepository(Tenant)
     private tenantRepo: Repository<Tenant>,
+    private readonly firebaseService: FirebaseService,
   ) {}
 
   async resolveTenantId(tenantId?: number, tenantSubdomain?: string): Promise<number | null> {
@@ -175,6 +177,13 @@ export class SettingsService {
 
   // ── Firebase Credential CRUD Methods ──
   async getFirebaseConfig(tenantId?: number, tenantSubdomain?: string) {
+    if (tenantId) {
+      const tenantCred = await this.firebaseRepo.findOne({
+        where: { tenantId },
+        order: { updatedAt: 'DESC' },
+      });
+      if (tenantCred) return tenantCred;
+    }
     const list = await this.firebaseRepo.find({
       order: { updatedAt: 'DESC' },
       take: 1,
@@ -182,8 +191,10 @@ export class SettingsService {
     return list.length > 0 ? list[0] : null;
   }
 
-  async getAllFirebaseConfigs() {
-    return this.firebaseRepo.find({ order: { createdAt: 'DESC' } });
+  async getAllFirebaseConfigs(tenantId?: number) {
+    const where: any = {};
+    if (tenantId) where.tenantId = tenantId;
+    return this.firebaseRepo.find({ where, order: { createdAt: 'DESC' } });
   }
 
   async getFirebaseConfigById(id: string) {
@@ -196,28 +207,47 @@ export class SettingsService {
 
   async createFirebaseConfig(dto: CreateFirebaseCredentialDto) {
     const newCred = this.firebaseRepo.create(dto);
-    return this.firebaseRepo.save(newCred);
+    const saved = await this.firebaseRepo.save(newCred);
+    try {
+      await this.firebaseService.reloadFirebase(saved.tenantId || undefined);
+    } catch (e) {}
+    return saved;
   }
 
   async saveFirebaseConfig(dto: CreateFirebaseCredentialDto) {
     const newCred = this.firebaseRepo.create(dto);
-    return this.firebaseRepo.save(newCred);
+    const saved = await this.firebaseRepo.save(newCred);
+    try {
+      await this.firebaseService.reloadFirebase(saved.tenantId || undefined);
+    } catch (e) {}
+    return saved;
   }
 
   async updateFirebaseConfig(id: string, dto: UpdateFirebaseCredentialDto) {
     const cred = await this.getFirebaseConfigById(id);
     Object.assign(cred, dto);
-    return this.firebaseRepo.save(cred);
+    const saved = await this.firebaseRepo.save(cred);
+    try {
+      await this.firebaseService.reloadFirebase(saved.tenantId || undefined);
+    } catch (e) {}
+    return saved;
   }
 
   async deleteFirebaseConfig(id?: string) {
+    let res: any;
     if (id) {
-      return this.firebaseRepo.delete(id);
+      res = await this.firebaseRepo.delete(id);
+    } else {
+      const all = await this.firebaseRepo.find();
+      if (all.length > 0) {
+        res = await this.firebaseRepo.remove(all);
+      } else {
+        res = { success: true };
+      }
     }
-    const all = await this.firebaseRepo.find();
-    if (all.length > 0) {
-      return this.firebaseRepo.remove(all);
-    }
-    return { success: true };
+    try {
+      await this.firebaseService.reloadFirebase();
+    } catch (e) {}
+    return res;
   }
 }

@@ -3,6 +3,7 @@ import {
   Get,
   Post,
   Patch,
+  Delete,
   Body,
   Query,
   UseGuards,
@@ -97,6 +98,39 @@ export class MerchantController {
     @Body('reason') reason?: string,
   ) {
     return this.merchantService.cancelParcel(req.user.id, id, reason);
+  }
+
+  @Patch('parcels/:id/address')
+  @ApiOperation({ summary: 'Update receiver delivery address and contact for a parcel' })
+  @ApiParam({ name: 'id', type: Number, description: 'Parcel ID' })
+  updateParcelAddress(
+    @Request() req: any,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: { receiverAddress?: string; receiverPhone?: string; receiverName?: string },
+  ) {
+    return this.merchantService.updateParcelAddress(req.user.id, id, dto);
+  }
+
+  @Patch('parcels/:id/note')
+  @ApiOperation({ summary: 'Add or update delivery special instruction note' })
+  @ApiParam({ name: 'id', type: Number, description: 'Parcel ID' })
+  updateParcelNote(
+    @Request() req: any,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: { note: string },
+  ) {
+    return this.merchantService.updateParcelNote(req.user.id, id, dto);
+  }
+
+  @Post('parcels/:id/speed-up')
+  @ApiOperation({ summary: 'Request rider to speed up urgent parcel delivery' })
+  @ApiParam({ name: 'id', type: Number, description: 'Parcel ID' })
+  requestSpeedUp(
+    @Request() req: any,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto?: { reason?: string },
+  ) {
+    return this.merchantService.requestSpeedUp(req.user.id, id, dto);
   }
 
   @Post('parcels')
@@ -219,5 +253,50 @@ export class MerchantController {
     @Body() dto: { message: string; attachmentUrl?: string },
   ) {
     return this.merchantService.sendParcelMessage(req.user.id, id, dto);
+  }
+
+  // ===================== MERCHANT NOTIFICATIONS =====================
+  @Get('notifications')
+  @ApiOperation({ summary: 'Get merchant notifications with pagination' })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  getNotifications(
+    @Request() req: any,
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 20,
+  ) {
+    return this.merchantService.getNotifications(req.user.id, Number(page), Number(limit));
+  }
+
+  @Get('notifications/unread-count')
+  @ApiOperation({ summary: 'Get merchant unread notifications count' })
+  getUnreadNotificationCount(@Request() req: any) {
+    return this.merchantService.getUnreadNotificationCount(req.user.id);
+  }
+
+  @Patch('notifications/:id/read')
+  @ApiOperation({ summary: 'Mark specific notification as read' })
+  @ApiParam({ name: 'id', type: Number, description: 'Notification ID' })
+  markNotificationAsRead(
+    @Request() req: any,
+    @Param('id', ParseIntPipe) id: number,
+  ) {
+    return this.merchantService.markNotificationAsRead(req.user.id, id);
+  }
+
+  @Post('notifications/read-all')
+  @ApiOperation({ summary: 'Mark all notifications as read' })
+  markAllNotificationsAsRead(@Request() req: any) {
+    return this.merchantService.markAllNotificationsAsRead(req.user.id);
+  }
+
+  @Delete('notifications/:id')
+  @ApiOperation({ summary: 'Delete a notification' })
+  @ApiParam({ name: 'id', type: Number, description: 'Notification ID' })
+  deleteNotification(
+    @Request() req: any,
+    @Param('id', ParseIntPipe) id: number,
+  ) {
+    return this.merchantService.deleteNotification(req.user.id, id);
   }
 }

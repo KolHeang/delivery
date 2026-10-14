@@ -6,6 +6,7 @@ import { getMessaging } from 'firebase-admin/messaging';
 import { DeviceToken } from '../auth/entities/device-token.entity';
 import { FirebaseCredential } from '../settings/entities/firebase-credential.entity';
 import { DriverNotification } from '../mobile/driver/entities/driver-notification.entity';
+import { MerchantNotification } from '../mobile/merchant/entities/merchant-notification.entity';
 
 @Injectable()
 export class FirebaseService implements OnModuleInit {
@@ -19,6 +20,8 @@ export class FirebaseService implements OnModuleInit {
     private readonly credentialRepo: Repository<FirebaseCredential>,
     @InjectRepository(DriverNotification)
     private readonly driverNotificationRepo: Repository<DriverNotification>,
+    @InjectRepository(MerchantNotification)
+    private readonly merchantNotificationRepo: Repository<MerchantNotification>,
   ) {}
 
   async onModuleInit() {
@@ -136,8 +139,26 @@ export class FirebaseService implements OnModuleInit {
       body: string;
       type?: string;
       data?: Record<string, any>;
+      tenantId?: number;
     },
   ) {
+    // 1. Always record in-app notification in DB
+    try {
+      const inAppNotif = this.merchantNotificationRepo.create({
+        merchantId,
+        title: payload.title,
+        body: payload.body,
+        type: payload.type || 'general',
+        data: payload.data || {},
+        tenantId: payload.tenantId,
+        isRead: false,
+      });
+      await this.merchantNotificationRepo.save(inAppNotif);
+    } catch (err: any) {
+      this.logger.warn(`Failed to save in-app notification for merchant ${merchantId}: ${err?.message}`);
+    }
+
+    // 2. Send FCM Push Notification
     const tokens = await this.deviceTokenRepo.find({
       where: { merchantId },
       select: { token: true, id: true },

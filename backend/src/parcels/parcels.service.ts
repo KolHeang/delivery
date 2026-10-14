@@ -389,6 +389,30 @@ export class ParcelsService {
     if (dto.status !== parcel.status || finalNote) {
       await this.addEvent(id, dto.status, finalNote);
     }
+
+    if (dto.status !== parcel.status && parcel.merchantId) {
+      try {
+        const notifInfo = this.getStatusNotificationText(
+          dto.status,
+          parcel.trackingCode,
+          finalNote,
+        );
+        await this.firebaseService.sendToMerchant(parcel.merchantId, {
+          title: notifInfo.title,
+          body: notifInfo.body,
+          type: 'order_status',
+          data: {
+            parcelId: parcel.id,
+            trackingCode: parcel.trackingCode,
+            status: dto.status,
+          },
+          tenantId: parcel.tenantId,
+        });
+      } catch (e) {
+        // Continue silently
+      }
+    }
+
     return this.findOne(id);
   }
 
@@ -420,6 +444,18 @@ export class ParcelsService {
       });
     } catch (e) {
       // Continue
+    }
+
+    if (parcel.merchantId) {
+      try {
+        await this.firebaseService.sendToMerchant(parcel.merchantId, {
+          title: 'បានចាត់តាំងអ្នកដឹកជញ្ជូន',
+          body: `កញ្ចប់ទំនិញ #${parcel.trackingCode} ត្រូវបានចាត់តាំងអ្នកដឹកជញ្ជូន`,
+          type: 'driver_assigned',
+          data: { parcelId: parcel.id, trackingCode: parcel.trackingCode, driverId: dto.driverId },
+          tenantId: parcel.tenantId,
+        });
+      } catch (e) {}
     }
 
     return this.findOne(id);
@@ -490,6 +526,18 @@ export class ParcelsService {
       });
     } catch (e) {
       // Continue
+    }
+
+    if (parcel.merchantId) {
+      try {
+        await this.firebaseService.sendToMerchant(parcel.merchantId, {
+          title: 'បានចាត់តាំងអ្នកដឹកជញ្ជូន',
+          body: `កញ្ចប់ទំនិញ #${parcel.trackingCode} ត្រូវបានចាត់តាំងអ្នកដឹកជញ្ជូន`,
+          type: 'driver_assigned',
+          data: { parcelId: parcel.id, trackingCode: parcel.trackingCode, driverId: dto.driverId },
+          tenantId: parcel.tenantId,
+        });
+      } catch (e) {}
     }
 
     return this.findOne(id);
@@ -633,5 +681,45 @@ export class ParcelsService {
       await this.pickupRequestRepo.save(request);
     }
     return { success: true };
+  }
+
+  private getStatusNotificationText(status: string, trackingCode: string, note?: string) {
+    switch (status) {
+      case 'picked-up':
+        return {
+          title: 'អ្នកដឹកជញ្ជូនបានទទួលទំនិញ',
+          body: `កញ្ចប់ទំនិញ #${trackingCode} ត្រូវបានទទួលយកសម្រាប់ដឹកជញ្ជូន`,
+        };
+      case 'in-transit':
+        return {
+          title: 'កំពុងដឹកជញ្ជូន',
+          body: `កញ្ចប់ទំនិញ #${trackingCode} កំពុងធ្វើដំណើរទៅកាន់អតិថិជន`,
+        };
+      case 'delivered':
+        return {
+          title: 'ដឹកជញ្ជូនជោគជ័យ 🎉',
+          body: `កញ្ចប់ទំនិញ #${trackingCode} ត្រូវបានប្រគល់ជូនអតិថិជនរួចរាល់`,
+        };
+      case 'failed':
+        return {
+          title: 'ដឹកជញ្ជូនមិនបានសម្រេច ⚠️',
+          body: `កញ្ចប់ទំនិញ #${trackingCode} ដឹកមិនបានសម្រេច${note ? ': ' + note : ''}`,
+        };
+      case 'returned':
+        return {
+          title: 'ទំនិញត្រូវបានប្រគល់ត្រឡប់ ↩️',
+          body: `កញ្ចប់ទំនិញ #${trackingCode} ត្រូវបានប្រគល់ត្រឡប់មកហាងវិញ`,
+        };
+      case 'in-warehouse':
+        return {
+          title: 'ទំនិញបានចូលឃ្លាំង',
+          body: `កញ្ចប់ទំនិញ #${trackingCode} បានមកដល់ឃ្លាំងចែកចាយ`,
+        };
+      default:
+        return {
+          title: 'បច្ចុប្បន្នភាពកញ្ចប់ទំនិញ',
+          body: `កញ្ចប់ទំនិញ #${trackingCode} ស្ថានភាព: ${status}`,
+        };
+    }
   }
 }

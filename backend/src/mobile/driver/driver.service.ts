@@ -16,6 +16,7 @@ import { DriverPayment } from '../../payments/entities/driver-payment.entity';
 
 import { ParcelMessage } from '../../parcels/entities/parcel-message.entity';
 import { DriverNotification } from './entities/driver-notification.entity';
+import { FirebaseService } from '../../firebase/firebase.service';
 
 @Injectable()
 export class DriverService {
@@ -32,6 +33,7 @@ export class DriverService {
     private readonly messageRepo: Repository<ParcelMessage>,
     @InjectRepository(DriverNotification)
     private readonly notificationRepo: Repository<DriverNotification>,
+    private readonly firebaseService: FirebaseService,
   ) {}
 
   async getProfile(driverId: number) {
@@ -414,6 +416,30 @@ export class DriverService {
           `Failed to log history for parcel #${parcelId} update by driver`,
           err,
         );
+      }
+    }
+
+    // Notify Merchant if status changed
+    if (dto.status !== parcel.status && parcel.merchantId) {
+      try {
+        const notifInfo = this.getStatusNotificationText(
+          dto.status,
+          parcel.trackingCode,
+          finalNote,
+        );
+        await this.firebaseService.sendToMerchant(parcel.merchantId, {
+          title: notifInfo.title,
+          body: notifInfo.body,
+          type: 'order_status',
+          data: {
+            parcelId: parcel.id,
+            trackingCode: parcel.trackingCode,
+            status: dto.status,
+          },
+          tenantId: parcel.tenantId,
+        });
+      } catch (e) {
+        // Continue silently
       }
     }
 
@@ -1700,7 +1726,66 @@ export class DriverService {
     });
 
     const saved = await this.messageRepo.save(msg);
+
+    // Notify Merchant of new message
+    if (parcel.merchantId) {
+      try {
+        await this.firebaseService.sendToMerchant(parcel.merchantId, {
+          title: `សារថ្មីពីអ្នកដឹក ${driver.nameKh || driver.name}`,
+          body: dto.message || 'បានផ្ញើរូបភាពមួយ',
+          type: 'chat_message',
+          data: {
+            parcelId: parcel.id,
+            trackingCode: parcel.trackingCode,
+          },
+          tenantId: parcel.tenantId,
+        });
+      } catch (e) {
+        // Continue silently
+      }
+    }
+
     return saved;
+  }
+
+  private getStatusNotificationText(status: string, trackingCode: string, note?: string) {
+    switch (status) {
+      case 'picked-up':
+        return {
+          title: 'អ្នកដឹកជញ្ជូនបានទទួលទំនិញ',
+          body: `កញ្ចប់ទំនិញ #${trackingCode} ត្រូវបានទទួលយកសម្រាប់ដឹកជញ្ជូន`,
+        };
+      case 'in-transit':
+        return {
+          title: 'កំពុងដឹកជញ្ជូន',
+          body: `កញ្ចប់ទំនិញ #${trackingCode} កំពុងធ្វើដំណើរទៅកាន់អតិថិជន`,
+        };
+      case 'delivered':
+        return {
+          title: 'ដឹកជញ្ជូនជោគជ័យ 🎉',
+          body: `កញ្ចប់ទំនិញ #${trackingCode} ត្រូវបានប្រគល់ជូនអតិថិជនរួចរាល់`,
+        };
+      case 'failed':
+        return {
+          title: 'ដឹកជញ្ជូនមិនបានសម្រេច ⚠️',
+          body: `កញ្ចប់ទំនិញ #${trackingCode} ដឹកមិនបានសម្រេច${note ? ': ' + note : ''}`,
+        };
+      case 'returned':
+        return {
+          title: 'ទំនិញត្រូវបានប្រគល់ត្រឡប់ ↩️',
+          body: `កញ្ចប់ទំនិញ #${trackingCode} ត្រូវបានប្រគល់ត្រឡប់មកហាងវិញ`,
+        };
+      case 'in-warehouse':
+        return {
+          title: 'ទំនិញបានចូលឃ្លាំង',
+          body: `កញ្ចប់ទំនិញ #${trackingCode} បានមកដល់ឃ្លាំងចែកចាយ`,
+        };
+      default:
+        return {
+          title: 'បច្ចុប្បន្នភាពកញ្ចប់ទំនិញ',
+          body: `កញ្ចប់ទំនិញ #${trackingCode} ស្ថានភាព: ${status}`,
+        };
+    }
   }
 
   // ===================== DRIVER NOTIFICATIONS =====================

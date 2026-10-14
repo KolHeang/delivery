@@ -12,7 +12,7 @@ import { Zone } from '../../zones/entities/zone.entity';
 import { MerchantPayment } from '../../payments/entities/merchant-payment.entity';
 
 import { ParcelMessage } from '../../parcels/entities/parcel-message.entity';
-import { DriverNotification } from '../driver/entities/driver-notification.entity';
+import { MerchantNotification } from './entities/merchant-notification.entity';
 import { FirebaseService } from '../../firebase/firebase.service';
 
 @Injectable()
@@ -32,8 +32,8 @@ export class MerchantService {
     private readonly merchantPaymentRepo: Repository<MerchantPayment>,
     @InjectRepository(ParcelMessage)
     private readonly messageRepo: Repository<ParcelMessage>,
-    @InjectRepository(DriverNotification)
-    private readonly notificationRepo: Repository<DriverNotification>,
+    @InjectRepository(MerchantNotification)
+    private readonly notificationRepo: Repository<MerchantNotification>,
     private readonly firebaseService: FirebaseService,
   ) {}
 
@@ -204,6 +204,148 @@ export class MerchantService {
     } catch (e) {}
 
     return { success: true, message: 'កញ្ចប់ឥវ៉ាន់ត្រូវបានលុបចោលដោយជោគជ័យ', parcel };
+  }
+
+  async updateParcelAddress(
+    merchantId: number,
+    parcelId: number,
+    dto: { receiverAddress?: string; receiverPhone?: string; receiverName?: string },
+  ) {
+    const parcel = await this.parcelRepo.findOne({
+      where: { id: parcelId, merchantId },
+      relations: { driver: true },
+    });
+
+    if (!parcel) {
+      throw new NotFoundException(`រកមិនឃើញកញ្ចប់ឥវ៉ាន់ #${parcelId} ឡើយ`);
+    }
+
+    if (['delivered', 'cancelled', 'returned'].includes(parcel.status)) {
+      throw new BadRequestException(
+        `មិនអាចកែប្រែអាសយដ្ឋានសម្រាប់កញ្ចប់ឥវ៉ាន់ក្នុងស្ថានភាព '${parcel.status}' បានទេ`,
+      );
+    }
+
+    if (dto.receiverAddress) parcel.receiverAddress = dto.receiverAddress;
+    if (dto.receiverPhone) parcel.receiverPhone = dto.receiverPhone;
+    if (dto.receiverName) parcel.receiverName = dto.receiverName;
+
+    await this.parcelRepo.save(parcel);
+
+    // Record timeline activity
+    try {
+      const event = this.eventRepo.create({
+        parcelId: parcel.id,
+        status: parcel.status,
+        note: `ហាងបានកែប្រែព័ត៌មានអ្នកទទួល: ${dto.receiverAddress || ''} (${dto.receiverPhone || ''})`,
+        tenantId: parcel.tenantId,
+      });
+      await this.eventRepo.save(event);
+    } catch (e) {}
+
+    // Notify assigned driver if exists
+    if (parcel.driverId) {
+      try {
+        await this.firebaseService.sendToDriver(parcel.driverId, {
+          title: `កែប្រែអាសយដ្ឋាន #${parcel.trackingCode}`,
+          body: `ហាងបានកែប្រែព័ត៌មានអ្នកទទួលទំនិញ: ${parcel.receiverAddress} (${parcel.receiverPhone})`,
+          type: 'address_updated',
+          data: { parcelId: parcel.id, trackingCode: parcel.trackingCode },
+          tenantId: parcel.tenantId,
+        });
+      } catch (e) {}
+    }
+
+    return parcel;
+  }
+
+  async updateParcelNote(
+    merchantId: number,
+    parcelId: number,
+    dto: { note: string },
+  ) {
+    const parcel = await this.parcelRepo.findOne({
+      where: { id: parcelId, merchantId },
+      relations: { driver: true },
+    });
+
+    if (!parcel) {
+      throw new NotFoundException(`រកមិនឃើញកញ្ចប់ឥវ៉ាន់ #${parcelId} ឡើយ`);
+    }
+
+    parcel.note = dto.note || '';
+    await this.parcelRepo.save(parcel);
+
+    // Record timeline activity
+    try {
+      const event = this.eventRepo.create({
+        parcelId: parcel.id,
+        status: parcel.status,
+        note: `ហាងបានបន្ថែមចំណាំពិសេស: ${dto.note}`,
+        tenantId: parcel.tenantId,
+      });
+      await this.eventRepo.save(event);
+    } catch (e) {}
+
+    // Notify driver if assigned
+    if (parcel.driverId) {
+      try {
+        await this.firebaseService.sendToDriver(parcel.driverId, {
+          title: `ចំណាំថ្មីពីហាង #${parcel.trackingCode}`,
+          body: `ហាងបានបន្ថែមចំណាំពិសេស: ${dto.note}`,
+          type: 'note_updated',
+          data: { parcelId: parcel.id, trackingCode: parcel.trackingCode },
+          tenantId: parcel.tenantId,
+        });
+      } catch (e) {}
+    }
+
+    return parcel;
+  }
+
+  async requestSpeedUp(
+    merchantId: number,
+    parcelId: number,
+    dto?: { reason?: string },
+  ) {
+    const parcel = await this.parcelRepo.findOne({
+      where: { id: parcelId, merchantId },
+      relations: { driver: true, merchant: true },
+    });
+
+    if (!parcel) {
+      throw new NotFoundException(`រកមិនឃើញកញ្ចប់ឥវ៉ាន់ #${parcelId} ឡើយ`);
+    }
+
+    if (['delivered', 'cancelled', 'returned'].includes(parcel.status)) {
+      throw new BadRequestException(`កញ្ចប់ឥវ៉ាន់ស្ថិតក្នុងស្ថានភាព '${parcel.status}' រួចហើយ`);
+    }
+
+    // Record timeline activity
+    try {
+      const event = this.eventRepo.create({
+        parcelId: parcel.id,
+        status: parcel.status,
+        note: `ហាងបានស្នើសុំពន្លឿនការដឹកជញ្ជូន (Speed up requested)${dto?.reason ? ': ' + dto.reason : ''}`,
+        tenantId: parcel.tenantId,
+      });
+      await this.eventRepo.save(event);
+    } catch (e) {}
+
+    // Notify driver with high priority
+    if (parcel.driverId) {
+      try {
+        await this.firebaseService.sendToDriver(parcel.driverId, {
+          title: `⚡ ស្នើសុំពន្លឿនការដឹកជញ្ជូន #${parcel.trackingCode}`,
+          body: `ហាង ${parcel.merchant?.nameKh || parcel.merchant?.name || ''} បានស្នើសុំឱ្យដឹកកញ្ចប់ទំនិញនេះជាបន្ទាន់!`,
+          type: 'speed_up_requested',
+          data: { parcelId: parcel.id, trackingCode: parcel.trackingCode, isUrgent: true },
+          tenantId: parcel.tenantId,
+        });
+      } catch (e) {}
+    }
+
+    return { success: true, message: 'បានផ្ញើសំណើពន្លឿនការដឹកជញ្ជូនទៅកាន់អ្នកដឹកជោគជ័យ' };
   }
 
   async generateNextTrackingCode(): Promise<string> {
@@ -727,5 +869,59 @@ export class MerchantService {
     }
 
     return saved;
+  }
+
+  // ===================== MERCHANT NOTIFICATIONS =====================
+  async getNotifications(merchantId: number, page: number = 1, limit: number = 20) {
+    const p = Math.max(1, page || 1);
+    const l = Math.max(1, Math.min(100, limit || 20));
+
+    const [items, total] = await this.notificationRepo.findAndCount({
+      where: { merchantId },
+      order: { createdAt: 'DESC' },
+      skip: (p - 1) * l,
+      take: l,
+    });
+
+    const unreadCount = await this.notificationRepo.count({
+      where: { merchantId, isRead: false },
+    });
+
+    return {
+      items,
+      total,
+      unreadCount,
+      page: p,
+      limit: l,
+      totalPages: Math.ceil(total / l),
+    };
+  }
+
+  async getUnreadNotificationCount(merchantId: number) {
+    const count = await this.notificationRepo.count({
+      where: { merchantId, isRead: false },
+    });
+    return { unreadCount: count };
+  }
+
+  async markNotificationAsRead(merchantId: number, notificationId: number) {
+    await this.notificationRepo.update(
+      { id: notificationId, merchantId },
+      { isRead: true },
+    );
+    return { success: true };
+  }
+
+  async markAllNotificationsAsRead(merchantId: number) {
+    await this.notificationRepo.update(
+      { merchantId, isRead: false },
+      { isRead: true },
+    );
+    return { success: true };
+  }
+
+  async deleteNotification(merchantId: number, notificationId: number) {
+    await this.notificationRepo.delete({ id: notificationId, merchantId });
+    return { success: true };
   }
 }

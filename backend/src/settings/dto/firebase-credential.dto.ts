@@ -1,7 +1,12 @@
-import { IsString, IsOptional } from 'class-validator';
+import { IsString, IsOptional, IsNumber } from 'class-validator';
 import { ApiProperty, PartialType } from '@nestjs/swagger';
 
 export class CreateFirebaseCredentialDto {
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsNumber()
+  tenantId?: number;
+
   @ApiProperty({ required: false, default: 'service_account' })
   @IsOptional()
   @IsString()

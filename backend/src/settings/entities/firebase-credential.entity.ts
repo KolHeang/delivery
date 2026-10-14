@@ -1,9 +1,25 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  ManyToOne,
+  JoinColumn,
+} from 'typeorm';
+import { Tenant } from '../../saas/entities/tenant.entity';
 
 @Entity('firebase_credentials')
 export class FirebaseCredential {
   @PrimaryGeneratedColumn('uuid')
   id: string;
+
+  @ManyToOne(() => Tenant, { nullable: true, onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'tenant_id' })
+  tenant: Tenant;
+
+  @Column({ name: 'tenant_id', type: 'int', nullable: true })
+  tenantId: number | null;
 
   @Column({ name: 'type', default: 'service_account' })
   type: string;

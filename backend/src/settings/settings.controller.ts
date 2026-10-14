@@ -59,15 +59,16 @@ export class SettingsController {
     const tenantId = req.headers['x-tenant-id'] ? +req.headers['x-tenant-id'] : (req.user?.tenantId ? +req.user.tenantId : undefined);
     const tenantSubdomain = (req.headers['x-tenant-subdomain'] as string) || req.user?.tenantSubdomain;
     const current = await this.settingsService.getFirebaseConfig(tenantId, tenantSubdomain);
-    const list = await this.settingsService.getAllFirebaseConfigs();
+    const list = await this.settingsService.getAllFirebaseConfigs(tenantId);
     return { current, list };
   }
 
   @Get('firebase/list')
   @ApiOperation({ summary: 'List all Firebase configs' })
   @RequirePermissions('settings.general', 'settings.manage')
-  getAllFirebase() {
-    return this.settingsService.getAllFirebaseConfigs();
+  getAllFirebase(@Req() req: any) {
+    const tenantId = req.headers['x-tenant-id'] ? +req.headers['x-tenant-id'] : (req.user?.tenantId ? +req.user.tenantId : undefined);
+    return this.settingsService.getAllFirebaseConfigs(tenantId);
   }
 
   @Get('firebase/:id')
@@ -82,8 +83,9 @@ export class SettingsController {
   @ApiOperation({ summary: 'Create Firebase credentials' })
   @RequirePermissions('settings.general', 'settings.manage')
   @LogActivity({ action: 'CREATE_FIREBASE_CONFIG', entityName: 'FirebaseCredential', description: 'Created Firebase credentials' })
-  createFirebase(@Body() body: any) {
-    return this.settingsService.createFirebaseConfig(body);
+  createFirebase(@Req() req: any, @Body() body: any) {
+    const tenantId = body.tenantId || (req.headers['x-tenant-id'] ? +req.headers['x-tenant-id'] : (req.user?.tenantId ? +req.user.tenantId : undefined));
+    return this.settingsService.createFirebaseConfig({ ...body, tenantId });
   }
 
   @Put('firebase/:id')

@@ -11,6 +11,10 @@ import { CreatePickupRequestDto } from '../../parcels/dto/pickup-request.dto';
 import { Zone } from '../../zones/entities/zone.entity';
 import { MerchantPayment } from '../../payments/entities/merchant-payment.entity';
 
+import { ParcelMessage } from '../../parcels/entities/parcel-message.entity';
+import { DriverNotification } from '../driver/entities/driver-notification.entity';
+import { FirebaseService } from '../../firebase/firebase.service';
+
 @Injectable()
 export class MerchantService {
   constructor(
@@ -26,6 +30,11 @@ export class MerchantService {
     private readonly zoneRepo: Repository<Zone>,
     @InjectRepository(MerchantPayment)
     private readonly merchantPaymentRepo: Repository<MerchantPayment>,
+    @InjectRepository(ParcelMessage)
+    private readonly messageRepo: Repository<ParcelMessage>,
+    @InjectRepository(DriverNotification)
+    private readonly notificationRepo: Repository<DriverNotification>,
+    private readonly firebaseService: FirebaseService,
   ) {}
 
   async getProfile(merchantId: number) {
@@ -613,5 +622,110 @@ export class MerchantService {
       creator: payment.creator?.name || 'Admin',
       orders,
     };
+  }
+
+  // ===================== PARCEL CHAT FOR MERCHANT =====================
+  async getParcelMessages(merchantId: number, parcelId: number) {
+    const parcel = await this.parcelRepo.findOne({
+      where: { id: parcelId, merchantId },
+      relations: { driver: true },
+    });
+    if (!parcel) {
+      throw new NotFoundException(
+        'Parcel not found or does not belong to your shop',
+      );
+    }
+
+    const messages = await this.messageRepo.find({
+      where: { parcelId },
+      order: { createdAt: 'ASC' },
+    });
+
+    // Mark driver/system messages as read for this merchant
+    await this.messageRepo
+      .createQueryBuilder()
+      .update(ParcelMessage)
+      .set({ isRead: true })
+      .where(
+        'parcelId = :parcelId AND senderType != :senderType AND isRead = false',
+        {
+          parcelId,
+          senderType: 'merchant',
+        },
+      )
+      .execute();
+
+    return {
+      parcel: {
+        id: parcel.id,
+        trackingCode: parcel.trackingCode,
+        status: parcel.status,
+        driver: parcel.driver
+          ? {
+              id: parcel.driver.id,
+              name: parcel.driver.nameKh || parcel.driver.name,
+              phone: parcel.driver.phone,
+              photo: parcel.driver.photo,
+            }
+          : null,
+      },
+      messages,
+    };
+  }
+
+  async sendParcelMessage(
+    merchantId: number,
+    parcelId: number,
+    dto: { message: string; attachmentUrl?: string },
+  ) {
+    if (!dto.message && !dto.attachmentUrl) {
+      throw new BadRequestException('Message or attachment is required');
+    }
+
+    const parcel = await this.parcelRepo.findOne({
+      where: { id: parcelId, merchantId },
+      relations: { driver: true },
+    });
+    if (!parcel) {
+      throw new NotFoundException(
+        'Parcel not found or does not belong to your shop',
+      );
+    }
+
+    const merchant = await this.merchantRepo.findOne({
+      where: { id: merchantId },
+    });
+    if (!merchant) throw new NotFoundException('Merchant not found');
+
+    const msg = this.messageRepo.create({
+      tenantId: parcel.tenantId,
+      parcelId,
+      senderType: 'merchant',
+      senderId: merchantId,
+      senderName: merchant.nameKh || merchant.name || 'Merchant',
+      senderAvatar: merchant.photo,
+      message: dto.message || '',
+      attachmentUrl: dto.attachmentUrl || undefined,
+      isRead: false,
+    });
+
+    const saved = await this.messageRepo.save(msg);
+
+    // Notify assigned driver if exists
+    if (parcel.driverId) {
+      try {
+        await this.firebaseService.sendToDriver(parcel.driverId, {
+          title: `សារថ្មីពីហាង ${merchant.nameKh || merchant.name}`,
+          body: dto.message || 'បានផ្ញើរូបភាពមួយ',
+          type: 'chat_message',
+          data: { parcelId: parcel.id, trackingCode: parcel.trackingCode },
+          tenantId: parcel.tenantId,
+        });
+      } catch (e) {
+        // Continue silently if notification fails
+      }
+    }
+
+    return saved;
   }
 }

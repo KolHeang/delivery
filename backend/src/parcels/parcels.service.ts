@@ -18,6 +18,7 @@ import {
   AssignDeliveryDto,
 } from './dto/parcel.dto';
 import { PaginatedResult } from '../interface/pagination.interface';
+import { FirebaseService } from '../firebase/firebase.service';
 
 @Injectable()
 export class ParcelsService {
@@ -26,6 +27,7 @@ export class ParcelsService {
     @InjectRepository(ParcelEvent) private readonly eventRepo: Repository<ParcelEvent>,
     @InjectRepository(PickupRequest) private readonly pickupRequestRepo: Repository<PickupRequest>,
     @InjectRepository(Zone) private readonly zoneRepo: Repository<Zone>,
+    private readonly firebaseService: FirebaseService,
   ) { }
 
 
@@ -372,7 +374,9 @@ export class ParcelsService {
     if (dto.paymentMethod) updates.paymentMethod = dto.paymentMethod;
     if (dto.paymentStatus) updates.paymentStatus = dto.paymentStatus as any;
     if (dto.proofPhotos && dto.proofPhotos.length > 0) updates.proofPhotos = dto.proofPhotos;
+    if (dto.signatureUrl) updates.signatureUrl = dto.signatureUrl;
     if (dto.failedPhoto || dto.photo) updates.failedPhoto = dto.failedPhoto || dto.photo;
+    if (dto.returnPhoto) updates.returnPhoto = dto.returnPhoto;
     if (finalNote !== undefined) updates.note = finalNote;
 
     if (['pending', 'in-warehouse', 'assigned', 'picked-up', 'in-transit'].includes(dto.status)) {
@@ -405,6 +409,19 @@ export class ParcelsService {
       pickedUpAt: new Date(),
     });
     await this.addEvent(id, 'picked-up');
+
+    try {
+      await this.firebaseService.sendToDriver(dto.driverId, {
+        title: 'បានចាត់តាំងការដឹកជញ្ជូនថ្មី',
+        body: `អ្នកទទួលបានកញ្ចប់ទំនិញ #${parcel.trackingCode}`,
+        type: 'task_assigned',
+        data: { parcelId: parcel.id, trackingCode: parcel.trackingCode },
+        tenantId: parcel.tenantId,
+      });
+    } catch (e) {
+      // Continue
+    }
+
     return this.findOne(id);
   }
 
@@ -423,6 +440,19 @@ export class ParcelsService {
       pickupDriverId: dto.driverId,
     });
     await this.addEvent(id, 'pending', 'Pickup driver assigned');
+
+    try {
+      await this.firebaseService.sendToDriver(dto.driverId, {
+        title: 'បានចាត់តាំងឱ្យទៅយកទំនិញពីហាង',
+        body: `អ្នកត្រូវបានចាត់តាំងទៅទទួលកញ្ចប់ទំនិញ #${parcel.trackingCode}`,
+        type: 'pickup_assigned',
+        data: { parcelId: parcel.id, trackingCode: parcel.trackingCode },
+        tenantId: parcel.tenantId,
+      });
+    } catch (e) {
+      // Continue
+    }
+
     return this.findOne(id);
   }
 
@@ -449,6 +479,19 @@ export class ParcelsService {
       assignedAt: new Date(),
     });
     await this.addEvent(id, 'assigned', isReassign ? `Reassigned to driver #${dto.driverId}` : undefined);
+
+    try {
+      await this.firebaseService.sendToDriver(dto.driverId, {
+        title: isReassign ? 'កញ្ចប់ទំនិញត្រូវបានផ្ទេរមកអ្នក' : 'បានចាត់តាំងកញ្ចប់ទំនិញថ្មី',
+        body: `អ្នកទទួលបានកញ្ចប់ទំនិញ #${parcel.trackingCode}`,
+        type: 'task_assigned',
+        data: { parcelId: parcel.id, trackingCode: parcel.trackingCode },
+        tenantId: parcel.tenantId,
+      });
+    } catch (e) {
+      // Continue
+    }
+
     return this.findOne(id);
   }
 

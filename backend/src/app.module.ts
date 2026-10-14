@@ -27,6 +27,7 @@ import { SaasModule } from './saas/saas.module';
 import { SeedModule } from './seed/seed.module';
 import { TelegramModule } from './telegram/telegram.module';
 import { TrackingModule } from './tracking/tracking.module';
+import { FirebaseModule } from './firebase/firebase.module';
 
 @Module({
   imports: [
@@ -59,6 +60,7 @@ import { TrackingModule } from './tracking/tracking.module';
     SeedModule,
     TelegramModule,
     TrackingModule,
+    FirebaseModule,
   ],
   providers: [
     {

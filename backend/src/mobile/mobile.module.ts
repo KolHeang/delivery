@@ -13,6 +13,9 @@ import { MerchantPayment } from '../payments/entities/merchant-payment.entity';
 import { RefreshToken } from '../auth/entities/refresh-token.entity';
 import { DeviceToken } from '../auth/entities/device-token.entity';
 import { Zone } from '../zones/entities/zone.entity';
+import { ParcelMessage } from '../parcels/entities/parcel-message.entity';
+import { DriverNotification } from './driver/entities/driver-notification.entity';
+import { MinioModule } from '../minio/minio.mudule';
 
 import { AuthController } from './auth/auth.controller';
 import { AuthService } from './auth/auth.service';
@@ -20,6 +23,7 @@ import { DriverController } from './driver/driver.controller';
 import { DriverService } from './driver/driver.service';
 import { MerchantController } from './merchant/merchant.controller';
 import { MerchantService } from './merchant/merchant.service';
+import { UploadController } from './upload/upload.controller';
 
 @Module({
   imports: [
@@ -34,7 +38,10 @@ import { MerchantService } from './merchant/merchant.service';
       RefreshToken,
       DeviceToken,
       Zone,
+      ParcelMessage,
+      DriverNotification,
     ]),
+    MinioModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: (config: ConfigService) => ({
@@ -49,7 +56,12 @@ import { MerchantService } from './merchant/merchant.service';
       inject: [ConfigService],
     }),
   ],
-  controllers: [AuthController, DriverController, MerchantController],
+  controllers: [
+    AuthController,
+    DriverController,
+    MerchantController,
+    UploadController,
+  ],
   providers: [AuthService, DriverService, MerchantService],
 })
 export class MobileModule { }

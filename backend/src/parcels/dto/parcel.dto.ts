@@ -10,45 +10,59 @@ import { ApiProperty, PartialType } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
 
 export class CreateParcelDto {
-  @ApiProperty() @IsNotEmpty() @IsString() receiverName: string;
-  @ApiProperty() @IsNotEmpty() @IsString() receiverPhone: string;
-  @ApiProperty() @IsNotEmpty() @IsString() receiverAddress: string;
+  @ApiProperty({ example: 'Chan Vanna', description: 'Receiver customer name' })
+  @IsNotEmpty()
+  @IsString()
+  receiverName: string;
 
-  @ApiProperty({ default: 0 })
+  @ApiProperty({ example: '098765432', description: 'Receiver phone number' })
+  @IsNotEmpty()
+  @IsString()
+  receiverPhone: string;
+
+  @ApiProperty({ example: 'House #12B, Street 271, Boeng Tumpun, Phnom Penh', description: 'Receiver delivery address' })
+  @IsNotEmpty()
+  @IsString()
+  receiverAddress: string;
+
+  @ApiProperty({ example: 1.5, default: 0, description: 'Package weight (kg)' })
   @IsOptional()
   @IsNumber()
   @Min(0)
   @Type(() => Number)
   weight?: number;
 
-  @ApiProperty({ enum: ['small', 'medium', 'large'], default: 'small' })
+  @ApiProperty({ enum: ['small', 'medium', 'large'], default: 'small', example: 'small' })
   @IsOptional()
   @Transform(({ value }) => value || 'small')
   @IsEnum(['small', 'medium', 'large'])
   size?: string;
 
-  @ApiProperty({ default: 0 })
+  @ApiProperty({ example: 25.5, default: 0, description: 'Cash on delivery amount to collect' })
   @IsOptional()
   @IsNumber()
   @Min(0)
   @Type(() => Number)
   cod?: number;
 
-  @ApiProperty({ default: 0 })
+  @ApiProperty({ example: 1.5, default: 0, description: 'Delivery fee' })
   @IsOptional()
   @IsNumber()
   @Min(0)
   @Type(() => Number)
   deliveryFee?: number;
 
-  @ApiProperty({ default: 1000, required: false })
+  @ApiProperty({ example: 1000, default: 1000, required: false, description: 'Driver commission / delivery fee share' })
   @IsOptional()
   @IsNumber()
   @Min(0)
   @Type(() => Number)
   driverFee?: number;
 
-  @ApiProperty({ required: false }) @IsOptional() @IsString() note?: string;
+  @ApiProperty({ example: 'Call 15 minutes before arrival', required: false, description: 'Special delivery note' })
+  @IsOptional()
+  @IsString()
+  note?: string;
   @ApiProperty({ required: false })
   @IsOptional()
   @IsNumber()

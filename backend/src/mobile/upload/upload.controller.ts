@@ -18,6 +18,8 @@ import {
   ApiConsumes,
   ApiBearerAuth,
   ApiQuery,
+  ApiBody,
+  ApiResponse,
 } from '@nestjs/swagger';
 import { MinioService } from '../../minio/minio.service';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
@@ -38,6 +40,36 @@ export class UploadController {
     required: false,
     description: 'Target folder (e.g., proofs, signatures, chat, profile)',
     example: 'proofs',
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary',
+          description: 'Image or document file (JPG, PNG, WebP, PDF up to 10MB)',
+        },
+      },
+      required: ['file'],
+    },
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'File uploaded successfully to MinIO object storage',
+    schema: {
+      example: {
+        status: true,
+        message: 'Successfully',
+        data: {
+          success: true,
+          url: 'http://localhost:9000/delivery/proofs/1729000000000-delivery_proof.jpg',
+          originalName: 'delivery_proof.jpg',
+          size: 245120,
+          mimetype: 'image/jpeg',
+        },
+      },
+    },
   })
   @UseInterceptors(
     FileInterceptor(
@@ -83,6 +115,40 @@ export class UploadController {
     required: false,
     description: 'Target folder',
     example: 'proofs',
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        files: {
+          type: 'array',
+          items: {
+            type: 'string',
+            format: 'binary',
+          },
+          description: 'Array of image files (up to 10 files, 10MB each)',
+        },
+      },
+      required: ['files'],
+    },
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Multiple files uploaded successfully',
+    schema: {
+      example: {
+        status: true,
+        message: 'Successfully',
+        data: {
+          success: true,
+          urls: [
+            'http://localhost:9000/delivery/proofs/1729000000001-item1.jpg',
+            'http://localhost:9000/delivery/proofs/1729000000002-item2.jpg',
+          ],
+          count: 2,
+        },
+      },
+    },
   })
   @UseInterceptors(
     FilesInterceptor(

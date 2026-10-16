@@ -37,7 +37,9 @@ export class AuthService {
         '(LOWER(user.email) = LOWER(:id) OR user.phone = :id OR LOWER(user.code) = LOWER(:id))',
         { id: cleanId },
       )
-      .andWhere('user.isDriver = true')
+      .andWhere('(user.isDriver = true OR roleRelation.name = :driverRole)', {
+        driverRole: 'driver',
+      })
       .getOne();
 
     if (!user) throw new UnauthorizedException('Invalid driver credentials');

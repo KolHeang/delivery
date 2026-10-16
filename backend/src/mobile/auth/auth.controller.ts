@@ -124,7 +124,7 @@ export class AuthController {
     },
   })
   merchantLogin(@Body() dto: MerchantLoginDto) {
-    const identifier = dto.phone;
+    const identifier = dto.phone || dto.email || dto.identifier || '';
     return this.authService.merchantLogin(identifier, dto.password);
   }
 

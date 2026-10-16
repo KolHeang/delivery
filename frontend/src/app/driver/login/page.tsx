@@ -122,9 +122,6 @@ export default function DriverLoginPage() {
     try {
       const res = await api.post('/mobile/auth/driver/login', {
         identifier: idVal,
-        phone: idVal,
-        email: idVal,
-        code: idVal,
         password: form.password,
       });
       setAuth(res.data.access_token, res.data.user);

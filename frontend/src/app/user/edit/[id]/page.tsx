@@ -19,6 +19,7 @@ const emptyForm = {
   zoneId: '',
   joinDate: '',
   salary: '',
+  driverFee: '1000',
   password: '',
   dob: '',
   gender: '',
@@ -96,6 +97,7 @@ export default function EditStaffPage() {
             zoneId: i.zoneId ? String(i.zoneId) : '',
             joinDate: i.joinDate || '',
             salary: i.salary !== undefined && i.salary !== null ? i.salary.toString() : '',
+            driverFee: i.driverFee !== undefined && i.driverFee !== null ? i.driverFee.toString() : '1000',
             password: '',
             dob: i.dob || '',
             gender: i.gender || '',
@@ -196,6 +198,9 @@ export default function EditStaffPage() {
       }
       if (form.joinDate) formData.append('joinDate', form.joinDate);
       if (form.salary) formData.append('salary', form.salary);
+      if (form.role === 'driver') {
+        formData.append('driverFee', form.driverFee || '1000');
+      }
       if (form.dob) formData.append('dob', form.dob);
       if (form.gender) formData.append('gender', form.gender);
       if (form.password) formData.append('password', form.password);
@@ -373,8 +378,8 @@ export default function EditStaffPage() {
                   </div>
                 </div>
 
-                {/* Row 4: Password & Salary */}
-                <div className="form-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '18px' }}>
+                {/* Row 4: Password & Salary & Driver Fee */}
+                <div className="form-row" style={{ display: 'grid', gridTemplateColumns: form.role === 'driver' ? '1fr 1fr 1fr' : '1fr 1fr', gap: '20px', marginBottom: '18px' }}>
                   <div className="form-group">
                     <label className="form-label" style={{ fontWeight: 600 }}>
                       {t('password') || 'ពាក្យសម្ងាត់ថ្មី (ទុកទំនេរបើមិនប្តូរ)'}
@@ -400,6 +405,26 @@ export default function EditStaffPage() {
                       onChange={f('salary')}
                     />
                   </div>
+                  {form.role === 'driver' && (
+                    <div className="form-group">
+                      <label className="form-label" style={{ fontWeight: 600, color: '#16a34a' }}>
+                        {lang === 'km' ? 'ថ្លៃដឹកក្នុងមួយកញ្ចប់ (៛)' : 'Driver Fee / Parcel (KHR)'}
+                      </label>
+                      <input
+                        type="number"
+                        step="100"
+                        min="0"
+                        className="form-control"
+                        placeholder="1000"
+                        value={form.driverFee}
+                        onChange={f('driverFee')}
+                        style={{ borderColor: '#86efac' }}
+                      />
+                      <small style={{ fontSize: '11px', color: '#64748b' }}>
+                        {lang === 'km' ? 'លំនាំដើម: 1,000 ៛/កញ្ចប់' : 'Default: 1,000 KHR/parcel'}
+                      </small>
+                    </div>
+                  )}
                 </div>
 
                 {/* Row 5: Dates & Personal info */}

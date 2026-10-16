@@ -1,5 +1,6 @@
 import { Controller, Post, Body, UseGuards, Request } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiBody, ApiResponse } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { RefreshTokenDto } from '../../auth/dto/refresh-token.dto';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
@@ -42,6 +43,7 @@ export class AuthController {
     return this.authService.refresh(dto.refresh_token);
   }
 
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @Post('driver/login')
   @ApiOperation({ summary: 'Driver login with code, phone, or email' })
   @ApiResponse({
@@ -85,6 +87,7 @@ export class AuthController {
     return this.authService.driverLogin(dto.identifier, dto.password);
   }
 
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @Post('merchant/login')
   @ApiOperation({ summary: 'Merchant login with phone or email' })
   @ApiResponse({

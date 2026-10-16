@@ -44,13 +44,10 @@ export class AuthService {
 
     if (!user) throw new UnauthorizedException('Invalid driver credentials');
 
-    // Check password or fallback to 123456
-    let isValid = false;
-    if (user.password) {
-      isValid = await bcrypt.compare(password, user.password);
-    } else {
-      isValid = password === '123456';
+    if (!user.password) {
+      throw new UnauthorizedException('Invalid credentials');
     }
+    const isValid = await bcrypt.compare(password, user.password);
 
     if (!isValid) throw new UnauthorizedException('Invalid credentials');
     if (!user.isActive) throw new UnauthorizedException('Account is disabled');
@@ -100,12 +97,10 @@ export class AuthService {
 
     if (!user) throw new UnauthorizedException('Invalid merchant credentials');
 
-    let isValid = false;
-    if (user.password) {
-      isValid = await bcrypt.compare(password, user.password);
-    } else {
-      isValid = password === '123456';
+    if (!user.password) {
+      throw new UnauthorizedException('Invalid credentials');
     }
+    const isValid = await bcrypt.compare(password, user.password);
 
     if (!isValid) throw new UnauthorizedException('Invalid credentials');
     if (!user.active) throw new UnauthorizedException('Account is disabled');

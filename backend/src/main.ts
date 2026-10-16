@@ -6,17 +6,114 @@ import { HttpExceptionFilter } from './filters/http-exception.filter';
 import { ResponseInterceptor } from './interceptors/response.interceptor';
 
 import { json, urlencoded } from 'express';
+import helmet from 'helmet';
+import { DataSource } from 'typeorm';
+import { TenantDomain } from './saas/entities/tenant-domain.entity';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
+  // Security headers via Helmet
+  app.use(
+    helmet({
+      contentSecurityPolicy: false, // Ensures Swagger UI works without blocking scripts
+      crossOriginEmbedderPolicy: false,
+    }),
+  );
 
   // Increase payload limit for base64 images (POD photos, signature)
   app.use(json({ limit: '50mb' }));
   app.use(urlencoded({ extended: true, limit: '50mb' }));
 
-  // Enable CORS
+  // Enable CORS with dynamic wildcard subdomain & database-driven custom domain matching
+  const baseDomain = (process.env.BASE_DOMAIN || 'e-express.com').replace(/^\./, '').toLowerCase();
+  const configuredOrigins = process.env.CORS_ORIGIN
+    ? process.env.CORS_ORIGIN.split(',').map((o) => o.trim().toLowerCase())
+    : [];
+
+  // Cached set of verified custom domains from database
+  let customDomainCache = new Set<string>();
+  let lastCustomDomainCheck = 0;
+
+  const isCustomDomainAllowed = async (host: string): Promise<boolean> => {
+    try {
+      const now = Date.now();
+      // Cache for 60 seconds to avoid querying DB on every request
+      if (now - lastCustomDomainCheck > 60000) {
+        const dataSource = app.get(DataSource);
+        if (dataSource && dataSource.isInitialized) {
+          const domainRepo = dataSource.getRepository(TenantDomain);
+          const verifiedRecords = await domainRepo.find({
+            select: { domain: true },
+            where: { isVerified: true },
+          });
+          customDomainCache = new Set(
+            verifiedRecords.map((d) => d.domain.toLowerCase().trim()),
+          );
+          lastCustomDomainCheck = now;
+        }
+      }
+      return customDomainCache.has(host);
+    } catch {
+      return false;
+    }
+  };
+
   app.enableCors({
-    origin: true, // This allows ANY origin to connect
+    origin: async (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+      // 1. Allow mobile apps, curl, server-to-server (requests with no origin header)
+      if (!origin) {
+        return callback(null, true);
+      }
+
+      const lowerOrigin = origin.toLowerCase();
+
+      // 2. In non-production, if CORS_ORIGIN is '*' or not set, allow all origins
+      if (
+        process.env.NODE_ENV !== 'production' ||
+        configuredOrigins.includes('*') ||
+        configuredOrigins.length === 0
+      ) {
+        return callback(null, true);
+      }
+
+      // 3. Exact match with any domain in configuredOrigins
+      if (configuredOrigins.includes(lowerOrigin)) {
+        return callback(null, true);
+      }
+
+      // 4. Match any tenant subdomain (*.yourdomain.com) of base domain or configured domains
+      const rootsToCheck = [
+        baseDomain,
+        ...configuredOrigins.map((o) => o.replace(/^https?:\/\//, '').replace(/:\d+$/, '')),
+      ];
+
+      const isSubdomainMatch = rootsToCheck.some((root) => {
+        if (!root || root === '*') return false;
+        const cleanRoot = root.replace(/^\*\./, '').replace(/^\./, '');
+        const escaped = cleanRoot.replace(/\./g, '\\.');
+        const subRegex = new RegExp(`^https?:\\/\\/([a-zA-Z0-9-]+\\.)*${escaped}(:\\d+)?$`, 'i');
+        return subRegex.test(lowerOrigin);
+      });
+
+      if (isSubdomainMatch) {
+        return callback(null, true);
+      }
+
+      // 5. Allow local dev origins (localhost & 127.0.0.1)
+      if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(lowerOrigin)) {
+        return callback(null, true);
+      }
+
+      // 6. Check database for verified Tenant Custom Domains (e.g. mycompany.com)
+      const cleanHost = lowerOrigin.replace(/^https?:\/\//, '').replace(/:\d+$/, '');
+      const isCustomAllowed = await isCustomDomainAllowed(cleanHost);
+      if (isCustomAllowed) {
+        return callback(null, true);
+      }
+
+      return callback(new Error(`CORS blocked for origin: ${origin}`), false);
+    },
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
   });

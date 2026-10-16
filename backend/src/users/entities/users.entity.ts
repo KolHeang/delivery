@@ -82,6 +82,9 @@ export class User {
   @Column('decimal', { precision: 10, scale: 2, default: 0.0 })
   salary: number;
 
+  @Column('decimal', { name: 'driver_fee', precision: 10, scale: 2, default: 1000.0, nullable: true })
+  driverFee: number;
+
   @ManyToOne(() => Zone, { nullable: true, eager: true })
   @JoinColumn({ name: 'zone_id' })
   zone: Zone;

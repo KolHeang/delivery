@@ -7,9 +7,10 @@ import { ParcelsService } from './parcels.service';
 import { ParcelsController } from './parcels.controller';
 
 import { Zone } from '../zones/entities/zone.entity';
+import { User } from '../users/entities/users.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Parcel, ParcelEvent, PickupRequest, Zone])],
+  imports: [TypeOrmModule.forFeature([Parcel, ParcelEvent, PickupRequest, Zone, User])],
   controllers: [ParcelsController],
   providers: [ParcelsService],
   exports: [ParcelsService],

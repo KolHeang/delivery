@@ -9,6 +9,7 @@ import { Parcel } from './entities/parcel.entity';
 import { ParcelEvent } from './entities/parcel-event.entity';
 import { PickupRequest } from './entities/pickup-request.entity';
 import { Zone } from '../zones/entities/zone.entity';
+import { User } from '../users/entities/users.entity';
 import {
   CreateParcelDto,
   UpdateParcelDto,
@@ -27,6 +28,7 @@ export class ParcelsService {
     @InjectRepository(ParcelEvent) private readonly eventRepo: Repository<ParcelEvent>,
     @InjectRepository(PickupRequest) private readonly pickupRequestRepo: Repository<PickupRequest>,
     @InjectRepository(Zone) private readonly zoneRepo: Repository<Zone>,
+    @InjectRepository(User) private readonly userRepo: Repository<User>,
     private readonly firebaseService: FirebaseService,
   ) { }
 
@@ -297,7 +299,12 @@ export class ParcelsService {
       }
     }
     if (dto.driverFee === undefined || dto.driverFee === null) {
-      dto.driverFee = 1000;
+      if (dto.driverId) {
+        const driver = await this.userRepo.findOne({ where: { id: dto.driverId } });
+        dto.driverFee = driver?.driverFee ? Number(driver.driverFee) : 1000;
+      } else {
+        dto.driverFee = 1000;
+      }
     }
     const parcel = this.repo.create(dto as any) as any as Parcel;
     if (parcel.status === 'picked-up' && !parcel.pickedUpAt) {
@@ -317,6 +324,12 @@ export class ParcelsService {
 
     if (dto.driverId !== undefined) {
       if (dto.driverId) {
+        if (updates.driverFee === undefined || updates.driverFee === null) {
+          const driver = await this.userRepo.findOne({ where: { id: dto.driverId } });
+          if (driver?.driverFee) {
+            updates.driverFee = Number(driver.driverFee);
+          }
+        }
         if (updates.status === undefined || updates.status === 'pending' || updates.status === 'in-warehouse' || updates.status === 'failed') {
           if (parcel.status === 'pending' || parcel.status === 'in-warehouse' || parcel.status === 'failed') {
             updates.status = 'assigned';
@@ -427,8 +440,14 @@ export class ParcelsService {
         'Direct delivery can only be assigned to pending parcels',
       );
     }
+    let directFee: number | undefined;
+    const directDriver = await this.userRepo.findOne({ where: { id: dto.driverId } });
+    if (directDriver?.driverFee) {
+      directFee = Number(directDriver.driverFee);
+    }
     await this.repo.update(id, {
       driverId: dto.driverId,
+      ...(directFee ? { driverFee: directFee } : {}),
       status: 'picked-up',
       pickedUpAt: new Date(),
     });
@@ -509,8 +528,14 @@ export class ParcelsService {
       );
     }
     const isReassign = (parcel.status === 'assigned' || parcel.status === 'failed') && parcel.driverId !== dto.driverId;
+    let assignedFee: number | undefined;
+    const deliveryDriver = await this.userRepo.findOne({ where: { id: dto.driverId } });
+    if (deliveryDriver?.driverFee) {
+      assignedFee = Number(deliveryDriver.driverFee);
+    }
     await this.repo.update(id, {
       driverId: dto.driverId,
+      ...(assignedFee ? { driverFee: assignedFee } : {}),
       status: 'assigned',
       assignedAt: new Date(),
     });

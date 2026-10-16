@@ -118,6 +118,12 @@ export class CreateUserDto {
   @Type(() => Number)
   salary?: number;
 
+  @ApiProperty({ required: false, default: 1000 })
+  @IsOptional()
+  @IsNumber()
+  @Type(() => Number)
+  driverFee?: number;
+
   @ApiProperty({ required: false })
   @IsOptional()
   @IsString()

@@ -198,6 +198,9 @@ export class UsersService implements OnModuleInit {
       dob: dto.dob && dto.dob.trim() !== '' ? dto.dob : null,
       zoneId: dto.zoneId ? Number(dto.zoneId) : null,
       vehicleId,
+      driverFee: dto.driverFee !== undefined && dto.driverFee !== null && !isNaN(Number(dto.driverFee))
+        ? Number(dto.driverFee)
+        : (isDriver ? 1000 : null),
       tenantId: dto.tenantId || tenantContext?.tenantId || 1,
       tenantSubdomain: dto.tenantSubdomain || tenantContext?.tenantSubdomain || null,
     };
@@ -294,6 +297,9 @@ export class UsersService implements OnModuleInit {
         payload.zoneId = null;
         payload.vehicleId = null;
       }
+    }
+    if (dto.driverFee !== undefined) {
+      payload.driverFee = dto.driverFee !== null && !isNaN(Number(dto.driverFee)) ? Number(dto.driverFee) : 1000;
     }
     delete payload.role;
 

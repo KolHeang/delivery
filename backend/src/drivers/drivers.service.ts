@@ -105,6 +105,7 @@ export class DriversService {
       vehicleId: dto.vehicleId,
       joinDate: dto.joinDate,
       salary: dto.salary ? parseFloat(dto.salary as any) : 0,
+      driverFee: dto.driverFee !== undefined && dto.driverFee !== null ? parseFloat(dto.driverFee as any) : 1000,
       roleId,
       password: hashed,
       tenantId: tenantId ?? null,
@@ -117,6 +118,9 @@ export class DriversService {
     const payload = { ...dto } as any;
     if (dto.password) {
       payload.password = await bcrypt.hash(dto.password, 10);
+    }
+    if (dto.driverFee !== undefined && dto.driverFee !== null) {
+      payload.driverFee = parseFloat(dto.driverFee as any);
     }
     payload.isDriver = true;
     payload.isStaff = false;

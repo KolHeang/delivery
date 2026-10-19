@@ -10,6 +10,7 @@ import { Organisation } from '../settings/entities/organisation.entity';
 import { Tenant } from '../saas/entities/tenant.entity';
 import { TelegramService } from '../telegram/telegram.service';
 import { FirebaseService } from '../firebase/firebase.service';
+import * as crypto from 'crypto';
 
 @Injectable()
 export class PaymentsService {
@@ -118,18 +119,21 @@ export class PaymentsService {
     },
     userId?: number,
     tenantId?: number,
+    token?: string,
   ) {
     const merchant = await this.merchantRepo.findOne({
       where: { id: merchantId },
     });
     if (!merchant) throw new NotFoundException('Merchant not found');
 
+    const secureToken = token || crypto.randomUUID();
     const payment = this.merchantPaymentRepo.create({
       merchantId,
       amount,
       amountKHR,
       date,
       reference,
+      token: secureToken,
       note,
       parcelIds,
       createdById: userId,
@@ -180,6 +184,15 @@ export class PaymentsService {
         }
       }
 
+      if (saved.token && finalDetailUrl) {
+        if (finalDetailUrl.includes('client_id=') && finalDetailUrl.includes('reference=')) {
+          finalDetailUrl = finalDetailUrl.replace(/client_id=[^&]+&reference=[^&]+/, `token=${saved.token}`);
+        } else if (!finalDetailUrl.includes('token=')) {
+          const separator = finalDetailUrl.includes('?') ? '&' : '?';
+          finalDetailUrl = `${finalDetailUrl}${separator}token=${saved.token}`;
+        }
+      }
+
       const text = `📦 <b>របាយការណ៍ដឹកជញ្ជូនប្រចាំថ្ងៃ</b>\n\n` +
         `- ឈ្មោះហាង: ${merchant.nameKh || merchant.name}\n` +
         `- កាលបរិច្ឆេទ: ${formattedDate}\n` +
@@ -225,6 +238,8 @@ export class PaymentsService {
     parcelIds?: number[],
     telegramReport?: any,
     userId?: number,
+    tenantId?: number,
+    token?: string,
   ) {
     return this.createMerchantPayment(
       merchantId,
@@ -236,6 +251,8 @@ export class PaymentsService {
       parcelIds,
       telegramReport,
       userId,
+      tenantId,
+      token,
     );
   }
 
@@ -469,9 +486,18 @@ export class PaymentsService {
     return this.updateMerchantPayment(id, body, userId);
   }
 
-  async getPublicInvoice(merchantId: number, reference: string) {
+  async getPublicInvoice(merchantId?: number, reference?: string, token?: string) {
+    let whereCondition: any;
+    if (token) {
+      whereCondition = { token };
+    } else if (merchantId && reference) {
+      whereCondition = { merchantId, reference };
+    } else {
+      throw new NotFoundException('Payment settlement not found');
+    }
+
     const payment = await this.merchantPaymentRepo.findOne({
-      where: { merchantId, reference },
+      where: whereCondition,
       relations: { merchant: true },
     });
     if (!payment) throw new NotFoundException('Payment settlement not found');

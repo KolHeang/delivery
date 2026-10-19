@@ -42,6 +42,9 @@ export class MerchantPayment {
   @Column({ nullable: true })
   reference: string;
 
+  @Column({ nullable: true, unique: true })
+  token: string;
+
   @Column({ nullable: true, type: 'text' })
   note: string;
 

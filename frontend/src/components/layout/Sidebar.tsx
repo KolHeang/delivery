@@ -211,15 +211,32 @@ export default function Sidebar() {
     <aside className="sidebar" style={{ width: 260 }}>
       {/* Brand Logo */}
       <div className="sidebar-logo" style={{ height: 76, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: 12, padding: '0 16px', borderBottom: '1px solid rgba(255,255,255,0.12)' }}>
-        <div style={{
-          width: 40, height: 40, borderRadius: 12,
-          background: 'linear-gradient(135deg, var(--accent), #6366f1)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          color: '#fff', fontSize: 22, boxShadow: '0 4px 12px rgba(59,130,246,0.4)',
-          flexShrink: 0
-        }}>
-          📦
-        </div>
+        {tenant?.logoUrl ? (
+          <img
+            src={tenant.logoUrl}
+            alt="Logo"
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: 12,
+              objectFit: 'contain',
+              background: '#ffffff',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+              padding: 2,
+              flexShrink: 0
+            }}
+          />
+        ) : (
+          <div style={{
+            width: 40, height: 40, borderRadius: 12,
+            background: 'linear-gradient(135deg, var(--accent), #6366f1)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            color: '#fff', fontSize: 22, boxShadow: '0 4px 12px rgba(59,130,246,0.4)',
+            flexShrink: 0
+          }}>
+            📦
+          </div>
+        )}
         <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', minWidth: 0, overflow: 'hidden' }}>
           <span style={{
             fontSize: 16,

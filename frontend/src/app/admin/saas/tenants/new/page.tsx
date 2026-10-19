@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { saasApi, Plan } from '@/lib/saas-api';
+import api from '@/lib/api';
 import { getUser, clearAuth } from '@/lib/auth';
 import {
   MdDashboard,
@@ -27,6 +28,9 @@ import {
   MdAttachMoney,
   MdLogout,
   MdKeyboardArrowDown,
+  MdCloudUpload,
+  MdDelete,
+  MdAddPhotoAlternate,
 } from 'react-icons/md';
 import { SaasCloudIcon } from '@/components/ui/SaasCloudIcon';
 import { getDomainSuffix } from '@/lib/domain';
@@ -39,9 +43,15 @@ export default function CreateTenantPage() {
   const [user, setUser] = useState<any>(null);
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
 
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string>('');
+  const [logoUploading, setLogoUploading] = useState<boolean>(false);
+  const logoInputRef = React.useRef<HTMLInputElement | null>(null);
+
   const [companyForm, setCompanyForm] = useState({
     companyName: '',
     subdomain: '',
+    logo: '',
     planId: 2,
     billingCycle: 'monthly' as 'monthly' | 'yearly',
     couponCode: '',
@@ -152,6 +162,54 @@ export default function CreateTenantPage() {
     }
   };
 
+  const handleLogoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert('ទំហំរូបភាពត្រូវតែតូចជាង 5MB (Image size must be less than 5MB)');
+      return;
+    }
+
+    setLogoFile(file);
+    const previewUrl = URL.createObjectURL(file);
+    setLogoPreview(previewUrl);
+
+    // 1. Convert to Base64 data URL as immediate and reliable fallback
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64String = reader.result as string;
+      setCompanyForm(prev => ({ ...prev, logo: base64String }));
+    };
+    reader.readAsDataURL(file);
+
+    // 2. Also try uploading to server storage
+    try {
+      setLogoUploading(true);
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await api.post('/mobile/upload/single?folder=tenants', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      if (res.data?.url) {
+        setCompanyForm(prev => ({ ...prev, logo: res.data.url }));
+      }
+    } catch {
+      // Fallback is base64String which was already set by FileReader
+    } finally {
+      setLogoUploading(false);
+    }
+  };
+
+  const handleRemoveLogo = () => {
+    setLogoFile(null);
+    setLogoPreview('');
+    setCompanyForm(prev => ({ ...prev, logo: '' }));
+    if (logoInputRef.current) {
+      logoInputRef.current.value = '';
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const errs: Record<string, string> = {};
@@ -199,6 +257,7 @@ export default function CreateTenantPage() {
         email: companyForm.email.trim().toLowerCase(),
         phone: companyForm.phone.trim(),
         password: companyForm.password,
+        logo: companyForm.logo || undefined,
       });
 
       // Return immediately to the company list
@@ -687,6 +746,117 @@ export default function CreateTenantPage() {
                   {/* Section 1: Company & Subdomain */}
                   <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 14, display: 'flex', alignItems: 'center' }}>
                     ១. ព័ត៌មានក្រុមហ៊ុន និង Workspace
+                  </div>
+
+                  {/* Company Logo Upload Card */}
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 16,
+                    padding: '16px 20px',
+                    background: '#f8fafc',
+                    borderRadius: 12,
+                    border: '1.5px dashed #cbd5e1',
+                    marginBottom: 20,
+                  }}>
+                    <input
+                      ref={logoInputRef}
+                      type="file"
+                      accept="image/png,image/jpeg,image/jpg,image/webp,image/svg+xml"
+                      style={{ display: 'none' }}
+                      onChange={handleLogoChange}
+                    />
+                    <div
+                      onClick={() => logoInputRef.current?.click()}
+                      style={{
+                        width: 72,
+                        height: 72,
+                        borderRadius: 14,
+                        background: '#ffffff',
+                        border: '1.5px solid #cbd5e1',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                        overflow: 'hidden',
+                        position: 'relative',
+                        boxShadow: '0 2px 6px rgba(0,0,0,0.05)',
+                        flexShrink: 0,
+                        transition: 'all 0.15s ease',
+                      }}
+                      title="ចុចដើម្បីជ្រើសរើសរូប Logo"
+                    >
+                      {logoPreview ? (
+                        <img
+                          src={logoPreview}
+                          alt="Logo Preview"
+                          style={{ width: '100%', height: '100%', objectFit: 'contain', padding: 4 }}
+                        />
+                      ) : (
+                        <div style={{ textAlign: 'center', color: '#94a3b8' }}>
+                          <MdAddPhotoAlternate size={28} />
+                          <div style={{ fontSize: 9, fontWeight: 700, marginTop: 2 }}>LOGO</div>
+                        </div>
+                      )}
+                    </div>
+
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                        <span style={{ fontSize: 13.5, fontWeight: 700, color: '#1e293b' }}>
+                          រូបសញ្ញាក្រុមហ៊ុន (Company Logo)
+                        </span>
+                        {logoUploading && (
+                          <span style={{ fontSize: 11, background: '#dbeafe', color: '#1e40af', padding: '2px 8px', borderRadius: 10, fontWeight: 600 }}>
+                            កំពុង Upload...
+                          </span>
+                        )}
+                        {logoPreview && !logoUploading && (
+                          <span style={{ fontSize: 11, background: '#dcfce7', color: '#15803d', padding: '2px 8px', borderRadius: 10, fontWeight: 600 }}>
+                            ✓ បានជ្រើសរើសរូបភាព
+                          </span>
+                        )}
+                      </div>
+                      <p style={{ fontSize: 12, color: '#64748b', margin: '0 0 8px 0' }}>
+                        គាំទ្រទម្រង់ PNG, JPG, WebP ឬ SVG (ទំហំរូបភាពមិនលើសពី 5MB)
+                      </p>
+                      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                        <button
+                          type="button"
+                          onClick={() => logoInputRef.current?.click()}
+                          className="btn btn-outline"
+                          style={{
+                            fontSize: 12,
+                            height: 32,
+                            padding: '0 12px',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 5,
+                            borderRadius: 6,
+                          }}
+                        >
+                          <MdCloudUpload size={16} />
+                          {logoPreview ? 'ប្តូររូប Logo' : 'ជ្រើសរើសរូប Logo'}
+                        </button>
+                        {logoPreview && (
+                          <button
+                            type="button"
+                            onClick={handleRemoveLogo}
+                            className="btn btn-ghost"
+                            style={{
+                              fontSize: 12,
+                              height: 32,
+                              padding: '0 8px',
+                              color: '#ef4444',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 4,
+                            }}
+                          >
+                            <MdDelete size={16} /> លុបចេញ
+                          </button>
+                        )}
+                      </div>
+                    </div>
                   </div>
 
                   <div className="form-row">

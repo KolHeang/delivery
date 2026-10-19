@@ -36,16 +36,21 @@ export default function ReportPaymentCustomerPage() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
+    const token = params.get('token');
     const clientId = params.get('client_id');
     const reference = params.get('reference');
 
-    if (!clientId || !reference) {
-      setError('ខ្វះប៉ារ៉ាម៉ែត្រក្នុង URL (Missing client_id or reference)');
+    if (!token && (!clientId || !reference)) {
+      setError('ខ្វះប៉ារ៉ាម៉ែត្រក្នុង URL (Missing token or credentials)');
       setLoading(false);
       return;
     }
 
-    api.get(`/payments/public/invoice?client_id=${clientId}&reference=${reference}`)
+    const queryUrl = token
+      ? `/payments/public/invoice?token=${encodeURIComponent(token)}`
+      : `/payments/public/invoice?client_id=${clientId}&reference=${reference}`;
+
+    api.get(queryUrl)
       .then((res) => {
         setData(res.data);
       })

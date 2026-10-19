@@ -25,6 +25,7 @@ import { DriverService } from './driver/driver.service';
 import { MerchantController } from './merchant/merchant.controller';
 import { MerchantService } from './merchant/merchant.service';
 import { UploadController } from './upload/upload.controller';
+import { TrackingModule } from '../tracking/tracking.module';
 
 @Module({
   imports: [
@@ -44,6 +45,7 @@ import { UploadController } from './upload/upload.controller';
       MerchantNotification,
     ]),
     MinioModule,
+    TrackingModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: (config: ConfigService) => ({

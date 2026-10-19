@@ -11,6 +11,7 @@ import { useLanguage } from '@/lib/LanguageContext';
 import { useTenant } from '@/lib/TenantContext';
 import DateInput, { formatDateToDDMMYYYY, getLocalDateString } from '@/components/ui/DateInput';
 import Modal from '@/components/ui/Modal';
+import { useSettings } from '@/lib/SettingsContext';
 
 
 
@@ -47,6 +48,7 @@ export default function PaymentWithStaffPage() {
   const router = useRouter();
   const { t, lang } = useLanguage();
   const { tenant } = useTenant();
+  const { khrRate = 4100 } = useSettings();
   
   const [drivers, setDrivers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -289,6 +291,18 @@ export default function PaymentWithStaffPage() {
     
     setSaving(true);
     try {
+      // First ensure all selected parcels have their latest fees and note saved to backend
+      await Promise.all(
+        selectedOrders.map((o: any) =>
+          api.patch(`/parcels/${o.id}`, {
+            cod: parseFloat(o.cod) || 0,
+            deliveryFee: parseFloat(o.deliveryFee) || 0,
+            driverFee: o.driverFee !== undefined && o.driverFee !== null ? parseFloat(o.driverFee) : 1000,
+            note: o.note || '',
+          }).catch(console.error)
+        )
+      );
+
       await api.post('/payments/staff', {
         driverId: parseInt(driverId),
         amount: totalDriverFee,
@@ -323,8 +337,29 @@ export default function PaymentWithStaffPage() {
   const printTotalDriverFee = printOrders.reduce((sum, o: any) => sum + (o.driverFee !== undefined && o.driverFee !== null ? parseFloat(o.driverFee) : 1000), 0);
   const printCodKhr = printOrders.filter((o: any) => o.codCurrency === 'KHR').reduce((sum, o: any) => sum + parseFloat(o.cod || '0'), 0);
   const printCodUsd = printOrders.filter((o: any) => o.codCurrency === 'USD').reduce((sum, o: any) => sum + parseFloat(o.cod || '0'), 0);
-  const printNetReturnUsd = printCodUsd;
-  const printNetReturnKhr = printCodKhr;
+  
+  // Auto-deduct driver commission from COD remittance
+  const printRate = khrRate || 4100;
+  let printNetReturnKhr = 0;
+  let printNetReturnUsd = printCodUsd;
+  if (printCodKhr >= printTotalDriverFee) {
+    printNetReturnKhr = printCodKhr - printTotalDriverFee;
+    printNetReturnUsd = printCodUsd;
+  } else if (printCodKhr > 0) {
+    const remainingKhr = printTotalDriverFee - printCodKhr;
+    printNetReturnKhr = 0;
+    const remainingUsd = remainingKhr / printRate;
+    printNetReturnUsd = Math.max(0, printCodUsd - remainingUsd);
+  } else {
+    if (printCodUsd > 0) {
+      const feeInUsd = printTotalDriverFee / printRate;
+      printNetReturnUsd = Math.max(0, printCodUsd - feeInUsd);
+      printNetReturnKhr = 0;
+    } else {
+      printNetReturnKhr = -printTotalDriverFee;
+      printNetReturnUsd = 0;
+    }
+  }
 
   // Filter historyData client-side
   const filteredHistory = historyData.filter((h: any) => {
@@ -567,13 +602,14 @@ export default function PaymentWithStaffPage() {
                     <th style={{ padding: '12px 10px', textAlign: 'right', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'ប្រាក់បានបញ្ចូល' : 'Collected COD'}</th>
                     <th style={{ padding: '12px 10px', textAlign: 'right', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'ប្រាក់កម្រៃដឹក' : 'Delivery Fee'}</th>
                     <th style={{ padding: '12px 10px', textAlign: 'right', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'កម្រៃអ្នកដឹក' : 'Driver Fee'}</th>
+                    <th style={{ padding: '12px 10px', textAlign: 'left', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none', minWidth: 140 }}>{lang === 'km' ? 'ចំណាំ / ផ្សេងៗ' : 'Notes / Remarks'}</th>
                     <th style={{ padding: '12px 10px', textAlign: 'center', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'ស្ថានភាព' : 'Status'}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {!driverId ? (
                     <tr>
-                      <td colSpan={11} style={{ textAlign: 'center', padding: '40px 0', color: '#64748b' }}>
+                      <td colSpan={12} style={{ textAlign: 'center', padding: '40px 0', color: '#64748b' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
                           <span style={{ fontSize: 28 }}>🚚</span>
                           <span style={{ fontSize: 14, fontWeight: 700, color: '#0f172a' }}>
@@ -586,7 +622,7 @@ export default function PaymentWithStaffPage() {
                       </td>
                     </tr>
                   ) : filteredOrders.filter((o: any) => o.status === 'delivered' && o.driverPaymentStatus === statusFilter).length === 0 ? (
-                    <tr><td colSpan={11} style={{ textAlign: 'center', padding: '30px 0', color: '#64748b' }}>{lang === 'km' ? 'គ្មានទិន្នន័យ' : 'No data'}</td></tr>
+                    <tr><td colSpan={12} style={{ textAlign: 'center', padding: '30px 0', color: '#64748b' }}>{lang === 'km' ? 'គ្មានទិន្នន័យ' : 'No data'}</td></tr>
                   ) : (
                     filteredOrders.filter((o: any) => o.status === 'delivered' && o.driverPaymentStatus === statusFilter).map((o: any, idx: number) => {
                       const isSelected = selectedIds.includes(o.id);
@@ -670,6 +706,26 @@ export default function PaymentWithStaffPage() {
                               `${(o.driverFee !== undefined && o.driverFee !== null ? parseFloat(o.driverFee) : 1000).toLocaleString()} ៛`
                             )}
                           </td>
+                          <td style={{ padding: '12px 10px', border: 'none' }}>
+                            {statusFilter === 'unpaid' ? (
+                              <input 
+                                type="text"
+                                placeholder={lang === 'km' ? 'ចំណាំ / ផ្សេងៗ...' : 'Notes...'}
+                                value={o.note || ''}
+                                onChange={e => {
+                                  const val = e.target.value;
+                                  setOrders(prev => prev.map(item => item.id === o.id ? { ...item, note: val } : item));
+                                }}
+                                onBlur={e => {
+                                  const val = e.target.value;
+                                  api.patch(`/parcels/${o.id}`, { note: val }).catch(console.error);
+                                }}
+                                style={{ width: '135px', padding: '4px 8px', fontSize: '12px', border: '1px solid #cbd5e1', borderRadius: '6px', color: '#334155' }}
+                              />
+                            ) : (
+                              <span style={{ fontSize: '12px', color: '#64748b' }}>{o.note || '—'}</span>
+                            )}
+                          </td>
                           <td style={{ padding: '12px 10px', textAlign: 'center', border: 'none' }}>
                             <span style={{ background: '#dcfce7', color: '#16a34a', padding: '4px 10px', borderRadius: 6, fontSize: 11, fontWeight: 700 }}>{lang === 'km' ? 'ជោគជ័យ' : 'Delivered'}</span>
                           </td>
@@ -687,14 +743,54 @@ export default function PaymentWithStaffPage() {
                     const usd = src.filter((o: any) => o.codCurrency === 'USD').reduce((s: number, o: any) => s + parseFloat(o.cod || '0'), 0);
                     const fee = src.reduce((s: number, o: any) => s + parseFloat(o.deliveryFee || '0'), 0);
                     const driverEarnings = src.reduce((s: number, o: any) => s + (o.driverFee !== undefined && o.driverFee !== null ? parseFloat(o.driverFee) : 1000), 0);
-                    const netReturnUSD = usd;
-                    const netReturnKHR = khr;
+                    
+                    const rate = khrRate || 4100;
+                    let netReturnKHR = 0;
+                    let netReturnUSD = usd;
+                    let deductionText = '';
+
+                    if (khr >= driverEarnings) {
+                      netReturnKHR = khr - driverEarnings;
+                      netReturnUSD = usd;
+                      if (driverEarnings > 0) {
+                        deductionText = lang === 'km' 
+                          ? `(បានដកកម្រៃដឹក ${driverEarnings.toLocaleString()} ៛ រួច)` 
+                          : `(Deducted ${driverEarnings.toLocaleString()} KHR fee)`;
+                      }
+                    } else if (khr > 0) {
+                      const remainingFeeKhr = driverEarnings - khr;
+                      netReturnKHR = 0;
+                      const remainingFeeUsd = remainingFeeKhr / rate;
+                      if (usd >= remainingFeeUsd) {
+                        netReturnUSD = Math.max(0, usd - remainingFeeUsd);
+                        deductionText = lang === 'km'
+                          ? `(បានដកកម្រៃដឹក ${khr.toLocaleString()} ៛ និង $${remainingFeeUsd.toFixed(2)} រួច)`
+                          : `(Deducted ${khr.toLocaleString()} KHR + $${remainingFeeUsd.toFixed(2)})`;
+                      } else {
+                        netReturnUSD = 0;
+                        netReturnKHR = khr - driverEarnings;
+                      }
+                    } else {
+                      if (usd > 0) {
+                        const feeInUsd = driverEarnings / rate;
+                        netReturnUSD = Math.max(0, usd - feeInUsd);
+                        netReturnKHR = 0;
+                        if (driverEarnings > 0) {
+                          deductionText = lang === 'km'
+                            ? `(បានដកកម្រៃដឹក ${driverEarnings.toLocaleString()} ៛ ≈ $${feeInUsd.toFixed(2)} រួច)`
+                            : `(Deducted ${driverEarnings.toLocaleString()} KHR ≈ $${feeInUsd.toFixed(2)})`;
+                        }
+                      } else {
+                        netReturnKHR = -driverEarnings;
+                        netReturnUSD = 0;
+                      }
+                    }
 
                     return (
                       <>
                         {khr > 0 && (
                           <tr style={{ background: '#f8fafc', borderTop: '2px solid #e2e8f0' }}>
-                            <td colSpan={7} style={{ textAlign: 'right', padding: '12px 16px', fontWeight: 700, color: '#334155', border: 'none' }}>
+                            <td colSpan={8} style={{ textAlign: 'right', padding: '12px 16px', fontWeight: 700, color: '#334155', border: 'none' }}>
                               {lang === 'km' ? 'សរុបប្រាក់បានបញ្ចូលជារៀល' : 'Total KHR Collected'}
                             </td>
                             <td colSpan={3} style={{ padding: '12px 10px', textAlign: 'right', border: 'none' }}>
@@ -706,7 +802,7 @@ export default function PaymentWithStaffPage() {
                           </tr>
                         )}
                         <tr style={{ background: '#f8fafc', borderTop: khr > 0 ? 'none' : '2px solid #e2e8f0' }}>
-                          <td colSpan={7} style={{ textAlign: 'right', padding: '12px 16px', fontWeight: 700, color: '#334155', border: 'none' }}>
+                          <td colSpan={8} style={{ textAlign: 'right', padding: '12px 16px', fontWeight: 700, color: '#334155', border: 'none' }}>
                             {lang === 'km' ? 'សរុបប្រាក់បានបញ្ចូលជាដុល្លារ' : 'Total USD Collected'}
                           </td>
                           <td colSpan={3} style={{ padding: '12px 10px', textAlign: 'right', border: 'none' }}>
@@ -719,7 +815,7 @@ export default function PaymentWithStaffPage() {
 
                         {/* Driver Commission Row */}
                         <tr style={{ background: '#f0fdf4', borderTop: '2px solid #bbf7d0' }}>
-                          <td colSpan={7} style={{ textAlign: 'right', padding: '14px 16px', fontWeight: 800, color: '#15803d', fontSize: 14, border: 'none' }}>
+                          <td colSpan={8} style={{ textAlign: 'right', padding: '14px 16px', fontWeight: 800, color: '#15803d', fontSize: 14, border: 'none' }}>
                             {lang === 'km' ? 'សរុបកម្រៃអ្នកដឹកទទួលបាន' : 'Total Driver Commission Earned'}
                           </td>
                           <td colSpan={3} style={{ padding: '12px 10px', textAlign: 'right', border: 'none' }}>
@@ -731,17 +827,34 @@ export default function PaymentWithStaffPage() {
                         </tr>
 
                         <tr style={{ background: '#f0fdf4', borderTop: '1px solid #bbf7d0', borderBottom: '1px solid #e2e8f0' }}>
-                          <td colSpan={7} style={{ textAlign: 'right', padding: '14px 16px', fontWeight: 800, color: '#16a34a', fontSize: 14, border: 'none' }}>
-                            {lang === 'km' ? 'ប្រាក់អ្នកដឹកត្រូវប្រគល់ជូនក្រុមហ៊ុន' : 'Net COD Return to Company'}
+                          <td colSpan={8} style={{ textAlign: 'right', padding: '14px 16px', fontWeight: 800, color: '#16a34a', fontSize: 14, border: 'none' }}>
+                            <div>{lang === 'km' ? 'ប្រាក់អ្នកដឹកត្រូវប្រគល់ជូនក្រុមហ៊ុន' : 'Net COD Return to Company'}</div>
+                            {deductionText && (
+                              <div style={{ fontSize: 12, fontWeight: 600, color: '#059669', marginTop: 2 }}>
+                                {deductionText}
+                              </div>
+                            )}
                           </td>
                           <td colSpan={3} style={{ padding: '12px 10px', textAlign: 'right', border: 'none' }}>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end' }}>
-                              <span style={{ background: '#16a34a', color: '#fff', padding: '6px 16px', borderRadius: 6, fontWeight: 800, fontSize: 14 }}>
-                                ${netReturnUSD.toFixed(2)}
-                              </span>
+                              {netReturnUSD > 0 && (
+                                <span style={{ background: '#16a34a', color: '#fff', padding: '6px 16px', borderRadius: 6, fontWeight: 800, fontSize: 14 }}>
+                                  ${netReturnUSD.toFixed(2)}
+                                </span>
+                              )}
                               {netReturnKHR > 0 && (
                                 <span style={{ background: '#16a34a', color: '#fff', padding: '6px 16px', borderRadius: 6, fontWeight: 800, fontSize: 14 }}>
                                   {netReturnKHR.toLocaleString()} ៛
+                                </span>
+                              )}
+                              {netReturnUSD === 0 && netReturnKHR === 0 && (
+                                <span style={{ background: '#16a34a', color: '#fff', padding: '6px 16px', borderRadius: 6, fontWeight: 800, fontSize: 14 }}>
+                                  0 ៛ / $0.00
+                                </span>
+                              )}
+                              {netReturnKHR < 0 && (
+                                <span style={{ background: '#dc2626', color: '#fff', padding: '6px 16px', borderRadius: 6, fontWeight: 800, fontSize: 14 }}>
+                                  {lang === 'km' ? `ក្រុមហ៊ុនត្រូវបើកជូន: ${Math.abs(netReturnKHR).toLocaleString()} ៛` : `Company pays driver: ${Math.abs(netReturnKHR).toLocaleString()} KHR`}
                                 </span>
                               )}
                             </div>
@@ -1276,7 +1389,11 @@ export default function PaymentWithStaffPage() {
               <tr style={{ background: '#f0fdf4' }}>
                 <td style={{ padding: '7px 12px', border: '1px solid #000', textAlign: 'right', fontWeight: 'bold', color: '#16a34a' }}>{lang === 'km' ? 'ប្រាក់អ្នកដឹកត្រូវប្រគល់ជូនក្រុមហ៊ុន (Net Return)' : 'Net COD Return to Company'}</td>
                 <td style={{ padding: '7px 12px', border: '1px solid #000', fontWeight: 'bold', color: '#16a34a', textAlign: 'right', fontSize: 12 }}>
-                  $ {printNetReturnUsd.toFixed(2)}{printNetReturnKhr > 0 ? ` / ${printNetReturnKhr.toLocaleString()} ${lang === 'km' ? 'រៀល' : 'KHR'}` : ''}
+                  {printNetReturnUsd > 0 ? `$ ${printNetReturnUsd.toFixed(2)}` : ''}
+                  {printNetReturnUsd > 0 && printNetReturnKhr > 0 ? ' / ' : ''}
+                  {printNetReturnKhr > 0 ? `${printNetReturnKhr.toLocaleString()} ${lang === 'km' ? 'រៀល' : 'KHR'}` : ''}
+                  {printNetReturnUsd === 0 && printNetReturnKhr === 0 ? `$ 0.00 / 0 ${lang === 'km' ? 'រៀល' : 'KHR'}` : ''}
+                  {printNetReturnKhr < 0 ? `(${lang === 'km' ? 'ក្រុមហ៊ុនបើកជូន' : 'To driver'}: ${Math.abs(printNetReturnKhr).toLocaleString()} ៛)` : ''}
                 </td>
               </tr>
             </tbody>

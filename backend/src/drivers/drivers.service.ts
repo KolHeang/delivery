@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, ILike } from 'typeorm';
 import { User } from '../users/entities/users.entity';
@@ -92,12 +92,18 @@ export class DriversService {
       code = `DRV-${String(nextId).padStart(4, '0')}`;
     }
 
+    const cleanEmail = dto.email && typeof dto.email === 'string' && dto.email.trim() !== '' ? dto.email.trim() : null;
+    if (cleanEmail) {
+      const exists = await this.repo.findOne({ where: { email: cleanEmail } });
+      if (exists) throw new ConflictException('Email already exists');
+    }
+
     const driver = this.repo.create({
       code,
       name: dto.name,
       nameKh: dto.nameKh,
       phone: dto.phone,
-      email: dto.email,
+      email: cleanEmail,
       isActive: dto.isActive !== undefined ? dto.isActive : true,
       isDriver: true,
       isStaff: false,
@@ -121,6 +127,13 @@ export class DriversService {
     }
     if (dto.driverFee !== undefined && dto.driverFee !== null) {
       payload.driverFee = parseFloat(dto.driverFee as any);
+    }
+    if (dto.email !== undefined) {
+      payload.email = dto.email && typeof dto.email === 'string' && dto.email.trim() !== '' ? dto.email.trim() : null;
+      if (payload.email) {
+        const exists = await this.repo.findOne({ where: { email: payload.email } });
+        if (exists && exists.id !== id) throw new ConflictException('Email already exists');
+      }
     }
     payload.isDriver = true;
     payload.isStaff = false;

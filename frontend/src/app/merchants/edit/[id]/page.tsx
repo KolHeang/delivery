@@ -141,22 +141,22 @@ export default function EditShopPage() {
     setSaving(true);
     try {
       const formData = new FormData();
-      formData.append("name", form.name);
-      formData.append("nameKh", form.nameKh);
-      formData.append("contact", form.contact);
-      formData.append("phone", form.phone);
-      formData.append("email", form.email);
-      formData.append("address", form.address);
+      formData.append("name", form.name.trim());
+      if (form.nameKh.trim()) formData.append("nameKh", form.nameKh.trim());
+      if (form.contact.trim()) formData.append("contact", form.contact.trim());
+      formData.append("phone", form.phone.trim());
+      formData.append("email", form.email.trim());
+      formData.append("address", form.address.trim());
       if (form.latitude) formData.append("latitude", form.latitude);
       if (form.longitude) formData.append("longitude", form.longitude);
-      formData.append("pricingTier", form.pricingTier);
+      if (form.pricingTier) formData.append("pricingTier", form.pricingTier);
       if (form.zoneId) formData.append("zoneId", form.zoneId);
       formData.append("deliveryFee", form.deliveryFee);
       formData.append("exchangeRate", form.exchangeRate);
-      formData.append("note", form.note);
-      formData.append("telegram", form.telegram);
-      formData.append("qrLinkKhr", form.qrLinkKhr);
-      formData.append("qrLinkUsd", form.qrLinkUsd);
+      if (form.note.trim()) formData.append("note", form.note.trim());
+      if (form.telegram.trim()) formData.append("telegram", form.telegram.trim());
+      if (form.qrLinkKhr.trim()) formData.append("qrLinkKhr", form.qrLinkKhr.trim());
+      if (form.qrLinkUsd.trim()) formData.append("qrLinkUsd", form.qrLinkUsd.trim());
 
       if (qrKhrFile) formData.append("qrImageKhr", qrKhrFile);
       if (qrUsdFile) formData.append("qrImageUsd", qrUsdFile);
@@ -335,12 +335,12 @@ export default function EditShopPage() {
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 16, marginBottom: 18 }}>
                   <div>
                     <label className="form-label" style={{ fontWeight: 600, fontSize: 13 }}>
-                      {lang === "km" ? "អ៊ីមែល" : "Email"}
+                      {lang === "km" ? "អ៊ីមែល (មិនទាមទារ)" : "Email (Optional)"}
                     </label>
                     <input
                       type="email"
                       className={`form-control ${errors.email ? "is-invalid" : ""}`}
-                      placeholder="shop@example.com"
+                      placeholder={lang === "km" ? "shop@example.com (មិនទាមទារ)" : "shop@example.com (Optional)"}
                       value={form.email}
                       onChange={(e) => handleFieldChange("email", e.target.value)}
                     />

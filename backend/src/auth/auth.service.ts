@@ -63,6 +63,7 @@ export class AuthService {
         isActive: user.isActive,
         permissions,
         tenantId: user.tenantId,
+        tenantSubdomain: user.tenantSubdomain,
       },
     };
   }

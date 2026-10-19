@@ -131,6 +131,36 @@ export class CreateParcelDto {
   @IsNumber()
   @Type(() => Number)
   branchId?: number;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  paymentMethod?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  paymentStatus?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  driverPaymentStatus?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  merchantPaymentStatus?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  remark?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  reason?: string;
 }
 
 export class UpdateParcelDto extends PartialType(CreateParcelDto) {
@@ -153,6 +183,16 @@ export class UpdateParcelDto extends PartialType(CreateParcelDto) {
   @IsOptional()
   @IsString()
   note?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  remark?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  reason?: string;
 
   @ApiProperty({ required: false })
   @IsOptional()
@@ -180,6 +220,26 @@ export class UpdateParcelDto extends PartialType(CreateParcelDto) {
 
   @ApiProperty({ required: false })
   @IsOptional()
+  @IsString()
+  paymentMethod?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  paymentStatus?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  driverPaymentStatus?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  merchantPaymentStatus?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
   @IsNumber()
   @Type(() => Number)
   updatedById?: number;
@@ -197,6 +257,7 @@ export class UpdateParcelStatusDto {
       'delivered',
       'failed',
       'returned',
+      'cancelled',
     ],
   })
   @IsEnum([
@@ -208,6 +269,7 @@ export class UpdateParcelStatusDto {
     'delivered',
     'failed',
     'returned',
+    'cancelled',
   ])
   status: string;
 

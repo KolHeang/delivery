@@ -10,6 +10,7 @@ import {
   Min,
   Max,
   IsBoolean,
+  ValidateIf,
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { Type, Transform } from 'class-transformer';
@@ -27,6 +28,8 @@ export class CreateUserDto {
 
   @ApiProperty({ required: false })
   @IsOptional()
+  @Transform(({ value }) => (!value || typeof value !== 'string' || value.trim() === '' ? null : value.trim()))
+  @ValidateIf((o) => o.email !== null && o.email !== undefined && o.email !== '')
   @IsEmail()
   email?: string;
 

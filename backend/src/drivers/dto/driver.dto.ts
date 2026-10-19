@@ -9,6 +9,7 @@ import {
   Min,
   Max,
   IsBoolean,
+  ValidateIf,
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { Type, Transform } from 'class-transformer';
@@ -18,7 +19,12 @@ export class CreateDriverDto {
   @ApiProperty() @IsNotEmpty() @IsString() name: string;
   @ApiProperty({ required: false }) @IsOptional() @IsString() nameKh?: string;
   @ApiProperty() @IsNotEmpty() @IsString() phone: string;
-  @ApiProperty({ required: false }) @IsOptional() @IsEmail() email?: string;
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @Transform(({ value }) => (!value || typeof value !== 'string' || value.trim() === '' ? null : value.trim()))
+  @ValidateIf((o) => o.email !== null && o.email !== undefined && o.email !== '')
+  @IsEmail()
+  email?: string;
   @ApiProperty({ required: false }) @IsOptional() @IsNumber() @Type(() => Number) roleId?: number;
   @ApiProperty({ required: false, default: true })
   @IsOptional()

@@ -55,7 +55,8 @@ api.interceptors.response.use(
         pathname === '/driver/login' ||
         pathname === '/merchant/login' ||
         pathname === '/admin/saas/login' ||
-        pathname === '/';
+        pathname === '/' ||
+        pathname.startsWith('/report_payment_customer');
       const isLoginRequest =
         error.config?.url?.includes('/auth/login') ||
         error.config?.url?.includes('/saas/admins/login') ||
@@ -64,6 +65,7 @@ api.interceptors.response.use(
       if (!isAuthPage && !isLoginRequest) {
         localStorage.removeItem('access_token');
         localStorage.removeItem('user');
+        localStorage.removeItem('saas_admin');
         if (pathname.startsWith('/admin/saas')) {
           window.location.href = '/admin/saas/login';
         } else {

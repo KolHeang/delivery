@@ -2,7 +2,8 @@
 
 import { useEffect, useState, Fragment, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { isAuthenticated } from '@/lib/auth';
+import { isAuthenticated, getUser } from '@/lib/auth';
+import { getTenantWorkspaceUrl, detectTenantSubdomain } from '@/lib/domain';
 import Sidebar from '@/components/layout/Sidebar';
 import Topbar from '@/components/layout/Topbar';
 import api from '@/lib/api';
@@ -447,7 +448,9 @@ export default function PaymentWithShopPage() {
         const groupPayableKHR = Math.max(0, groupTotalKHR - (groupRemainingUSD * groupRate));
 
         const reference = `SETTLE-SHOP-${Date.now().toString().slice(-6)}`;
-        const detailUrl = `${window.location.origin}/report_payment_customer?client_id=${mId}&reference=${reference}`;
+        const activeSubdomain = tenant?.subdomain || getUser()?.tenantSubdomain || detectTenantSubdomain();
+        const baseUrl = activeSubdomain ? getTenantWorkspaceUrl(activeSubdomain) : window.location.origin;
+        const detailUrl = `${baseUrl}/report_payment_customer?client_id=${mId}&reference=${reference}`;
 
         // Also find any failed/returned orders for this merchant in the filter criteria to mark as settled
         const groupFailedOrders = filteredOrders.filter(
@@ -822,12 +825,13 @@ export default function PaymentWithShopPage() {
                       <th style={{ padding: '12px 10px', textAlign: 'left', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'អាសយដ្ឋាន' : 'Address'}</th>
                       <th style={{ padding: '12px 10px', textAlign: 'right', width: 150, background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'ប្រាក់បានបញ្ចូល' : 'Collected COD'}</th>
                       <th style={{ padding: '12px 10px', textAlign: 'right', width: 140, background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'ប្រាក់កម្រៃដឹក' : 'Delivery Fee'}</th>
+                      <th style={{ padding: '12px 10px', textAlign: 'left', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none', minWidth: 140 }}>{lang === 'km' ? 'ចំណាំ / មូលហេតុ' : 'Notes / Reason'}</th>
                       <th style={{ padding: '12px 10px', textAlign: 'center', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'ស្ថានភាព' : 'Status'}</th>
                     </tr>
                   </thead>
                   <tbody>
                     {eligibleOrders.length === 0 ? (
-                      <tr><td colSpan={10} style={{ textAlign: 'center', padding: '30px 0', color: '#64748b' }}>{lang === 'km' ? 'គ្មានទិន្នន័យ' : 'No data'}</td></tr>
+                      <tr><td colSpan={11} style={{ textAlign: 'center', padding: '30px 0', color: '#64748b' }}>{lang === 'km' ? 'គ្មានទិន្នន័យ' : 'No data'}</td></tr>
                     ) : (
                       eligibleOrders.map((o, idx) => {
                         const isSelected = selectedIds.includes(o.id);
@@ -908,6 +912,35 @@ export default function PaymentWithShopPage() {
                               )}
                             </td>
 
+                            {/* Notes / Reason */}
+                            <td style={{ padding: '12px 10px', border: 'none', fontSize: 12 }}>
+                              {statusFilter === 'unpaid' ? (
+                                <input
+                                  type="text"
+                                  defaultValue={o.note || ''}
+                                  placeholder={lang === 'km' ? 'ចំណាំ...' : 'Note...'}
+                                  onBlur={async (e) => {
+                                    const newVal = e.target.value;
+                                    if (newVal !== (o.note || '')) {
+                                      try {
+                                        await api.patch('/parcels/' + o.id, { note: newVal });
+                                        setOrders(prev => prev.map(item => item.id === o.id ? { ...item, note: newVal } : item));
+                                      } catch (err: any) {
+                                        console.error(err);
+                                      }
+                                    }
+                                  }}
+                                  style={{ width: 130, height: 28, padding: '2px 6px', fontSize: 12, borderRadius: 6, border: '1px solid #cbd5e1' }}
+                                />
+                              ) : o.note ? (
+                                <span style={{ color: '#0f172a', fontWeight: 500 }}>
+                                  📝 {o.note}
+                                </span>
+                              ) : (
+                                <span style={{ color: '#94a3b8' }}>—</span>
+                              )}
+                            </td>
+
                             <td style={{ padding: '12px 10px', textAlign: 'center', border: 'none' }}>
                               <span style={{ background: '#dcfce7', color: '#16a34a', padding: '4px 10px', borderRadius: 6, fontSize: 11, fontWeight: 700 }}>
                                 {lang === 'km' ? 'ជោគជ័យ' : 'Delivered'}
@@ -927,7 +960,7 @@ export default function PaymentWithShopPage() {
                             <td colSpan={2} style={{ padding: '12px 10px', textAlign: 'right', border: 'none' }}>
                               <span style={{ background: '#fef3c7', color: '#d97706', padding: '6px 16px', borderRadius: 6, fontWeight: 800, fontSize: 14 }}>{totalKHR.toLocaleString()} ៛</span>
                             </td>
-                            <td style={{ border: 'none' }} />
+                            <td colSpan={2} style={{ border: 'none' }} />
                           </tr>
                         )}
                         <tr style={{ background: '#f8fafc', borderTop: totalKHR > 0 ? 'none' : '2px solid #e2e8f0' }}>
@@ -935,14 +968,14 @@ export default function PaymentWithShopPage() {
                           <td colSpan={2} style={{ padding: '12px 10px', textAlign: 'right', border: 'none' }}>
                             <span style={{ background: '#dbeafe', color: '#1e40af', padding: '6px 16px', borderRadius: 6, fontWeight: 800, fontSize: 14 }}>${totalUSD.toFixed(2)}</span>
                           </td>
-                          <td style={{ border: 'none' }} />
+                          <td colSpan={2} style={{ border: 'none' }} />
                         </tr>
                         <tr style={{ background: '#f8fafc' }}>
                           <td colSpan={7} style={{ textAlign: 'right', padding: '12px 16px', fontWeight: 700, color: '#334155', border: 'none' }}>{lang === 'km' ? 'សរុបថ្លៃសេវាដឹក' : 'Total Delivery Fee'}</td>
                           <td colSpan={2} style={{ padding: '12px 10px', textAlign: 'right', border: 'none' }}>
                             <span style={{ background: '#fee2e2', color: '#dc2626', padding: '6px 16px', borderRadius: 6, fontWeight: 800, fontSize: 14 }}>-${deliveryFee.toFixed(2)}</span>
                           </td>
-                          <td style={{ border: 'none' }} />
+                          <td colSpan={2} style={{ border: 'none' }} />
                         </tr>
                         <tr style={{ background: '#f0fdf4', borderTop: '2px solid #bbf7d0', borderBottom: '1px solid #e2e8f0' }}>
                           <td colSpan={7} style={{ textAlign: 'right', padding: '14px 16px', fontWeight: 800, color: '#16a34a', fontSize: 14, border: 'none' }}>{lang === 'km' ? 'ទឹកប្រាក់ត្រូវទូទាត់សរុប' : 'Net Payable to Shop'}</td>
@@ -952,7 +985,7 @@ export default function PaymentWithShopPage() {
                               <span style={{ background: '#16a34a', color: '#fff', padding: '6px 16px', borderRadius: 6, fontWeight: 800, fontSize: 14 }}>{payableKHR.toLocaleString()} ៛</span>
                             </div>
                           </td>
-                          <td style={{ border: 'none' }} />
+                          <td colSpan={2} style={{ border: 'none' }} />
                         </tr>
                       </>
                     )}

@@ -125,8 +125,9 @@ export class UsersService implements OnModuleInit {
     dto: CreateUserDto,
     tenantContext?: { tenantId?: number; tenantSubdomain?: string },
   ): Promise<Omit<User, 'password'>> {
-    if (dto.email && dto.email.trim() !== '') {
-      const exists = await this.repo.findOne({ where: { email: dto.email } });
+    const cleanEmail = dto.email && typeof dto.email === 'string' && dto.email.trim() !== '' ? dto.email.trim() : null;
+    if (cleanEmail) {
+      const exists = await this.repo.findOne({ where: { email: cleanEmail } });
       if (exists) throw new ConflictException('Email already exists');
     }
     const rawPassword = dto.password || '123456';
@@ -189,6 +190,7 @@ export class UsersService implements OnModuleInit {
     const payload: any = {
       ...dto,
       code,
+      email: cleanEmail,
       password: hashed,
       roleId,
       isActive,
@@ -237,6 +239,14 @@ export class UsersService implements OnModuleInit {
 
     if (dto.salary !== undefined) {
       payload.salary = dto.salary ? parseFloat(dto.salary as any) : 0.0;
+    }
+
+    if (dto.email !== undefined) {
+      payload.email = dto.email && typeof dto.email === 'string' && dto.email.trim() !== '' ? dto.email.trim() : null;
+      if (payload.email) {
+        const exists = await this.repo.findOne({ where: { email: payload.email } });
+        if (exists && exists.id !== id) throw new ConflictException('Email already exists');
+      }
     }
 
     if (dto.zoneId !== undefined) {

@@ -156,7 +156,7 @@ export default function DeliveriesPage() {
       case 'assigned': return 'បានចាត់ចែង';
       case 'picked-up': return 'បានប្រមូល';
       case 'in-transit': return 'កំពុងដឹក';
-      case 'delivered': return 'បញ្ចប់(បុគ្គលិក)';
+      case 'delivered': return 'បានដឹកជោគជ័យ';
       case 'failed': return 'មិនជោគជ័យ';
       case 'returned': return 'បានត្រឡប់';
       default: return status;
@@ -543,6 +543,8 @@ export default function DeliveriesPage() {
                                 o.status,
                                 'pending',
                                 'in-warehouse',
+                                'assigned',
+                                'picked-up',
                                 'in-transit',
                                 'delivered',
                                 'failed',

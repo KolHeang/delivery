@@ -72,6 +72,11 @@ export class MerchantsService {
 
   create(dto: CreateMerchantDto): Promise<Merchant> {
     const data: any = { ...dto };
+    if (!data.email || (typeof data.email === 'string' && data.email.trim() === '')) {
+      delete data.email;
+    } else {
+      data.email = data.email.trim();
+    }
     if (!data.zoneId || isNaN(Number(data.zoneId)) || Number(data.zoneId) <= 0) {
       delete data.zoneId;
     } else {
@@ -88,6 +93,13 @@ export class MerchantsService {
   async update(id: number, dto: UpdateMerchantDto): Promise<Merchant> {
     await this.findOne(id);
     const data: any = { ...dto };
+    if (data.email !== undefined) {
+      if (!data.email || (typeof data.email === 'string' && data.email.trim() === '')) {
+        data.email = null;
+      } else {
+        data.email = data.email.trim();
+      }
+    }
     if (data.zoneId !== undefined) {
       if (!data.zoneId || isNaN(Number(data.zoneId)) || Number(data.zoneId) <= 0) {
         data.zoneId = null;

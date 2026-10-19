@@ -95,6 +95,11 @@ export class CreateMerchantPaymentDto {
   @IsString()
   reference?: string;
 
+  @ApiProperty({ example: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890', required: false })
+  @IsOptional()
+  @IsString()
+  token?: string;
+
   @ApiProperty({ example: 'COD settlement', required: false })
   @IsOptional()
   @IsString()

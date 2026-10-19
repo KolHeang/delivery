@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, useParams } from 'next/navigation';
 import { saasApi, Plan } from '@/lib/saas-api';
+import api from '@/lib/api';
 import { getUser, clearAuth } from '@/lib/auth';
 import {
   MdDashboard,
@@ -16,6 +17,9 @@ import {
   MdLogout,
   MdKeyboardArrowDown,
   MdReceiptLong,
+  MdCloudUpload,
+  MdDelete,
+  MdAddPhotoAlternate,
 } from 'react-icons/md';
 import { SaasCloudIcon } from '@/components/ui/SaasCloudIcon';
 
@@ -62,11 +66,17 @@ export default function EditTenantPage() {
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   const [domainSuffix, setDomainSuffix] = useState('.new-delivery.rithyboth.work');
 
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string>('');
+  const [logoUploading, setLogoUploading] = useState<boolean>(false);
+  const logoInputRef = React.useRef<HTMLInputElement | null>(null);
+
   const tr = (km: string, en: string) => (lang === 'km' ? km : en);
 
   const [form, setForm] = useState({
     companyName: '',
     subdomain: '',
+    logo: '',
     planId: 0,
     billingCycle: 'monthly' as 'monthly' | 'yearly',
     status: 'active',
@@ -126,6 +136,7 @@ export default function EditTenantPage() {
           setForm({
             companyName: tenantRes.name || '',
             subdomain: tenantRes.slug || '',
+            logo: tenantRes.logo || '',
             planId: tenantRes.planId || (tenantRes.plan ? tenantRes.plan.id : (plansRes && plansRes[0]?.id) || 0),
             billingCycle: activeSub?.billingCycle || 'monthly',
             status: tenantRes.status || 'active',
@@ -137,6 +148,9 @@ export default function EditTenantPage() {
             adminEmail: tenantRes.adminUser?.email || tenantRes.email || '',
             password: '',
           });
+          if (tenantRes.logo) {
+            setLogoPreview(tenantRes.logo);
+          }
         } else {
           alert(tr('រកមិនឃើញព័ត៌មានក្រុមហ៊ុននេះទេ', 'Tenant not found'));
           router.push('/admin/saas?tab=tenants');
@@ -163,6 +177,54 @@ export default function EditTenantPage() {
     }
   };
 
+  const handleLogoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert(tr('ទំហំរូបភាពត្រូវតែតូចជាង 5MB', 'Image size must be less than 5MB'));
+      return;
+    }
+
+    setLogoFile(file);
+    const previewUrl = URL.createObjectURL(file);
+    setLogoPreview(previewUrl);
+
+    // 1. Convert to Base64 data URL as immediate fallback
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64String = reader.result as string;
+      setForm(prev => ({ ...prev, logo: base64String }));
+    };
+    reader.readAsDataURL(file);
+
+    // 2. Also try uploading to server storage
+    try {
+      setLogoUploading(true);
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await api.post('/mobile/upload/single?folder=tenants', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      if (res.data?.url) {
+        setForm(prev => ({ ...prev, logo: res.data.url }));
+      }
+    } catch {
+      // Fallback is base64String
+    } finally {
+      setLogoUploading(false);
+    }
+  };
+
+  const handleRemoveLogo = () => {
+    setLogoFile(null);
+    setLogoPreview('');
+    setForm(prev => ({ ...prev, logo: '' }));
+    if (logoInputRef.current) {
+      logoInputRef.current.value = '';
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -185,6 +247,7 @@ export default function EditTenantPage() {
       await saasApi.updateTenant(tenantId, {
         name: form.companyName.trim(),
         slug: form.subdomain.trim().toLowerCase(),
+        logo: form.logo,
         phone: form.phone.trim(),
         email: form.email.trim(),
         address: form.address.trim(),
@@ -644,6 +707,117 @@ export default function EditTenantPage() {
                   {/* SECTION 1: Company & Workspace */}
                   <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 14, display: 'flex', alignItems: 'center' }}>
                     {tr('១. ព័ត៌មានក្រុមហ៊ុន និង Workspace', '1. Company & Workspace Details')}
+                  </div>
+
+                  {/* Company Logo Upload Card */}
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 16,
+                    padding: '16px 20px',
+                    background: '#f8fafc',
+                    borderRadius: 12,
+                    border: '1.5px dashed #cbd5e1',
+                    marginBottom: 20,
+                  }}>
+                    <input
+                      ref={logoInputRef}
+                      type="file"
+                      accept="image/png,image/jpeg,image/jpg,image/webp,image/svg+xml"
+                      style={{ display: 'none' }}
+                      onChange={handleLogoChange}
+                    />
+                    <div
+                      onClick={() => logoInputRef.current?.click()}
+                      style={{
+                        width: 72,
+                        height: 72,
+                        borderRadius: 14,
+                        background: '#ffffff',
+                        border: '1.5px solid #cbd5e1',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                        overflow: 'hidden',
+                        position: 'relative',
+                        boxShadow: '0 2px 6px rgba(0,0,0,0.05)',
+                        flexShrink: 0,
+                        transition: 'all 0.15s ease',
+                      }}
+                      title={tr('ចុចដើម្បីជ្រើសរើសរូប Logo', 'Click to choose company logo')}
+                    >
+                      {logoPreview ? (
+                        <img
+                          src={logoPreview}
+                          alt="Logo Preview"
+                          style={{ width: '100%', height: '100%', objectFit: 'contain', padding: 4 }}
+                        />
+                      ) : (
+                        <div style={{ textAlign: 'center', color: '#94a3b8' }}>
+                          <MdAddPhotoAlternate size={28} />
+                          <div style={{ fontSize: 9, fontWeight: 700, marginTop: 2 }}>LOGO</div>
+                        </div>
+                      )}
+                    </div>
+
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                        <span style={{ fontSize: 13.5, fontWeight: 700, color: '#1e293b' }}>
+                          {tr('រូបសញ្ញាក្រុមហ៊ុន (Company Logo)', 'Company Logo')}
+                        </span>
+                        {logoUploading && (
+                          <span style={{ fontSize: 11, background: '#dbeafe', color: '#1e40af', padding: '2px 8px', borderRadius: 10, fontWeight: 600 }}>
+                            {tr('កំពុង Upload...', 'Uploading...')}
+                          </span>
+                        )}
+                        {logoPreview && !logoUploading && (
+                          <span style={{ fontSize: 11, background: '#dcfce7', color: '#15803d', padding: '2px 8px', borderRadius: 10, fontWeight: 600 }}>
+                            {tr('✓ មានរូបភាព Logo រួចហើយ', '✓ Logo image set')}
+                          </span>
+                        )}
+                      </div>
+                      <p style={{ fontSize: 12, color: '#64748b', margin: '0 0 8px 0' }}>
+                        {tr('គាំទ្រទម្រង់ PNG, JPG, WebP ឬ SVG (ទំហំរូបភាពមិនលើសពី 5MB)', 'Supports PNG, JPG, WebP, or SVG (Max 5MB)')}
+                      </p>
+                      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                        <button
+                          type="button"
+                          onClick={() => logoInputRef.current?.click()}
+                          className="btn btn-outline"
+                          style={{
+                            fontSize: 12,
+                            height: 32,
+                            padding: '0 12px',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 5,
+                            borderRadius: 6,
+                          }}
+                        >
+                          <MdCloudUpload size={16} />
+                          {logoPreview ? tr('ប្តូររូប Logo', 'Change Logo') : tr('ជ្រើសរើសរូប Logo', 'Choose Logo')}
+                        </button>
+                        {logoPreview && (
+                          <button
+                            type="button"
+                            onClick={handleRemoveLogo}
+                            className="btn btn-ghost"
+                            style={{
+                              fontSize: 12,
+                              height: 32,
+                              padding: '0 8px',
+                              color: '#ef4444',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 4,
+                            }}
+                          >
+                            <MdDelete size={16} /> {tr('លុបចេញ', 'Remove')}
+                          </button>
+                        )}
+                      </div>
+                    </div>
                   </div>
 
                   <div className="form-row">

@@ -115,6 +115,7 @@ export class PaymentsController {
       body.telegramReport,
       req.user?.id,
       req.user?.tenantId,
+      body.token,
     );
   }
 
@@ -162,12 +163,15 @@ export class PaymentsController {
   // Public Invoice Report (Unauthenticated)
   @Get('public/invoice')
   @ApiOperation({ summary: 'Public invoice report query' })
-  @ApiQuery({ name: 'client_id', type: Number, required: true })
-  @ApiQuery({ name: 'reference', type: String, required: true })
+  @ApiQuery({ name: 'token', type: String, required: false })
+  @ApiQuery({ name: 'client_id', type: Number, required: false })
+  @ApiQuery({ name: 'reference', type: String, required: false })
   getPublicInvoice(
-    @Query('client_id', ParseIntPipe) clientId: number,
-    @Query('reference') reference: string,
+    @Query('token') token?: string,
+    @Query('client_id') clientId?: string,
+    @Query('reference') reference?: string,
   ) {
-    return this.paymentsService.getPublicInvoice(clientId, reference);
+    const parsedClientId = clientId ? parseInt(clientId, 10) : undefined;
+    return this.paymentsService.getPublicInvoice(parsedClientId, reference, token);
   }
 }

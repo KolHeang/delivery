@@ -203,6 +203,7 @@ export class SubscriptionsService {
     email: string;
     phone?: string;
     password?: string;
+    logo?: string;
   }) {
     if (!dto.email || !dto.companyName || !dto.subdomain) {
       throw new BadRequestException('Please provide company name, subdomain, and email');
@@ -227,8 +228,12 @@ export class SubscriptionsService {
         email: dto.email.toLowerCase().trim(),
         status: 'active',
         planId: dto.planId,
+        logo: dto.logo || undefined,
       });
       tenant = await this.tenantRepo.save(tenant);
+    } else if (dto.logo) {
+      tenant.logo = dto.logo;
+      await this.tenantRepo.save(tenant);
     }
 
     // 1.1 Auto-register default domain in saas_domains

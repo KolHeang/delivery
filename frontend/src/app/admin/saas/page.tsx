@@ -1679,16 +1679,29 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
                         <td style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: 12.5 }}>
                           {(subsPage - 1) * subsLimit + idx + 1}
                         </td>
-                        <td style={{ minWidth: 160 }}>
-                          <span
-                            onClick={() => handleOpenTenantDetailModal(s)}
-                            style={{ fontWeight: 700, color: '#0f172a', cursor: 'pointer', transition: 'color 0.15s' }}
-                            onMouseEnter={(e) => (e.currentTarget.style.color = '#2563eb')}
-                            onMouseLeave={(e) => (e.currentTarget.style.color = '#0f172a')}
-                            title={tr('ចុចមើលព័ត៌មានលម្អិត', 'Click to view details')}
-                          >
-                            {s.companyName || `Company #${s.id}`}
-                          </span>
+                        <td style={{ minWidth: 180 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                            {s.tenant?.logo || s.logo ? (
+                              <img
+                                src={s.tenant?.logo || s.logo}
+                                alt="Logo"
+                                style={{ width: 28, height: 28, borderRadius: 6, objectFit: 'contain', background: '#fff', border: '1px solid #e2e8f0', padding: 1, flexShrink: 0 }}
+                              />
+                            ) : (
+                              <div style={{ width: 28, height: 28, borderRadius: 6, background: '#eff6ff', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 12, flexShrink: 0 }}>
+                                {(s.companyName || 'C').charAt(0).toUpperCase()}
+                              </div>
+                            )}
+                            <span
+                              onClick={() => handleOpenTenantDetailModal(s)}
+                              style={{ fontWeight: 700, color: '#0f172a', cursor: 'pointer', transition: 'color 0.15s' }}
+                              onMouseEnter={(e) => (e.currentTarget.style.color = '#2563eb')}
+                              onMouseLeave={(e) => (e.currentTarget.style.color = '#0f172a')}
+                              title={tr('ចុចមើលព័ត៌មានលម្អិត', 'Click to view details')}
+                            >
+                              {s.companyName || `Company #${s.id}`}
+                            </span>
+                          </div>
                         </td>
                         <td>
                           {(s.subdomain || s.tenant?.slug) ? (

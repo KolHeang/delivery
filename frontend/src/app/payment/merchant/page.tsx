@@ -448,9 +448,12 @@ export default function PaymentWithShopPage() {
         const groupPayableKHR = Math.max(0, groupTotalKHR - (groupRemainingUSD * groupRate));
 
         const reference = `SETTLE-SHOP-${Date.now().toString().slice(-6)}`;
+        const token = (typeof crypto !== 'undefined' && crypto.randomUUID) 
+          ? crypto.randomUUID() 
+          : `sec_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
         const activeSubdomain = tenant?.subdomain || getUser()?.tenantSubdomain || detectTenantSubdomain();
         const baseUrl = activeSubdomain ? getTenantWorkspaceUrl(activeSubdomain) : window.location.origin;
-        const detailUrl = `${baseUrl}/report_payment_customer?client_id=${mId}&reference=${reference}`;
+        const detailUrl = `${baseUrl}/report_payment_customer?token=${token}`;
 
         // Also find any failed/returned orders for this merchant in the filter criteria to mark as settled
         const groupFailedOrders = filteredOrders.filter(
@@ -464,6 +467,7 @@ export default function PaymentWithShopPage() {
           amountKHR: groupPayableKHR,
           date: new Date().toISOString(),
           reference,
+          token,
           note: lang === 'km' 
             ? `ទូទាត់ប្រាក់ហាង។ USD: $${groupPayableUSD.toFixed(2)}, KHR: ${groupPayableKHR.toLocaleString()} KHR`
             : `Settle shop payout. USD: $${groupPayableUSD.toFixed(2)}, KHR: ${groupPayableKHR.toLocaleString()} KHR`,

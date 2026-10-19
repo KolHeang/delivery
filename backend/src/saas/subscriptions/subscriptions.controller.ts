@@ -53,6 +53,7 @@ export class SubscriptionsController {
       email: string;
       phone?: string;
       password?: string;
+      logo?: string;
     },
   ) {
     return this.subService.registerAndCheckout(body);

@@ -9,7 +9,10 @@ import {
   UseGuards,
   Request,
   ParseIntPipe,
+  Sse,
+  MessageEvent,
 } from '@nestjs/common';
+import { Observable } from 'rxjs';
 import {
   ApiTags,
   ApiBearerAuth,
@@ -30,6 +33,9 @@ import {
   ScanParcelDto,
   ScanUpdateParcelStatusDto,
   SendDriverParcelMessageDto,
+  BatchScanParcelsDto,
+  BatchClaimParcelsDto,
+  BatchUpdateParcelStatusDto,
 } from './dto/driver-mobile.dto';
 
 @ApiTags('Mobile Driver')
@@ -276,6 +282,106 @@ export class DriverController {
     return this.driverService.updateScannedParcelStatus(req.user.id, dto.code, dto);
   }
 
+  @Post('scan/multiple')
+  @ApiOperation({
+    summary: 'Batch scan multiple parcels (continuous / multi QR code scan lookup)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Validation, claimability, and task summary for multiple scanned parcel codes',
+  })
+  scanMultipleParcels(
+    @Request() req: any,
+    @Body() dto: BatchScanParcelsDto,
+  ) {
+    return this.driverService.scanMultipleParcels(req.user.id, dto.codes);
+  }
+
+  @Post('scan/batch')
+  @ApiOperation({
+    summary: 'Alias for batch scan multiple parcels',
+  })
+  scanBatchParcels(
+    @Request() req: any,
+    @Body() dto: BatchScanParcelsDto,
+  ) {
+    return this.driverService.scanMultipleParcels(req.user.id, dto.codes);
+  }
+
+  @Post('scan/multiple/claim')
+  @ApiOperation({
+    summary: 'Driver claims multiple scanned parcels at once (batch claim / warehouse dispatch)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Summary of claimed parcels and any failed items',
+  })
+  claimMultipleParcels(
+    @Request() req: any,
+    @Body() dto: BatchClaimParcelsDto,
+  ) {
+    return this.driverService.claimMultipleParcels(req.user.id, dto.codes);
+  }
+
+  @Post('scan/batch/claim')
+  @ApiOperation({
+    summary: 'Alias for batch claim multiple parcels',
+  })
+  claimBatchParcels(
+    @Request() req: any,
+    @Body() dto: BatchClaimParcelsDto,
+  ) {
+    return this.driverService.claimMultipleParcels(req.user.id, dto.codes);
+  }
+
+  @Post('scan/batch-claim')
+  @ApiOperation({
+    summary: 'Alias for batch claim multiple parcels',
+  })
+  claimBatchClaimParcels(
+    @Request() req: any,
+    @Body() dto: BatchClaimParcelsDto,
+  ) {
+    return this.driverService.claimMultipleParcels(req.user.id, dto.codes);
+  }
+
+  @Post('scan/multiple/update-status')
+  @ApiOperation({
+    summary: 'Driver batch updates delivery status for multiple scanned parcels (e.g. all in-transit)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Summary of status-updated parcels',
+  })
+  updateMultipleParcelsStatus(
+    @Request() req: any,
+    @Body() dto: BatchUpdateParcelStatusDto,
+  ) {
+    return this.driverService.updateMultipleParcelsStatus(req.user.id, dto.codes, dto as any);
+  }
+
+  @Post('scan/batch/update-status')
+  @ApiOperation({
+    summary: 'Alias for batch status update for multiple parcels',
+  })
+  updateBatchParcelsStatus(
+    @Request() req: any,
+    @Body() dto: BatchUpdateParcelStatusDto,
+  ) {
+    return this.driverService.updateMultipleParcelsStatus(req.user.id, dto.codes, dto as any);
+  }
+
+  @Post('scan/batch-update-status')
+  @ApiOperation({
+    summary: 'Alias for batch status update for multiple parcels',
+  })
+  updateBatchUpdateStatus(
+    @Request() req: any,
+    @Body() dto: BatchUpdateParcelStatusDto,
+  ) {
+    return this.driverService.updateMultipleParcelsStatus(req.user.id, dto.codes, dto as any);
+  }
+
   @Get('tasks')
   @ApiOperation({ summary: 'Get assigned tasks with optional pagination and filters' })
   @ApiQuery({
@@ -380,6 +486,127 @@ export class DriverController {
       page,
       limit,
     );
+  }
+
+  @Get('tasks/new')
+  @ApiOperation({
+    summary: 'Get new / recent tasks for driver mobile app (ការងារថ្មីៗ)',
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    type: Number,
+    description: 'Number of recent tasks to return (default: 10)',
+    example: 10,
+  })
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    type: Number,
+    description: 'Page number (default: 1)',
+    example: 1,
+  })
+  @ApiQuery({
+    name: 'status',
+    required: false,
+    type: String,
+    description: 'Optional status filter (e.g. assigned, pending, delivered, failed)',
+    example: 'assigned',
+  })
+  @ApiQuery({
+    name: 'search',
+    required: false,
+    type: String,
+    description: 'Search keyword by tracking code, phone, or address',
+    example: 'C016',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'List of new/recent tasks with Khmer status and badge styling',
+    schema: {
+      example: {
+        status: true,
+        message: 'Successfully',
+        data: {
+          tasks: [
+            {
+              id: 101,
+              trackingCode: 'C0161020260004',
+              trackingCodeFormatted: '#C0161020260004',
+              merchantName: 'Heang',
+              receiverName: 'Heang',
+              receiverPhone: '098765432',
+              receiverAddress: 'ស្វាយរលំ ភូមិលេខ២',
+              location: 'ស្វាយរលំ ភូមិលេខ២',
+              status: 'delivered',
+              statusKh: 'ដឹកដល់',
+              statusBadge: {
+                label: 'ដឹកដល់',
+                color: '#16a34a',
+                backgroundColor: '#dcfce7',
+              },
+              cod: 25.5,
+              codCurrency: 'USD',
+            },
+          ],
+          total: 1,
+          page: 1,
+          limit: 10,
+          totalPages: 1,
+        },
+      },
+    },
+  })
+  getNewTasks(
+    @Request() req: any,
+    @Query('limit') limit?: number,
+    @Query('page') page?: number,
+    @Query('status') status?: string,
+    @Query('search') search?: string,
+  ) {
+    return this.driverService.getNewTasks(
+      req.user.id,
+      limit,
+      page,
+      status,
+      search,
+    );
+  }
+
+  @Get('tasks/recent')
+  @ApiOperation({
+    summary: 'Alias for get new / recent tasks for driver mobile app (ការងារថ្មីៗ)',
+  })
+  getRecentTasks(
+    @Request() req: any,
+    @Query('limit') limit?: number,
+    @Query('page') page?: number,
+    @Query('status') status?: string,
+    @Query('search') search?: string,
+  ) {
+    return this.driverService.getNewTasks(
+      req.user.id,
+      limit,
+      page,
+      status,
+      search,
+    );
+  }
+
+  @Sse('tasks/realtime')
+  @ApiOperation({
+    summary: 'Server-Sent Events (SSE) real-time task stream for driver app',
+  })
+  tasksRealtime(@Request() req: any): Observable<MessageEvent> {
+    return this.driverService.getRealtimeTaskStream(req.user.id);
+  }
+
+  @Sse('tasks/stream')
+  @ApiOperation({
+    summary: 'Alias for SSE real-time task stream for driver app',
+  })
+  tasksStream(@Request() req: any): Observable<MessageEvent> {
+    return this.driverService.getRealtimeTaskStream(req.user.id);
   }
 
   @Get('tasks/status-counts')

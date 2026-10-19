@@ -101,10 +101,31 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
           setIsNotFound(false);
         }
       } else {
-        // Root Platform
-        setIsTenant(false);
-        setTenant(null);
-        setSubdomain(null);
+        // Root Platform: check if logged-in user belongs to a tenant workspace
+        let userSubdomain: string | null = null;
+        try {
+          const raw = localStorage.getItem('user');
+          if (raw) {
+            const u = JSON.parse(raw);
+            if (u?.tenantSubdomain) userSubdomain = u.tenantSubdomain;
+          }
+        } catch {}
+
+        if (userSubdomain) {
+          setSubdomain(userSubdomain);
+          setIsTenant(true);
+          const fallbackName = userSubdomain.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+          setTenant({
+            id: 0,
+            companyName: fallbackName,
+            subdomain: userSubdomain,
+            status: 'active',
+          });
+        } else {
+          setIsTenant(false);
+          setTenant(null);
+          setSubdomain(null);
+        }
         setIsNotFound(false);
       }
     } catch (err) {
@@ -119,7 +140,7 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
     resolveTenant();
   }, []);
 
-  if (isNotFound && subdomain && typeof window !== 'undefined' && !window.location.pathname.startsWith('/admin/saas')) {
+  if (isNotFound && subdomain && typeof window !== 'undefined' && !window.location.pathname.startsWith('/admin/saas') && !window.location.pathname.startsWith('/report_payment_customer')) {
     const domainSuffix = getDomainSuffix();
     return (
       <div

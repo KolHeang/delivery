@@ -8,6 +8,7 @@ export interface User {
   photo?: string;
   permissions?: string[];
   tenantId?: number;
+  tenantSubdomain?: string;
 }
 
 
@@ -52,6 +53,7 @@ export function setAuth(token: string, user: User) {
 export function clearAuth() {
   localStorage.removeItem('access_token');
   localStorage.removeItem('user');
+  localStorage.removeItem('saas_admin');
 }
 
 export function isAuthenticated(): boolean {

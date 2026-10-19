@@ -8,9 +8,13 @@ import { ParcelsController } from './parcels.controller';
 
 import { Zone } from '../zones/entities/zone.entity';
 import { User } from '../users/entities/users.entity';
+import { TrackingModule } from '../tracking/tracking.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Parcel, ParcelEvent, PickupRequest, Zone, User])],
+  imports: [
+    TypeOrmModule.forFeature([Parcel, ParcelEvent, PickupRequest, Zone, User]),
+    TrackingModule,
+  ],
   controllers: [ParcelsController],
   providers: [ParcelsService],
   exports: [ParcelsService],

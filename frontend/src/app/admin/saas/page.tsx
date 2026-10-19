@@ -260,6 +260,14 @@ export default function SaasMasterPortal() {
         setActiveMenu(tab as any);
       }
     }
+    if (typeof window !== 'undefined') {
+      const token = localStorage.getItem('access_token');
+      const saasAdmin = localStorage.getItem('saas_admin');
+      if (!token && !saasAdmin) {
+        router.replace('/admin/saas/login');
+        return;
+      }
+    }
     const currentUser = getUser();
     setUser(currentUser);
     loadAllData();

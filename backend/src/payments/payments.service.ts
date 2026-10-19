@@ -7,6 +7,7 @@ import { User } from '../users/entities/users.entity';
 import { Merchant } from '../merchants/entities/merchant.entity';
 import { Parcel } from '../parcels/entities/parcel.entity';
 import { Organisation } from '../settings/entities/organisation.entity';
+import { Tenant } from '../saas/entities/tenant.entity';
 import { TelegramService } from '../telegram/telegram.service';
 import { FirebaseService } from '../firebase/firebase.service';
 
@@ -19,6 +20,7 @@ export class PaymentsService {
     @InjectRepository(Merchant) private merchantRepo: Repository<Merchant>,
     @InjectRepository(Parcel) private parcelRepo: Repository<Parcel>,
     @InjectRepository(Organisation) private orgRepo: Repository<Organisation>,
+    @InjectRepository(Tenant) private tenantRepo: Repository<Tenant>,
     private readonly telegramService: TelegramService,
     private readonly firebaseService: FirebaseService,
   ) { }
@@ -157,6 +159,27 @@ export class PaymentsService {
       const year = d.getFullYear();
       const formattedDate = `${day}/${month}/${year}`;
 
+      let finalDetailUrl = telegramReport.detailUrl || '';
+      const effectiveTenantId = tenantId || merchant.tenantId;
+      if (effectiveTenantId) {
+        try {
+          const tenantObj = await this.tenantRepo.findOne({ where: { id: effectiveTenantId } });
+          const tenantSlug = tenantObj?.slug;
+          if (tenantSlug) {
+            const baseDomain = process.env.NEXT_PUBLIC_BASE_DOMAIN?.replace(/^https?:\/\//, '') || 'new-delivery.rithyboth.work';
+            if (finalDetailUrl.includes(`://${baseDomain}`)) {
+              finalDetailUrl = finalDetailUrl.replace(`://${baseDomain}`, `://${tenantSlug}.${baseDomain}`);
+            } else if (finalDetailUrl.includes('://localhost:3000')) {
+              finalDetailUrl = finalDetailUrl.replace('://localhost:3000', `://${tenantSlug}.localhost:3000`);
+            } else if (finalDetailUrl.startsWith('/')) {
+              finalDetailUrl = `https://${tenantSlug}.${baseDomain}${finalDetailUrl}`;
+            }
+          }
+        } catch (e) {
+          // ignore error
+        }
+      }
+
       const text = `📦 <b>របាយការណ៍ដឹកជញ្ជូនប្រចាំថ្ងៃ</b>\n\n` +
         `- ឈ្មោះហាង: ${merchant.nameKh || merchant.name}\n` +
         `- កាលបរិច្ឆេទ: ${formattedDate}\n` +
@@ -172,7 +195,7 @@ export class PaymentsService {
         `<b>USD:</b> $ ${parseFloat(telegramReport.payableUSD as any || 0).toFixed(2)} USD\n` +
         `<b>KHR:</b> ${(telegramReport.payableKHR || 0).toLocaleString()} រៀល\n` +
         `-------------------------\n` +
-        `របាយការណ៍លម្អិត ចុចត្រង់នេះ: <a href="${telegramReport.detailUrl || ''}">Click Detail</a>`;
+        `របាយការណ៍លម្អិត ចុចត្រង់នេះ: <a href="${finalDetailUrl}">Click Detail</a>`;
 
       await this.telegramService.notifyMerchant(merchantId, 'PAYMENT_SETTLEMENT', text);
     }

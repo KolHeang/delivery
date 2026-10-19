@@ -176,7 +176,7 @@ export default function EditStaffPage() {
       formData.append('name', form.name);
       if (form.nameKh) formData.append('nameKh', form.nameKh);
       if (form.phone) formData.append('phone', form.phone);
-      if (form.email) formData.append('email', form.email);
+      if (form.email && form.email.trim()) formData.append('email', form.email.trim());
       formData.append('role', form.role);
       if (selectedRole?.id) formData.append('roleId', selectedRole.id.toString());
       formData.append('active', form.active.toString());

@@ -795,27 +795,29 @@ export default function LoginPage() {
           </button>
         </form>
 
-        {/* Dynamic Footer */}
-        <div style={{ marginTop: 22, textAlign: 'center' }}>
-          <a
-            href="/admin/saas/login"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 6,
-              fontSize: 12.5,
-              fontWeight: 700,
-              color: '#4f46e5',
-              textDecoration: 'none',
-              padding: '6px 12px',
-              borderRadius: 8,
-              backgroundColor: '#eef2ff',
-              transition: 'background 0.15s',
-            }}
-          >
-            <span>👑</span> EBS Master SaaS Super Admin &rarr;
-          </a>
-        </div>
+        {/* SaaS Super Admin Switcher (Only visible on main root domain, hidden on tenant workspaces) */}
+        {!isTenant && !activeSubdomain && (
+          <div style={{ marginTop: 22, textAlign: 'center' }}>
+            <a
+              href="/admin/saas/login"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                fontSize: 12.5,
+                fontWeight: 700,
+                color: '#4f46e5',
+                textDecoration: 'none',
+                padding: '6px 12px',
+                borderRadius: 8,
+                backgroundColor: '#eef2ff',
+                transition: 'background 0.15s',
+              }}
+            >
+              <span>👑</span> EBS Master SaaS Super Admin &rarr;
+            </a>
+          </div>
+        )}
 
         <div
           style={{

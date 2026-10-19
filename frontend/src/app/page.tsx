@@ -2,26 +2,19 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { isAuthenticated, getUser } from '@/lib/auth';
+import { detectTenantSubdomain } from '@/lib/domain';
 
 export default function RootPage() {
   const router = useRouter();
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && localStorage.getItem('saas_admin')) {
-      router.replace('/admin/saas');
-    } else if (isAuthenticated()) {
-      const user = getUser();
-      if (user?.role === 'driver') {
-        router.replace('/driver/tasks');
-      } else if (user?.role === 'merchant') {
-        router.replace('/merchant/orders');
-      } else {
-        router.replace('/dashboard');
-      }
-    } else {
-      router.replace('/admin/saas/login');
+    const sub = detectTenantSubdomain();
+    if (sub) {
+      router.replace('/auth');
+      return;
     }
+
+    router.replace('/admin/saas');
   }, [router]);
 
   return (

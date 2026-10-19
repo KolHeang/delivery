@@ -10,6 +10,8 @@ import {
 import { Server, Socket } from 'socket.io';
 import { TrackingService } from './tracking.service';
 import { Logger } from '@nestjs/common';
+import { Subject, Observable } from 'rxjs';
+import { filter } from 'rxjs/operators';
 
 @WebSocketGateway({
   cors: {
@@ -23,10 +25,33 @@ export class TrackingGateway implements OnGatewayConnection, OnGatewayDisconnect
 
   private logger = new Logger('TrackingGateway');
 
+  // Real-time task event stream for SSE and gateway listeners
+  private driverTaskSubject = new Subject<{
+    driverId: number;
+    type: 'new_task' | 'task_updated';
+    task: any;
+  }>();
+
   constructor(private readonly trackingService: TrackingService) {}
+
+  getDriverTaskObservable(driverId: number): Observable<{ type: string; task: any }> {
+    return this.driverTaskSubject.asObservable().pipe(
+      filter((msg) => Number(msg.driverId) === Number(driverId)),
+    );
+  }
 
   handleConnection(client: Socket) {
     this.logger.log(`Client connected: ${client.id}`);
+    const queryDriverId =
+      client.handshake?.query?.driverId || client.handshake?.auth?.driverId;
+    if (queryDriverId) {
+      const driverId = Number(queryDriverId);
+      if (!isNaN(driverId) && driverId > 0) {
+        const roomName = `driver:${driverId}`;
+        client.join(roomName);
+        this.logger.log(`Driver client ${client.id} automatically joined room ${roomName}`);
+      }
+    }
   }
 
   handleDisconnect(client: Socket) {
@@ -152,4 +177,87 @@ export class TrackingGateway implements OnGatewayConnection, OnGatewayDisconnect
 
     return { success: true, room: tenantRoom, activeDriversCount: drivers.length };
   }
+
+  /**
+   * Driver subscribes to their own task updates room
+   */
+  @SubscribeMessage('subscribe:driver')
+  async handleSubscribeDriver(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { driverId: number },
+  ) {
+    if (!data || !data.driverId) {
+      return { success: false, error: 'driverId is required' };
+    }
+    const driverId = Number(data.driverId);
+    const roomName = `driver:${driverId}`;
+    await client.join(roomName);
+    this.logger.log(`Driver client ${client.id} joined room ${roomName}`);
+    return { success: true, room: roomName, driverId };
+  }
+
+  @SubscribeMessage('driver:join')
+  async handleDriverJoin(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { driverId: number },
+  ) {
+    return this.handleSubscribeDriver(client, data);
+  }
+
+  /**
+   * Real-time notification when a new task is assigned to a driver
+   */
+  notifyDriverNewTask(driverId: number, task: any) {
+    if (!driverId) return;
+    const room = `driver:${driverId}`;
+    const payload = {
+      event: 'new_task',
+      type: 'new_task',
+      driverId,
+      task,
+      timestamp: new Date().toISOString(),
+    };
+
+    if (this.server) {
+      this.server.to(room).emit('driver:new_task', payload);
+      this.server.to(room).emit('driver:task_assigned', payload);
+      this.server.to(room).emit('task:new', payload);
+      this.server.to(room).emit('task:update', payload);
+    }
+
+    this.driverTaskSubject.next({
+      driverId,
+      type: 'new_task',
+      task,
+    });
+  }
+
+  /**
+   * Real-time notification when a driver task status changes
+   */
+  notifyDriverTaskUpdated(driverId: number, task: any) {
+    if (!driverId) return;
+    const room = `driver:${driverId}`;
+    const payload = {
+      event: 'task_updated',
+      type: 'task_updated',
+      driverId,
+      taskId: task?.id,
+      status: task?.status,
+      task,
+      timestamp: new Date().toISOString(),
+    };
+
+    if (this.server) {
+      this.server.to(room).emit('driver:task_updated', payload);
+      this.server.to(room).emit('task:update', payload);
+    }
+
+    this.driverTaskSubject.next({
+      driverId,
+      type: 'task_updated',
+      task,
+    });
+  }
 }
+

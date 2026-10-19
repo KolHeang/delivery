@@ -2,9 +2,13 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  Optional,
+  MessageEvent,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In, Brackets } from 'typeorm';
+import { Observable, interval, merge, from, EMPTY } from 'rxjs';
+import { map } from 'rxjs/operators';
 import * as bcrypt from 'bcrypt';
 import { User } from '../../users/entities/users.entity';
 import { Parcel } from '../../parcels/entities/parcel.entity';
@@ -17,6 +21,8 @@ import { DriverPayment } from '../../payments/entities/driver-payment.entity';
 import { ParcelMessage } from '../../parcels/entities/parcel-message.entity';
 import { DriverNotification } from './entities/driver-notification.entity';
 import { FirebaseService } from '../../firebase/firebase.service';
+import { TrackingGateway } from '../../tracking/tracking.gateway';
+import { formatDriverTask, FormattedDriverTask } from './utils/task-formatter.util';
 
 @Injectable()
 export class DriverService {
@@ -34,6 +40,7 @@ export class DriverService {
     @InjectRepository(DriverNotification)
     private readonly notificationRepo: Repository<DriverNotification>,
     private readonly firebaseService: FirebaseService,
+    @Optional() private readonly trackingGateway?: TrackingGateway,
   ) {}
 
   async getProfile(driverId: number) {
@@ -204,14 +211,129 @@ export class DriverService {
       .take(limitNum)
       .getManyAndCount();
 
+    const formatted = result.map((p) => formatDriverTask(p, driverId));
+
     return {
-      results: result,
-      result,
+      results: formatted,
+      result: formatted,
+      data: formatted,
+      items: formatted,
+      tasks: formatted,
       total,
       page: pageNum,
       limit: limitNum,
       totalPages: Math.ceil(total / limitNum),
     };
+  }
+
+  /**
+   * Get recent / new tasks specifically for driver mobile app (ការងារថ្មីៗ)
+   */
+  async getNewTasks(
+    driverId: number,
+    limit: number = 10,
+    page: number = 1,
+    status?: string,
+    search?: string,
+  ) {
+    const pageNum = page ? Math.max(1, parseInt(page as any, 10)) : 1;
+    const limitNum = limit ? Math.min(100, Math.max(1, parseInt(limit as any, 10))) : 10;
+    const skip = (pageNum - 1) * limitNum;
+
+    const query = this.parcelRepo
+      .createQueryBuilder('parcel')
+      .leftJoinAndSelect('parcel.merchant', 'merchant')
+      .leftJoinAndSelect('parcel.customer', 'customer')
+      .leftJoinAndSelect('parcel.zone', 'zone')
+      .where(
+        new Brackets((qb) => {
+          qb.where('parcel.driver_id = :driverId', { driverId }).orWhere(
+            'parcel.pickup_driver_id = :driverId',
+            { driverId },
+          );
+        }),
+      )
+      .orderBy('parcel.createdAt', 'DESC');
+
+    if (status) {
+      query.andWhere('parcel.status = :status', { status });
+    }
+
+    if (search) {
+      const searchTerm = `%${search}%`;
+      query.andWhere(
+        new Brackets((qb) => {
+          qb.where('parcel.tracking_code ILIKE :searchTerm', { searchTerm })
+            .orWhere('parcel.receiver_phone ILIKE :searchTerm', { searchTerm })
+            .orWhere('parcel.receiver_name ILIKE :searchTerm', { searchTerm })
+            .orWhere('parcel.receiver_address ILIKE :searchTerm', { searchTerm });
+        }),
+      );
+    }
+
+    const [result, total] = await query
+      .skip(skip)
+      .take(limitNum)
+      .getManyAndCount();
+
+    const formatted = result.map((p) => formatDriverTask(p, driverId));
+
+    return {
+      results: formatted,
+      result: formatted,
+      data: formatted,
+      items: formatted,
+      tasks: formatted,
+      total,
+      page: pageNum,
+      limit: limitNum,
+      totalPages: Math.ceil(total / limitNum),
+    };
+  }
+
+  /**
+   * SSE Stream: Real-time task push stream for driver mobile app
+   */
+  getRealtimeTaskStream(driverId: number): Observable<MessageEvent> {
+    const initial$ = from(this.getNewTasks(driverId, 10)).pipe(
+      map(
+        (res) =>
+          ({
+            data: {
+              type: 'initial',
+              tasks: res.tasks,
+              total: res.total,
+              timestamp: new Date().toISOString(),
+            },
+          }) as MessageEvent,
+      ),
+    );
+
+    const live$ = this.trackingGateway
+      ? this.trackingGateway.getDriverTaskObservable(driverId).pipe(
+          map(
+            (event) =>
+              ({
+                data: {
+                  type: event.type,
+                  task: formatDriverTask(event.task, driverId),
+                  timestamp: new Date().toISOString(),
+                },
+              }) as MessageEvent,
+          ),
+        )
+      : EMPTY;
+
+    const ping$ = interval(25000).pipe(
+      map(
+        () =>
+          ({
+            data: { type: 'ping', timestamp: new Date().toISOString() },
+          }) as MessageEvent,
+      ),
+    );
+
+    return merge(initial$, live$, ping$);
   }
 
   async getTaskStatusCounts(
@@ -367,14 +489,55 @@ export class DriverService {
     parcelId: number,
     dto: UpdateParcelStatusDto,
   ) {
-    const parcel = await this.parcelRepo.findOne({
+    let parcel = await this.parcelRepo.findOne({
       where: [
         { id: parcelId, driverId },
         { id: parcelId, pickupDriverId: driverId },
       ],
     });
-    if (!parcel)
-      throw new NotFoundException('Parcel not found or not assigned to you');
+
+    if (!parcel) {
+      // If parcel is in a reassignable state ('in-warehouse', 'failed', 'returned', 'pending'), allow driver 2 to claim & update
+      const existing = await this.parcelRepo.findOne({ where: { id: parcelId } });
+      const reassignableStatuses = ['in-warehouse', 'failed', 'returned', 'pending'];
+      if (existing && reassignableStatuses.includes(existing.status)) {
+        const previousDriverId = existing.driverId;
+        await this.parcelRepo.update(existing.id, {
+          driverId,
+          assignedAt: new Date(),
+          updatedById: driverId,
+        });
+        existing.driverId = driverId;
+        existing.assignedAt = new Date();
+        existing.updatedById = driverId;
+
+        try {
+          const note = previousDriverId
+            ? `Reassigned from Driver #${previousDriverId} to Driver #${driverId} upon scan update`
+            : `Assigned to Driver #${driverId} upon scan update`;
+          await this.historyRepo.save(
+            this.historyRepo.create({
+              parcelId,
+              status: existing.status,
+              note,
+            }),
+          );
+        } catch (e) {}
+
+        if (previousDriverId && previousDriverId !== driverId) {
+          try {
+            this.trackingGateway?.notifyDriverTaskUpdated(
+              previousDriverId,
+              formatDriverTask({ ...existing, status: 'reassigned' }, previousDriverId),
+            );
+          } catch (e) {}
+        }
+
+        parcel = existing;
+      } else {
+        throw new NotFoundException('Parcel not found or not assigned to you');
+      }
+    }
 
     let finalNote = dto.remark !== undefined ? dto.remark : dto.note;
     if (dto.reason) {
@@ -443,7 +606,17 @@ export class DriverService {
       }
     }
 
-    return this.parcelRepo.findOne({ where: { id: parcelId } });
+    const updated = await this.parcelRepo.findOne({
+      where: { id: parcelId },
+      relations: { customer: true, merchant: true, zone: true },
+    });
+    if (updated) {
+      try {
+        this.trackingGateway?.notifyDriverTaskUpdated(driverId, formatDriverTask(updated, driverId));
+      } catch (e) {}
+    }
+
+    return updated || this.parcelRepo.findOne({ where: { id: parcelId } });
   }
 
   async getSummary(driverId: number) {
@@ -1174,26 +1347,33 @@ export class DriverService {
     const isPickupDriver = parcel.pickupDriverId === driverId;
     const isAssignedToMe = isDeliveryDriver || isPickupDriver;
 
+    // A parcel can be claimed/reassigned if:
+    // 1. Unassigned (!parcel.driverId) in 'pending' or 'in-warehouse'
+    // 2. OR status is 'in-warehouse' (admin set to in-warehouse, or returned to hub) -> ANY driver scanning it can claim & take out for delivery
+    // 3. OR status is 'failed' (driver 1 failed delivery, ready for redelivery by driver 2)
+    // 4. OR status is 'returned' or 'pending'
+    const isReassignableStatus = ['in-warehouse', 'failed', 'returned', 'pending'].includes(parcel.status);
+    const canClaim =
+      (!isAssignedToMe && (!parcel.driverId || isReassignableStatus)) ||
+      parcel.status === 'in-warehouse';
+
     let driverRole:
       | 'delivery_driver'
       | 'pickup_driver'
       | 'unassigned'
       | 'assigned_to_other' = 'unassigned';
 
-    if (isDeliveryDriver) {
+    if (isDeliveryDriver && parcel.status !== 'in-warehouse') {
       driverRole = 'delivery_driver';
-    } else if (isPickupDriver) {
+    } else if (isPickupDriver && parcel.status !== 'in-warehouse') {
       driverRole = 'pickup_driver';
     } else if (parcel.driverId && parcel.driverId !== driverId) {
-      driverRole = 'assigned_to_other';
+      driverRole = isReassignableStatus ? 'unassigned' : 'assigned_to_other';
     }
 
     // Available actions
     const availableActions: string[] = [];
-    if (
-      !parcel.driverId &&
-      (parcel.status === 'pending' || parcel.status === 'in-warehouse')
-    ) {
+    if (canClaim) {
       availableActions.push('claim');
     }
     if (isPickupDriver && parcel.status === 'pending') {
@@ -1203,61 +1383,101 @@ export class DriverService {
       isDeliveryDriver &&
       (parcel.status === 'assigned' ||
         parcel.status === 'in-transit' ||
-        parcel.status === 'picked-up')
+        parcel.status === 'picked-up' ||
+        parcel.status === 'failed')
     ) {
       availableActions.push('deliver');
       availableActions.push('failed');
     }
-    if (isDeliveryDriver && parcel.status === 'assigned') {
-      availableActions.push('in-transit');
+    if (
+      (isDeliveryDriver || canClaim) &&
+      (parcel.status === 'assigned' || parcel.status === 'failed' || parcel.status === 'in-warehouse')
+    ) {
+      if (!availableActions.includes('in-transit')) {
+        availableActions.push('in-transit');
+      }
     }
 
+    const formattedTask = formatDriverTask(parcel, driverId);
     return {
       parcel,
+      task: formattedTask,
       scanInfo: {
         scannedCode: rawCode,
         extractedCode: code,
         isAssignedToMe,
         driverRole,
-        canUpdateStatus:
-          isAssignedToMe ||
-          (!parcel.driverId &&
-            ['pending', 'in-warehouse'].includes(parcel.status)),
+        canClaim,
+        canReassign: isReassignableStatus && Boolean(parcel.driverId && parcel.driverId !== driverId),
+        previousDriver: parcel.driver ? { id: parcel.driver.id, name: parcel.driver.name } : null,
+        canUpdateStatus: isAssignedToMe || canClaim,
         availableActions,
       },
     };
   }
 
   async claimScannedParcel(driverId: number, rawCode: string) {
-    const { parcel } = await this.scanParcel(driverId, rawCode);
+    const { parcel, scanInfo } = await this.scanParcel(driverId, rawCode);
 
-    if (parcel.driverId && parcel.driverId !== driverId) {
+    const reassignableStatuses = ['in-warehouse', 'failed', 'returned', 'pending'];
+    const canReassign = reassignableStatuses.includes(parcel.status);
+
+    if (parcel.driverId && parcel.driverId !== driverId && !canReassign) {
       throw new BadRequestException(
-        'ទំនិញនេះត្រូវបានប្រគល់ទៅឱ្យអ្នកដឹកផ្សេងរួចហើយ',
+        'ទំនិញនេះកំពុងដឹកជញ្ជូនដោយអ្នកដឹកផ្សេង (This parcel is currently assigned to another driver)',
       );
     }
 
-    parcel.driverId = driverId;
-    parcel.updatedById = driverId;
-    if (parcel.status === 'pending' || parcel.status === 'in-warehouse') {
-      parcel.status = 'assigned';
-      parcel.assignedAt = new Date();
+    if (parcel.status === 'delivered') {
+      throw new BadRequestException(
+        'ទំនិញនេះបានដឹកជញ្ជូនរួចរាល់ហើយ (This parcel has already been delivered)',
+      );
     }
 
-    await this.parcelRepo.save(parcel);
+    const previousDriverId = parcel.driverId;
+    const isReassigned = Boolean(previousDriverId && previousDriverId !== driverId);
+
+    // Direct database update to guarantee driver_id foreign key update regardless of relation entity cache
+    await this.parcelRepo.update(parcel.id, {
+      driverId: driverId,
+      updatedById: driverId,
+      status: 'assigned',
+      assignedAt: new Date(),
+    });
 
     try {
+      const historyNote = isReassigned
+        ? `Driver #${driverId} scanned and claimed (reassigned from Driver #${previousDriverId})`
+        : `Driver #${driverId} scanned and claimed parcel`;
+
       const history = this.historyRepo.create({
         parcelId: parcel.id,
-        status: parcel.status,
-        note: `Driver #${driverId} scanned and claimed parcel`,
+        status: 'assigned',
+        note: historyNote,
       });
       await this.historyRepo.save(history);
     } catch (err) {
       console.error('History log error:', err);
     }
 
-    return this.scanParcel(driverId, parcel.trackingCode);
+    const result = await this.scanParcel(driverId, parcel.trackingCode);
+
+    // 1. Notify new driver (Driver 2) via real-time WebSocket
+    try {
+      this.trackingGateway?.notifyDriverNewTask(driverId, formatDriverTask(result.parcel, driverId));
+    } catch (e) {}
+
+    // 2. Notify previous driver (Driver 1) that parcel was reassigned
+    if (isReassigned) {
+      try {
+        this.trackingGateway?.notifyDriverTaskUpdated(
+          previousDriverId,
+          formatDriverTask({ ...result.parcel, status: 'reassigned' }, previousDriverId),
+        );
+      } catch (e) {}
+    }
+
+    return result;
   }
 
   async updateScannedParcelStatus(
@@ -1265,8 +1485,194 @@ export class DriverService {
     rawCode: string,
     dto: UpdateParcelStatusDto,
   ) {
-    const { parcel } = await this.scanParcel(driverId, rawCode);
+    const { parcel, scanInfo } = await this.scanParcel(driverId, rawCode);
+
+    // If driver 2 scans a parcel in reassignable state and immediately updates status:
+    // Auto-claim first so ownership transfers smoothly
+    if (parcel.driverId !== driverId && scanInfo?.canClaim) {
+      await this.claimScannedParcel(driverId, rawCode);
+    }
+
     return this.updateParcelStatus(driverId, parcel.id, dto);
+  }
+
+  /**
+   * Batch / Multi scan lookups
+   * Returns validation, status, claimability, and task info for each code.
+   */
+  async scanMultipleParcels(driverId: number, rawCodes: string[]) {
+    const codes = Array.from(
+      new Set(
+        (rawCodes || [])
+          .map((c) => (typeof c === 'string' ? c.trim() : ''))
+          .filter(Boolean),
+      ),
+    );
+
+    const items: Array<{
+      code: string;
+      success: boolean;
+      parcel?: any;
+      task?: any;
+      scanInfo?: any;
+      error?: string;
+    }> = [];
+
+    let claimableCount = 0;
+    let assignedToMeCount = 0;
+    let validCount = 0;
+    let errorCount = 0;
+
+    for (const code of codes) {
+      try {
+        const scanRes = await this.scanParcel(driverId, code);
+        validCount++;
+        if (scanRes.scanInfo?.canClaim) claimableCount++;
+        if (scanRes.scanInfo?.isAssignedToMe) assignedToMeCount++;
+
+        items.push({
+          code,
+          success: true,
+          parcel: scanRes.parcel,
+          task: scanRes.task,
+          scanInfo: scanRes.scanInfo,
+        });
+      } catch (err: any) {
+        errorCount++;
+        items.push({
+          code,
+          success: false,
+          error: err.message || 'Parcel not found',
+        });
+      }
+    }
+
+    return {
+      items,
+      summary: {
+        total: codes.length,
+        validCount,
+        claimableCount,
+        assignedToMeCount,
+        errorCount,
+      },
+    };
+  }
+
+  /**
+   * Batch / Multi claim parcels
+   * Allows driver to claim multiple packages at once (e.g. at warehouse, or taking over failed parcels).
+   */
+  async claimMultipleParcels(driverId: number, rawCodes: string[]) {
+    const codes = Array.from(
+      new Set(
+        (rawCodes || [])
+          .map((c) => (typeof c === 'string' ? c.trim() : ''))
+          .filter(Boolean),
+      ),
+    );
+
+    const successful: Array<{
+      code: string;
+      parcelId: number;
+      trackingCode: string;
+      status: string;
+      previousDriverId?: number;
+      message: string;
+    }> = [];
+    const failed: Array<{
+      code: string;
+      error: string;
+    }> = [];
+
+    for (const code of codes) {
+      try {
+        const claimRes = await this.claimScannedParcel(driverId, code);
+        successful.push({
+          code,
+          parcelId: claimRes.parcel.id,
+          trackingCode: claimRes.parcel.trackingCode,
+          status: claimRes.parcel.status,
+          message: 'Claimed successfully',
+        });
+      } catch (err: any) {
+        failed.push({
+          code,
+          error: err.message || 'Failed to claim parcel',
+        });
+      }
+    }
+
+    return {
+      successful,
+      failed,
+      summary: {
+        total: codes.length,
+        claimed: successful.length,
+        failed: failed.length,
+      },
+    };
+  }
+
+  /**
+   * Batch / Multi status update
+   * Allows driver to batch update status of multiple parcels (e.g. all in-transit, or in-warehouse).
+   */
+  async updateMultipleParcelsStatus(
+    driverId: number,
+    rawCodes: string[],
+    dto: UpdateParcelStatusDto,
+  ) {
+    const codes = Array.from(
+      new Set(
+        (rawCodes || [])
+          .map((c) => (typeof c === 'string' ? c.trim() : ''))
+          .filter(Boolean),
+      ),
+    );
+
+    const successful: Array<{
+      code: string;
+      parcelId: number;
+      trackingCode: string;
+      status: string;
+      message: string;
+    }> = [];
+    const failed: Array<{
+      code: string;
+      error: string;
+    }> = [];
+
+    for (const code of codes) {
+      try {
+        const updateRes = await this.updateScannedParcelStatus(driverId, code, dto);
+        if (!updateRes) {
+          throw new BadRequestException('Failed to update parcel status');
+        }
+        successful.push({
+          code,
+          parcelId: updateRes.id,
+          trackingCode: updateRes.trackingCode,
+          status: updateRes.status,
+          message: `Status updated to ${dto.status}`,
+        });
+      } catch (err: any) {
+        failed.push({
+          code,
+          error: err.message || 'Failed to update status',
+        });
+      }
+    }
+
+    return {
+      successful,
+      failed,
+      summary: {
+        total: codes.length,
+        updated: successful.length,
+        failed: failed.length,
+      },
+    };
   }
 
   async getPayments(

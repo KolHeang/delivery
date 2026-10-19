@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  Optional,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Like, ILike, Between, MoreThanOrEqual, LessThanOrEqual, In } from 'typeorm';
@@ -20,6 +21,8 @@ import {
 } from './dto/parcel.dto';
 import { PaginatedResult } from '../interface/pagination.interface';
 import { FirebaseService } from '../firebase/firebase.service';
+import { TrackingGateway } from '../tracking/tracking.gateway';
+import { formatDriverTask } from '../mobile/driver/utils/task-formatter.util';
 
 @Injectable()
 export class ParcelsService {
@@ -30,6 +33,7 @@ export class ParcelsService {
     @InjectRepository(Zone) private readonly zoneRepo: Repository<Zone>,
     @InjectRepository(User) private readonly userRepo: Repository<User>,
     private readonly firebaseService: FirebaseService,
+    @Optional() private readonly trackingGateway?: TrackingGateway,
   ) { }
 
 
@@ -360,18 +364,74 @@ export class ParcelsService {
     if (finalStatus === 'in-warehouse' && !parcel.warehouseAt) {
       updates.warehouseAt = new Date();
     }
-    if (finalStatus === 'delivered' && !updates.deliveredAt && !parcel.deliveredAt) {
-      updates.deliveredAt = new Date();
+    if (finalStatus === 'delivered') {
+      if (!updates.deliveredAt && !parcel.deliveredAt) {
+        updates.deliveredAt = new Date();
+      }
+      if (dto.paymentMethod) {
+        updates.paymentMethod = dto.paymentMethod;
+      }
+      if (dto.paymentStatus) {
+        updates.paymentStatus = dto.paymentStatus;
+      } else {
+        updates.paymentStatus = 'paid';
+      }
+    }
+    if (finalStatus === 'failed' || finalStatus === 'returned' || finalStatus === 'cancelled') {
+      if (dto.paymentMethod !== undefined) {
+        updates.paymentMethod = dto.paymentMethod;
+      }
+      if (!updates.paymentStatus) {
+        updates.paymentStatus = 'pending';
+      }
     }
     if (dto.createdAt) {
       updates.createdAt = new Date(dto.createdAt);
     }
-    await this.repo.update(id, updates);
-    if (finalStatus && finalStatus !== parcel.status) {
-      const historyNote = dto.note || (updates.status === 'assigned' ? 'Driver assigned' : undefined);
-      await this.addEvent(id, finalStatus, historyNote);
+    if (updates.remark !== undefined) {
+      if (!updates.note) updates.note = updates.remark;
+      delete updates.remark;
     }
-    return this.findOne(id);
+    if (updates.reason !== undefined) {
+      if (!updates.note) updates.note = updates.reason;
+      delete updates.reason;
+    }
+    await this.repo.update(id, updates);
+    if (finalStatus && (finalStatus !== parcel.status || updates.note)) {
+      const historyNote = updates.note || dto.note || (updates.status === 'assigned' ? 'Driver assigned' : undefined);
+      await this.addEvent(id, finalStatus, historyNote);
+      if (finalStatus !== parcel.status && parcel.merchantId) {
+        try {
+          const notifInfo = this.getStatusNotificationText(
+            finalStatus,
+            parcel.trackingCode,
+            historyNote,
+          );
+          await this.firebaseService.sendToMerchant(parcel.merchantId, {
+            title: notifInfo.title,
+            body: notifInfo.body,
+            type: 'order_status',
+            data: {
+              parcelId: parcel.id,
+              trackingCode: parcel.trackingCode,
+              status: finalStatus,
+            },
+            tenantId: parcel.tenantId,
+          });
+        } catch (e) {}
+      }
+    }
+    const updatedParcel = await this.findOne(id);
+    if (dto.driverId && (!parcel.driverId || parcel.driverId !== dto.driverId)) {
+      try {
+        this.trackingGateway?.notifyDriverNewTask(dto.driverId, formatDriverTask(updatedParcel, dto.driverId));
+      } catch (e) {}
+    } else if (updatedParcel.driverId && finalStatus && finalStatus !== parcel.status) {
+      try {
+        this.trackingGateway?.notifyDriverTaskUpdated(updatedParcel.driverId, formatDriverTask(updatedParcel, updatedParcel.driverId));
+      } catch (e) {}
+    }
+    return updatedParcel;
   }
 
   async updateStatus(id: number, dto: UpdateParcelStatusDto): Promise<Parcel> {
@@ -426,7 +486,19 @@ export class ParcelsService {
       }
     }
 
-    return this.findOne(id);
+    const updatedParcel = await this.findOne(id);
+    if (updatedParcel.driverId) {
+      try {
+        this.trackingGateway?.notifyDriverTaskUpdated(updatedParcel.driverId, formatDriverTask(updatedParcel, updatedParcel.driverId));
+      } catch (e) {}
+    }
+    if (updatedParcel.pickupDriverId && updatedParcel.pickupDriverId !== updatedParcel.driverId) {
+      try {
+        this.trackingGateway?.notifyDriverTaskUpdated(updatedParcel.pickupDriverId, formatDriverTask(updatedParcel, updatedParcel.pickupDriverId));
+      } catch (e) {}
+    }
+
+    return updatedParcel;
   }
 
   /**
@@ -477,7 +549,12 @@ export class ParcelsService {
       } catch (e) {}
     }
 
-    return this.findOne(id);
+    const result = await this.findOne(id);
+    try {
+      this.trackingGateway?.notifyDriverNewTask(dto.driverId, formatDriverTask(result, dto.driverId));
+    } catch (e) {}
+
+    return result;
   }
 
   /**
@@ -508,7 +585,12 @@ export class ParcelsService {
       // Continue
     }
 
-    return this.findOne(id);
+    const result = await this.findOne(id);
+    try {
+      this.trackingGateway?.notifyDriverNewTask(dto.driverId, formatDriverTask(result, dto.driverId));
+    } catch (e) {}
+
+    return result;
   }
 
   /**
@@ -565,7 +647,12 @@ export class ParcelsService {
       } catch (e) {}
     }
 
-    return this.findOne(id);
+    const result = await this.findOne(id);
+    try {
+      this.trackingGateway?.notifyDriverNewTask(dto.driverId, formatDriverTask(result, dto.driverId));
+    } catch (e) {}
+
+    return result;
   }
 
   async remove(id: number): Promise<{ message: string }> {
@@ -733,7 +820,12 @@ export class ParcelsService {
       case 'returned':
         return {
           title: 'ទំនិញត្រូវបានប្រគល់ត្រឡប់ ↩️',
-          body: `កញ្ចប់ទំនិញ #${trackingCode} ត្រូវបានប្រគល់ត្រឡប់មកហាងវិញ`,
+          body: `កញ្ចប់ទំនិញ #${trackingCode} ត្រូវបានប្រគល់ត្រឡប់មកហាងវិញ${note ? ': ' + note : ''}`,
+        };
+      case 'cancelled':
+        return {
+          title: 'ការដឹកជញ្ជូនត្រូវបានបោះបង់ 🚫',
+          body: `កញ្ចប់ទំនិញ #${trackingCode} ត្រូវបានបោះបង់${note ? ': ' + note : ''}`,
         };
       case 'in-warehouse':
         return {

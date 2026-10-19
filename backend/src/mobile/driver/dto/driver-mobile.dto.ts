@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsString, IsOptional, IsEnum, IsArray } from 'class-validator';
+import { IsNotEmpty, IsString, IsOptional, IsEnum, IsArray, ArrayNotEmpty } from 'class-validator';
 
 export class UpdateDriverProfileDto {
   @ApiProperty({ example: 'Sok Dara', required: false, description: 'Full name in English' })
@@ -150,3 +150,64 @@ export class SendDriverParcelMessageDto {
   @IsString()
   attachmentUrl?: string;
 }
+
+export class BatchScanParcelsDto {
+  @ApiProperty({
+    example: ['PKG1001', 'PKG1002', 'PKG1003'],
+    type: [String],
+    description: 'Array of parcel tracking codes or QR contents to scan',
+  })
+  @IsArray()
+  @IsString({ each: true })
+  @ArrayNotEmpty()
+  codes: string[];
+}
+
+export class BatchClaimParcelsDto {
+  @ApiProperty({
+    example: ['PKG1001', 'PKG1002'],
+    type: [String],
+    description: 'Array of parcel tracking codes to claim',
+  })
+  @IsArray()
+  @IsString({ each: true })
+  @ArrayNotEmpty()
+  codes: string[];
+}
+
+export class BatchUpdateParcelStatusDto {
+  @ApiProperty({
+    example: ['PKG1001', 'PKG1002'],
+    type: [String],
+    description: 'Array of parcel tracking codes to update',
+  })
+  @IsArray()
+  @IsString({ each: true })
+  @ArrayNotEmpty()
+  codes: string[];
+
+  @ApiProperty({
+    example: 'in-transit',
+    enum: ['picked-up', 'in-transit', 'in-warehouse', 'delivered', 'failed', 'returned'],
+    description: 'Target delivery status for all parcels',
+  })
+  @IsNotEmpty()
+  @IsEnum(['picked-up', 'in-transit', 'in-warehouse', 'delivered', 'failed', 'returned'])
+  status: string;
+
+  @ApiProperty({ example: 'Departed hub', required: false })
+  @IsOptional()
+  @IsString()
+  note?: string;
+
+  @ApiProperty({ example: 'Remarks', required: false })
+  @IsOptional()
+  @IsString()
+  remark?: string;
+
+  @ApiProperty({ example: 'Reason', required: false })
+  @IsOptional()
+  @IsString()
+  reason?: string;
+}
+

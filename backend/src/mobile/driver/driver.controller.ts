@@ -596,6 +596,101 @@ export class DriverController {
   @Sse('tasks/realtime')
   @ApiOperation({
     summary: 'Server-Sent Events (SSE) real-time task stream for driver app',
+    description: 'Establishes a persistent SSE stream delivering real-time task events to the driver mobile app: 1) "initial" with current active tasks, 2) "task_assigned" / "status_updated" for live task changes, 3) "ping" heartbeat every 25s.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Continuous Server-Sent Events stream. Returns event payloads formatted as JSON data.',
+    schema: {
+      type: 'object',
+      properties: {
+        type: { type: 'string', example: 'initial' },
+        timestamp: { type: 'string', example: '2026-10-20T06:54:00.000Z' },
+        total: { type: 'number', example: 1 },
+        tasks: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              id: { type: 'number', example: 105 },
+              trackingCode: { type: 'string', example: 'CO201020260051' },
+              trackingCodeFormatted: { type: 'string', example: '#CO201020260051' },
+              merchantName: { type: 'string', example: 'E Mart Store' },
+              senderName: { type: 'string', example: 'E Mart Store' },
+              receiverName: { type: 'string', example: 'Sokha Mean' },
+              receiverPhone: { type: 'string', example: '012345678' },
+              receiverAddress: { type: 'string', example: 'ផ្លូវ 271, ភ្នំពេញ' },
+              location: { type: 'string', example: 'ផ្លូវ 271, ភ្នំពេញ' },
+              address: { type: 'string', example: 'ផ្លូវ 271, ភ្នំពេញ' },
+              zone: { type: 'string', example: 'ខណ្ឌមានជ័យ' },
+              status: { type: 'string', example: 'assigned' },
+              statusKh: { type: 'string', example: 'ទទួលយក' },
+              statusLabel: { type: 'string', example: 'ទទួលយក' },
+              statusText: { type: 'string', example: 'ទទួលយក' },
+              statusBadge: {
+                type: 'object',
+                properties: {
+                  label: { type: 'string', example: 'ទទួលយក' },
+                  color: { type: 'string', example: '#7c3aed' },
+                  backgroundColor: { type: 'string', example: '#ede9fe' },
+                },
+              },
+              badgeColor: { type: 'string', example: '#7c3aed' },
+              badgeBg: { type: 'string', example: '#ede9fe' },
+              cod: { type: 'number', example: 25.0 },
+              codCurrency: { type: 'string', example: 'USD' },
+              deliveryFee: { type: 'number', example: 1.5 },
+              driverFee: { type: 'number', example: 1.0 },
+              driverRole: { type: 'string', example: 'delivery_driver' },
+              note: { type: 'string', example: 'Call receiver before delivery' },
+              createdAt: { type: 'string', example: '2026-10-20T03:15:00.000Z' },
+              assignedAt: { type: 'string', example: '2026-10-20T04:00:00.000Z' },
+              deliveredAt: { type: 'string', nullable: true, example: null },
+            },
+          },
+        },
+      },
+      example: {
+        type: 'initial',
+        total: 1,
+        timestamp: '2026-10-20T06:54:00.000Z',
+        tasks: [
+          {
+            id: 105,
+            trackingCode: 'CO201020260051',
+            trackingCodeFormatted: '#CO201020260051',
+            merchantName: 'E Mart Store',
+            senderName: 'E Mart Store',
+            receiverName: 'Sokha Mean',
+            receiverPhone: '012345678',
+            receiverAddress: 'ផ្លូវ 271, ភ្នំពេញ',
+            location: 'ផ្លូវ 271, ភ្នំពេញ',
+            address: 'ផ្លូវ 271, ភ្នំពេញ',
+            zone: 'ខណ្ឌមានជ័យ',
+            status: 'assigned',
+            statusKh: 'ទទួលយក',
+            statusLabel: 'ទទួលយក',
+            statusText: 'ទទួលយក',
+            statusBadge: {
+              label: 'ទទួលយក',
+              color: '#7c3aed',
+              backgroundColor: '#ede9fe',
+            },
+            badgeColor: '#7c3aed',
+            badgeBg: '#ede9fe',
+            cod: 25.0,
+            codCurrency: 'USD',
+            deliveryFee: 1.5,
+            driverFee: 1.0,
+            driverRole: 'delivery_driver',
+            note: 'Call receiver before delivery',
+            createdAt: '2026-10-20T03:15:00.000Z',
+            assignedAt: '2026-10-20T04:00:00.000Z',
+            deliveredAt: null,
+          },
+        ],
+      },
+    },
   })
   tasksRealtime(@Request() req: any): Observable<MessageEvent> {
     return this.driverService.getRealtimeTaskStream(req.user.id);
@@ -604,6 +699,35 @@ export class DriverController {
   @Sse('tasks/stream')
   @ApiOperation({
     summary: 'Alias for SSE real-time task stream for driver app',
+    description: 'Alias of /tasks/realtime',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Continuous Server-Sent Events stream.',
+    example: {
+      type: 'initial',
+      total: 1,
+      timestamp: '2026-10-20T06:54:00.000Z',
+      tasks: [
+        {
+          id: 105,
+          trackingCode: 'CO201020260051',
+          trackingCodeFormatted: '#CO201020260051',
+          merchantName: 'E Mart Store',
+          receiverName: 'Sokha Mean',
+          receiverPhone: '012345678',
+          receiverAddress: 'ផ្លូវ 271, ភ្នំពេញ',
+          status: 'assigned',
+          statusKh: 'ទទួលយក',
+          cod: 25.0,
+          codCurrency: 'USD',
+          deliveryFee: 1.5,
+          driverFee: 1.0,
+          driverRole: 'delivery_driver',
+          createdAt: '2026-10-20T03:15:00.000Z',
+        },
+      ],
+    },
   })
   tasksStream(@Request() req: any): Observable<MessageEvent> {
     return this.driverService.getRealtimeTaskStream(req.user.id);

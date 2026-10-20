@@ -1,15 +1,18 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { isAuthenticated } from '@/lib/auth';
 import Sidebar from '@/components/layout/Sidebar';
 import Topbar from '@/components/layout/Topbar';
+import Pagination from '@/components/ui/Pagination';
 import api from '@/lib/api';
-import { MdPrint, MdArrowBack, MdPhone, MdInventory } from 'react-icons/md';
+import { MdPrint, MdArrowBack, MdSearch, MdClear } from 'react-icons/md';
 import { useLanguage } from '@/lib/LanguageContext';
 import { useTenant } from '@/lib/TenantContext';
 import DateInput, { getLocalDateString, formatDateToDDMMYYYY } from '@/components/ui/DateInput';
+import { TableSkeleton } from '@/components/ui/Skeleton';
+import Thumbnail from '@/components/ui/Thumbnail';
 
 const formatCOD = (cod: any, currency: string) => {
   if (currency === 'KHR') return `${parseInt(cod || 0).toLocaleString()} ៛`;
@@ -50,20 +53,29 @@ export default function PrintInvoicePage() {
   const router = useRouter();
   const [orders, setOrders] = useState<any[]>([]);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [selectedParcelsMap, setSelectedParcelsMap] = useState<Record<number, any>>({});
+  const [totalItems, setTotalItems] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [fetchingOrders, setFetchingOrders] = useState(false);
+  const [isPrinting, setIsPrinting] = useState(false);
 
+  // Filter & Pagination States
   const [merchants, setMerchants] = useState<any[]>([]);
   const [drivers, setDrivers] = useState<any[]>([]);
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [merchantFilter, setMerchantFilter] = useState('');
   const [driverFilter, setDriverFilter] = useState('');
   const [startDate, setStartDate] = useState(() => getLocalDateString());
   const [endDate, setEndDate] = useState(() => getLocalDateString());
-  const [filteredOrders, setFilteredOrders] = useState<any[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(50); // Default to 50 for quick batch selection
+
   const { lang } = useLanguage();
   const { tenant } = useTenant();
   const [isDirectMode, setIsDirectMode] = useState(false);
+  const [directIds, setDirectIds] = useState<string>('');
   const [orgInfo, setOrgInfo] = useState<{ name?: string; phone?: string; address?: string; logo?: string }>({});
 
   const getDynamicCompanyName = () => {
@@ -84,116 +96,210 @@ export default function PrintInvoicePage() {
 
   const dynamicCompanyName = getDynamicCompanyName();
 
+  // Debounce search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+      setCurrentPage(1);
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  // Initial load: merchants, drivers, organisation info, URL params
   useEffect(() => {
     if (!isAuthenticated()) { router.push('/'); return; }
+
+    const params = new URLSearchParams(window.location.search);
+    const singleId = params.get('id');
+    if (singleId) {
+      setIsDirectMode(true);
+      setDirectIds(singleId);
+      const parsedIds = singleId.split(',').map(x => parseInt(x.trim())).filter(x => !isNaN(x));
+      setSelectedIds(parsedIds);
+    }
+
     Promise.all([
-      api.get('/parcels'),
       api.get('/select/merchants'),
       api.get('/select/drivers'),
       api.get('/settings/organisation').catch(() => null),
     ])
-      .then(([oRes, mRes, dRes, orgRes]) => {
-        const orderData = Array.isArray(oRes.data) ? oRes.data : (oRes.data?.results || oRes.data?.result || []);
-        setOrders(orderData);
+      .then(([mRes, dRes, orgRes]) => {
         setMerchants(Array.isArray(mRes.data) ? mRes.data : (mRes.data?.results || mRes.data?.result || []));
         setDrivers(Array.isArray(dRes.data) ? dRes.data : (dRes.data?.results || dRes.data?.result || []));
         if (orgRes && orgRes.data) {
           setOrgInfo(orgRes.data);
         }
-        
-        const params = new URLSearchParams(window.location.search);
-        const singleId = params.get('id');
-        if (singleId) {
-          setIsDirectMode(true);
-          if (singleId.includes(',')) {
-            const parsedIds = singleId.split(',').map(x => parseInt(x)).filter(x => !isNaN(x));
-            setSelectedIds(parsedIds);
-            const matchedOrders = orderData.filter((o: any) => parsedIds.includes(o.id));
-            setOrders(matchedOrders);
-          } else {
-            const parsedId = parseInt(singleId);
-            setSelectedIds([parsedId]);
-            const matchedOrder = orderData.find((o: any) => o.id === parsedId);
-            if (matchedOrder) {
-              setSearch(matchedOrder.trackingCode || '');
-            }
-            setOrders(orderData);
-          }
-        } else {
-          setSelectedIds(orderData.map((o: any) => o.id));
-          setOrders(orderData);
-        }
       })
-      .catch(() => {})
-      .finally(() => setLoading(false));
+      .catch((err) => console.error('Error fetching selects:', err));
   }, [router]);
 
-  useEffect(() => {
-    let list = orders;
-    if (statusFilter !== 'all') list = list.filter(o => o.status === statusFilter);
-    if (driverFilter) list = list.filter(o => o.driverId === parseInt(driverFilter));
-    if (merchantFilter) list = list.filter(o => o.merchantId === parseInt(merchantFilter));
-    if (startDate) {
-      const start = new Date(startDate);
-      start.setHours(0, 0, 0, 0);
-      list = list.filter(o => new Date(o.createdAt) >= start);
-    }
-    if (endDate) {
-      const end = new Date(endDate);
-      end.setHours(23, 59, 59, 999);
-      list = list.filter(o => new Date(o.createdAt) <= end);
-    }
-    if (search) {
-      const q = search.toLowerCase();
-      list = list.filter(o =>
-        o.trackingCode?.toLowerCase().includes(q) ||
-        o.receiverName?.toLowerCase().includes(q) ||
-        o.receiverPhone?.includes(q) ||
-        o.merchant?.name?.toLowerCase().includes(q) ||
-        o.merchant?.nameKh?.toLowerCase().includes(q) ||
-        o.driver?.name?.toLowerCase().includes(q) ||
-        o.driver?.nameKh?.toLowerCase().includes(q)
-      );
-    }
-    setFilteredOrders(list);
-  }, [orders, search, statusFilter, driverFilter, merchantFilter, startDate, endDate]);
-
-  const toggleSelect = (id: number) => {
-    setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
-  };
-
-  const allFilteredSelected = filteredOrders.length > 0 && filteredOrders.every(o => selectedIds.includes(o.id));
-
-  const toggleAll = () => {
-    const filteredIds = filteredOrders.map(o => o.id);
-    if (allFilteredSelected) {
-      setSelectedIds(prev => prev.filter(id => !filteredIds.includes(id)));
-    } else {
-      setSelectedIds(prev => Array.from(new Set([...prev, ...filteredIds])));
-    }
-  };
-
-  const handlePrint = async () => {
+  // Main data loader function
+  const loadParcels = useCallback(async () => {
+    setFetchingOrders(true);
     try {
-      await api.post('/invoices', { parcelIds: selectedIds });
+      const params: any = {
+        page: currentPage,
+        limit: pageSize,
+        driverId: driverFilter || undefined,
+        merchantId: merchantFilter || undefined,
+        status: statusFilter !== 'all' ? statusFilter : undefined,
+        startDate: startDate || undefined,
+        endDate: endDate || undefined,
+        search: debouncedSearch || undefined,
+      };
+
+      if (directIds) {
+        params.ids = directIds;
+        params.limit = Math.max(pageSize, 500);
+      }
+
+      const res = await api.get('/parcels', { params });
+      const orderData = Array.isArray(res.data) 
+        ? res.data 
+        : (res.data?.results || res.data?.result || []);
+      const total = res.data?.total ?? (Array.isArray(res.data) ? res.data.length : orderData.length);
+
+      setOrders(orderData);
+      setTotalItems(total);
+
+      // Cache order objects by id so selections across pages are preserved
+      setSelectedParcelsMap(prev => {
+        const next = { ...prev };
+        orderData.forEach((o: any) => {
+          next[o.id] = o;
+        });
+        return next;
+      });
+
+      // Auto-select initial items if first load or direct mode
+      if (directIds) {
+        const parsedIds = directIds.split(',').map(x => parseInt(x.trim())).filter(x => !isNaN(x));
+        setSelectedIds(parsedIds);
+      } else if (loading && orderData.length > 0 && selectedIds.length === 0) {
+        // Auto select current page on initial visit
+        setSelectedIds(orderData.map((o: any) => o.id));
+      }
     } catch (err) {
-      console.error('Failed to save printed invoices:', err);
+      console.error('Failed to load parcels:', err);
+    } finally {
+      setFetchingOrders(false);
+      setLoading(false);
     }
+  }, [currentPage, pageSize, driverFilter, merchantFilter, statusFilter, startDate, endDate, debouncedSearch, directIds, loading, selectedIds.length]);
+
+  // Trigger loading parcels whenever filters or pagination change
+  useEffect(() => {
+    loadParcels();
+  }, [loadParcels]);
+
+  // Handle individual checkbox selection
+  const toggleSelect = (id: number) => {
+    setSelectedIds(prev => {
+      if (prev.includes(id)) {
+        return prev.filter(x => x !== id);
+      } else {
+        return [...prev, id];
+      }
+    });
+  };
+
+  // Check if all items on current page are selected
+  const isCurrentPageAllSelected = useMemo(() => {
+    return orders.length > 0 && orders.every(o => selectedIds.includes(o.id));
+  }, [orders, selectedIds]);
+
+  // Toggle selection for all items on the current page
+  const toggleCurrentPageSelect = () => {
+    if (isCurrentPageAllSelected) {
+      const pageIds = new Set(orders.map(o => o.id));
+      setSelectedIds(prev => prev.filter(id => !pageIds.has(id)));
+    } else {
+      const newIds = new Set([...selectedIds, ...orders.map(o => o.id)]);
+      setSelectedIds(Array.from(newIds));
+      setSelectedParcelsMap(prev => {
+        const next = { ...prev };
+        orders.forEach(o => { next[o.id] = o; });
+        return next;
+      });
+    }
+  };
+
+  // Select all matching items across all pages (up to 1000)
+  const handleSelectAllMatching = async () => {
+    setFetchingOrders(true);
+    try {
+      const res = await api.get('/parcels', {
+        params: {
+          page: 1,
+          limit: 1000,
+          driverId: driverFilter || undefined,
+          merchantId: merchantFilter || undefined,
+          status: statusFilter !== 'all' ? statusFilter : undefined,
+          startDate: startDate || undefined,
+          endDate: endDate || undefined,
+          search: debouncedSearch || undefined,
+          ids: directIds || undefined,
+        }
+      });
+      const allItems = Array.isArray(res.data) ? res.data : (res.data?.results || res.data?.result || []);
+      const allIds = allItems.map((o: any) => o.id);
+      setSelectedIds(allIds);
+      setSelectedParcelsMap(prev => {
+        const next = { ...prev };
+        allItems.forEach((o: any) => { next[o.id] = o; });
+        return next;
+      });
+    } catch (err) {
+      console.error('Failed to select all matching items:', err);
+    } finally {
+      setFetchingOrders(false);
+    }
+  };
+
+  // Clear all selections
+  const handleDeselectAll = () => {
+    setSelectedIds([]);
+  };
+
+  // Print selected invoices
+  const handlePrint = async () => {
+    if (selectedIds.length === 0) return;
+    setIsPrinting(true);
+
+    try {
+      // Check if any selected IDs are missing from selectedParcelsMap
+      const missingIds = selectedIds.filter(id => !selectedParcelsMap[id]);
+      if (missingIds.length > 0) {
+        const res = await api.get('/parcels', {
+          params: {
+            ids: missingIds.join(','),
+            limit: missingIds.length + 50,
+          }
+        });
+        const items = Array.isArray(res.data) ? res.data : (res.data?.results || res.data?.result || []);
+        setSelectedParcelsMap(prev => {
+          const next = { ...prev };
+          items.forEach((o: any) => { next[o.id] = o; });
+          return next;
+        });
+      }
+
+      await api.post('/invoices', { parcelIds: selectedIds }).catch(() => {});
+    } catch (err) {
+      console.error('Failed to prepare invoices for printing:', err);
+    } finally {
+      setIsPrinting(false);
+    }
+
     setTimeout(() => {
       window.print();
-    }, 100);
+    }, 150);
   };
 
-  if (loading) return (
-    <div className="app-layout">
-      <Sidebar />
-      <div className="main-content">
-        <div className="loading-wrapper"><div className="spinner" /></div>
-      </div>
-    </div>
-  );
-
-  const selectedOrders = filteredOrders.filter(o => selectedIds.includes(o.id));
+  // Printable orders list
+  const printableOrders = useMemo(() => {
+    return selectedIds.map(id => selectedParcelsMap[id]).filter(Boolean);
+  }, [selectedIds, selectedParcelsMap]);
 
   return (
     <div className="app-layout" style={{ display: 'block', minHeight: '100vh', background: '#f1f5f9' }}>
@@ -219,12 +325,12 @@ export default function PrintInvoicePage() {
               gap: 24px !important;
               padding: 30px 20px 60px !important;
               width: 100% !important;
-              max-width: ${selectedOrders.length > 1 ? '1040px' : '520px'} !important;
+              max-width: ${printableOrders.length > 1 ? '1040px' : '520px'} !important;
               margin: 0 auto !important;
             }
             @media (min-width: 1024px) {
               .print-only-container {
-                grid-template-columns: ${selectedOrders.length > 1 ? 'repeat(2, minmax(0, 480px))' : '1fr'} !important;
+                grid-template-columns: ${printableOrders.length > 1 ? 'repeat(2, minmax(0, 480px))' : '1fr'} !important;
               }
             }
           ` : `
@@ -245,7 +351,7 @@ export default function PrintInvoicePage() {
           .no-print {
             display: none !important;
           }
-          .sidebar, .topbar, .filter-section, .table-container, .select-all-bar {
+          .sidebar, .topbar, .filter-section, .table-container, .select-all-bar, .pagination-wrapper {
             display: none !important;
           }
           .main-content {
@@ -328,7 +434,7 @@ export default function PrintInvoicePage() {
                 padding: '3px 10px', 
                 borderRadius: 20 
               }}>
-                {selectedOrders.length} {lang === 'km' ? 'កញ្ចប់' : 'Parcels'}
+                {printableOrders.length} {lang === 'km' ? 'កញ្ចប់' : 'Parcels'}
               </span>
             </div>
 
@@ -336,6 +442,7 @@ export default function PrintInvoicePage() {
             <button 
               className="btn" 
               onClick={handlePrint}
+              disabled={printableOrders.length === 0 || isPrinting}
               style={{ 
                 fontWeight: 700, 
                 display: 'flex', 
@@ -347,12 +454,13 @@ export default function PrintInvoicePage() {
                 background: 'linear-gradient(135deg, #10b981, #059669)',
                 color: '#fff',
                 border: 'none',
-                cursor: 'pointer',
+                cursor: printableOrders.length === 0 ? 'not-allowed' : 'pointer',
+                opacity: printableOrders.length === 0 ? 0.6 : 1,
                 boxShadow: '0 4px 12px rgba(16, 185, 129, 0.25)',
                 transition: 'all 0.2s'
               }}
             >
-              <MdPrint size={20} /> {lang === 'km' ? 'បោះពុម្ពវិក្កយបត្រ' : 'Print Invoice'}
+              <MdPrint size={20} /> {isPrinting ? (lang === 'km' ? 'កំពុងរៀបចំ...' : 'Preparing...') : (lang === 'km' ? 'បោះពុម្ពវិក្កយបត្រ' : 'Print Invoice')}
             </button>
           </header>
         ) : (
@@ -366,11 +474,11 @@ export default function PrintInvoicePage() {
           
           {/* Filter Card */}
           <div className="card filter-section" style={{ marginBottom: 20 }}>
-            <div className="card-header">
+            <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
               <span className="card-title">🔍 {lang === 'km' ? 'ត្រងទិន្នន័យ' : 'Filter Options'}</span>
               <button 
                 onClick={handlePrint}
-                disabled={selectedOrders.length === 0}
+                disabled={selectedIds.length === 0 || isPrinting}
                 className="btn btn-primary"
                 style={{ 
                   padding: '8px 18px', 
@@ -380,19 +488,49 @@ export default function PrintInvoicePage() {
                   alignItems: 'center',
                   gap: 6,
                   borderRadius: 8,
-                  cursor: selectedOrders.length === 0 ? 'not-allowed' : 'pointer',
-                  opacity: selectedOrders.length === 0 ? 0.6 : 1
+                  cursor: selectedIds.length === 0 ? 'not-allowed' : 'pointer',
+                  opacity: selectedIds.length === 0 ? 0.6 : 1
                 }}
               >
-                <MdPrint size={18} /> {lang === 'km' ? `បោះពុម្ពដែលបានជ្រើសរើស (${selectedOrders.length})` : `Print Selected (${selectedOrders.length})`}
+                <MdPrint size={18} /> {lang === 'km' ? `បោះពុម្ពដែលបានជ្រើសរើស (${selectedIds.length})` : `Print Selected (${selectedIds.length})`}
               </button>
             </div>
             <div className="card-body" style={{ padding: '16px 20px' }}>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 14 }}>
+                
+                {/* Search Box */}
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label">{lang === 'km' ? 'ស្វែងរក' : 'Search'}</label>
+                  <div style={{ position: 'relative' }}>
+                    <MdSearch size={18} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+                    <input
+                      type="text"
+                      className="form-control"
+                      placeholder={lang === 'km' ? 'លេខកូដ, លេខទូរស័ព្ទ, ឈ្មោះ...' : 'Tracking, Phone, Name...'}
+                      value={search}
+                      onChange={e => setSearch(e.target.value)}
+                      style={{ paddingLeft: 34, paddingRight: search ? 30 : 12 }}
+                    />
+                    {search && (
+                      <button 
+                        type="button" 
+                        onClick={() => setSearch('')}
+                        style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', border: 'none', background: 'transparent', cursor: 'pointer', color: '#94a3b8' }}
+                      >
+                        <MdClear size={16} />
+                      </button>
+                    )}
+                  </div>
+                </div>
+
                 {/* Driver Filter */}
                 <div className="form-group" style={{ marginBottom: 0 }}>
                   <label className="form-label">{lang === 'km' ? 'អ្នកដឹក' : 'Driver'}</label>
-                  <select className="form-control" value={driverFilter} onChange={e => setDriverFilter(e.target.value)}>
+                  <select 
+                    className="form-control" 
+                    value={driverFilter} 
+                    onChange={e => { setDriverFilter(e.target.value); setCurrentPage(1); }}
+                  >
                     <option value="">{lang === 'km' ? '-- ទាំងអស់ --' : '-- All --'}</option>
                     {drivers.map(d => (
                       <option key={d.id} value={d.id}>
@@ -405,7 +543,11 @@ export default function PrintInvoicePage() {
                 {/* Shop Filter */}
                 <div className="form-group" style={{ marginBottom: 0 }}>
                   <label className="form-label">{lang === 'km' ? 'ហាង' : 'Shop'}</label>
-                  <select className="form-control" value={merchantFilter} onChange={e => setMerchantFilter(e.target.value)}>
+                  <select 
+                    className="form-control" 
+                    value={merchantFilter} 
+                    onChange={e => { setMerchantFilter(e.target.value); setCurrentPage(1); }}
+                  >
                     <option value="">{lang === 'km' ? '-- ទាំងអស់ --' : '-- All --'}</option>
                     {merchants.map(m => (
                       <option key={m.id} value={m.id}>
@@ -415,12 +557,32 @@ export default function PrintInvoicePage() {
                   </select>
                 </div>
 
+                {/* Status Filter */}
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label">{lang === 'km' ? 'ស្ថានភាព' : 'Status'}</label>
+                  <select 
+                    className="form-control" 
+                    value={statusFilter} 
+                    onChange={e => { setStatusFilter(e.target.value); setCurrentPage(1); }}
+                  >
+                    <option value="all">{lang === 'km' ? '-- ទាំងអស់ --' : '-- All --'}</option>
+                    <option value="pending">{lang === 'km' ? 'រង់ចាំ (Pending)' : 'Pending'}</option>
+                    <option value="in-warehouse">{lang === 'km' ? 'ក្នុងឃ្លាំង (In Warehouse)' : 'In Warehouse'}</option>
+                    <option value="assigned">{lang === 'km' ? 'ចាត់តាំងរួច (Assigned)' : 'Assigned'}</option>
+                    <option value="picked-up">{lang === 'km' ? 'បានទទួល (Picked Up)' : 'Picked Up'}</option>
+                    <option value="in-transit">{lang === 'km' ? 'កំពុងដឹក (In Transit)' : 'In Transit'}</option>
+                    <option value="delivered">{lang === 'km' ? 'ជោគជ័យ (Delivered)' : 'Delivered'}</option>
+                    <option value="failed">{lang === 'km' ? 'មិនជោគជ័យ (Failed)' : 'Failed'}</option>
+                    <option value="returned">{lang === 'km' ? 'បង្វិលត្រឡប់ (Returned)' : 'Returned'}</option>
+                  </select>
+                </div>
+
                 {/* Start Date */}
                 <DateInput
                   labelEn="Start Date"
                   labelKh="ចាប់ផ្តើម"
                   value={startDate}
-                  onChange={setStartDate}
+                  onChange={val => { setStartDate(val); setCurrentPage(1); }}
                 />
 
                 {/* End Date */}
@@ -428,7 +590,7 @@ export default function PrintInvoicePage() {
                   labelEn="End Date"
                   labelKh="បញ្ចប់"
                   value={endDate}
-                  onChange={setEndDate}
+                  onChange={val => { setEndDate(val); setCurrentPage(1); }}
                 />
               </div>
             </div>
@@ -436,30 +598,85 @@ export default function PrintInvoicePage() {
 
           {/* Orders Table Card */}
           <div className="card table-container" style={{ marginBottom: 30 }}>
-            <div className="card-header">
-              <span className="card-title">📦 {lang === 'km' ? 'បញ្ជីកញ្ចប់សម្រាប់បោះពុម្ព' : 'Parcel List for Printing'}</span>
-              <span style={{ 
-                background: '#e0e7ff', 
-                color: '#3730a3', 
-                fontSize: 12, 
-                fontWeight: 700, 
-                padding: '4px 12px', 
-                borderRadius: 20 
-              }}>
-                {selectedOrders.length} / {filteredOrders.length} {lang === 'km' ? 'កញ្ចប់បានជ្រើសរើស' : 'Selected'}
-              </span>
+            <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <span className="card-title">📦 {lang === 'km' ? 'បញ្ជីកញ្ចប់សម្រាប់បោះពុម្ព' : 'Parcel List for Printing'}</span>
+                <span style={{ 
+                  background: '#e0e7ff', 
+                  color: '#3730a3', 
+                  fontSize: 12, 
+                  fontWeight: 700, 
+                  padding: '4px 12px', 
+                  borderRadius: 20 
+                }}>
+                  {selectedIds.length} / {totalItems} {lang === 'km' ? 'កញ្ចប់បានជ្រើសរើស' : 'Selected'}
+                </span>
+              </div>
+
+              {/* Batch Selection Action Buttons */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <button
+                  type="button"
+                  onClick={toggleCurrentPageSelect}
+                  className="btn btn-outline btn-sm"
+                  style={{ fontSize: 12, padding: '5px 12px', borderRadius: 6, fontWeight: 600 }}
+                >
+                  {isCurrentPageAllSelected 
+                    ? (lang === 'km' ? 'ដោះទំព័រនេះ' : 'Deselect Page')
+                    : (lang === 'km' ? 'ជ្រើសរើសទំព័រនេះ' : 'Select Page')}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSelectAllMatching}
+                  disabled={totalItems === 0 || selectedIds.length === totalItems}
+                  className="btn btn-outline btn-sm"
+                  style={{ fontSize: 12, padding: '5px 12px', borderRadius: 6, fontWeight: 600 }}
+                >
+                  {lang === 'km' ? `ជ្រើសរើសទាំងអស់ (${totalItems})` : `Select All (${totalItems})`}
+                </button>
+                {selectedIds.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleDeselectAll}
+                    className="btn btn-outline btn-sm"
+                    style={{ fontSize: 12, padding: '5px 12px', borderRadius: 6, fontWeight: 600, color: '#ef4444', borderColor: '#fca5a5' }}
+                  >
+                    {lang === 'km' ? 'ដោះការជ្រើសរើស' : 'Clear All'}
+                  </button>
+                )}
+              </div>
             </div>
-            <div className="table-wrapper" style={{ overflowX: 'auto' }}>
+
+            <div className="table-wrapper" style={{ overflowX: 'auto', position: 'relative' }}>
+              {fetchingOrders && (
+                <div style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  background: 'rgba(255, 255, 255, 0.65)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  zIndex: 10,
+                  backdropFilter: 'blur(1px)'
+                }}>
+                  <div className="spinner" style={{ width: 28, height: 28 }} />
+                </div>
+              )}
+
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
                   <tr>
                     <th style={{ width: 45, textAlign: 'center' }}>{lang === 'km' ? 'ល.រ' : 'No.'}</th>
+                    <th style={{ width: 55, textAlign: 'center' }}>{lang === 'km' ? 'រូបភាព' : 'Photo'}</th>
                     <th style={{ width: 85, textAlign: 'center' }}>
                       <label style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, cursor: 'pointer', margin: 0, fontWeight: 700 }}>
                         <input
                           type="checkbox"
-                          checked={allFilteredSelected}
-                          onChange={toggleAll}
+                          checked={isCurrentPageAllSelected}
+                          onChange={toggleCurrentPageSelect}
                           style={{ width: 16, height: 16, accentColor: 'var(--accent)', cursor: 'pointer' }}
                         />
                         <span>{lang === 'km' ? 'ទាំងអស់' : 'All'}</span>
@@ -476,51 +693,80 @@ export default function PrintInvoicePage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredOrders.length === 0 ? (
+                  {loading || (fetchingOrders && orders.length === 0) ? (
+                    <TableSkeleton columns={11} rows={8} hasThumbnail />
+                  ) : orders.length === 0 ? (
                     <tr>
-                      <td colSpan={10} style={{ textAlign: 'center', padding: '36px 20px', color: 'var(--text-muted)', fontSize: 13 }}>
+                      <td colSpan={11} style={{ textAlign: 'center', padding: '36px 20px', color: 'var(--text-muted)', fontSize: 13 }}>
                         {lang === 'km' ? 'គ្មានទិន្នន័យ' : 'No Data'}
                       </td>
                     </tr>
                   ) : (
-                    filteredOrders.map((o, idx) => (
-                      <tr key={o.id} style={{ background: selectedIds.includes(o.id) ? '#f0f7ff' : undefined }}>
-                        <td style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: 12 }}>{idx + 1}</td>
-                        <td style={{ textAlign: 'center' }}>
-                          <input
-                            type="checkbox"
-                            checked={selectedIds.includes(o.id)}
-                            onChange={() => toggleSelect(o.id)}
-                            style={{ width: 16, height: 16, accentColor: 'var(--accent)', cursor: 'pointer' }}
-                          />
-                        </td>
-                        <td style={{ fontWeight: 700 }}>{o.trackingCode}</td>
-                        <td style={{ color: 'var(--text-secondary)', fontSize: 12 }}>
-                          {o.createdAt ? formatDateToDDMMYYYY(o.createdAt) : ''}
-                        </td>
-                        <td style={{ fontWeight: 600 }}>{o.merchant?.nameKh || o.merchant?.name || ''}</td>
-                        <td style={{ fontSize: 12.5, color: 'var(--text-secondary)' }}>{o.receiverAddress || ''}</td>
-                        <td style={{ fontSize: 12.5 }}>{o.receiverPhone || ''}</td>
-                        <td style={{ textAlign: 'right', fontWeight: 700, color: 'var(--danger)' }}>
-                          {parseFloat(o.cod || 0).toFixed(2)} ({o.codCurrency || 'USD'})
-                        </td>
-                        <td>
-                          {getDriverLabel(o.driver, lang)}
-                        </td>
-                        <td style={{ textAlign: 'center' }}>
-                          {getStatusLabel(o.status, lang)}
-                        </td>
-                      </tr>
-                    ))
+                    orders.map((o, idx) => {
+                      const parcelPhoto = o.itemPhoto || (Array.isArray(o.proofPhotos) ? o.proofPhotos[0] : o.proofPhotos) || null;
+                      return (
+                        <tr key={o.id} style={{ background: selectedIds.includes(o.id) ? '#f0f7ff' : undefined }}>
+                          <td style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: 12 }}>
+                            {(currentPage - 1) * pageSize + idx + 1}
+                          </td>
+                          <td style={{ textAlign: 'center', padding: '4px' }}>
+                            <Thumbnail
+                              src={parcelPhoto}
+                              alt={o.trackingCode || 'Parcel'}
+                              size={32}
+                              type="parcel"
+                            />
+                          </td>
+                          <td style={{ textAlign: 'center' }}>
+                            <input
+                              type="checkbox"
+                              checked={selectedIds.includes(o.id)}
+                              onChange={() => toggleSelect(o.id)}
+                              style={{ width: 16, height: 16, accentColor: 'var(--accent)', cursor: 'pointer' }}
+                            />
+                          </td>
+                          <td style={{ fontWeight: 700 }}>{o.trackingCode}</td>
+                          <td style={{ color: 'var(--text-secondary)', fontSize: 12 }}>
+                            {o.createdAt ? formatDateToDDMMYYYY(o.createdAt) : ''}
+                          </td>
+                          <td style={{ fontWeight: 600 }}>{o.merchant?.nameKh || o.merchant?.name || ''}</td>
+                          <td style={{ fontSize: 12.5, color: 'var(--text-secondary)' }}>{o.receiverAddress || ''}</td>
+                          <td style={{ fontSize: 12.5 }}>{o.receiverPhone || ''}</td>
+                          <td style={{ textAlign: 'right', fontWeight: 700, color: 'var(--danger)' }}>
+                            {parseFloat(o.cod || 0).toFixed(2)} ({o.codCurrency || 'USD'})
+                          </td>
+                          <td>
+                            {getDriverLabel(o.driver, lang)}
+                          </td>
+                          <td style={{ textAlign: 'center' }}>
+                            {getStatusLabel(o.status, lang)}
+                          </td>
+                        </tr>
+                      );
+                    })
                   )}
                 </tbody>
               </table>
             </div>
+
+            {/* Pagination Controls */}
+            {totalItems > 0 && (
+              <div className="pagination-wrapper">
+                <Pagination
+                  currentPage={currentPage}
+                  totalItems={totalItems}
+                  pageSize={pageSize}
+                  onPageChange={setCurrentPage}
+                  onPageSizeChange={(sz) => { setPageSize(sz); setCurrentPage(1); }}
+                  pageSizeOptions={[10, 25, 50, 100, 200, 500]}
+                />
+              </div>
+            )}
           </div>
 
           {/* Printable Sticker Cards Preview */}
           <div className="print-only-container">
-            {selectedOrders.map(o => (
+            {printableOrders.map(o => (
               <div
                 key={o.id}
                 className="invoice-card"

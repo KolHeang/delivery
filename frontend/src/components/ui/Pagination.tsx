@@ -10,6 +10,7 @@ interface PaginationProps {
   pageSize: number;
   onPageChange: (page: number) => void;
   onPageSizeChange?: (pageSize: number) => void;
+  pageSizeOptions?: number[];
 }
 
 export default function Pagination({
@@ -18,6 +19,7 @@ export default function Pagination({
   pageSize,
   onPageChange,
   onPageSizeChange,
+  pageSizeOptions = [10, 20, 50, 100, 200, 500],
 }: PaginationProps) {
   const { lang } = useLanguage();
   const isKh = lang === 'km';
@@ -93,7 +95,7 @@ export default function Pagination({
                 transition: 'border-color var(--transition-fast)'
               }}
             >
-              {[10, 20, 50, 100].map((size) => (
+              {pageSizeOptions.map((size) => (
                 <option key={size} value={size}>
                   {size}
                 </option>

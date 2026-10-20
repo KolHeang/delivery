@@ -250,4 +250,21 @@ export class SettingsService {
     } catch (e) {}
     return res;
   }
+
+  // ── Firebase Logs & Testing ──
+  async getFirebaseLogs(limit?: number, status?: string, tenantId?: number) {
+    return this.firebaseService.findAllLogs({ limit, status, tenantId });
+  }
+
+  async getRegisteredDevices() {
+    return this.firebaseService.getRegisteredDevices();
+  }
+
+  async testFirebase(options: { targetToken?: string; title?: string; body?: string; tenantId?: number }) {
+    return this.firebaseService.testFirebase(options);
+  }
+
+  async clearFirebaseLogs(tenantId?: number) {
+    return this.firebaseService.clearLogs(tenantId);
+  }
 }

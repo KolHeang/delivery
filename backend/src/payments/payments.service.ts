@@ -513,19 +513,47 @@ export class PaymentsService {
         .getMany();
     }
 
-    let orgInfo = await this.orgRepo.findOne({ where: {} });
-    if (!orgInfo) {
-      orgInfo = {
-        name: 'E-Express',
-        phone: '011609414',
-        address: 'Phnom Penh',
-      } as any;
+    const effectiveTenantId = payment.tenantId || payment.merchant?.tenantId;
+    let tenant: Tenant | null = null;
+    if (effectiveTenantId) {
+      tenant = await this.tenantRepo.findOne({ where: { id: effectiveTenantId } });
     }
+
+    let orgSetting: Organisation | null = null;
+    if (effectiveTenantId) {
+      orgSetting = await this.orgRepo.findOne({ where: { tenantId: effectiveTenantId } });
+    }
+    if (!orgSetting) {
+      orgSetting = await this.orgRepo.findOne({ where: {} });
+    }
+
+    const dynamicLogo = tenant?.logo || orgSetting?.logo || null;
+    const dynamicName = (orgSetting?.name && orgSetting.name !== 'EBS Digital Solutions')
+      ? orgSetting.name
+      : (tenant?.name || orgSetting?.name || 'Delivery Express');
+
+    const orgInfo = {
+      name: dynamicName,
+      phone: orgSetting?.phone || tenant?.phone || '012345676',
+      address: orgSetting?.address || tenant?.address || 'Phnom Penh, Cambodia',
+      logo: dynamicLogo,
+      logoUrl: dynamicLogo,
+      email: orgSetting?.email || tenant?.email || '',
+    };
 
     return {
       payment,
       parcels,
       orgInfo,
+      tenant: tenant ? {
+        id: tenant.id,
+        name: tenant.name,
+        slug: tenant.slug,
+        logo: tenant.logo,
+        logoUrl: tenant.logo,
+        phone: tenant.phone,
+        address: tenant.address,
+      } : null,
     };
   }
 }

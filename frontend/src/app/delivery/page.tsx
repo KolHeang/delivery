@@ -14,6 +14,8 @@ import { FiPlusCircle } from 'react-icons/fi';
 import { useLanguage } from '@/lib/LanguageContext';
 import DateInput, { formatDateToDDMMYYYY, getLocalDateString } from '@/components/ui/DateInput';
 import Pagination from '@/components/ui/Pagination';
+import { TableSkeleton } from '@/components/ui/Skeleton';
+import Thumbnail from '@/components/ui/Thumbnail';
 
 const getLocalFirstDayOfMonthString = () => {
   const d = new Date();
@@ -362,10 +364,11 @@ export default function DeliveriesPage() {
               </div>
             </div>
             <div className="table-responsive" style={{ overflowX: 'auto' }}>
-              <table style={{ minWidth: 1800, width: '100%' }}>
+              <table style={{ minWidth: 1850, width: '100%' }}>
                 <thead>
                   <tr>
                     <th style={{ width: 50, textAlign: 'center' }}>{lang === 'km' ? 'ល.រ' : 'No.'}</th>
+                    <th style={{ width: 60, textAlign: 'center' }}>{lang === 'km' ? 'រូបភាព' : 'Photo'}</th>
                     <th style={{ minWidth: 140 }}>{lang === 'km' ? 'លេខ' : 'Tracking'}</th>
                     <th style={{ textAlign: 'center', width: 40 }}>
                       <input
@@ -394,23 +397,31 @@ export default function DeliveriesPage() {
                 </thead>
                 <tbody>
                   {loading ? (
-                    <tr>
-                      <td colSpan={18} style={{ padding: '40px 0', textAlign: 'center' }}>
-                        <div className="loading-wrapper"><div className="spinner" /></div>
-                      </td>
-                    </tr>
+                    <TableSkeleton columns={19} rows={8} hasThumbnail />
                   ) : filtered.length === 0 ? (
                     <tr>
-                      <td colSpan={18} style={{ padding: '36px 20px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
+                      <td colSpan={19} style={{ padding: '36px 20px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
                         {lang === 'km' ? 'គ្មានទិន្នន័យ' : 'No data'}
                       </td>
                     </tr>
                   ) : (
                     filtered.map((o: any, idx) => {
                       const isSelected = selectedIds.includes(o.id);
+                      const parcelPhoto = o.itemPhoto || (Array.isArray(o.proofPhotos) ? o.proofPhotos[0] : o.proofPhotos) || null;
+                      const hasMultipleProofs = Array.isArray(o.proofPhotos) && o.proofPhotos.length > 1;
+
                       return (
                         <tr key={o.id} style={{ backgroundColor: isSelected ? '#eff6ff' : 'transparent', transition: 'background-color 0.15s ease' }}>
                           <td style={{ color: 'var(--text-muted)', fontSize: 12 }}>{(currentPage - 1) * pageSize + idx + 1}</td>
+                          <td style={{ textAlign: 'center', padding: '6px' }}>
+                            <Thumbnail
+                              src={parcelPhoto}
+                              alt={o.trackingCode || 'Parcel'}
+                              size={36}
+                              type="parcel"
+                              badge={hasMultipleProofs ? `+${o.proofPhotos.length}` : undefined}
+                            />
+                          </td>
                           <td>
                             <span 
                               style={{ color: '#2563eb', cursor: 'pointer', fontWeight: 600, textDecoration: 'underline' }}

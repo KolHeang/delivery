@@ -12,6 +12,8 @@ import { FaTelegramPlane, FaRegEdit, FaTrashAlt } from 'react-icons/fa';
 import { FiPlusCircle } from 'react-icons/fi';
 import { useLanguage } from '@/lib/LanguageContext';
 import Pagination from '@/components/ui/Pagination';
+import { TableSkeleton } from '@/components/ui/Skeleton';
+import Thumbnail from '@/components/ui/Thumbnail';
 
 export default function ShopsPage() {
   const router = useRouter();
@@ -138,11 +140,7 @@ export default function ShopsPage() {
                 </thead>
                 <tbody>
                   {loading ? (
-                    <tr>
-                      <td colSpan={9} style={{ padding: '40px 0', textAlign: 'center' }}>
-                        <div className="loading-wrapper"><div className="spinner" /></div>
-                      </td>
-                    </tr>
+                    <TableSkeleton columns={9} rows={6} hasThumbnail />
                   ) : filtered.length === 0 ? (
                     <tr>
                       <td colSpan={9} style={{ padding: '36px 20px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
@@ -166,27 +164,13 @@ export default function ShopsPage() {
                           </td>
                           <td>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                              <div
-                                style={{
-                                  width: 32,
-                                  height: 32,
-                                  borderRadius: '50%',
-                                  background: '#e2e8f0',
-                                  color: '#94a3b8',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  fontSize: 18,
-                                  flexShrink: 0,
-                                  overflow: 'hidden',
-                                }}
-                              >
-                                {m.photo ? (
-                                  <img src={m.photo} alt={m.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                ) : (
-                                  <span style={{ fontSize: 16 }}>🏪</span>
-                                )}
-                              </div>
+                              <Thumbnail
+                                src={m.photo || null}
+                                alt={m.name || 'Merchant'}
+                                size={36}
+                                shape="rounded"
+                                type="merchant"
+                              />
                               <div>
                                 <div style={{ fontWeight: 600 }}>{m.name}</div>
                                 {m.nameKh && m.nameKh !== m.name && (

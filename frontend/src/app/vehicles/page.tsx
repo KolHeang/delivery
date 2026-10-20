@@ -12,6 +12,7 @@ import { FaRegEdit, FaTrashAlt } from 'react-icons/fa';
 import { FiPlusCircle } from 'react-icons/fi';
 import Pagination from '@/components/ui/Pagination';
 import { useLanguage } from '@/lib/LanguageContext';
+import { TableSkeleton } from '@/components/ui/Skeleton';
 
 const TYPES = ['motorbike', 'car', 'van', 'truck', 'tuk-tuk'];
 
@@ -79,11 +80,7 @@ export default function VehiclesPage() {
                 </thead>
                 <tbody>
                   {loading ? (
-                    <tr>
-                      <td colSpan={7} style={{ padding: '40px 0', textAlign: 'center' }}>
-                        <div className="loading-wrapper"><div className="spinner" /></div>
-                      </td>
-                    </tr>
+                    <TableSkeleton columns={7} rows={5} />
                   ) : items.length === 0 ? (
                     <tr>
                       <td colSpan={7} style={{ padding: '36px 20px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>

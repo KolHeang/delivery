@@ -6,6 +6,10 @@ import { FirebaseCredential } from '../settings/entities/firebase-credential.ent
 import { DriverNotification } from '../mobile/driver/entities/driver-notification.entity';
 import { MerchantNotification } from '../mobile/merchant/entities/merchant-notification.entity';
 
+import { FirebaseLog } from './entities/firebase-log.entity';
+import { User } from '../users/entities/users.entity';
+import { Merchant } from '../merchants/entities/merchant.entity';
+
 @Global()
 @Module({
   imports: [
@@ -14,6 +18,9 @@ import { MerchantNotification } from '../mobile/merchant/entities/merchant-notif
       FirebaseCredential,
       DriverNotification,
       MerchantNotification,
+      FirebaseLog,
+      User,
+      Merchant,
     ]),
   ],
   providers: [FirebaseService],

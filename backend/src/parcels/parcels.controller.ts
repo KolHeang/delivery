@@ -55,6 +55,7 @@ export class ParcelsController {
   @ApiQuery({ name: 'merchantPaymentStatus', required: false, type: String })
   @ApiQuery({ name: 'startDate', required: false, type: String })
   @ApiQuery({ name: 'endDate', required: false, type: String })
+  @ApiQuery({ name: 'ids', required: false, type: String })
   findAll(
     @Request() req: any,
     @Query('page') page?: string,
@@ -67,6 +68,7 @@ export class ParcelsController {
     @Query('merchantPaymentStatus') merchantPaymentStatus?: string,
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
+    @Query('ids') ids?: string,
   ) {
     return this.parcelsService.findAll({
       page: page ? +page : undefined,
@@ -79,6 +81,7 @@ export class ParcelsController {
       merchantPaymentStatus,
       startDate,
       endDate,
+      ids,
       tenantId: this.getEffectiveTenantId(req),
     });
   }

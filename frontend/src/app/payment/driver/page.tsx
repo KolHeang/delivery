@@ -12,6 +12,7 @@ import { useTenant } from '@/lib/TenantContext';
 import DateInput, { formatDateToDDMMYYYY, getLocalDateString } from '@/components/ui/DateInput';
 import Modal from '@/components/ui/Modal';
 import { useSettings } from '@/lib/SettingsContext';
+import { TableSkeleton, Skeleton } from '@/components/ui/Skeleton';
 
 
 
@@ -392,8 +393,24 @@ export default function PaymentWithStaffPage() {
   if (loading) return (
     <div className="app-layout">
       <Sidebar />
-      <div className="main-content">
-        <div className="loading-wrapper"><div className="spinner" /></div>
+      <div className="main-content" style={{ background: '#f3f4f6', minHeight: '100vh', fontFamily: 'Kantumruy Pro, sans-serif' }}>
+        <Topbar title={lang === 'km' ? 'ទូទាត់ប្រាក់ជាមួយអ្នកដឹក' : 'Payment with Delivery'} subtitle={lang === 'km' ? 'ទូទាត់ប្រាក់ជាមួយអ្នកដឹកជញ្ជូន' : 'Settle payout with delivery drivers'} />
+        <div className="page-content" style={{ padding: 20 }}>
+          <div className="card" style={{ padding: 20, marginBottom: 20 }}>
+            <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
+              <Skeleton width={180} height={38} borderRadius={6} />
+              <Skeleton width={180} height={38} borderRadius={6} />
+              <Skeleton width={120} height={38} borderRadius={6} />
+            </div>
+          </div>
+          <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+            <table style={{ width: '100%' }}>
+              <tbody>
+                <TableSkeleton columns={10} rows={8} hasThumbnail />
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
     </div>
   );

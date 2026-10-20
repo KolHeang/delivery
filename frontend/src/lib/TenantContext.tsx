@@ -14,6 +14,7 @@ export interface TenantInfo {
   logoUrl?: string;
   phone?: string;
   email?: string;
+  address?: string;
   plan?: {
     name: string;
     limits?: {
@@ -92,6 +93,7 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
             logoUrl: res.tenant.logo,
             phone: res.tenant.phone,
             email: res.tenant.email,
+            address: res.tenant.address,
             status: res.tenant.status,
             plan: res.plan,
           });

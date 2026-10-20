@@ -62,6 +62,7 @@ export class ParcelsService {
     merchantPaymentStatus?: string;
     startDate?: string;
     endDate?: string;
+    ids?: string | number[];
     tenantId?: number;
   }): Promise<PaginatedResult<Parcel>> {
     const qb = this.repo
@@ -73,6 +74,18 @@ export class ParcelsService {
       .leftJoinAndSelect('parcel.customer', 'customer')
       .leftJoinAndSelect('parcel.zone', 'zone')
       .orderBy('parcel.createdAt', 'DESC');
+
+    if (query?.ids) {
+      const idList = Array.isArray(query.ids)
+        ? query.ids
+        : String(query.ids)
+            .split(',')
+            .map((x) => parseInt(x.trim(), 10))
+            .filter((x) => !isNaN(x));
+      if (idList.length > 0) {
+        qb.andWhere('parcel.id IN (:...idList)', { idList });
+      }
+    }
 
     if (query?.tenantId) {
       qb.andWhere('parcel.tenantId = :tenantId', { tenantId: query.tenantId });
@@ -135,7 +148,7 @@ export class ParcelsService {
     if (query?.search) {
       const term = `%${query.search.trim()}%`;
       qb.andWhere(
-        '(parcel.trackingCode ILIKE :term OR parcel.receiverName ILIKE :term OR parcel.receiverPhone ILIKE :term OR parcel.receiverAddress ILIKE :term OR merchant.name ILIKE :term OR driver.name ILIKE :term)',
+        '(parcel.trackingCode ILIKE :term OR parcel.receiverName ILIKE :term OR parcel.receiverPhone ILIKE :term OR parcel.receiverAddress ILIKE :term OR merchant.name ILIKE :term OR merchant.nameKh ILIKE :term OR driver.name ILIKE :term OR driver.nameKh ILIKE :term)',
         { term },
       );
     }

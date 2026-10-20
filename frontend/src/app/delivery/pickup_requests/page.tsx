@@ -7,6 +7,7 @@ import Sidebar from '@/components/layout/Sidebar';
 import Topbar from '@/components/layout/Topbar';
 import api from '@/lib/api';
 import { useLanguage } from '@/lib/LanguageContext';
+import { TableSkeleton } from '@/components/ui/Skeleton';
 import {
   MdRefresh, MdSearch, MdClose, MdVisibility, MdDirectionsBike,
   MdCheckCircle, MdHourglassEmpty, MdLocalShipping,
@@ -190,11 +191,7 @@ export default function PickupRequestsPage() {
                 </thead>
                 <tbody>
                   {loading ? (
-                    <tr>
-                      <td colSpan={10} style={{ padding: '40px 0', textAlign: 'center' }}>
-                        <div className="loading-wrapper"><div className="spinner" /></div>
-                      </td>
-                    </tr>
+                    <TableSkeleton columns={10} rows={6} hasThumbnail />
                   ) : filtered.length === 0 ? (
                     <tr>
                       <td colSpan={10} style={{ padding: '36px 20px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>

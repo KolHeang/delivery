@@ -15,6 +15,7 @@ import {
 } from 'recharts';
 import { MdHome, MdLocalPostOffice, MdSearch } from 'react-icons/md';
 import DateInput, { getLocalDateString } from '@/components/ui/DateInput';
+import { StatsSkeleton, ChartSkeleton, Skeleton } from '@/components/ui/Skeleton';
 
 const STATUS_COLORS: Record<string, string> = {
   pending: '#f59e0b', 'in-warehouse': '#0f766e', assigned: '#6366f1',
@@ -37,7 +38,7 @@ export default function DashboardPage() {
   }, []);
 
   // Date range filters
-  const [rangeType, setRangeType] = useState('all');
+  const [rangeType, setRangeType] = useState('today');
   const [customStart, setCustomStart] = useState(() => getLocalDateString());
   const [customEnd, setCustomEnd] = useState(() => getLocalDateString());
 
@@ -46,7 +47,7 @@ export default function DashboardPage() {
     let start = '';
     let end = '';
 
-    const formatDate = (d: Date) => d.toISOString().split('T')[0];
+    const formatDate = (d: Date) => getLocalDateString(d);
 
     if (type === 'today') {
       start = formatDate(today);
@@ -118,7 +119,41 @@ export default function DashboardPage() {
     <div className="app-layout">
       <Sidebar />
       <div className="main-content">
-        <div className="loading-wrapper"><div className="spinner" /></div>
+        <Topbar title={t('dashboard')} subtitle={t('dashboardSubtitle')} />
+        <div className="page-content">
+          {/* Skeleton Stats Grid */}
+          <StatsSkeleton count={12} />
+
+          {/* Skeleton Summary Flow */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, margin: '20px 0' }}>
+            <Skeleton height={100} borderRadius={12} />
+            <Skeleton height={100} borderRadius={12} />
+            <Skeleton height={100} borderRadius={12} />
+          </div>
+
+          {/* Skeleton Charts */}
+          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 20 }}>
+            <ChartSkeleton height={320} />
+            <ChartSkeleton height={320} />
+          </div>
+
+          {/* Skeleton Drivers Card */}
+          <div className="card" style={{ marginTop: 20, padding: 20 }}>
+            <Skeleton width={180} height={20} style={{ marginBottom: 16 }} />
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 12 }}>
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', borderRadius: 12, background: '#f8fafc' }}>
+                  <Skeleton width={34} height={34} borderRadius="50%" />
+                  <div style={{ flex: 1 }}>
+                    <Skeleton width="60%" height={14} style={{ marginBottom: 6 }} />
+                    <Skeleton width="40%" height={10} />
+                  </div>
+                  <Skeleton width={30} height={20} />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

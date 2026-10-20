@@ -11,6 +11,8 @@ import { FaRegEdit, FaTrashAlt } from 'react-icons/fa';
 import { FiPlusCircle } from 'react-icons/fi';
 import { useLanguage } from '@/lib/LanguageContext';
 import Pagination from '@/components/ui/Pagination';
+import { TableSkeleton } from '@/components/ui/Skeleton';
+import Thumbnail from '@/components/ui/Thumbnail';
 
 export default function StaffPage() {
   const router = useRouter();
@@ -148,11 +150,7 @@ export default function StaffPage() {
                 </thead>
                 <tbody>
                   {loading ? (
-                    <tr>
-                      <td colSpan={12} style={{ padding: '40px 0', textAlign: 'center' }}>
-                        <div className="loading-wrapper"><div className="spinner" /></div>
-                      </td>
-                    </tr>
+                    <TableSkeleton columns={12} rows={6} hasThumbnail />
                   ) : filtered.length === 0 ? (
                     <tr>
                       <td colSpan={12} style={{ padding: '36px 20px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
@@ -194,28 +192,13 @@ export default function StaffPage() {
                           </td>
                           <td>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                              <div
-                                style={{
-                                  width: 32,
-                                  height: 32,
-                                  borderRadius: '50%',
-                                  background: 'var(--primary-light, #e0e7ff)',
-                                  color: 'var(--primary, #3b82f6)',
-                                  fontSize: 13,
-                                  fontWeight: 600,
-                                  overflow: 'hidden',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  flexShrink: 0,
-                                }}
-                              >
-                                {d.photo ? (
-                                  <img src={d.photo} alt={d.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                ) : (
-                                  (d.name?.[0] || 'U').toUpperCase()
-                                )}
-                              </div>
+                              <Thumbnail
+                                src={d.photo || null}
+                                alt={d.name || 'User'}
+                                size={34}
+                                shape="circle"
+                                type="avatar"
+                              />
                               <div>
                                 <div style={{ fontWeight: 600 }}>{d.name}</div>
                                 {d.nameKh && d.nameKh !== d.name && (

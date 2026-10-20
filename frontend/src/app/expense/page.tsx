@@ -12,6 +12,7 @@ import { FiPlusCircle } from 'react-icons/fi';
 import { useLanguage } from '@/lib/LanguageContext';
 import Pagination from '@/components/ui/Pagination';
 import { formatDate } from '@/lib/date-utils';
+import { TableSkeleton } from '@/components/ui/Skeleton';
 
 export default function ExpenseListPage() {
   const router = useRouter();
@@ -73,11 +74,7 @@ export default function ExpenseListPage() {
                 </thead>
                 <tbody>
                   {loading ? (
-                    <tr>
-                      <td colSpan={5} style={{ padding: '40px 0', textAlign: 'center' }}>
-                        <div className="loading-wrapper"><div className="spinner" /></div>
-                      </td>
-                    </tr>
+                    <TableSkeleton columns={5} rows={5} />
                   ) : expenses.length === 0 ? (
                     <tr>
                       <td colSpan={5} style={{ padding: '36px 20px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>

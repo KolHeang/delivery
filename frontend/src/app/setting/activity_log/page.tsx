@@ -8,6 +8,7 @@ import Topbar from '@/components/layout/Topbar';
 import api from '@/lib/api';
 import { useLanguage } from '@/lib/LanguageContext';
 import Pagination from '@/components/ui/Pagination';
+import { TableSkeleton } from '@/components/ui/Skeleton';
 import { MdSearch, MdFilterList, MdRemoveRedEye, MdRefresh } from 'react-icons/md';
 
 export default function ActivityLogsPage() {
@@ -232,34 +233,32 @@ export default function ActivityLogsPage() {
               <span className="card-title">📋 {isKh ? 'ប្រវត្តិនៃសកម្មភាពប្រព័ន្ធ' : 'System Audit Log Records'}</span>
             </div>
 
-            {loading ? (
-              <div className="loading-wrapper">
-                <div className="spinner" />
-              </div>
-            ) : logs.length === 0 ? (
-              <div className="empty-state">
-                <div className="empty-state-icon">📋</div>
-                <div className="empty-state-title">{isKh ? 'រកមិនឃើញប្រវត្តិកត់ត្រាឡើយ' : 'No Audit Logs Found'}</div>
-              </div>
-            ) : (
-              <>
-                <div style={{ overflowX: 'auto' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                    <thead>
-                      <tr>
-                        <th style={{ width: 60 }}>{isKh ? 'ល.រ' : 'No.'}</th>
-                        <th>{isKh ? 'កាលបរិច្ឆេទ' : 'Timestamp'}</th>
-                        <th>{isKh ? 'អ្នកធ្វើសកម្មភាព' : 'Actor'}</th>
-                        <th>{isKh ? 'សកម្មភាព' : 'Action Type'}</th>
-                        <th>{isKh ? 'ប្រភេទ Module' : 'Entity'}</th>
-                        <th>{isKh ? 'ID គោលដៅ' : 'Target ID'}</th>
-                        <th>{isKh ? 'ការពិពណ៌នា' : 'Description'}</th>
-                        <th>IP Address</th>
-                        <th style={{ textAlign: 'center', width: 100 }}>{isKh ? 'សកម្មភាព' : 'Details'}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {logs.map((log, idx) => {
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr>
+                    <th style={{ width: 60 }}>{isKh ? 'ល.រ' : 'No.'}</th>
+                    <th>{isKh ? 'កាលបរិច្ឆេទ' : 'Timestamp'}</th>
+                    <th>{isKh ? 'អ្នកធ្វើសកម្មភាព' : 'Actor'}</th>
+                    <th>{isKh ? 'សកម្មភាព' : 'Action Type'}</th>
+                    <th>{isKh ? 'ប្រភេទ Module' : 'Entity'}</th>
+                    <th>{isKh ? 'ID គោលដៅ' : 'Target ID'}</th>
+                    <th>{isKh ? 'ការពិពណ៌នា' : 'Description'}</th>
+                    <th>IP Address</th>
+                    <th style={{ textAlign: 'center', width: 100 }}>{isKh ? 'សកម្មភាព' : 'Details'}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {loading ? (
+                    <TableSkeleton columns={9} rows={8} />
+                  ) : logs.length === 0 ? (
+                    <tr>
+                      <td colSpan={9} style={{ textAlign: 'center', padding: '36px 20px', color: 'var(--text-muted)' }}>
+                        {isKh ? 'រកមិនឃើញប្រវត្តិកត់ត្រាឡើយ' : 'No Audit Logs Found'}
+                      </td>
+                    </tr>
+                  ) : (
+                    logs.map((log, idx) => {
                         const actorName = log.user?.name || log.merchant?.name || 'Anonymous';
                         const actorRole = log.user ? log.user.role : (log.merchant ? 'merchant' : 'system');
                         return (
@@ -312,7 +311,7 @@ export default function ActivityLogsPage() {
                             </td>
                           </tr>
                         );
-                      })}
+                      }))}
                     </tbody>
                   </table>
                 </div>
@@ -324,9 +323,7 @@ export default function ActivityLogsPage() {
                   onPageChange={page => setCurrentPage(page)}
                   onPageSizeChange={size => { setPageSize(size); setCurrentPage(1); }}
                 />
-              </>
-            )}
-          </div>
+              </div>
         </div>
       </div>
 

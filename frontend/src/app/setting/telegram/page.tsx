@@ -9,6 +9,7 @@ import api from '@/lib/api';
 import { useLanguage } from '@/lib/LanguageContext';
 import Modal from '@/components/ui/Modal';
 import Pagination from '@/components/ui/Pagination';
+import { TableSkeleton } from '@/components/ui/Skeleton';
 import {
   MdSearch,
   MdCheckCircle,
@@ -202,11 +203,7 @@ export default function TelegramSettingsPage() {
                 </thead>
                 <tbody>
                   {loading ? (
-                    <tr>
-                      <td colSpan={7} style={{ padding: '40px 0', textAlign: 'center' }}>
-                        <div className="loading-wrapper"><div className="spinner" /></div>
-                      </td>
-                    </tr>
+                    <TableSkeleton columns={7} rows={5} />
                   ) : pagedItems.length === 0 ? (
                     <tr>
                       <td colSpan={7} style={{ padding: '36px 20px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>

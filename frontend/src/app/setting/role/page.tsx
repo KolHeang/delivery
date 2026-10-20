@@ -11,6 +11,7 @@ import { MdSecurity } from 'react-icons/md';
 import { FaRegEdit, FaTrashAlt } from 'react-icons/fa';
 import { FiPlusCircle } from 'react-icons/fi';
 import Pagination from '@/components/ui/Pagination';
+import { TableSkeleton } from '@/components/ui/Skeleton';
 
 interface Permission {
   id: number;
@@ -133,11 +134,7 @@ export default function RolesListPage() {
                 </thead>
                 <tbody>
                   {loading ? (
-                    <tr>
-                      <td colSpan={5} style={{ padding: '40px 0', textAlign: 'center' }}>
-                        <div className="loading-wrapper"><div className="spinner" /></div>
-                      </td>
-                    </tr>
+                    <TableSkeleton columns={5} rows={4} />
                   ) : roles.length === 0 ? (
                     <tr>
                       <td colSpan={5} style={{ padding: '36px 20px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>

@@ -190,28 +190,51 @@ export class AuthService {
   }
 
   async saveDeviceToken(role: string, id: number, dto: SaveDeviceTokenDto) {
-    const { token, deviceType } = dto;
-    let deviceToken = await this.deviceTokenRepository.findOne({
-      where: { token },
-    });
+    try {
+      const { token, deviceType } = dto;
 
-    if (deviceToken) {
-      deviceToken.userId = role === 'merchant' ? null : id;
-      deviceToken.merchantId = role === 'merchant' ? id : null;
-      if (deviceType) {
-        deviceToken.deviceType = deviceType;
+      // 1. Clean up older stale tokens of this user/merchant so they don't pile up dead tokens
+      if (role === 'merchant') {
+        await this.deviceTokenRepository
+          .createQueryBuilder()
+          .delete()
+          .where('merchant_id = :id AND token != :token', { id, token })
+          .execute();
+      } else {
+        await this.deviceTokenRepository
+          .createQueryBuilder()
+          .delete()
+          .where('user_id = :id AND token != :token', { id, token })
+          .execute();
       }
-    } else {
-      deviceToken = this.deviceTokenRepository.create({
-        token,
-        deviceType,
-        userId: role === 'merchant' ? null : id,
-        merchantId: role === 'merchant' ? id : null,
-      });
-    }
 
-    await this.deviceTokenRepository.save(deviceToken);
-    return { success: true, message: 'Device token saved successfully' };
+      // 2. Find if this exact token exists (or belonged to another account)
+      let deviceToken = await this.deviceTokenRepository.findOne({
+        where: { token },
+      });
+
+      if (deviceToken) {
+        deviceToken.userId = role === 'merchant' ? null : id;
+        deviceToken.merchantId = role === 'merchant' ? id : null;
+        if (deviceType) {
+          deviceToken.deviceType = deviceType;
+        }
+      } else {
+        deviceToken = this.deviceTokenRepository.create({
+          token,
+          deviceType,
+          userId: role === 'merchant' ? null : id,
+          merchantId: role === 'merchant' ? id : null,
+        });
+      }
+
+      await this.deviceTokenRepository.save(deviceToken);
+      console.log(`📱 [DeviceToken Registered] Role: ${role}, ID: ${id}, DeviceType: ${deviceType || 'unknown'}, Token: ${token?.slice(0, 20)}...`);
+      return { success: true, message: 'Device token saved successfully' };
+    } catch (err: any) {
+      console.error(`❌ [DeviceToken Error] Failed to register device token for ${role} #${id}:`, err);
+      throw err;
+    }
   }
 
   async forgotPassword(identifier: string) {

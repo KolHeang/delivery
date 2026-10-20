@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from 'react';
 import api from '@/lib/api';
 import { formatDateToDDMMYYYY } from '@/components/ui/DateInput';
 import { useSettings } from '@/lib/SettingsContext';
+import { useTenant } from '@/lib/TenantContext';
 
 const getKhmerDateString = (date: Date = new Date()) => {
   const days = ['អាទិត្យ', 'ចន្ទ', 'អង្គារ', 'ពុធ', 'ព្រហស្បតិ៍', 'សុក្រ', 'សៅរ៍'];
@@ -29,6 +30,7 @@ const getKhmerDateString = (date: Date = new Date()) => {
 
 export default function ReportPaymentCustomerPage() {
   const { khrRate } = useSettings();
+  const { tenant } = useTenant();
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -68,7 +70,7 @@ export default function ReportPaymentCustomerPage() {
       hasAutoPrintedRef.current = true;
       const timer = setTimeout(() => {
         window.print();
-      }, 500);
+      }, 700);
       return () => clearTimeout(timer);
     }
   }, [loading, data, error]);
@@ -97,8 +99,33 @@ export default function ReportPaymentCustomerPage() {
   const parcels = data.parcels || data.orders || [];
   const orders = parcels;
   const payment = data.payment;
-  const orgInfo = data.orgInfo;
+  const orgInfo = data.orgInfo || {};
   const merchant = payment?.merchant;
+
+  const dynamicLogo = orgInfo.logo || orgInfo.logoUrl || data.tenant?.logo || data.tenant?.logoUrl || tenant?.logoUrl;
+
+  const getDynamicCompanyName = () => {
+    if (orgInfo.name && orgInfo.name !== 'Delivery Express' && orgInfo.name !== 'EBS Digital Solutions') {
+      return orgInfo.name;
+    }
+    if (data.tenant?.name) return data.tenant.name;
+    if (tenant?.companyName) return tenant.companyName;
+    if (typeof window !== 'undefined') {
+      const hostname = window.location.hostname;
+      const parts = hostname.split('.');
+      if (parts.length > 1 && parts[0] !== 'www' && parts[0] !== 'localhost') {
+        return parts[0]
+          .split('-')
+          .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+          .join(' ');
+      }
+    }
+    return orgInfo.name || 'Delivery Express';
+  };
+
+  const dynamicCompanyName = getDynamicCompanyName();
+  const dynamicAddress = orgInfo.address || data.tenant?.address || tenant?.address || 'Phnom Penh, Cambodia';
+  const dynamicPhone = orgInfo.phone || data.tenant?.phone || tenant?.phone || '012345676';
 
   const deliveredOrders = orders.filter((o: any) => o.status === 'delivered');
   const inTransitOrders = orders.filter((o: any) => o.status === 'in-transit' || o.status === 'picked-up' || o.status === 'pending' || o.status === 'failed');
@@ -138,7 +165,7 @@ export default function ReportPaymentCustomerPage() {
             max-width: 100% !important;
             width: 100% !important;
           }
-          th, td, tr {
+          th, td, tr, img {
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
           }
@@ -206,25 +233,41 @@ export default function ReportPaymentCustomerPage() {
           {/* Left: Company Details */}
           <div className="receipt-header-left" style={{ fontSize: 11, lineHeight: '1.6', flex: 1 }}>
             <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 6 }}>
-              <div style={{
-                width: 36, height: 36, borderRadius: 10,
-                background: 'linear-gradient(135deg, #2563eb, #6366f1)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: '#fff', fontSize: 18, boxShadow: '0 4px 10px rgba(37,99,235,0.2)',
-                flexShrink: 0,
-                WebkitPrintColorAdjust: 'exact',
-                printColorAdjust: 'exact'
-              }}>
-                📦
-              </div>
+              {dynamicLogo ? (
+                <img 
+                  src={dynamicLogo} 
+                  alt="Logo" 
+                  style={{ 
+                    width: 42, 
+                    height: 42, 
+                    borderRadius: 8, 
+                    objectFit: 'contain',
+                    flexShrink: 0,
+                    WebkitPrintColorAdjust: 'exact',
+                    printColorAdjust: 'exact'
+                  }} 
+                />
+              ) : (
+                <div style={{
+                  width: 36, height: 36, borderRadius: 10,
+                  background: 'linear-gradient(135deg, #2563eb, #6366f1)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  color: '#fff', fontSize: 18, boxShadow: '0 4px 10px rgba(37,99,235,0.2)',
+                  flexShrink: 0,
+                  WebkitPrintColorAdjust: 'exact',
+                  printColorAdjust: 'exact'
+                }}>
+                  📦
+                </div>
+              )}
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <span style={{ fontSize: 18, fontWeight: 800, color: '#1e3a8a', letterSpacing: '0.5px', lineHeight: 1.1, WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
-                  {orgInfo.name || 'Delivery Express'}
+                  {dynamicCompanyName}
                 </span>
               </div>
             </div>
-            <div><strong>អាសយដ្ឋាន៖</strong> {orgInfo.address}</div>
-            <div><strong>ទូរស័ព្ទ៖</strong> {orgInfo.phone}</div>
+            <div><strong>អាសយដ្ឋាន៖</strong> {dynamicAddress}</div>
+            <div><strong>ទូរស័ព្ទ៖</strong> {dynamicPhone}</div>
           </div>
 
           {/* Center: Title */}

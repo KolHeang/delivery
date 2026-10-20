@@ -1,5 +1,5 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, UseGuards, Req } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth, ApiOperation, ApiParam } from '@nestjs/swagger';
+import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards, Req } from '@nestjs/common';
+import { ApiTags, ApiBearerAuth, ApiOperation, ApiParam, ApiQuery } from '@nestjs/swagger';
 import { SettingsService } from './settings.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/permissions.guard';
@@ -69,6 +69,61 @@ export class SettingsController {
   getAllFirebase(@Req() req: any) {
     const tenantId = req.headers['x-tenant-id'] ? +req.headers['x-tenant-id'] : (req.user?.tenantId ? +req.user.tenantId : undefined);
     return this.settingsService.getAllFirebaseConfigs(tenantId);
+  }
+
+  @Get('firebase/logs')
+  @ApiOperation({ summary: 'Get Firebase push notification logs' })
+  @RequirePermissions('settings.general', 'settings.manage')
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiQuery({ name: 'status', required: false, type: String })
+  getFirebaseLogs(
+    @Query('limit') limit?: string,
+    @Query('status') status?: string,
+    @Req() req?: any,
+  ) {
+    const tenantId = req.headers['x-tenant-id']
+      ? +req.headers['x-tenant-id']
+      : (req.user?.tenantId ? +req.user.tenantId : undefined);
+    return this.settingsService.getFirebaseLogs(
+      limit ? parseInt(limit, 10) : 100,
+      status,
+      tenantId,
+    );
+  }
+
+  @Get('firebase/tokens')
+  @ApiOperation({ summary: 'Get registered mobile device tokens' })
+  @RequirePermissions('settings.general', 'settings.manage')
+  getRegisteredDevices() {
+    return this.settingsService.getRegisteredDevices();
+  }
+
+  @Post('firebase/test')
+  @ApiOperation({ summary: 'Test Firebase connection & dispatch test notification' })
+  @RequirePermissions('settings.general', 'settings.manage')
+  testFirebase(
+    @Body() body: { targetToken?: string; title?: string; body?: string },
+    @Req() req?: any,
+  ) {
+    const tenantId = req.headers['x-tenant-id']
+      ? +req.headers['x-tenant-id']
+      : (req.user?.tenantId ? +req.user.tenantId : undefined);
+    return this.settingsService.testFirebase({
+      targetToken: body?.targetToken,
+      title: body?.title,
+      body: body?.body,
+      tenantId,
+    });
+  }
+
+  @Delete('firebase/logs/clear')
+  @ApiOperation({ summary: 'Clear Firebase notification logs' })
+  @RequirePermissions('settings.general', 'settings.manage')
+  clearFirebaseLogs(@Req() req?: any) {
+    const tenantId = req.headers['x-tenant-id']
+      ? +req.headers['x-tenant-id']
+      : (req.user?.tenantId ? +req.user.tenantId : undefined);
+    return this.settingsService.clearFirebaseLogs(tenantId);
   }
 
   @Get('firebase/:id')

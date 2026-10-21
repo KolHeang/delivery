@@ -21,6 +21,7 @@ import { Partner } from './partners/partner.entity';
 import { Commission } from './commissions/commission.entity';
 import { SaasInvoice } from './invoices/saas-invoice.entity';
 import { SaasPayment } from './payments/saas-payment.entity';
+import { SaasPaymentOption } from './payments/saas-payment-option.entity';
 
 // Services
 import { SaasService } from './saas.service';
@@ -62,6 +63,7 @@ import { DomainsController } from './domains/domains.controller';
       Commission,
       SaasInvoice,
       SaasPayment,
+      SaasPaymentOption,
       Zone,
       SubZone,
     ]),

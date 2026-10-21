@@ -29,7 +29,7 @@ export class Partner {
   @Column({ name: 'referral_code', unique: true })
   referralCode: string;
 
-  @Column('decimal', { name: 'commission_rate', precision: 5, scale: 2, default: 15.0 })
+  @Column('decimal', { name: 'commission_rate', precision: 7, scale: 4, default: 15.0 })
   commissionRate: number; // e.g. 15.00 for 15%
 
   @Column('jsonb', {

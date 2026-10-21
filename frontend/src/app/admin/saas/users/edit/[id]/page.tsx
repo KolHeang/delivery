@@ -1,26 +1,40 @@
 'use client';
 
+import { SaasMasterLayout } from '@/components/layout/SaasMasterLayout';
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, useParams } from 'next/navigation';
 import { saasApi } from '@/lib/saas-api';
 import { getUser, clearAuth } from '@/lib/auth';
+import { useLanguage } from '@/lib/LanguageContext';
+import { FlagKm, FlagEn } from '@/components/ui/Flags';
+import { SaasCloudIcon } from '@/components/ui/SaasCloudIcon';
 import {
   MdDashboard,
   MdBusiness,
-  MdArrowBack,
+  MdReceiptLong,
+  MdPayment,
   MdGroup,
   MdWorkspacePremium,
   MdLocalOffer,
   MdAttachMoney,
   MdLogout,
   MdKeyboardArrowDown,
+  MdArrowBack,
+  MdPerson,
+  MdEmail,
+  MdPhone,
+  MdVpnKey,
+  MdSecurity,
+  MdCheckCircle,
 } from 'react-icons/md';
 
 export default function EditSaasAdminPage() {
   const router = useRouter();
   const params = useParams();
   const adminId = Number(params.id);
+  const { lang, setLang } = useLanguage();
+  const tr = (km: string, en: string) => (lang === 'km' ? km : en);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -80,8 +94,8 @@ export default function EditSaasAdminPage() {
           });
         }
       } catch (err) {
-        alert('បរាជ័យក្នុងការទាញយកព័ត៌មាន SaaS Admin');
-        router.push('/admin/saas?tab=users');
+        alert(tr('បរាជ័យក្នុងការទាញយកព័ត៌មាន SaaS Admin', 'Failed to load SaaS Admin details'));
+        router.push('/admin/saas/users');
       } finally {
         setLoading(false);
       }
@@ -93,7 +107,7 @@ export default function EditSaasAdminPage() {
   }, [adminId, router]);
 
   const handleLogout = () => {
-    if (confirm('តើអ្នកពិតជាចង់ចាកចេញពីប្រព័ន្ធ (Logout) មែនទេ?')) {
+    if (confirm(tr('តើអ្នកពិតជាចង់ចាកចេញពីប្រព័ន្ធ (Logout) មែនទេ?', 'Are you sure you want to log out?'))) {
       clearAuth();
       localStorage.removeItem('saas_admin');
       router.push('/admin/saas/login');
@@ -102,8 +116,8 @@ export default function EditSaasAdminPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!adminForm.name || !adminForm.email) {
-      alert('សូមបំពេញព័ត៌មានចាំបាច់ឱ្យបានគ្រប់គ្រាន់ (*)');
+    if (!adminForm.name.trim() || !adminForm.email.trim()) {
+      alert(tr('សូមបំពេញព័ត៌មានចាំបាច់ឱ្យបានគ្រប់គ្រាន់ (*)', 'Please fill in required fields (*)'));
       return;
     }
 
@@ -121,304 +135,21 @@ export default function EditSaasAdminPage() {
       }
 
       await saasApi.updateSaasAdmin(adminId, payload);
-      alert('បានកែប្រែ SaaS Platform Admin ជោគជ័យ!');
-      router.push('/admin/saas?tab=users');
+      alert(tr('បានកែប្រែ SaaS Platform Admin ជោគជ័យ!', 'SaaS Platform Admin updated successfully!'));
+      router.push('/admin/saas/users');
     } catch (err: any) {
-      alert(err.response?.data?.message || 'បរាជ័យក្នុងការកែប្រែ SaaS Admin');
+      alert(err.response?.data?.message || tr('បរាជ័យក្នុងការកែប្រែ SaaS Admin', 'Failed to update SaaS Admin'));
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: '#f8fafc', fontFamily: 'inherit' }}>
-      {/* 1. SIDEBAR */}
-      <aside
-        style={{
-          width: 270,
-          background: '#2b529a',
-          borderRight: '1px solid rgba(255, 255, 255, 0.12)',
-          display: 'flex',
-          flexDirection: 'column',
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          bottom: 0,
-          zIndex: 100,
-          boxShadow: '4px 0 24px rgba(0,0,0,0.15)',
-        }}
-      >
-        <div style={{ padding: '24px 20px', borderBottom: '1px solid rgba(255, 255, 255, 0.12)', display: 'flex', alignItems: 'center', gap: 12 }}>
-          <div style={{ width: 42, height: 42, borderRadius: 12, background: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, color: '#1e3b75', fontSize: 20 }}>
-            EBS
-          </div>
-          <div>
-            <div style={{ fontWeight: 900, fontSize: 16, color: '#ffffff' }}>EBS CLOUD</div>
-            <div style={{ fontSize: 11, color: '#bfdbfe', fontWeight: 600 }}>SaaS Management</div>
-          </div>
-        </div>
-
-        <div style={{ padding: '20px 14px', flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <Link
-            href="/admin/saas?tab=dashboard"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 12,
-              width: '100%',
-              padding: '11px 16px',
-              borderRadius: 10,
-              background: 'transparent',
-              color: '#ffffff',
-              fontSize: 14,
-              fontWeight: 600,
-              textDecoration: 'none',
-              borderLeft: '4px solid transparent',
-              transition: 'all 0.15s',
-            }}
-          >
-            <MdDashboard size={20} color="#bfdbfe" />
-            <span>ផ្ទាំងគ្រប់គ្រងទូទៅ</span>
-          </Link>
-
-          <Link
-            href="/admin/saas?tab=tenants"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 12,
-              width: '100%',
-              padding: '11px 16px',
-              borderRadius: 10,
-              background: 'transparent',
-              color: '#ffffff',
-              fontSize: 14,
-              fontWeight: 600,
-              textDecoration: 'none',
-              borderLeft: '4px solid transparent',
-              transition: 'all 0.15s',
-            }}
-          >
-            <MdBusiness size={20} color="#bfdbfe" />
-            <span>បញ្ជីក្រុមហ៊ុនជាវសេវា</span>
-          </Link>
-
-          <Link
-            href="/admin/saas?tab=users"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 12,
-              width: '100%',
-              padding: '11px 16px',
-              borderRadius: 10,
-              background: 'rgba(255, 255, 255, 0.15)',
-              color: '#ffffff',
-              fontSize: 14,
-              fontWeight: 700,
-              textDecoration: 'none',
-              borderLeft: '4px solid #60a5fa',
-              transition: 'all 0.15s',
-            }}
-          >
-            <MdGroup size={20} color="#60a5fa" />
-            <span>គណនី SaaS Admins</span>
-          </Link>
-
-          <Link
-            href="/admin/saas?tab=plans"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 12,
-              width: '100%',
-              padding: '11px 16px',
-              borderRadius: 10,
-              background: 'transparent',
-              color: '#ffffff',
-              fontSize: 14,
-              fontWeight: 600,
-              textDecoration: 'none',
-              borderLeft: '4px solid transparent',
-              transition: 'all 0.15s',
-            }}
-          >
-            <MdWorkspacePremium size={20} color="#bfdbfe" />
-            <span>កញ្ចប់សេវា</span>
-          </Link>
-
-          <Link
-            href="/admin/saas?tab=coupons"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 12,
-              width: '100%',
-              padding: '11px 16px',
-              borderRadius: 10,
-              background: 'transparent',
-              color: '#ffffff',
-              fontSize: 14,
-              fontWeight: 600,
-              textDecoration: 'none',
-              borderLeft: '4px solid transparent',
-              transition: 'all 0.15s',
-            }}
-          >
-            <MdLocalOffer size={20} color="#bfdbfe" />
-            <span>គូប៉ុងបញ្ចុះតម្លៃ</span>
-          </Link>
-
-          <Link
-            href="/admin/saas?tab=partners"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 12,
-              width: '100%',
-              padding: '11px 16px',
-              borderRadius: 10,
-              background: 'transparent',
-              color: '#ffffff',
-              fontSize: 14,
-              fontWeight: 600,
-              textDecoration: 'none',
-              borderLeft: '4px solid transparent',
-              transition: 'all 0.15s',
-            }}
-          >
-            <MdAttachMoney size={20} color="#bfdbfe" />
-            <span>ដៃគូសហការ</span>
-          </Link>
-        </div>
-      </aside>
-
-      {/* 2. MAIN CONTENT AREA */}
-      <div style={{ flex: 1, marginLeft: 270, display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-        {/* Topbar */}
-        <header
-          style={{
-            height: 64,
-            background: '#2b529a',
-            borderBottom: '1px solid rgba(255, 255, 255, 0.12)',
-            padding: '0 32px',
-            display: 'flex',
-            justifyContent: 'flex-end',
-            alignItems: 'center',
-            position: 'sticky',
-            top: 0,
-            zIndex: 80,
-            boxShadow: '0 4px 16px rgba(0,0,0,0.06)',
-          }}
-        >
-          <div style={{ position: 'relative', paddingLeft: 14, borderLeft: '1px solid rgba(255, 255, 255, 0.2)' }}>
-            <button
-              onClick={() => setShowProfileDropdown(!showProfileDropdown)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 10,
-                background: showProfileDropdown ? 'rgba(255, 255, 255, 0.18)' : 'rgba(255, 255, 255, 0.08)',
-                border: '1px solid rgba(255, 255, 255, 0.2)',
-                borderRadius: 12,
-                padding: '6px 12px',
-                cursor: 'pointer',
-                textAlign: 'left',
-              }}
-            >
-              <div
-                style={{
-                  width: 34,
-                  height: 34,
-                  borderRadius: '50%',
-                  background: 'linear-gradient(135deg, #3b82f6, #6366f1)',
-                  color: '#ffffff',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontWeight: 900,
-                  fontSize: 14,
-                }}
-              >
-                {user?.name ? user.name.charAt(0).toUpperCase() : 'A'}
-              </div>
-              <div>
-                <div style={{ fontSize: 13, fontWeight: 900, color: '#ffffff', lineHeight: 1.2 }}>{user?.name || 'Admin User'}</div>
-                <div style={{ fontSize: 11, color: '#bfdbfe', fontWeight: 600 }}>{user?.email || 'admin@gmail.com'}</div>
-              </div>
-              <MdKeyboardArrowDown
-                size={20}
-                color="#ffffff"
-                style={{
-                  marginLeft: 4,
-                  transform: showProfileDropdown ? 'rotate(180deg)' : 'rotate(0deg)',
-                }}
-              />
-            </button>
-
-            {showProfileDropdown && (
-              <>
-                <div
-                  onClick={() => setShowProfileDropdown(false)}
-                  style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 90 }}
-                />
-                <div
-                  style={{
-                    position: 'absolute',
-                    top: 'calc(100% + 8px)',
-                    right: 0,
-                    width: 250,
-                    background: '#ffffff',
-                    borderRadius: 16,
-                    boxShadow: '0 14px 35px -4px rgba(0,0,0,0.22)',
-                    border: '1px solid #e2e8f0',
-                    padding: '8px',
-                    zIndex: 95,
-                  }}
-                >
-                  <div style={{ padding: '10px 12px', borderBottom: '1px solid #f1f5f9' }}>
-                    <div style={{ fontSize: 13.5, fontWeight: 900, color: '#0f172a' }}>{user?.name || 'Admin User'}</div>
-                    <div style={{ fontSize: 11.5, color: '#64748b', marginTop: 1 }}>{user?.email || 'admin@gmail.com'}</div>
-                  </div>
-
-                  <div style={{ padding: '6px 0' }}>
-                    <button
-                      onClick={() => {
-                        setShowProfileDropdown(false);
-                        handleLogout();
-                      }}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 10,
-                        width: '100%',
-                        padding: '9px 12px',
-                        border: 'none',
-                        background: '#fef2f2',
-                        color: '#dc2626',
-                        fontSize: 13,
-                        fontWeight: 800,
-                        borderRadius: 10,
-                        cursor: 'pointer',
-                        textAlign: 'left',
-                      }}
-                    >
-                      <MdLogout size={18} />
-                      <span>ចាកចេញ (Logout)</span>
-                    </button>
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
-        </header>
-
-        {/* Page Content Body */}
-        <main style={{ flex: 1, padding: '24px 32px', width: '100%', minWidth: 0, boxSizing: 'border-box' }}>
-          {/* Back Button & Title */}
+    <SaasMasterLayout activeTab="users">
+          {/* Header & Back Button */}
           <div style={{ marginBottom: 20 }}>
             <Link
-              href="/admin/saas?tab=users"
+              href="/admin/saas/users"
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -428,48 +159,69 @@ export default function EditSaasAdminPage() {
                 fontSize: 13,
                 fontWeight: 600,
                 marginBottom: 10,
+                transition: 'color 0.15s',
               }}
+              onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--accent)')}
+              onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-muted)')}
             >
               <MdArrowBack size={16} />
-              <span>ត្រឡប់ទៅបញ្ជី SaaS Admins</span>
+              <span>{tr('ត្រឡប់ទៅបញ្ជី SaaS Admins', 'Back to SaaS Admins List')}</span>
             </Link>
 
-            <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 4px' }}>
-              កែប្រែ SaaS Platform Admin
+            <h1 style={{ fontSize: 22, fontWeight: 800, color: '#0f172a', margin: '0 0 6px', letterSpacing: '-0.3px' }}>
+              {tr('កែប្រែព័ត៌មាន SaaS Platform Admin', 'Edit SaaS Platform Admin')}
             </h1>
-            <p style={{ fontSize: 12.5, color: 'var(--text-muted)', margin: 0 }}>
-              កែប្រែព័ត៌មានគណនី និងតួនាទី Role របស់អ្នកគ្រប់គ្រង SaaS Platform
+            <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: 0 }}>
+              {tr('កែសម្រួលព័ត៌មានគណនី Admin ឬផ្លាស់ប្តូរពាក្យសម្ងាត់', 'Update Admin account credentials or reset password')}
             </p>
           </div>
 
-          {/* Form Card */}
-          <div className="card">
-            <div className="card-header">
-              <span className="card-title">ព័ត៌មានគណនី Admin</span>
+          {loading ? (
+            <div className="card" style={{ padding: '60px 20px', textAlign: 'center', color: '#64748b' }}>
+              <div style={{ fontSize: 28, marginBottom: 12 }}>⏳</div>
+              <div style={{ fontWeight: 700 }}>{tr('កំពុងទាញយកព័ត៌មាន...', 'Loading admin information...')}</div>
             </div>
+          ) : (
+            /* Form Card */
+            <div className="card" style={{ maxWidth: 860, background: '#ffffff', borderRadius: 16, border: '1px solid #e2e8f0', boxShadow: '0 4px 14px rgba(0,0,0,0.03)' }}>
+              <div className="card-header" style={{ padding: '16px 24px', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ width: 32, height: 32, borderRadius: 8, background: '#eff6ff', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <MdPerson size={18} />
+                </div>
+                <span className="card-title" style={{ fontSize: 15, fontWeight: 700, margin: 0 }}>
+                  {tr('ព័ត៌មានគណនី SaaS Admin', 'SaaS Admin Account Information')}
+                </span>
+              </div>
 
-            <div className="card-body">
-              {loading ? (
-                <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>កំពុងទាញយកទិន្នន័យ...</div>
-              ) : (
-                <form onSubmit={handleSubmit} autoComplete="off">
-                  <div className="form-row">
+              <div className="card-body" style={{ padding: '24px' }}>
+                <form onSubmit={handleSubmit} autoComplete="off" noValidate>
+                  {/* Prevent autofill ghost inputs */}
+                  <input type="text" style={{ display: 'none' }} tabIndex={-1} readOnly />
+                  <input type="password" style={{ display: 'none' }} tabIndex={-1} readOnly />
+
+                  {/* Row 1: Name & Phone */}
+                  <div className="form-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16, marginBottom: 16 }}>
                     <div className="form-group">
-                      <label className="form-label">
-                        ឈ្មោះអ្នកគ្រប់គ្រង <span style={{ color: '#ef4444' }}>*</span>
+                      <label className="form-label" style={{ fontWeight: 600, fontSize: 13, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <MdPerson size={15} color="#64748b" />
+                        <span>{tr('ឈ្មោះអ្នកគ្រប់គ្រង', 'Admin Full Name')}</span>
+                        <span style={{ color: '#ef4444' }}>*</span>
                       </label>
                       <input
                         type="text"
+                        required
                         className="form-control"
-                        placeholder="ឧ. John SuperAdmin"
+                        placeholder={tr('ឧ. John SuperAdmin', 'e.g. John SuperAdmin')}
                         value={adminForm.name}
                         onChange={(e) => setAdminForm({ ...adminForm, name: e.target.value })}
+                        style={{ height: 42, fontSize: 13.5 }}
                       />
                     </div>
 
                     <div className="form-group">
-                      <label className="form-label">
-                        លេខទូរស័ព្ទ
+                      <label className="form-label" style={{ fontWeight: 600, fontSize: 13, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <MdPhone size={15} color="#64748b" />
+                        <span>{tr('លេខទូរស័ព្ទ', 'Phone Number')}</span>
                       </label>
                       <input
                         type="text"
@@ -477,88 +229,111 @@ export default function EditSaasAdminPage() {
                         placeholder="012 345 678"
                         value={adminForm.phone}
                         onChange={(e) => setAdminForm({ ...adminForm, phone: e.target.value })}
+                        style={{ height: 42, fontSize: 13.5 }}
                       />
                     </div>
                   </div>
 
-                  <div className="form-row">
+                  {/* Row 2: Email & Password */}
+                  <div className="form-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16, marginBottom: 16 }}>
                     <div className="form-group">
-                      <label className="form-label">
-                        អ៊ីមែលសម្រាប់ Login <span style={{ color: '#ef4444' }}>*</span>
+                      <label className="form-label" style={{ fontWeight: 600, fontSize: 13, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <MdEmail size={15} color="#64748b" />
+                        <span>{tr('Email សម្រាប់ Login', 'Login Email')}</span>
+                        <span style={{ color: '#ef4444' }}>*</span>
                       </label>
                       <input
                         type="email"
+                        required
+                        name="saas_edit_admin_email_field"
+                        id="saas_edit_admin_email_field"
+                        autoComplete="off"
                         className="form-control"
                         placeholder="admin@ebsexpress.com"
                         value={adminForm.email}
                         onChange={(e) => setAdminForm({ ...adminForm, email: e.target.value })}
+                        style={{ height: 42, fontSize: 13.5 }}
                       />
                     </div>
 
                     <div className="form-group">
-                      <label className="form-label">
-                        ពាក្យសម្ងាត់ថ្មី
+                      <label className="form-label" style={{ fontWeight: 600, fontSize: 13, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <MdVpnKey size={15} color="#64748b" />
+                        <span>{tr('ពាក្យសម្ងាត់ថ្មី (ទុកទទេបើមិនប្តូរ)', 'New Password (Leave empty to keep current)')}</span>
                       </label>
                       <input
                         type="password"
+                        name="saas_edit_admin_password_field"
+                        id="saas_edit_admin_password_field"
+                        autoComplete="new-password"
                         className="form-control"
-                        placeholder="បញ្ចូលពាក្យសម្ងាត់ថ្មី..."
+                        placeholder={tr('ទុកទទេ ប្រសិនបើមិនចង់ប្តូរ...', 'Leave blank to keep unchanged...')}
                         value={adminForm.password}
                         onChange={(e) => setAdminForm({ ...adminForm, password: e.target.value })}
+                        style={{ height: 42, fontSize: 13.5 }}
                       />
                     </div>
                   </div>
 
-                  <div className="form-group">
-                    <label className="form-label">
-                      តួនាទី <span style={{ color: '#ef4444' }}>*</span>
-                    </label>
-                    <select
-                      className="form-control"
-                      value={adminForm.role}
-                      onChange={(e) => setAdminForm({ ...adminForm, role: e.target.value })}
-                    >
-                      <option value="super_admin">Super Admin</option>
-                      <option value="finance_admin">Finance Admin</option>
-                      <option value="support_admin">Support Admin</option>
-                    </select>
+                  {/* Row 3: Role & Status */}
+                  <div className="form-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16, marginBottom: 20 }}>
+                    <div className="form-group">
+                      <label className="form-label" style={{ fontWeight: 600, fontSize: 13, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <MdSecurity size={15} color="#64748b" />
+                        <span>{tr('តួនាទី', 'Admin Role')}</span>
+                        <span style={{ color: '#ef4444' }}>*</span>
+                      </label>
+                      <select
+                        className="form-control"
+                        value={adminForm.role}
+                        onChange={(e) => setAdminForm({ ...adminForm, role: e.target.value })}
+                        style={{ height: 42, fontSize: 13.5, fontWeight: 600 }}
+                      >
+                        <option value="super_admin">{tr('Super Admin (សិទ្ធិពេញលេញលើ SaaS)', 'Super Admin (Full SaaS Access)')}</option>
+                        <option value="finance_admin">{tr('Finance Admin (គ្រប់គ្រងការទូទាត់ & គម្រោង)', 'Finance Admin (Billing & Plans)')}</option>
+                        <option value="support_admin">{tr('Support Admin (ជំនួយការបច្ចេកទេស)', 'Support Admin (Technical Support)')}</option>
+                      </select>
+                    </div>
+
+                    <div className="form-group">
+                      <label className="form-label" style={{ fontWeight: 600, fontSize: 13, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <MdCheckCircle size={15} color="#64748b" />
+                        <span>{tr('ស្ថានភាពគណនី', 'Account Status')}</span>
+                      </label>
+                      <select
+                        className="form-control"
+                        value={adminForm.isActive ? 'true' : 'false'}
+                        onChange={(e) => setAdminForm({ ...adminForm, isActive: e.target.value === 'true' })}
+                        style={{ height: 42, fontSize: 13.5, fontWeight: 600 }}
+                      >
+                        <option value="true">{tr('● សកម្ម (Active)', '● Active')}</option>
+                        <option value="false">{tr('● ផ្អាកដំណើរការ (Inactive)', '● Inactive')}</option>
+                      </select>
+                    </div>
                   </div>
 
-                  <div className="form-group" style={{ marginTop: 10 }}>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', cursor: 'pointer' }}>
-                      <input
-                        type="checkbox"
-                        checked={adminForm.isActive}
-                        onChange={(e) => setAdminForm({ ...adminForm, isActive: e.target.checked })}
-                      />
-                      <span>ដំណើរការសកម្ម</span>
-                    </label>
-                  </div>
-
-                  {/* Submit Buttons */}
-                  <div style={{ marginTop: 24, display: 'flex', gap: 12, justifyContent: 'flex-end', borderTop: '1px solid var(--border)', paddingTop: 16 }}>
+                  {/* Form Action Buttons */}
+                  <div style={{ marginTop: 24, display: 'flex', gap: 12, justifyContent: 'flex-end', borderTop: '1px solid #e2e8f0', paddingTop: 18 }}>
                     <Link
-                      href="/admin/saas?tab=users"
+                      href="/admin/saas/users"
                       className="btn btn-cancel"
-                      style={{ background: '#dc2626', color: '#ffffff', border: '1px solid #dc2626', fontWeight: 700 }}
+                      style={{ background: '#dc2626', color: '#ffffff', border: '1px solid #dc2626', fontWeight: 700, padding: '9px 20px', borderRadius: 8, fontSize: 13.5 }}
                     >
-                      បោះបង់
+                      {tr('បោះបង់', 'Cancel')}
                     </Link>
                     <button
                       type="submit"
                       disabled={saving}
                       className="btn btn-primary"
-                      style={{ background: '#2563eb', color: '#ffffff', border: '1px solid #2563eb', fontWeight: 700 }}
+                      style={{ background: '#2563eb', color: '#ffffff', border: '1px solid #2563eb', fontWeight: 700, padding: '9px 24px', borderRadius: 8, fontSize: 13.5 }}
                     >
-                      {saving ? 'កំពុងរក្សាទុក...' : 'រក្សាទុក'}
+                      {saving ? tr('កំពុងរក្សាទុក...', 'Saving...') : tr('រក្សាទុក', 'Save')}
                     </button>
                   </div>
                 </form>
-              )}
+              </div>
             </div>
-          </div>
-        </main>
-      </div>
-    </div>
+          )}
+            </SaasMasterLayout>
   );
 }

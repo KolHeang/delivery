@@ -9,8 +9,9 @@ export default function DynamicTitle() {
   const searchParams = useSearchParams();
   const { tenant } = useTenant();
   const [orgName, setOrgName] = useState<string>('');
+  const [orgLogo, setOrgLogo] = useState<string>('');
 
-  // Listen to organization name updates in localStorage
+  // Listen to organization name & logo updates in localStorage
   useEffect(() => {
     const updateLocalOrg = () => {
       try {
@@ -19,6 +20,9 @@ export default function DynamicTitle() {
           const parsed = JSON.parse(cached);
           if (parsed?.name) {
             setOrgName(parsed.name);
+          }
+          if (parsed?.logo !== undefined) {
+            setOrgLogo(parsed.logo || '');
           }
         }
       } catch {}
@@ -80,17 +84,18 @@ export default function DynamicTitle() {
     // Pure clean title with NO suffixes ("— Tenants Management", "— Delivery Management", etc.)
     document.title = company || 'EBS Express';
 
-    // 3. Update Favicon if tenant has custom logo
-    if (tenant?.logoUrl) {
+    // 3. Update Favicon if tenant or organisation has custom logo
+    const effectiveFavicon = tenant?.logoUrl || orgLogo;
+    if (effectiveFavicon) {
       let iconLink = document.querySelector("link[rel*='icon']") as HTMLLinkElement;
       if (!iconLink) {
         iconLink = document.createElement('link');
         iconLink.rel = 'shortcut icon';
         document.getElementsByTagName('head')[0]?.appendChild(iconLink);
       }
-      iconLink.href = tenant.logoUrl;
+      iconLink.href = effectiveFavicon;
     }
-  }, [pathname, searchParams, tenant, orgName]);
+  }, [pathname, searchParams, tenant, orgName, orgLogo]);
 
   return null;
 }

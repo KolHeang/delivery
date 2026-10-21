@@ -51,13 +51,13 @@ export class SaasInvoice {
   @JoinColumn({ name: 'coupon_id' })
   coupon: Coupon;
 
-  @Column('decimal', { precision: 10, scale: 2 })
+  @Column('decimal', { precision: 10, scale: 4 })
   subtotal: number;
 
-  @Column('decimal', { name: 'discount_amount', precision: 10, scale: 2, default: 0.0 })
+  @Column('decimal', { name: 'discount_amount', precision: 10, scale: 4, default: 0.0 })
   discountAmount: number;
 
-  @Column('decimal', { name: 'total_amount', precision: 10, scale: 2 })
+  @Column('decimal', { name: 'total_amount', precision: 10, scale: 4 })
   totalAmount: number;
 
   @Column({

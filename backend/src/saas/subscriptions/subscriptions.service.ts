@@ -149,10 +149,11 @@ export class SubscriptionsService {
       isExpired,
       features: sub.plan?.features || {},
       limits: {
-        maxUsers: sub.plan?.maxUsers || 1,
-        maxDrivers: sub.plan?.maxDrivers || 0,
-        maxVehicles: sub.plan?.maxVehicles || 0,
-        maxOrdersPerMonth: sub.plan?.maxOrdersPerMonth || 100,
+        maxUsers: sub.plan?.maxUsers ?? 1,
+        maxDrivers: sub.plan?.maxDrivers ?? 0,
+        maxMerchants: (sub.plan as any)?.maxMerchants ?? 0,
+        maxVehicles: sub.plan?.maxVehicles ?? 0,
+        maxOrdersPerMonth: sub.plan?.maxOrdersPerMonth ?? 0,
       },
     };
   }

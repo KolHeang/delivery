@@ -55,6 +55,9 @@ import {
   MdStorefront,
   MdDirectionsCar,
   MdCalendarToday,
+  MdPayment,
+  MdCancel,
+  MdAccountBalance,
 } from 'react-icons/md';
 import { FaRegEdit, FaTrashAlt } from 'react-icons/fa';
 import { FiPlusCircle } from 'react-icons/fi';
@@ -64,19 +67,23 @@ import { SaasCloudIcon } from '@/components/ui/SaasCloudIcon';
 import Pagination from '@/components/ui/Pagination';
 import DateInput from '@/components/ui/DateInput';
 import { getTenantWorkspaceUrl } from '@/lib/domain';
+import { formatRemainingDuration } from '@/lib/date-utils';
 
-export default function SaasMasterPortal() {
+export default function SaasMasterPortal({ initialTab }: { initialTab?: 'dashboard' | 'tenants' | 'invoices' | 'create-invoice' | 'users' | 'plans' | 'coupons' | 'partners' | 'create-tenant' | 'create-partner' | 'payment-options' } = {}) {
   const router = useRouter();
   const { lang, setLang } = useLanguage();
   const tr = (km: string, en: string) => (lang === 'km' ? km : en);
 
-  const [activeMenu, setActiveMenu] = useState<'dashboard' | 'tenants' | 'invoices' | 'create-invoice' | 'users' | 'plans' | 'coupons' | 'partners' | 'create-tenant' | 'create-partner'>('dashboard');
+  const [activeMenu, setActiveMenu] = useState<'dashboard' | 'tenants' | 'invoices' | 'create-invoice' | 'users' | 'plans' | 'coupons' | 'partners' | 'create-tenant' | 'create-partner' | 'payment-options'>(initialTab || 'dashboard');
   const [subscriptions, setSubscriptions] = useState<any[]>([]);
   const [plans, setPlans] = useState<any[]>([]);
   const [coupons, setCoupons] = useState<any[]>([]);
   const [commissions, setCommissions] = useState<any[]>([]);
   const [saasAdminsList, setSaasAdminsList] = useState<any[]>([]);
   const [allInvoices, setAllInvoices] = useState<any[]>([]);
+  const [allPayments, setAllPayments] = useState<any[]>([]);
+  const [paymentOptions, setPaymentOptions] = useState<any[]>([]);
+  const [invoicesSubTab, setInvoicesSubTab] = useState<'invoices' | 'approvals' | 'all-payments'>('invoices');
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -89,8 +96,18 @@ export default function SaasMasterPortal() {
   // Tab Pagination States
   const [subsPage, setSubsPage] = useState(1);
   const [subsLimit, setSubsLimit] = useState(10);
+  const [companyTab, setCompanyTab] = useState<'all' | 'expiring_30'>('all');
   const [invoicesPage, setInvoicesPage] = useState(1);
   const [invoicesLimit, setInvoicesLimit] = useState(10);
+  const [paymentsPage, setPaymentsPage] = useState(1);
+  const [paymentsLimit, setPaymentsLimit] = useState(10);
+  const [paymentOptionsPage, setPaymentOptionsPage] = useState(1);
+  const [paymentOptionsLimit, setPaymentOptionsLimit] = useState(10);
+  const [paymentOptionSearch, setPaymentOptionSearch] = useState('');
+  const [paymentOptionFilter, setPaymentOptionFilter] = useState('all');
+  const [paymentOptionTypeFilter, setPaymentOptionTypeFilter] = useState('all');
+  const [paymentSearchQuery, setPaymentSearchQuery] = useState('');
+  const [paymentStatusFilter, setPaymentStatusFilter] = useState('all');
   const [adminsPage, setAdminsPage] = useState(1);
   const [adminsLimit, setAdminsLimit] = useState(10);
   const [plansPage, setPlansPage] = useState(1);
@@ -101,6 +118,29 @@ export default function SaasMasterPortal() {
   const [partnersLimit, setPartnersLimit] = useState(10);
   const [commissionsPage, setCommissionsPage] = useState(1);
   const [commissionsLimit, setCommissionsLimit] = useState(10);
+
+  // Modal: Payment Option State (Create / Edit)
+  const [showPaymentOptionModal, setShowPaymentOptionModal] = useState(false);
+  const [editingOptionId, setEditingOptionId] = useState<number | null>(null);
+  const [savingOption, setSavingOption] = useState(false);
+  const [paymentOptionForm, setPaymentOptionForm] = useState({
+    name: '',
+    type: 'offline' as 'offline' | 'aba' | 'khqr',
+    status: 'active' as 'active' | 'pending' | 'inactive',
+    bankName: 'ABA Bank',
+    accountName: 'EBS LOGISTICS SAAS CO., LTD.',
+    accountNumber: '',
+    qrCodeUrl: '',
+    instructions: '',
+    requiresApproval: true,
+    sortOrder: 1,
+  });
+
+  // Modal: Reject Payment State
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [selectedPaymentForReject, setSelectedPaymentForReject] = useState<any>(null);
+  const [rejectReason, setRejectReason] = useState('');
+  const [rejecting, setRejecting] = useState(false);
 
   // Modal: Renew / Extend Company Validity
   const [showRenewModal, setShowRenewModal] = useState(false);
@@ -245,19 +285,32 @@ export default function SaasMasterPortal() {
   });
   const [partnerErrors, setPartnerErrors] = useState<{ [key: string]: string }>({});
 
-  const handleSelectMenu = (tab: 'dashboard' | 'tenants' | 'invoices' | 'users' | 'plans' | 'coupons' | 'partners') => {
+  const handleSelectMenu = (tab: 'dashboard' | 'tenants' | 'invoices' | 'users' | 'plans' | 'coupons' | 'partners' | 'payment-options') => {
     setActiveMenu(tab);
+    const targetUrl = tab === 'dashboard' ? '/admin/saas' : `/admin/saas/${tab}`;
     if (typeof window !== 'undefined') {
-      window.history.replaceState(null, '', `?tab=${tab}`);
+      window.history.pushState(null, '', targetUrl);
     }
   };
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search);
-      const tab = params.get('tab');
-      if (tab && ['dashboard', 'tenants', 'invoices', 'users', 'plans', 'coupons', 'partners'].includes(tab)) {
-        setActiveMenu(tab as any);
+    if (initialTab) {
+      setActiveMenu(initialTab);
+    } else if (typeof window !== 'undefined') {
+      const pathname = window.location.pathname;
+      if (pathname.includes('/admin/saas/tenants')) setActiveMenu('tenants');
+      else if (pathname.includes('/admin/saas/users')) setActiveMenu('users');
+      else if (pathname.includes('/admin/saas/plans')) setActiveMenu('plans');
+      else if (pathname.includes('/admin/saas/coupons')) setActiveMenu('coupons');
+      else if (pathname.includes('/admin/saas/invoices')) setActiveMenu('invoices');
+      else if (pathname.includes('/admin/saas/payment-options')) setActiveMenu('payment-options');
+      else if (pathname.includes('/admin/saas/partners')) setActiveMenu('partners');
+      else {
+        const params = new URLSearchParams(window.location.search);
+        const tab = params.get('tab');
+        if (tab && ['dashboard', 'tenants', 'invoices', 'users', 'plans', 'coupons', 'partners', 'payment-options'].includes(tab)) {
+          setActiveMenu(tab as any);
+        }
       }
     }
     if (typeof window !== 'undefined') {
@@ -276,7 +329,7 @@ export default function SaasMasterPortal() {
   const loadAllData = async () => {
     try {
       setLoading(true);
-      const [subsRes, plansRes, couponsRes, commsRes, adminsRes, partnersRes, invoicesRes] = await Promise.all([
+      const [subsRes, plansRes, couponsRes, commsRes, adminsRes, partnersRes, invoicesRes, paymentsRes, optionsRes] = await Promise.all([
         saasApi.getAllSubscriptions().catch(() => []),
         saasApi.getPlans().catch(() => []),
         saasApi.getCoupons().catch(() => []),
@@ -284,6 +337,8 @@ export default function SaasMasterPortal() {
         saasApi.getSaasAdmins().catch(() => []),
         saasApi.getAllPartners().catch(() => []),
         saasApi.getAllInvoices().catch(() => []),
+        saasApi.getAllPayments().catch(() => []),
+        saasApi.getPaymentOptions(true).catch(() => []),
       ]);
 
       setSubscriptions(Array.isArray(subsRes) ? subsRes : (subsRes?.data || subsRes?.result || []));
@@ -293,6 +348,8 @@ export default function SaasMasterPortal() {
       setSaasAdminsList(Array.isArray(adminsRes) ? adminsRes : (adminsRes?.data || adminsRes?.result || []));
       setPartners(Array.isArray(partnersRes) ? partnersRes : (partnersRes?.data || partnersRes?.result || []));
       setAllInvoices(Array.isArray(invoicesRes) ? invoicesRes : (invoicesRes?.data || invoicesRes?.result || []));
+      setAllPayments(Array.isArray(paymentsRes) ? paymentsRes : ((paymentsRes as any)?.data || (paymentsRes as any)?.result || []));
+      setPaymentOptions(Array.isArray(optionsRes) ? optionsRes : ((optionsRes as any)?.data || (optionsRes as any)?.result || []));
     } catch (err) {
       console.error('Error loading SaaS data:', err);
     } finally {
@@ -457,6 +514,125 @@ export default function SaasMasterPortal() {
     }
   };
 
+  // ── SaaS Payment Approvals & Options Handlers ──
+  const pendingPayments = allPayments.filter((p) => p.status === 'pending');
+  const pendingPaymentsCount = pendingPayments.length;
+
+  const handleApprovePayment = async (paymentId: number) => {
+    if (!confirm(tr(
+      'តើអ្នកប្រាកដជាចង់អនុម័តការទូទាត់នេះមែនទេ? វិក្កយបត្រនឹងត្រូវកំណត់ជា «បង់រួច» ហើយគម្រោងក្រុមហ៊ុននឹងត្រូវបានបើកដំណើរការ / បន្តសុពលភាពជាស្វ័យប្រវត្តិ។',
+      'Are you sure you want to approve this offline payment? The invoice will be marked as PAID and company subscription will be activated / extended immediately.'
+    ))) return;
+    try {
+      const res = await saasApi.approvePayment(paymentId);
+      alert(res?.message || tr('ការទូទាត់ត្រូវបានអនុម័តជោគជ័យ!', 'Payment approved successfully!'));
+      await loadAllData();
+    } catch (err: any) {
+      alert(err.response?.data?.message || tr('បរាជ័យក្នុងការអនុម័តការទូទាត់', 'Failed to approve payment'));
+    }
+  };
+
+  const handleOpenRejectPayment = (payment: any) => {
+    setSelectedPaymentForReject(payment);
+    setRejectReason('');
+    setShowRejectModal(true);
+  };
+
+  const handleConfirmRejectPayment = async () => {
+    if (!selectedPaymentForReject) return;
+    try {
+      setRejecting(true);
+      await saasApi.rejectPayment(selectedPaymentForReject.id, rejectReason);
+      alert(tr('ការទូទាត់ត្រូវបានបដិសេធជោគជ័យ', 'Payment rejected successfully'));
+      setShowRejectModal(false);
+      setSelectedPaymentForReject(null);
+      await loadAllData();
+    } catch (err: any) {
+      alert(err.response?.data?.message || tr('បរាជ័យក្នុងការបដិសេធការទូទាត់', 'Failed to reject payment'));
+    } finally {
+      setRejecting(false);
+    }
+  };
+
+  const handleOpenCreatePaymentOption = () => {
+    setEditingOptionId(null);
+    setPaymentOptionForm({
+      name: '',
+      type: 'offline',
+      status: 'active',
+      bankName: 'ABA Bank',
+      accountName: 'EBS LOGISTICS SAAS CO., LTD.',
+      accountNumber: '',
+      qrCodeUrl: '',
+      instructions: 'Please transfer to the bank account and enter your Transaction ID.',
+      requiresApproval: true,
+      sortOrder: (paymentOptions.length + 1) * 10,
+    });
+    setShowPaymentOptionModal(true);
+  };
+
+  const handleOpenEditPaymentOption = (opt: any) => {
+    setEditingOptionId(opt.id);
+    setPaymentOptionForm({
+      name: opt.name || '',
+      type: opt.type || 'offline',
+      status: opt.status || 'active',
+      bankName: opt.bankName || '',
+      accountName: opt.accountName || '',
+      accountNumber: opt.accountNumber || '',
+      qrCodeUrl: opt.qrCodeUrl || '',
+      instructions: opt.instructions || '',
+      requiresApproval: opt.requiresApproval !== undefined ? opt.requiresApproval : true,
+      sortOrder: opt.sortOrder ?? 0,
+    });
+    setShowPaymentOptionModal(true);
+  };
+
+  const handleSavePaymentOption = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!paymentOptionForm.name) {
+      alert(tr('សូមបំពេញឈ្មោះជម្រើសទូទាត់', 'Please fill in payment option name'));
+      return;
+    }
+    try {
+      setSavingOption(true);
+      if (editingOptionId) {
+        await saasApi.updatePaymentOption(editingOptionId, paymentOptionForm);
+        alert(tr('បានកែប្រែជម្រើសទូទាត់ជោគជ័យ!', 'Payment option updated successfully!'));
+      } else {
+        await saasApi.createPaymentOption(paymentOptionForm);
+        alert(tr('បានបង្កើតជម្រើសទូទាត់ថ្មីជោគជ័យ!', 'Payment option created successfully!'));
+      }
+      setShowPaymentOptionModal(false);
+      await loadAllData();
+    } catch (err: any) {
+      alert(err.response?.data?.message || tr('បរាជ័យក្នុងការរក្សាទុកជម្រើសទូទាត់', 'Failed to save payment option'));
+    } finally {
+      setSavingOption(false);
+    }
+  };
+
+  const handleDeletePaymentOption = async (id: number) => {
+    if (!confirm(tr('តើអ្នកប្រាកដជាចង់លុបជម្រើសទូទាត់នេះមែនទេ?', 'Are you sure you want to delete this payment option?'))) return;
+    try {
+      await saasApi.deletePaymentOption(id);
+      alert(tr('បានលុបជម្រើសទូទាត់ជោគជ័យ!', 'Payment option deleted successfully!'));
+      await loadAllData();
+    } catch (err: any) {
+      alert(err.response?.data?.message || tr('បរាជ័យក្នុងការលុបជម្រើសទូទាត់', 'Failed to delete payment option'));
+    }
+  };
+
+  const handleToggleOptionStatus = async (opt: any) => {
+    const nextStatus = opt.status === 'active' ? 'inactive' : 'active';
+    try {
+      await saasApi.updatePaymentOption(opt.id, { status: nextStatus });
+      await loadAllData();
+    } catch (err: any) {
+      alert(err.response?.data?.message || tr('បរាជ័យក្នុងការផ្លាស់ប្តូរស្ថានភាព', 'Failed to change status'));
+    }
+  };
+
   const formatLocalDateStr = (d: Date) => {
     const year = d.getFullYear();
     const month = String(d.getMonth() + 1).padStart(2, '0');
@@ -599,11 +775,11 @@ export default function SaasMasterPortal() {
       description: plan.description || '',
       priceMonthly: Number(plan.priceMonthly) || 0,
       priceYearly: Number(plan.priceYearly) || 0,
-      maxUsers: plan.maxUsers || 10,
-      maxDrivers: plan.maxDrivers || 15,
-      maxMerchants: plan.maxMerchants || 50,
-      maxOrdersPerMonth: plan.maxOrdersPerMonth || 2000,
-      maxVehicles: plan.maxVehicles || 15,
+      maxUsers: plan.maxUsers ?? 10,
+      maxDrivers: plan.maxDrivers ?? 15,
+      maxMerchants: plan.maxMerchants ?? 50,
+      maxOrdersPerMonth: plan.maxOrdersPerMonth ?? 2000,
+      maxVehicles: plan.maxVehicles ?? 15,
       isPopular: !!plan.isPopular,
       isActive: plan.isActive !== false,
     });
@@ -1040,7 +1216,54 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
     return acc + price;
   }, 0);
 
+  const isExpiringIn30Days = (endVal?: string | Date | null) => {
+    if (!endVal) return false;
+    const end = new Date(endVal).getTime();
+    if (isNaN(end)) return false;
+    const now = Date.now();
+    const diffDays = Math.ceil((end - now) / (1000 * 60 * 60 * 24));
+    return diffDays <= 30;
+  };
+
+  const getExpiryBadgeInfo = (dateVal?: string | Date | null) => {
+    if (!dateVal) return null;
+    const end = new Date(dateVal).getTime();
+    if (isNaN(end)) return null;
+    const now = Date.now();
+    const diffDays = Math.ceil((end - now) / (1000 * 60 * 60 * 24));
+    if (diffDays < 0) {
+      return {
+        isExpired: true,
+        isExpiringSoon: true,
+        text: tr(`ផុតកំណត់ ${Math.abs(diffDays)} ថ្ងៃមុន`, `Expired ${Math.abs(diffDays)}d ago`),
+        color: '#dc2626',
+        bg: '#fee2e2',
+        border: '#fca5a5',
+      };
+    }
+    if (diffDays <= 30) {
+      return {
+        isExpired: false,
+        isExpiringSoon: true,
+        text: tr(`សល់ ${diffDays} ថ្ងៃ`, `${diffDays}d left`),
+        color: '#ea580c',
+        bg: '#ffedd5',
+        border: '#fdba74',
+      };
+    }
+    return null;
+  };
+
+  const expiringIn30DaysCount = subscriptions.filter((s) => {
+    const expiry = s.currentPeriodEnd || s.tenant?.subscriptionExpiresAt;
+    return isExpiringIn30Days(expiry);
+  }).length;
+
   const filteredSubscriptions = subscriptions.filter(s => {
+    if (companyTab === 'expiring_30') {
+      const expiry = s.currentPeriodEnd || s.tenant?.subscriptionExpiresAt;
+      if (!isExpiringIn30Days(expiry)) return false;
+    }
     const q = searchQuery.toLowerCase();
     return (
       (s.companyName && s.companyName.toLowerCase().includes(q)) ||
@@ -1204,6 +1427,7 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
             style={{
               display: 'flex',
               alignItems: 'center',
+              justifyContent: 'space-between',
               gap: 12,
               width: '100%',
               padding: '11px 16px',
@@ -1219,8 +1443,47 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
               borderLeft: (activeMenu === 'invoices' || activeMenu === 'create-invoice') ? '4px solid #ffffff' : '4px solid transparent',
             }}
           >
-            <MdReceiptLong size={20} color={(activeMenu === 'invoices' || activeMenu === 'create-invoice') ? '#ffffff' : '#bfdbfe'} />
-            <span>{tr('ប្រវត្តិវិក្កយបត្រ', 'Billing Invoices')}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <MdReceiptLong size={20} color={(activeMenu === 'invoices' || activeMenu === 'create-invoice') ? '#ffffff' : '#bfdbfe'} />
+              <span>{tr('ប្រវត្តិវិក្កយបត្រ', 'Billing Invoices')}</span>
+            </div>
+            {pendingPaymentsCount > 0 && (
+              <span style={{
+                background: '#ef4444',
+                color: '#ffffff',
+                fontSize: 11,
+                fontWeight: 900,
+                padding: '2px 7px',
+                borderRadius: 10,
+                boxShadow: '0 2px 6px rgba(239,68,68,0.5)',
+              }}>
+                {pendingPaymentsCount}
+              </span>
+            )}
+          </button>
+
+          <button
+            onClick={() => handleSelectMenu('payment-options')}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 12,
+              width: '100%',
+              padding: '11px 16px',
+              borderRadius: 10,
+              border: 'none',
+              background: activeMenu === 'payment-options' ? 'rgba(255, 255, 255, 0.18)' : 'transparent',
+              color: '#ffffff',
+              fontSize: 14,
+              fontWeight: activeMenu === 'payment-options' ? 900 : 600,
+              cursor: 'pointer',
+              textAlign: 'left',
+              transition: 'all 0.15s',
+              borderLeft: activeMenu === 'payment-options' ? '4px solid #ffffff' : '4px solid transparent',
+            }}
+          >
+            <MdPayment size={20} color={activeMenu === 'payment-options' ? '#ffffff' : '#bfdbfe'} />
+            <span>{tr('ជម្រើសទូទាត់', 'Payment Options')}</span>
           </button>
 
           <button
@@ -1516,10 +1779,10 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
             .saas-custom-table {
               width: 100% !important;
               border-collapse: collapse !important;
-              font-size: 13.5px !important;
+              font-size: 13px !important;
             }
             .saas-custom-table thead th {
-              background: #2f55a5 !important;
+              background: #2b529a !important;
               color: #ffffff !important;
               border-bottom: 1px solid rgba(255, 255, 255, 0.15) !important;
               font-size: 12.5px !important;
@@ -1529,22 +1792,17 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
               padding: 12px 16px !important;
             }
             .saas-custom-table tbody tr {
+              background: #ffffff !important;
               transition: background-color 0.15s ease !important;
               border-bottom: 1px solid #f1f5f9 !important;
             }
-            .saas-custom-table tbody tr:nth-child(odd) {
-              background: #f8fafc;
-            }
-            .saas-custom-table tbody tr:nth-child(even) {
-              background: #ffffff;
-            }
             .saas-custom-table tbody tr:hover td {
-              background: #eef2fa !important;
+              background: #f8fafc !important;
             }
             .saas-custom-table tbody td {
               vertical-align: middle !important;
               padding: 12px 16px !important;
-              color: #334155 !important;
+              color: #1e293b !important;
             }
           `}</style>
 
@@ -1560,6 +1818,7 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
               {activeMenu === 'plans' && tr('គម្រោងតម្លៃកញ្ចប់សេវា', 'Subscription Plans & Pricing')}
               {activeMenu === 'coupons' && tr('គូប៉ុងបញ្ចុះតម្លៃ', 'Promo Coupons & Discounts')}
               {activeMenu === 'partners' && tr('ដៃគូសហការ និងកម្រៃជើងសារ', 'Affiliate Partners & Commissions')}
+              {activeMenu === 'payment-options' && tr('ជម្រើសទូទាត់ប្រាក់', 'Payment Options')}
             </h1>
             <p style={{ fontSize: 12.5, color: 'var(--text-muted)', margin: 0 }}>
               {activeMenu === 'dashboard' && tr('ទិដ្ឋភាពរួមនៃប្រព័ន្ធ SaaS និងស្ថិតិចំណូលប្រចាំខែ', 'Overview of SaaS delivery platform and monthly recurring revenue')}
@@ -1571,15 +1830,31 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
               {activeMenu === 'plans' && tr('កំណត់តម្លៃ និងដែនកំណត់សម្រាប់កញ្ចប់សេវាកម្ម', 'Configure quotas, features, limits and pricing for each tier')}
               {activeMenu === 'coupons' && tr('បង្កើត និងគ្រប់គ្រងកូដបញ្ចុះតម្លៃសម្រាប់អតិថិជន', 'Create and monitor promotional discount coupons')}
               {activeMenu === 'partners' && tr('តាមដាន និងទូទាត់ប្រាក់កម្រៃជើងសារដៃគូសហការ', 'Track referral affiliate partners and commission payouts')}
+              {activeMenu === 'payment-options' && tr('គ្រប់គ្រងវិធីសាស្ត្រទូទាត់ប្រាក់ គណនីធនាគារ និងលក្ខខណ្ឌអនុម័តការជាវសេវា', 'Manage subscription payment gateways, bank accounts, and approval rules')}
             </p>
           </div>
 
           {/* TAB 1: MASTER DASHBOARD VIEW */}
           {activeMenu === 'dashboard' && (
             <div>
-              {/* 4 Metric KPI Cards */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 20, marginBottom: 32 }}>
-                <div style={{ background: '#fff', borderRadius: 20, padding: '24px', border: '1px solid #e2e8f0', boxShadow: '0 4px 14px rgba(0,0,0,0.03)', display: 'flex', alignItems: 'center', gap: 16 }}>
+              {/* 5 Metric KPI Cards */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 20, marginBottom: 32 }}>
+                <div
+                  onClick={() => {
+                    setCompanyTab('all');
+                    handleSelectMenu('tenants');
+                  }}
+                  style={{ background: '#fff', borderRadius: 20, padding: '24px', border: '1px solid #e2e8f0', boxShadow: '0 4px 14px rgba(0,0,0,0.03)', display: 'flex', alignItems: 'center', gap: 16, cursor: 'pointer', transition: 'all 0.2s ease' }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                    e.currentTarget.style.boxShadow = '0 6px 20px rgba(0,0,0,0.06)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = '0 4px 14px rgba(0,0,0,0.03)';
+                  }}
+                  title={tr('ចុចដើម្បីមើលបញ្ជីក្រុមហ៊ុនទាំងអស់', 'Click to view all companies')}
+                >
                   <div style={{ width: 54, height: 54, borderRadius: 16, background: '#eff6ff', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26, flexShrink: 0 }}>
                     🏢
                   </div>
@@ -1601,7 +1876,72 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
                   </div>
                 </div>
 
-                <div style={{ background: '#fff', borderRadius: 20, padding: '24px', border: '1px solid #e2e8f0', boxShadow: '0 4px 14px rgba(0,0,0,0.03)', display: 'flex', alignItems: 'center', gap: 16 }}>
+                {/* Expire in 30 Days Card */}
+                <div
+                  onClick={() => {
+                    setCompanyTab('expiring_30');
+                    handleSelectMenu('tenants');
+                  }}
+                  style={{
+                    background: '#fff',
+                    borderRadius: 20,
+                    padding: '24px',
+                    border: expiringIn30DaysCount > 0 ? '1.5px solid #fed7aa' : '1px solid #e2e8f0',
+                    boxShadow: '0 4px 14px rgba(0,0,0,0.03)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 16,
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                    e.currentTarget.style.boxShadow = '0 6px 20px rgba(0,0,0,0.06)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = '0 4px 14px rgba(0,0,0,0.03)';
+                  }}
+                  title={tr('ចុចដើម្បីមើលក្រុមហ៊ុនជិតផុតកំណត់', 'Click to view expiring companies')}
+                >
+                  <div style={{
+                    width: 54,
+                    height: 54,
+                    borderRadius: 16,
+                    background: expiringIn30DaysCount > 0 ? '#fff7ed' : '#f8fafc',
+                    color: expiringIn30DaysCount > 0 ? '#ea580c' : '#64748b',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: 26,
+                    flexShrink: 0
+                  }}>
+                    ⏳
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 13, color: '#64748b', fontWeight: 600 }}>{tr('ជិតផុតកំណត់ក្នុង 30 ថ្ងៃ', 'Expire in 30 Days')}</div>
+                    <div style={{ fontSize: 28, fontWeight: 900, color: expiringIn30DaysCount > 0 ? '#ea580c' : '#0f172a', marginTop: 2 }}>
+                      {expiringIn30DaysCount}
+                    </div>
+                    <div style={{ fontSize: 11.5, color: expiringIn30DaysCount > 0 ? '#ea580c' : '#64748b', fontWeight: 600, marginTop: 4 }}>
+                      {expiringIn30DaysCount > 0 ? tr('● ត្រូវការបន្តសុពលភាព', '● Requires renewal') : tr('គ្មានក្រុមហ៊ុនជិតផុតកំណត់', 'None expiring soon')}
+                    </div>
+                  </div>
+                </div>
+
+                <div
+                  onClick={() => handleSelectMenu('plans')}
+                  style={{ background: '#fff', borderRadius: 20, padding: '24px', border: '1px solid #e2e8f0', boxShadow: '0 4px 14px rgba(0,0,0,0.03)', display: 'flex', alignItems: 'center', gap: 16, cursor: 'pointer', transition: 'all 0.2s ease' }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                    e.currentTarget.style.boxShadow = '0 6px 20px rgba(0,0,0,0.06)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = '0 4px 14px rgba(0,0,0,0.03)';
+                  }}
+                  title={tr('ចុចមើលគម្រោងសេវាទាំងអស់', 'Click to view all plans')}
+                >
                   <div style={{ width: 54, height: 54, borderRadius: 16, background: '#fdf4ff', color: '#c026d3', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26, flexShrink: 0 }}>
                     💎
                   </div>
@@ -1612,7 +1952,19 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
                   </div>
                 </div>
 
-                <div style={{ background: '#fff', borderRadius: 20, padding: '24px', border: '1px solid #e2e8f0', boxShadow: '0 4px 14px rgba(0,0,0,0.03)', display: 'flex', alignItems: 'center', gap: 16 }}>
+                <div
+                  onClick={() => handleSelectMenu('partners')}
+                  style={{ background: '#fff', borderRadius: 20, padding: '24px', border: '1px solid #e2e8f0', boxShadow: '0 4px 14px rgba(0,0,0,0.03)', display: 'flex', alignItems: 'center', gap: 16, cursor: 'pointer', transition: 'all 0.2s ease' }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                    e.currentTarget.style.boxShadow = '0 6px 20px rgba(0,0,0,0.06)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = '0 4px 14px rgba(0,0,0,0.03)';
+                  }}
+                  title={tr('ចុចមើលដៃគូសហការទាំងអស់', 'Click to view affiliate partners')}
+                >
                   <div style={{ width: 54, height: 54, borderRadius: 16, background: '#fef3c7', color: '#d97706', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26, flexShrink: 0 }}>
                     🤝
                   </div>
@@ -1629,8 +1981,83 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
           {/* TAB 2: ALL TENANTS SUBSCRIBERS */}
           {activeMenu === 'tenants' && (
             <div className="card">
-              <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
-                <span className="card-title">{tr('បញ្ជីក្រុមហ៊ុនដែលបានចុះឈ្មោះ', 'Registered Companies')}</span>
+              <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 14 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+                  <span className="card-title" style={{ margin: 0 }}>{tr('បញ្ជីក្រុមហ៊ុនដែលបានចុះឈ្មោះ', 'Registered Companies')}</span>
+
+                  {/* Two Tabs: All & Expire in 30 Days */}
+                  <div style={{ display: 'inline-flex', background: '#f1f5f9', padding: '3px', borderRadius: '10px', gap: '3px' }}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCompanyTab('all');
+                        setSubsPage(1);
+                      }}
+                      style={{
+                        border: 'none',
+                        background: companyTab === 'all' ? '#ffffff' : 'transparent',
+                        color: companyTab === 'all' ? '#1e293b' : '#64748b',
+                        padding: '6px 14px',
+                        borderRadius: '7px',
+                        fontSize: 12.5,
+                        fontWeight: companyTab === 'all' ? 700 : 500,
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 6,
+                        boxShadow: companyTab === 'all' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+                        transition: 'all 0.15s ease',
+                      }}
+                    >
+                      <span>{tr('ទាំងអស់', 'All')}</span>
+                      <span style={{
+                        background: companyTab === 'all' ? '#2563eb' : '#e2e8f0',
+                        color: companyTab === 'all' ? '#ffffff' : '#64748b',
+                        padding: '1px 7px',
+                        borderRadius: 10,
+                        fontSize: 11,
+                        fontWeight: 700,
+                      }}>
+                        {subscriptions.length}
+                      </span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCompanyTab('expiring_30');
+                        setSubsPage(1);
+                      }}
+                      style={{
+                        border: 'none',
+                        background: companyTab === 'expiring_30' ? '#ffffff' : 'transparent',
+                        color: companyTab === 'expiring_30' ? '#ea580c' : '#64748b',
+                        padding: '6px 14px',
+                        borderRadius: '7px',
+                        fontSize: 12.5,
+                        fontWeight: companyTab === 'expiring_30' ? 700 : 500,
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 6,
+                        boxShadow: companyTab === 'expiring_30' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+                        transition: 'all 0.15s ease',
+                      }}
+                    >
+                      <span>⏳ {tr('ជិតផុតកំណត់ក្នុង 30 ថ្ងៃ', 'Expire in 30 Days')}</span>
+                      <span style={{
+                        background: companyTab === 'expiring_30' ? '#ea580c' : (expiringIn30DaysCount > 0 ? '#fee2e2' : '#e2e8f0'),
+                        color: companyTab === 'expiring_30' ? '#ffffff' : (expiringIn30DaysCount > 0 ? '#ef4444' : '#64748b'),
+                        padding: '1px 7px',
+                        borderRadius: 10,
+                        fontSize: 11,
+                        fontWeight: 700,
+                      }}>
+                        {expiringIn30DaysCount}
+                      </span>
+                    </button>
+                  </div>
+                </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
                   {/* Search Bar */}
@@ -1658,7 +2085,7 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
               <div style={{ overflowX: 'auto', width: '100%', WebkitOverflowScrolling: 'touch' }}>
                 <table className="saas-custom-table" style={{ width: '100%', minWidth: 860, borderCollapse: 'collapse', textAlign: 'left' }}>
                   <thead>
-                    <tr style={{ background: '#2f55a5', color: '#ffffff' }}>
+                    <tr style={{ background: '#2b529a', color: '#ffffff' }}>
                       <th style={{ width: 44, textAlign: 'center', whiteSpace: 'nowrap' }}>{tr('ល.រ', 'No.')}</th>
                       <th style={{ whiteSpace: 'nowrap', minWidth: 150 }}>{tr('ឈ្មោះក្រុមហ៊ុន', 'Company')}</th>
                       <th style={{ whiteSpace: 'nowrap' }}>{tr('Workspace Subdomain', 'Workspace Subdomain')}</th>
@@ -1672,7 +2099,24 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
                     </tr>
                   </thead>
                   <tbody>
-                    {paginatedSubscriptions.map((s, idx) => (
+                    {paginatedSubscriptions.length === 0 ? (
+                      <tr>
+                        <td colSpan={10} style={{ textAlign: 'center', padding: '48px 20px', color: '#64748b' }}>
+                          <div style={{ fontSize: 36, marginBottom: 8 }}>{companyTab === 'expiring_30' ? '🎉' : '🏢'}</div>
+                          <div style={{ fontSize: 14, fontWeight: 700, color: '#1e293b' }}>
+                            {companyTab === 'expiring_30'
+                              ? tr('មិនមានក្រុមហ៊ុនជិតផុតកំណត់ក្នុង 30 ថ្ងៃទេ', 'No companies expiring in the next 30 days')
+                              : tr('មិនមានទិន្នន័យក្រុមហ៊ុនទេ', 'No companies found')}
+                          </div>
+                          <div style={{ fontSize: 12.5, color: '#94a3b8', marginTop: 4 }}>
+                            {companyTab === 'expiring_30'
+                              ? tr('ក្រុមហ៊ុនទាំងអស់មានសុពលភាពលើសពី 30 ថ្ងៃ', 'All active company subscriptions are valid for more than 30 days')
+                              : tr('សូមសាកល្បងស្វែងរកដោយពាក្យគន្លឹះផ្សេង', 'Try adjusting your search criteria')}
+                          </div>
+                        </td>
+                      </tr>
+                    ) : (
+                      paginatedSubscriptions.map((s, idx) => (
                       <tr
                         key={s.id}
                       >
@@ -1749,8 +2193,32 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
                             ● {s.status}
                           </span>
                         </td>
-                        <td style={{ color: 'var(--text-secondary)', fontSize: 13 }}>
-                          {formatDate(s.currentPeriodEnd)}
+                        <td style={{ color: 'var(--text-secondary)', fontSize: 13, whiteSpace: 'nowrap' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <span style={{ fontWeight: 600 }}>{formatDate(s.currentPeriodEnd)}</span>
+                            {(() => {
+                              const badge = getExpiryBadgeInfo(s.currentPeriodEnd || s.tenant?.subscriptionExpiresAt);
+                              if (!badge) return null;
+                              return (
+                                <span
+                                  style={{
+                                    background: badge.bg,
+                                    color: badge.color,
+                                    border: `1px solid ${badge.border}`,
+                                    fontSize: 10.5,
+                                    fontWeight: 700,
+                                    padding: '1.5px 6px',
+                                    borderRadius: 6,
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: 3,
+                                  }}
+                                >
+                                  {badge.isExpired ? '⚠️' : '⏳'} {badge.text}
+                                </span>
+                              );
+                            })()}
+                          </div>
                         </td>
                         <td style={{ textAlign: 'right' }}>
                           <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end', alignItems: 'center' }}>
@@ -1818,7 +2286,8 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
                           </div>
                         </td>
                       </tr>
-                    ))}
+                    ))
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -2072,84 +2541,186 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
 
           {/* TAB: BILLING INVOICES */}
           {activeMenu === 'invoices' && (
-            <div className="card">
-              <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
-                <span className="card-title">{tr('ប្រវត្តិវិក្កយបត្រ & ការទូទាត់ទាំងអស់', 'All Invoices & Payments')}</span>
+            <div>
+              {/* Invoices & Payment Approvals Sub-Tab Switcher */}
+              <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  onClick={() => setInvoicesSubTab('invoices')}
+                  style={{
+                    padding: '9px 18px',
+                    borderRadius: 10,
+                    border: 'none',
+                    background: invoicesSubTab === 'invoices' ? '#2563eb' : '#ffffff',
+                    color: invoicesSubTab === 'invoices' ? '#ffffff' : '#475569',
+                    fontWeight: invoicesSubTab === 'invoices' ? 800 : 600,
+                    fontSize: 13,
+                    cursor: 'pointer',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  <MdReceiptLong size={16} />
+                  <span>{tr('វិក្កយបត្រទាំងអស់', 'All Invoices')}</span>
+                  <span style={{
+                    background: invoicesSubTab === 'invoices' ? 'rgba(255,255,255,0.25)' : '#e2e8f0',
+                    color: invoicesSubTab === 'invoices' ? '#ffffff' : '#475569',
+                    padding: '1px 7px',
+                    borderRadius: 12,
+                    fontSize: 11,
+                    fontWeight: 800,
+                  }}>
+                    {allInvoices.length}
+                  </span>
+                </button>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                  {/* Search Bar */}
-                  <div style={{ display: 'flex', alignItems: 'center', background: '#f8fafc', border: '1.5px solid var(--border)', borderRadius: 'var(--radius)', padding: '6px 12px', width: 230, height: 38 }}>
-                    <MdSearch size={17} color="var(--text-muted)" />
-                    <input
-                      type="text"
-                      placeholder={tr('ស្វែងរកវិក្កយបត្រ / ក្រុមហ៊ុន...', 'Search Invoice / Company...')}
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      style={{ border: 'none', background: 'transparent', outline: 'none', paddingLeft: 6, fontSize: 13, width: '100%' }}
-                    />
-                  </div>
+                <button
+                  type="button"
+                  onClick={() => setInvoicesSubTab('approvals')}
+                  style={{
+                    padding: '9px 18px',
+                    borderRadius: 10,
+                    border: 'none',
+                    background: invoicesSubTab === 'approvals' ? '#d97706' : '#ffffff',
+                    color: invoicesSubTab === 'approvals' ? '#ffffff' : '#475569',
+                    fontWeight: invoicesSubTab === 'approvals' ? 800 : 600,
+                    fontSize: 13,
+                    cursor: 'pointer',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  <MdAccountBalance size={16} />
+                  <span>{tr('ការទូទាត់ Offline រង់ចាំការអនុម័ត', 'Offline Approvals')}</span>
+                  {pendingPaymentsCount > 0 ? (
+                    <span style={{
+                      background: invoicesSubTab === 'approvals' ? '#ffffff' : '#ef4444',
+                      color: invoicesSubTab === 'approvals' ? '#d97706' : '#ffffff',
+                      padding: '1px 8px',
+                      borderRadius: 12,
+                      fontSize: 11,
+                      fontWeight: 900,
+                    }}>
+                      {pendingPaymentsCount}
+                    </span>
+                  ) : (
+                    <span style={{
+                      background: invoicesSubTab === 'approvals' ? 'rgba(255,255,255,0.25)' : '#e2e8f0',
+                      color: invoicesSubTab === 'approvals' ? '#ffffff' : '#475569',
+                      padding: '1px 7px',
+                      borderRadius: 12,
+                      fontSize: 11,
+                      fontWeight: 800,
+                    }}>
+                      0
+                    </span>
+                  )}
+                </button>
 
-                  {/* Status Filter */}
-                  <select
-                    value={invoiceStatusFilter}
-                    onChange={(e) => setInvoiceStatusFilter(e.target.value)}
-                    className="form-control"
-                    style={{ width: 'auto', padding: '6px 12px', fontSize: 13, height: 38, borderRadius: 'var(--radius)', borderColor: 'var(--border)' }}
-                  >
-                    <option value="all">{tr('ស្ថានភាពទាំងអស់', 'All Statuses')}</option>
-                    <option value="paid">{tr('បង់រួច', 'Paid')}</option>
-                    <option value="pending">{tr('មិនទាន់បង់', 'Pending')}</option>
-                    <option value="void">{tr('ទុកជាមោឃៈ', 'Void')}</option>
-                  </select>
-
-                  {/* Action Button */}
-                  <button
-                    type="button"
-                    onClick={handleOpenCreateInvoice}
-                    className="btn btn-primary btn-sm"
-                    style={{ display: 'inline-flex', alignItems: 'center', gap: 6, height: 38, padding: '0 16px', fontWeight: 700 }}
-                  >
-                    <FiPlusCircle size={15} />
-                    <span>{tr('ចេញវិក្កយបត្រថ្មី', 'Issue Invoice')}</span>
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setInvoicesSubTab('all-payments')}
+                  style={{
+                    padding: '9px 18px',
+                    borderRadius: 10,
+                    border: 'none',
+                    background: invoicesSubTab === 'all-payments' ? '#0f172a' : '#ffffff',
+                    color: invoicesSubTab === 'all-payments' ? '#ffffff' : '#475569',
+                    fontWeight: invoicesSubTab === 'all-payments' ? 800 : 600,
+                    fontSize: 13,
+                    cursor: 'pointer',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  <MdPayment size={16} />
+                  <span>{tr('ប្រវត្តិប្រតិបត្តិការទូទាត់ទាំងអស់', 'All Payments History')}</span>
+                  <span style={{
+                    background: invoicesSubTab === 'all-payments' ? 'rgba(255,255,255,0.25)' : '#e2e8f0',
+                    color: invoicesSubTab === 'all-payments' ? '#ffffff' : '#475569',
+                    padding: '1px 7px',
+                    borderRadius: 12,
+                    fontSize: 11,
+                    fontWeight: 800,
+                  }}>
+                    {allPayments.length}
+                  </span>
+                </button>
               </div>
 
-              <div style={{ overflowX: 'auto', width: '100%', WebkitOverflowScrolling: 'touch' }}>
-                <table className="saas-custom-table" style={{ width: '100%', minWidth: 860, borderCollapse: 'collapse', textAlign: 'left' }}>
-                  <thead>
-                    <tr style={{ background: '#2f55a5', color: '#ffffff' }}>
-                      <th style={{ width: 44, textAlign: 'center', whiteSpace: 'nowrap' }}>{tr('ល.រ', 'No.')}</th>
-                      <th style={{ whiteSpace: 'nowrap' }}>{tr('លេខវិក្កយបត្រ', 'Invoice No.')}</th>
-                      <th style={{ whiteSpace: 'nowrap' }}>{tr('ឈ្មោះក្រុមហ៊ុន', 'Company Name')}</th>
-                      <th style={{ whiteSpace: 'nowrap' }}>{tr('អ៊ីមែល', 'Email')}</th>
-                      <th style={{ whiteSpace: 'nowrap' }}>{tr('កាលបរិច្ឆេទបង្កើត', 'Created Date')}</th>
-                      <th style={{ whiteSpace: 'nowrap' }}>{tr('ថ្ងៃផុតកំណត់', 'Due Date')}</th>
-                      <th style={{ whiteSpace: 'nowrap' }}>{tr('តម្លៃដើម', 'Subtotal')}</th>
-                      <th style={{ whiteSpace: 'nowrap' }}>{tr('បញ្ចុះតម្លៃ', 'Discount')}</th>
-                      <th style={{ whiteSpace: 'nowrap' }}>{tr('ទឹកប្រាក់សរុប', 'Total Amount')}</th>
-                      <th style={{ whiteSpace: 'nowrap' }}>{tr('ស្ថានភាព', 'Status')}</th>
-                      <th style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>{tr('សកម្មភាព', 'Action')}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {allInvoices.filter((inv) => {
-                      const matchStatus = invoiceStatusFilter === 'all' || inv.status === invoiceStatusFilter;
-                      const term = searchQuery.toLowerCase();
-                      const matchSearch = !searchQuery || 
-                        inv.invoiceNumber?.toLowerCase().includes(term) ||
-                        inv.subscription?.companyName?.toLowerCase().includes(term) ||
-                        inv.user?.email?.toLowerCase().includes(term);
-                      return matchStatus && matchSearch;
-                    }).length === 0 ? (
-                      <tr>
-                        <td colSpan={11} style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-muted)' }}>
-                          {tr('មិនមានទិន្នន័យវិក្កយបត្រត្រូវបង្ហាញទេ', 'No invoices found')}
-                        </td>
-                      </tr>
-                    ) : (
-                      allInvoices
-                        .filter((inv) => {
+              {/* SUB-TAB 1: ALL INVOICES */}
+              {invoicesSubTab === 'invoices' && (
+                <div className="card">
+                  <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+                    <span className="card-title">{tr('ប្រវត្តិវិក្កយបត្រទាំងអស់', 'All Invoices')}</span>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                      {/* Search Bar */}
+                      <div style={{ display: 'flex', alignItems: 'center', background: '#f8fafc', border: '1.5px solid var(--border)', borderRadius: 'var(--radius)', padding: '6px 12px', width: 230, height: 38 }}>
+                        <MdSearch size={17} color="var(--text-muted)" />
+                        <input
+                          type="text"
+                          placeholder={tr('ស្វែងរកវិក្កយបត្រ / ក្រុមហ៊ុន...', 'Search Invoice / Company...')}
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          style={{ border: 'none', background: 'transparent', outline: 'none', paddingLeft: 6, fontSize: 13, width: '100%' }}
+                        />
+                      </div>
+
+                      {/* Status Filter */}
+                      <select
+                        value={invoiceStatusFilter}
+                        onChange={(e) => setInvoiceStatusFilter(e.target.value)}
+                        className="form-control"
+                        style={{ width: 'auto', padding: '6px 12px', fontSize: 13, height: 38, borderRadius: 'var(--radius)', borderColor: 'var(--border)' }}
+                      >
+                        <option value="all">{tr('ស្ថានភាពទាំងអស់', 'All Statuses')}</option>
+                        <option value="paid">{tr('បង់រួច', 'Paid')}</option>
+                        <option value="pending">{tr('មិនទាន់បង់', 'Pending')}</option>
+                        <option value="void">{tr('ទុកជាមោឃៈ', 'Void')}</option>
+                      </select>
+
+                      {/* Action Button */}
+                      <button
+                        type="button"
+                        onClick={handleOpenCreateInvoice}
+                        className="btn btn-primary btn-sm"
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: 6, height: 38, padding: '0 16px', fontWeight: 700 }}
+                      >
+                        <FiPlusCircle size={15} />
+                        <span>{tr('ចេញវិក្កយបត្រថ្មី', 'Issue Invoice')}</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div style={{ overflowX: 'auto', width: '100%', WebkitOverflowScrolling: 'touch' }}>
+                    <table className="saas-custom-table" style={{ width: '100%', minWidth: 860, borderCollapse: 'collapse', textAlign: 'left' }}>
+                      <thead>
+                        <tr style={{ background: '#2b529a', color: '#ffffff' }}>
+                          <th style={{ width: 44, textAlign: 'center', whiteSpace: 'nowrap' }}>{tr('ល.រ', 'No.')}</th>
+                          <th style={{ whiteSpace: 'nowrap' }}>{tr('លេខវិក្កយបត្រ', 'Invoice No.')}</th>
+                          <th style={{ whiteSpace: 'nowrap' }}>{tr('ឈ្មោះក្រុមហ៊ុន', 'Company Name')}</th>
+                          <th style={{ whiteSpace: 'nowrap' }}>{tr('អ៊ីមែល', 'Email')}</th>
+                          <th style={{ whiteSpace: 'nowrap' }}>{tr('កាលបរិច្ឆេទបង្កើត', 'Created Date')}</th>
+                          <th style={{ whiteSpace: 'nowrap' }}>{tr('ថ្ងៃផុតកំណត់', 'Due Date')}</th>
+                          <th style={{ whiteSpace: 'nowrap' }}>{tr('តម្លៃដើម', 'Subtotal')}</th>
+                          <th style={{ whiteSpace: 'nowrap' }}>{tr('បញ្ចុះតម្លៃ', 'Discount')}</th>
+                          <th style={{ whiteSpace: 'nowrap' }}>{tr('ទឹកប្រាក់សរុប', 'Total Amount')}</th>
+                          <th style={{ whiteSpace: 'nowrap' }}>{tr('ស្ថានភាព', 'Status')}</th>
+                          <th style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>{tr('សកម្មភាព', 'Action')}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {allInvoices.filter((inv) => {
                           const matchStatus = invoiceStatusFilter === 'all' || inv.status === invoiceStatusFilter;
                           const term = searchQuery.toLowerCase();
                           const matchSearch = !searchQuery || 
@@ -2157,95 +2728,527 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
                             inv.subscription?.companyName?.toLowerCase().includes(term) ||
                             inv.user?.email?.toLowerCase().includes(term);
                           return matchStatus && matchSearch;
-                        })
-                        .slice((invoicesPage - 1) * invoicesLimit, invoicesPage * invoicesLimit)
-                        .map((inv, idx) => (
-                          <tr key={inv.id}>
-                            <td style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: 12.5 }}>
-                              {(invoicesPage - 1) * invoicesLimit + idx + 1}
+                        }).length === 0 ? (
+                          <tr>
+                            <td colSpan={11} style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-muted)' }}>
+                              {tr('មិនមានទិន្នន័យវិក្កយបត្រត្រូវបង្ហាញទេ', 'No invoices found')}
                             </td>
-                            <td style={{ fontWeight: 800, color: 'var(--accent)', fontFamily: 'monospace' }}>
-                              {inv.invoiceNumber}
-                            </td>
-                            <td>
-                              <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
-                                {inv.subscription?.companyName || `Company #${inv.subscriptionId || '-'}`}
-                              </span>
-                            </td>
-                            <td>
-                              <span style={{ color: 'var(--text-secondary)', fontSize: 13 }}>
-                                {inv.user?.email || '-'}
-                              </span>
-                            </td>
-                            <td style={{ color: 'var(--text-secondary)' }}>
-                              {formatDate(inv.createdAt)}
-                            </td>
-                            <td style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>
-                              {formatDate(inv.dueDate || inv.subscription?.currentPeriodEnd)}
-                            </td>
-                            <td style={{ color: 'var(--text-secondary)' }}>
-                              ${Number(inv.subtotal).toFixed(2)}
-                            </td>
-                            <td style={{ color: 'var(--success)', fontWeight: 700 }}>
-                              -${Number(inv.discountAmount).toFixed(2)}
-                            </td>
-                            <td style={{ fontWeight: 900, color: 'var(--text-primary)' }}>
-                              ${Number(inv.totalAmount).toFixed(2)}
-                            </td>
-                            <td>
-                              <span
-                                className={`badge badge-${inv.status === 'paid' ? 'active' : inv.status === 'pending' ? 'warning' : 'inactive'}`}
-                                style={{ textTransform: 'uppercase', fontSize: 11 }}
-                              >
-                                ● {inv.status === 'paid' ? tr('បង់រួច', 'PAID') : inv.status}
-                              </span>
-                            </td>
-                            <td style={{ textAlign: 'right' }}>
-                              <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end', alignItems: 'center' }}>
-                                {inv.status !== 'paid' && (
-                                  <button
-                                    onClick={() => handleMarkInvoicePaid(inv.id)}
-                                    className="btn btn-primary btn-sm"
-                                    style={{ fontSize: 11.5, fontWeight: 700, padding: '4px 10px' }}
-                                  >
-                                    ✓ {tr('កំណត់ជា «បង់រួច»', 'Mark Paid')}
-                                  </button>
-                                )}
-                                <button
-                                  onClick={() => printInvoicePdf(inv)}
-                                  className="btn btn-ghost btn-sm"
-                                  style={{ fontSize: 12, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 4 }}
-                                  title={tr('បោះពុម្ព / ទាញយកជា PDF', 'Print / Download PDF')}
-                                >
-                                  <MdDownload size={14} /> PDF
-                                </button>
+                          </tr>
+                        ) : (
+                          allInvoices
+                            .filter((inv) => {
+                              const matchStatus = invoiceStatusFilter === 'all' || inv.status === invoiceStatusFilter;
+                              const term = searchQuery.toLowerCase();
+                              const matchSearch = !searchQuery || 
+                                inv.invoiceNumber?.toLowerCase().includes(term) ||
+                                inv.subscription?.companyName?.toLowerCase().includes(term) ||
+                                inv.user?.email?.toLowerCase().includes(term);
+                              return matchStatus && matchSearch;
+                            })
+                            .slice((invoicesPage - 1) * invoicesLimit, invoicesPage * invoicesLimit)
+                            .map((inv, idx) => {
+                              const pendingPaymentForInv = allPayments.find(p => p.invoiceId === inv.id && p.status === 'pending');
+                              return (
+                                <tr key={inv.id}>
+                                  <td style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: 12.5 }}>
+                                    {(invoicesPage - 1) * invoicesLimit + idx + 1}
+                                  </td>
+                                  <td>
+                                    <div style={{ fontWeight: 800, color: 'var(--accent)', fontFamily: 'monospace' }}>
+                                      {inv.invoiceNumber}
+                                    </div>
+                                    {pendingPaymentForInv && (
+                                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: '#fffbeb', border: '1px solid #fde68a', color: '#b45309', padding: '1px 6px', borderRadius: 4, fontSize: 10.5, fontWeight: 700, marginTop: 4 }}>
+                                        <span>⏳ Offline Paid:</span>
+                                        <span style={{ fontFamily: 'monospace' }}>{pendingPaymentForInv.transactionId || `#${pendingPaymentForInv.id}`}</span>
+                                      </div>
+                                    )}
+                                  </td>
+                                  <td>
+                                    <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+                                      {inv.subscription?.companyName || `Company #${inv.subscriptionId || '-'}`}
+                                    </span>
+                                  </td>
+                                  <td>
+                                    <span style={{ color: 'var(--text-secondary)', fontSize: 13 }}>
+                                      {inv.user?.email || '-'}
+                                    </span>
+                                  </td>
+                                  <td style={{ color: 'var(--text-secondary)' }}>
+                                    {formatDate(inv.createdAt)}
+                                  </td>
+                                  <td style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>
+                                    {formatDate(inv.dueDate || inv.subscription?.currentPeriodEnd)}
+                                  </td>
+                                  <td style={{ color: 'var(--text-secondary)' }}>
+                                    ${Number(inv.subtotal).toFixed(2)}
+                                  </td>
+                                  <td style={{ color: 'var(--success)', fontWeight: 700 }}>
+                                    -${Number(inv.discountAmount).toFixed(2)}
+                                  </td>
+                                  <td style={{ fontWeight: 900, color: 'var(--text-primary)' }}>
+                                    ${Number(inv.totalAmount).toFixed(2)}
+                                  </td>
+                                  <td>
+                                    <span
+                                      className={`badge badge-${inv.status === 'paid' ? 'active' : inv.status === 'pending' ? 'warning' : 'inactive'}`}
+                                      style={{ textTransform: 'uppercase', fontSize: 11 }}
+                                    >
+                                      ● {inv.status === 'paid' ? tr('បង់រួច', 'PAID') : inv.status}
+                                    </span>
+                                  </td>
+                                  <td style={{ textAlign: 'right' }}>
+                                    <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end', alignItems: 'center' }}>
+                                      {pendingPaymentForInv ? (
+                                        <button
+                                          onClick={() => handleApprovePayment(pendingPaymentForInv.id)}
+                                          className="btn btn-sm"
+                                          style={{ fontSize: 11.5, fontWeight: 800, padding: '4px 10px', background: '#10b981', color: '#ffffff', border: 'none', borderRadius: 6 }}
+                                          title={tr('អនុម័តការទូទាត់ Offline នេះ', 'Approve offline payment')}
+                                        >
+                                          ✓ {tr('អនុម័តការទូទាត់', 'Approve Payment')}
+                                        </button>
+                                      ) : inv.status !== 'paid' ? (
+                                        <button
+                                          onClick={() => handleMarkInvoicePaid(inv.id)}
+                                          className="btn btn-primary btn-sm"
+                                          style={{ fontSize: 11.5, fontWeight: 700, padding: '4px 10px' }}
+                                        >
+                                          ✓ {tr('កំណត់ជា «បង់រួច»', 'Mark Paid')}
+                                        </button>
+                                      ) : null}
+                                      <button
+                                        onClick={() => printInvoicePdf(inv)}
+                                        className="btn btn-ghost btn-sm"
+                                        style={{ fontSize: 12, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                                        title={tr('បោះពុម្ព / ទាញយកជា PDF', 'Print / Download PDF')}
+                                      >
+                                        <MdDownload size={14} /> PDF
+                                      </button>
+                                    </div>
+                                  </td>
+                                </tr>
+                              );
+                            })
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <Pagination
+                    currentPage={invoicesPage}
+                    totalItems={allInvoices.filter((inv) => {
+                      const matchStatus = invoiceStatusFilter === 'all' || inv.status === invoiceStatusFilter;
+                      const term = searchQuery.toLowerCase();
+                      const matchSearch = !searchQuery || 
+                        inv.invoiceNumber?.toLowerCase().includes(term) ||
+                        inv.subscription?.companyName?.toLowerCase().includes(term) ||
+                        inv.user?.email?.toLowerCase().includes(term);
+                      return matchStatus && matchSearch;
+                    }).length}
+                    pageSize={invoicesLimit}
+                    onPageChange={(page) => setInvoicesPage(page)}
+                    onPageSizeChange={(size) => {
+                      setInvoicesLimit(size);
+                      setInvoicesPage(1);
+                    }}
+                  />
+                </div>
+              )}
+
+              {/* SUB-TAB 2: OFFLINE APPROVALS */}
+              {invoicesSubTab === 'approvals' && (
+                <div className="card">
+                  <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+                    <div>
+                      <span className="card-title">{tr('ការទូទាត់ Offline រង់ចាំការអនុម័ត', 'Offline Payments Pending Admin Approval')}</span>
+                      <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
+                        {tr('បញ្ជីការទូទាត់ដែលក្រុមហ៊ុនបានផ្ញើមក និងរង់ចាំ Admin ពិនិត្យផ្ទៀងផ្ទាត់គណនីធនាគារ', 'Payments submitted by tenant companies waiting for bank verification')}
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', background: '#f8fafc', border: '1.5px solid var(--border)', borderRadius: 'var(--radius)', padding: '6px 12px', width: 250, height: 38 }}>
+                        <MdSearch size={17} color="var(--text-muted)" />
+                        <input
+                          type="text"
+                          placeholder={tr('ស្វែងរកក្រុមហ៊ុន / Tx ID...', 'Search Company / Tx ID...')}
+                          value={paymentSearchQuery}
+                          onChange={(e) => setPaymentSearchQuery(e.target.value)}
+                          style={{ border: 'none', background: 'transparent', outline: 'none', paddingLeft: 6, fontSize: 13, width: '100%' }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Informational Guidance Alert */}
+                  <div style={{ background: '#fffbeb', border: '1.5px solid #fef3c7', borderRadius: 12, padding: '14px 18px', margin: '0 20px 16px', display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                    <MdAccountBalance size={24} color="#d97706" style={{ flexShrink: 0, marginTop: 2 }} />
+                    <div style={{ fontSize: 12.5, color: '#92400e', lineHeight: 1.5 }}>
+                      <strong>{tr('ការទូទាត់បែប Offline ត្រូវការការអនុម័តពី Admin SAAS', 'Offline Payment requires Admin Approval')}:</strong>{' '}
+                      {tr(
+                        'អតិថិជនបានផ្ទេរប្រាក់តាមរយៈការផ្ទេរធនាគារ (ABA, ACLEDA) និងបានបញ្ចូល Transaction ID។ សូមពិនិត្យផ្ទៀងផ្ទាត់ទឹកប្រាក់ក្នុងគណនីធនាគារ រួចចុច «អនុម័ត» ដើម្បីឱ្យគម្រោងក្រុមហ៊ុនត្រូវបានបើកដំណើរការ ឬបន្តសុពលភាពភ្លាមៗ។',
+                        'Tenants transferred funds via bank transfer and submitted their Transaction ID. Please verify the amount in your bank account, then click «Approve» to immediately activate or extend their company subscription.'
+                      )}
+                    </div>
+                  </div>
+
+                  <div style={{ overflowX: 'auto', width: '100%', WebkitOverflowScrolling: 'touch' }}>
+                    <table className="saas-custom-table" style={{ width: '100%', minWidth: 900, borderCollapse: 'collapse', textAlign: 'left' }}>
+                      <thead>
+                        <tr style={{ background: '#d97706', color: '#ffffff' }}>
+                          <th style={{ width: 44, textAlign: 'center', whiteSpace: 'nowrap' }}>{tr('ល.រ', 'No.')}</th>
+                          <th style={{ whiteSpace: 'nowrap' }}>{tr('ក្រុមហ៊ុនជាវសេវា', 'Tenant Company')}</th>
+                          <th style={{ whiteSpace: 'nowrap' }}>{tr('វិក្កយបត្រ', 'Invoice No.')}</th>
+                          <th style={{ whiteSpace: 'nowrap' }}>{tr('ទឹកប្រាក់', 'Amount Due')}</th>
+                          <th style={{ whiteSpace: 'nowrap' }}>{tr('វិធីសាស្ត្រទូទាត់', 'Payment Method')}</th>
+                          <th style={{ whiteSpace: 'nowrap' }}>{tr('Transaction ID / Ref', 'Transaction ID / Ref')}</th>
+                          <th style={{ whiteSpace: 'nowrap' }}>{tr('កាលបរិច្ឆេទផ្ញើ', 'Submitted Date')}</th>
+                          <th style={{ whiteSpace: 'nowrap' }}>{tr('ស្ថានភាព', 'Status')}</th>
+                          <th style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>{tr('សកម្មភាព', 'Action')}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {pendingPayments.filter((p) => {
+                          const term = paymentSearchQuery.toLowerCase();
+                          return (
+                            !paymentSearchQuery ||
+                            p.transactionId?.toLowerCase().includes(term) ||
+                            p.invoice?.subscription?.companyName?.toLowerCase().includes(term) ||
+                            p.invoice?.invoiceNumber?.toLowerCase().includes(term)
+                          );
+                        }).length === 0 ? (
+                          <tr>
+                            <td colSpan={9} style={{ textAlign: 'center', padding: '48px 0', color: 'var(--text-muted)' }}>
+                              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+                                <MdCheckCircle size={36} color="#10b981" />
+                                <div style={{ fontSize: 14, fontWeight: 700, color: '#334155' }}>
+                                  {tr('មិនមានការទូទាត់ Offline កំពុងរង់ចាំការអនុម័តទេ!', 'No offline payments waiting for approval!')}
+                                </div>
+                                <div style={{ fontSize: 12, color: '#94a3b8' }}>
+                                  {tr('ការទូទាត់ទាំងអស់ត្រូវបានពិនិត្យ និងអនុម័តរួចរាល់។', 'All submitted payments have been approved or processed.')}
+                                </div>
                               </div>
                             </td>
                           </tr>
-                        ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
+                        ) : (
+                          pendingPayments
+                            .filter((p) => {
+                              const term = paymentSearchQuery.toLowerCase();
+                              return (
+                                !paymentSearchQuery ||
+                                p.transactionId?.toLowerCase().includes(term) ||
+                                p.invoice?.subscription?.companyName?.toLowerCase().includes(term) ||
+                                p.invoice?.invoiceNumber?.toLowerCase().includes(term)
+                              );
+                            })
+                            .map((p, idx) => (
+                              <tr key={p.id}>
+                                <td style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: 12.5 }}>
+                                  {idx + 1}
+                                </td>
+                                <td>
+                                  <div style={{ fontWeight: 700, color: '#0f172a' }}>
+                                    {p.invoice?.subscription?.companyName || `Company #${p.invoice?.subscriptionId || '-'}`}
+                                  </div>
+                                  <div style={{ fontSize: 11.5, color: '#64748b' }}>
+                                    {p.invoice?.user?.email || p.invoice?.subscription?.user?.email || '-'}
+                                  </div>
+                                </td>
+                                <td>
+                                  <span style={{ fontWeight: 800, color: 'var(--accent)', fontFamily: 'monospace' }}>
+                                    {p.invoice?.invoiceNumber || `#${p.invoiceId}`}
+                                  </span>
+                                </td>
+                                <td>
+                                  <span style={{ fontWeight: 900, color: '#0f172a', fontSize: 14 }}>
+                                    ${Number(p.amount || p.invoice?.totalAmount || 0).toFixed(2)}
+                                  </span>
+                                </td>
+                                <td>
+                                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#eff6ff', color: '#1d4ed8', padding: '3px 8px', borderRadius: 6, fontSize: 12, fontWeight: 700 }}>
+                                    <MdAccountBalance size={14} />
+                                    <span>{p.paymentMethod === 'offline' ? tr('ការផ្ទេរប្រាក់ Offline', 'Offline Bank Transfer') : p.paymentMethod}</span>
+                                  </div>
+                                </td>
+                                <td>
+                                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                                    <span style={{ fontFamily: 'monospace', fontWeight: 800, color: '#b45309', background: '#fffbeb', border: '1px solid #fde68a', padding: '3px 8px', borderRadius: 6, fontSize: 12 }}>
+                                      {p.transactionId || '-'}
+                                    </span>
+                                    {p.transactionId && (
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          navigator.clipboard.writeText(p.transactionId);
+                                          alert(tr('បានចម្លង Transaction ID!', 'Copied Transaction ID!'));
+                                        }}
+                                        style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#64748b', padding: 2 }}
+                                        title={tr('ចម្លង', 'Copy')}
+                                      >
+                                        <MdContentCopy size={14} />
+                                      </button>
+                                    )}
+                                  </div>
+                                  {p.note && (
+                                    <div style={{ fontSize: 11, color: '#64748b', marginTop: 2, fontStyle: 'italic' }}>
+                                      Note: {p.note}
+                                    </div>
+                                  )}
+                                </td>
+                                <td style={{ color: 'var(--text-secondary)', fontSize: 12.5 }}>
+                                  {formatDate(p.createdAt)}
+                                </td>
+                                <td>
+                                  <span
+                                    style={{
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: 5,
+                                      background: '#fef3c7',
+                                      color: '#b45309',
+                                      border: '1px solid #fde68a',
+                                      padding: '3px 8px',
+                                      borderRadius: 12,
+                                      fontSize: 11,
+                                      fontWeight: 800,
+                                      textTransform: 'uppercase',
+                                    }}
+                                  >
+                                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#d97706' }} />
+                                    {tr('រង់ចាំការអនុម័ត', 'PENDING APPROVAL')}
+                                  </span>
+                                </td>
+                                <td style={{ textAlign: 'right' }}>
+                                  <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end', alignItems: 'center' }}>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleApprovePayment(p.id)}
+                                      className="btn btn-sm"
+                                      style={{
+                                        fontSize: 12,
+                                        fontWeight: 800,
+                                        padding: '5px 12px',
+                                        background: '#10b981',
+                                        color: '#ffffff',
+                                        border: 'none',
+                                        borderRadius: 6,
+                                        cursor: 'pointer',
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: 4,
+                                        boxShadow: '0 2px 6px rgba(16,185,129,0.3)',
+                                      }}
+                                    >
+                                      <MdCheck size={14} />
+                                      <span>{tr('អនុម័ត', 'Approve')}</span>
+                                    </button>
 
-              <Pagination
-                currentPage={invoicesPage}
-                totalItems={allInvoices.filter((inv) => {
-                  const matchStatus = invoiceStatusFilter === 'all' || inv.status === invoiceStatusFilter;
-                  const term = searchQuery.toLowerCase();
-                  const matchSearch = !searchQuery || 
-                    inv.invoiceNumber?.toLowerCase().includes(term) ||
-                    inv.subscription?.companyName?.toLowerCase().includes(term) ||
-                    inv.user?.email?.toLowerCase().includes(term);
-                  return matchStatus && matchSearch;
-                }).length}
-                pageSize={invoicesLimit}
-                onPageChange={(page) => setInvoicesPage(page)}
-                onPageSizeChange={(size) => {
-                  setInvoicesLimit(size);
-                  setInvoicesPage(1);
-                }}
-              />
+                                    <button
+                                      type="button"
+                                      onClick={() => handleOpenRejectPayment(p)}
+                                      className="btn btn-sm"
+                                      style={{
+                                        fontSize: 12,
+                                        fontWeight: 700,
+                                        padding: '5px 10px',
+                                        background: '#fee2e2',
+                                        color: '#b91c1c',
+                                        border: '1px solid #fca5a5',
+                                        borderRadius: 6,
+                                        cursor: 'pointer',
+                                      }}
+                                    >
+                                      <MdCancel size={13} />
+                                      <span>{tr('បដិសេធ', 'Reject')}</span>
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* SUB-TAB 3: ALL PAYMENTS HISTORY */}
+              {invoicesSubTab === 'all-payments' && (
+                <div className="card">
+                  <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+                    <div>
+                      <span className="card-title">{tr('ប្រវត្តិប្រតិបត្តិការទូទាត់ទាំងអស់', 'All Payments Transaction History')}</span>
+                      <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
+                        {tr('កំណត់ត្រាការទូទាត់គ្រប់វិធីសាស្ត្រ (Offline, Bank Transfer, API, etc.)', 'Complete payment logs for all subscription billing events')}
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', background: '#f8fafc', border: '1.5px solid var(--border)', borderRadius: 'var(--radius)', padding: '6px 12px', width: 230, height: 38 }}>
+                        <MdSearch size={17} color="var(--text-muted)" />
+                        <input
+                          type="text"
+                          placeholder={tr('ស្វែងរក Tx ID / ក្រុមហ៊ុន...', 'Search Tx / Company...')}
+                          value={paymentSearchQuery}
+                          onChange={(e) => setPaymentSearchQuery(e.target.value)}
+                          style={{ border: 'none', background: 'transparent', outline: 'none', paddingLeft: 6, fontSize: 13, width: '100%' }}
+                        />
+                      </div>
+
+                      <select
+                        value={paymentStatusFilter}
+                        onChange={(e) => setPaymentStatusFilter(e.target.value)}
+                        className="form-control"
+                        style={{ width: 'auto', padding: '6px 12px', fontSize: 13, height: 38, borderRadius: 'var(--radius)', borderColor: 'var(--border)' }}
+                      >
+                        <option value="all">{tr('ស្ថានភាពទាំងអស់', 'All Statuses')}</option>
+                        <option value="success">{tr('ជោគជ័យ (Success)', 'Success')}</option>
+                        <option value="pending">{tr('រង់ចាំអនុម័ត (Pending)', 'Pending')}</option>
+                        <option value="failed">{tr('បរាជ័យ (Failed)', 'Failed')}</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div style={{ overflowX: 'auto', width: '100%', WebkitOverflowScrolling: 'touch' }}>
+                    <table className="saas-custom-table" style={{ width: '100%', minWidth: 900, borderCollapse: 'collapse', textAlign: 'left' }}>
+                      <thead>
+                        <tr style={{ background: '#0f172a', color: '#ffffff' }}>
+                          <th style={{ width: 44, textAlign: 'center', whiteSpace: 'nowrap' }}>{tr('ល.រ', 'No.')}</th>
+                          <th style={{ whiteSpace: 'nowrap' }}>{tr('ក្រុមហ៊ុន', 'Company')}</th>
+                          <th style={{ whiteSpace: 'nowrap' }}>{tr('វិក្កយបត្រ', 'Invoice No.')}</th>
+                          <th style={{ whiteSpace: 'nowrap' }}>{tr('ទឹកប្រាក់', 'Amount')}</th>
+                          <th style={{ whiteSpace: 'nowrap' }}>{tr('វិធីសាស្ត្រ', 'Method')}</th>
+                          <th style={{ whiteSpace: 'nowrap' }}>{tr('Transaction ID', 'Transaction ID')}</th>
+                          <th style={{ whiteSpace: 'nowrap' }}>{tr('ស្ថានភាព', 'Status')}</th>
+                          <th style={{ whiteSpace: 'nowrap' }}>{tr('អ្នកអនុម័ត', 'Approved By')}</th>
+                          <th style={{ whiteSpace: 'nowrap' }}>{tr('កាលបរិច្ឆេទ', 'Date')}</th>
+                          <th style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>{tr('សកម្មភាព', 'Action')}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {allPayments.filter((p) => {
+                          const matchStatus = paymentStatusFilter === 'all' || p.status === paymentStatusFilter;
+                          const term = paymentSearchQuery.toLowerCase();
+                          const matchSearch = !paymentSearchQuery ||
+                            p.transactionId?.toLowerCase().includes(term) ||
+                            p.invoice?.subscription?.companyName?.toLowerCase().includes(term) ||
+                            p.invoice?.invoiceNumber?.toLowerCase().includes(term);
+                          return matchStatus && matchSearch;
+                        }).length === 0 ? (
+                          <tr>
+                            <td colSpan={10} style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-muted)' }}>
+                              {tr('មិនមានកំណត់ត្រាការទូទាត់ទេ', 'No payment records found')}
+                            </td>
+                          </tr>
+                        ) : (
+                          allPayments
+                            .filter((p) => {
+                              const matchStatus = paymentStatusFilter === 'all' || p.status === paymentStatusFilter;
+                              const term = paymentSearchQuery.toLowerCase();
+                              const matchSearch = !paymentSearchQuery ||
+                                p.transactionId?.toLowerCase().includes(term) ||
+                                p.invoice?.subscription?.companyName?.toLowerCase().includes(term) ||
+                                p.invoice?.invoiceNumber?.toLowerCase().includes(term);
+                              return matchStatus && matchSearch;
+                            })
+                            .slice((paymentsPage - 1) * paymentsLimit, paymentsPage * paymentsLimit)
+                            .map((p, idx) => (
+                              <tr key={p.id}>
+                                <td style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: 12.5 }}>
+                                  {(paymentsPage - 1) * paymentsLimit + idx + 1}
+                                </td>
+                                <td style={{ fontWeight: 700, color: '#0f172a' }}>
+                                  {p.invoice?.subscription?.companyName || `Company #${p.invoice?.subscriptionId || '-'}`}
+                                </td>
+                                <td style={{ fontWeight: 800, color: 'var(--accent)', fontFamily: 'monospace' }}>
+                                  {p.invoice?.invoiceNumber || `#${p.invoiceId}`}
+                                </td>
+                                <td style={{ fontWeight: 900, color: '#0f172a' }}>
+                                  ${Number(p.amount || 0).toFixed(2)}
+                                </td>
+                                <td>
+                                  <span style={{ textTransform: 'capitalize', fontWeight: 600, color: '#475569' }}>
+                                    {p.paymentMethod || 'offline'}
+                                  </span>
+                                </td>
+                                <td style={{ fontFamily: 'monospace', fontWeight: 700, color: '#334155' }}>
+                                  {p.transactionId || '-'}
+                                </td>
+                                <td>
+                                  <span
+                                    className={`badge badge-${p.status === 'success' ? 'active' : p.status === 'pending' ? 'warning' : 'inactive'}`}
+                                    style={{ textTransform: 'uppercase', fontSize: 11 }}
+                                  >
+                                    ● {p.status}
+                                  </span>
+                                </td>
+                                <td style={{ fontSize: 12, color: '#64748b' }}>
+                                  {p.approvedBy ? (
+                                    <div>
+                                      <div style={{ fontWeight: 600, color: '#0f172a' }}>{p.approvedBy}</div>
+                                      <div style={{ fontSize: 10.5 }}>{formatDate(p.approvedAt)}</div>
+                                    </div>
+                                  ) : (
+                                    '-'
+                                  )}
+                                </td>
+                                <td style={{ color: 'var(--text-secondary)', fontSize: 12.5 }}>
+                                  {formatDate(p.createdAt)}
+                                </td>
+                                <td style={{ textAlign: 'right' }}>
+                                  {p.status === 'pending' ? (
+                                    <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleApprovePayment(p.id)}
+                                        className="btn btn-sm"
+                                        style={{ fontSize: 11.5, fontWeight: 700, padding: '3px 8px', background: '#10b981', color: '#fff', border: 'none', borderRadius: 4 }}
+                                      >
+                                        ✓ {tr('អនុម័ត', 'Approve')}
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleOpenRejectPayment(p)}
+                                        className="btn btn-sm"
+                                        style={{ fontSize: 11.5, fontWeight: 700, padding: '3px 6px', background: '#fee2e2', color: '#b91c1c', border: '1px solid #fca5a5', borderRadius: 4 }}
+                                      >
+                                        ✕
+                                      </button>
+                                    </div>
+                                  ) : p.status === 'success' ? (
+                                    <span style={{ fontSize: 12, color: '#10b981', fontWeight: 800 }}>✓ {tr('អនុម័តរួច', 'Approved')}</span>
+                                  ) : (
+                                    <span style={{ fontSize: 12, color: '#ef4444' }}>{p.note || '-'}</span>
+                                  )}
+                                </td>
+                              </tr>
+                            ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <Pagination
+                    currentPage={paymentsPage}
+                    totalItems={allPayments.filter((p) => {
+                      const matchStatus = paymentStatusFilter === 'all' || p.status === paymentStatusFilter;
+                      const term = paymentSearchQuery.toLowerCase();
+                      const matchSearch = !paymentSearchQuery ||
+                        p.transactionId?.toLowerCase().includes(term) ||
+                        p.invoice?.subscription?.companyName?.toLowerCase().includes(term) ||
+                        p.invoice?.invoiceNumber?.toLowerCase().includes(term);
+                      return matchStatus && matchSearch;
+                    }).length}
+                    pageSize={paymentsLimit}
+                    onPageChange={(page) => setPaymentsPage(page)}
+                    onPageSizeChange={(size) => {
+                      setPaymentsLimit(size);
+                      setPaymentsPage(1);
+                    }}
+                  />
+                </div>
+              )}
             </div>
           )}
 
@@ -2531,7 +3534,7 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
               <div style={{ overflowX: 'auto', width: '100%', WebkitOverflowScrolling: 'touch' }}>
                 <table className="saas-custom-table" style={{ width: '100%', minWidth: 800, borderCollapse: 'collapse', textAlign: 'left' }}>
                   <thead>
-                    <tr style={{ background: '#2f55a5', color: '#ffffff' }}>
+                    <tr style={{ background: '#2b529a', color: '#ffffff' }}>
                       <th style={{ width: 44, textAlign: 'center', whiteSpace: 'nowrap' }}>{tr('ល.រ', 'No.')}</th>
                       <th>{tr('ឈ្មោះ', 'Name')}</th>
                       <th>{tr('Email សម្រាប់ Login', 'Login Email')}</th>
@@ -2638,7 +3641,7 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
               <div style={{ overflowX: 'auto', width: '100%', WebkitOverflowScrolling: 'touch' }}>
                 <table className="saas-custom-table" style={{ width: '100%', minWidth: 900, borderCollapse: 'collapse', textAlign: 'left' }}>
                   <thead>
-                    <tr style={{ background: '#2f55a5', color: '#ffffff' }}>
+                    <tr style={{ background: '#2b529a', color: '#ffffff' }}>
                       <th style={{ width: 44, textAlign: 'center', whiteSpace: 'nowrap' }}>{tr('ល.រ', 'No.')}</th>
                       <th>{tr('ឈ្មោះកញ្ចប់សេវា', 'Plan Name')}</th>
                       <th>Slug</th>
@@ -2687,16 +3690,40 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
                           ${Number(p.priceYearly).toFixed(2)}
                         </td>
                         <td style={{ color: 'var(--text-secondary)' }}>
-                          {p.maxDrivers || 10}
+                          {Number(p.maxDrivers) === 0 ? (
+                            <span className="badge badge-delivered" style={{ fontSize: 11, background: '#dcfce7', color: '#15803d' }}>
+                              ∞ {tr('មិនកំណត់', 'Unlimited')}
+                            </span>
+                          ) : (
+                            p.maxDrivers ?? 10
+                          )}
                         </td>
                         <td style={{ color: 'var(--text-secondary)' }}>
-                          {p.maxMerchants || 50}
+                          {Number(p.maxMerchants) === 0 ? (
+                            <span className="badge badge-delivered" style={{ fontSize: 11, background: '#dcfce7', color: '#15803d' }}>
+                              ∞ {tr('មិនកំណត់', 'Unlimited')}
+                            </span>
+                          ) : (
+                            p.maxMerchants ?? 50
+                          )}
                         </td>
                         <td style={{ color: 'var(--text-secondary)' }}>
-                          {p.maxOrdersPerMonth || 1000}
+                          {Number(p.maxOrdersPerMonth) === 0 ? (
+                            <span className="badge badge-delivered" style={{ fontSize: 11, background: '#dcfce7', color: '#15803d' }}>
+                              ∞ {tr('មិនកំណត់', 'Unlimited')}
+                            </span>
+                          ) : (
+                            p.maxOrdersPerMonth ?? 1000
+                          )}
                         </td>
                         <td style={{ color: 'var(--text-secondary)' }}>
-                          {p.maxVehicles || 10}
+                          {Number(p.maxVehicles) === 0 ? (
+                            <span className="badge badge-delivered" style={{ fontSize: 11, background: '#dcfce7', color: '#15803d' }}>
+                              ∞ {tr('មិនកំណត់', 'Unlimited')}
+                            </span>
+                          ) : (
+                            p.maxVehicles ?? 10
+                          )}
                         </td>
                         <td>
                           <span className={`badge badge-${p.isActive !== false ? 'active' : 'inactive'}`} style={{ fontSize: 11 }}>
@@ -2773,62 +3800,87 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
               <div style={{ overflowX: 'auto', width: '100%', WebkitOverflowScrolling: 'touch' }}>
                 <table className="saas-custom-table" style={{ width: '100%', minWidth: 750, borderCollapse: 'collapse', textAlign: 'left' }}>
                   <thead>
-                    <tr style={{ background: '#2f55a5', color: '#ffffff' }}>
+                    <tr style={{ background: '#2b529a', color: '#ffffff' }}>
                       <th style={{ width: 44, textAlign: 'center', whiteSpace: 'nowrap' }}>{tr('ល.រ', 'No.')}</th>
                       <th>Coupon Code</th>
                       <th>{tr('ប្រភេទបញ្ចុះតម្លៃ', 'Discount Type')}</th>
                       <th>{tr('តម្លៃបញ្ចុះ', 'Discount Value')}</th>
                       <th>{tr('ចំនួនប្រើប្រាស់', 'Usage / Limit')}</th>
+                      <th>{tr('ថ្ងៃផុតកំណត់', 'Expire Date')}</th>
                       <th>{tr('ស្ថានភាព', 'Status')}</th>
                       <th style={{ textAlign: 'right' }}>{tr('សកម្មភាព', 'Action')}</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {paginatedCoupons.map((c, idx) => (
-                      <tr key={c.id}>
-                        <td style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: 12.5 }}>
-                          {(couponsPage - 1) * couponsLimit + idx + 1}
-                        </td>
-                        <td>
-                          <span style={{ fontWeight: 600, color: 'var(--accent)' }}>
-                            {c.code}
-                          </span>
-                        </td>
-                        <td style={{ textTransform: 'capitalize', color: 'var(--text-secondary)' }}>
-                          {c.discountType === 'percentage' ? tr('ភាគរយ (%)', 'Percentage (%)') : tr('ចំនួនថេរ ($)', 'Fixed ($)')}
-                        </td>
-                        <td style={{ fontWeight: 600, color: '#059669' }}>
-                          {c.discountType === 'percentage' ? `${c.discountValue}%` : `$${Number(c.discountValue).toFixed(2)}`}
-                        </td>
-                        <td style={{ color: 'var(--text-muted)' }}>
-                          {c.usageCount || 0} / {c.usageLimit || '∞'}
-                        </td>
-                        <td>
-                          <span className={`badge badge-${c.isActive !== false ? 'active' : 'inactive'}`} style={{ fontSize: 11 }}>
-                            ● {c.isActive !== false ? tr('សកម្ម', 'Active') : tr('អសកម្ម', 'Inactive')}
-                          </span>
-                        </td>
-                        <td style={{ textAlign: 'right' }}>
-                          <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end', alignItems: 'center' }}>
-                            <Link
-                              href={`/admin/saas/coupons/edit/${c.id}`}
-                              className="btn btn-ghost btn-icon btn-sm"
-                              title={tr('កែប្រែ Coupon', 'Edit Coupon')}
-                            >
-                              <FaRegEdit size={14} />
-                            </Link>
-                            <button
-                              className="btn btn-ghost btn-icon btn-sm"
-                              style={{ color: 'var(--danger)' }}
-                              onClick={() => handleDeleteCoupon(c.id, c.code)}
-                              title={tr('លុប Coupon', 'Delete Coupon')}
-                            >
-                              <FaTrashAlt size={13} />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
+                    {paginatedCoupons.map((c, idx) => {
+                      const isExpired = c.status === 'expired' || Boolean(c.expiresAt && new Date(c.expiresAt).getTime() < Date.now());
+                      const statusVal = isExpired ? 'expired' : (c.status || (c.isActive !== false ? 'active' : 'inactive'));
+
+                      return (
+                        <tr key={c.id}>
+                          <td style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: 12.5 }}>
+                            {(couponsPage - 1) * couponsLimit + idx + 1}
+                          </td>
+                          <td>
+                            <span style={{ fontWeight: 600, color: 'var(--accent)' }}>
+                              {c.code}
+                            </span>
+                          </td>
+                          <td style={{ textTransform: 'capitalize', color: 'var(--text-secondary)' }}>
+                            {c.discountType === 'percentage' ? tr('ភាគរយ (%)', 'Percentage (%)') : tr('ចំនួនថេរ ($)', 'Fixed ($)')}
+                          </td>
+                          <td style={{ fontWeight: 600, color: '#059669' }}>
+                            {c.discountType === 'percentage' ? `${c.discountValue}%` : `$${Number(c.discountValue).toFixed(2)}`}
+                          </td>
+                          <td style={{ color: 'var(--text-muted)' }}>
+                            {c.usedCount || c.usageCount || 0} / {c.usageLimit || '∞'}
+                          </td>
+                          <td style={{ fontSize: 12.5, whiteSpace: 'nowrap' }}>
+                            {c.expiresAt ? (
+                              <span style={{ color: isExpired ? '#ef4444' : 'inherit', fontWeight: isExpired ? 600 : 400 }}>
+                                {new Date(c.expiresAt).toLocaleDateString()}
+                              </span>
+                            ) : (
+                              <span style={{ color: 'var(--text-muted)' }}>—</span>
+                            )}
+                          </td>
+                          <td>
+                            {statusVal === 'expired' ? (
+                              <span className="badge badge-failed" style={{ fontSize: 11, background: '#fee2e2', color: '#b91c1c' }}>
+                                ● {tr('ផុតកំណត់', 'Expired')}
+                              </span>
+                            ) : statusVal === 'active' ? (
+                              <span className="badge badge-active" style={{ fontSize: 11, background: '#dcfce7', color: '#15803d' }}>
+                                ● {tr('សកម្ម', 'Active')}
+                              </span>
+                            ) : (
+                              <span className="badge badge-inactive" style={{ fontSize: 11, background: '#f1f5f9', color: '#64748b' }}>
+                                ● {tr('អសកម្ម', 'Inactive')}
+                              </span>
+                            )}
+                          </td>
+                          <td style={{ textAlign: 'right' }}>
+                            <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end', alignItems: 'center' }}>
+                              <Link
+                                href={`/admin/saas/coupons/edit/${c.id}`}
+                                className="btn btn-ghost btn-icon btn-sm"
+                                title={tr('កែប្រែ Coupon', 'Edit Coupon')}
+                              >
+                                <FaRegEdit size={14} />
+                              </Link>
+                              <button
+                                className="btn btn-ghost btn-icon btn-sm"
+                                style={{ color: 'var(--danger)' }}
+                                onClick={() => handleDeleteCoupon(c.id, c.code)}
+                                title={tr('លុប Coupon', 'Delete Coupon')}
+                              >
+                                <FaTrashAlt size={13} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -2926,7 +3978,7 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
                 <div style={{ overflowX: 'auto', width: '100%', WebkitOverflowScrolling: 'touch' }}>
                   <table className="saas-custom-table" style={{ width: '100%', minWidth: 800, borderCollapse: 'collapse', textAlign: 'left' }}>
                     <thead>
-                      <tr style={{ background: '#2f55a5', color: '#ffffff' }}>
+                      <tr style={{ background: '#2b529a', color: '#ffffff' }}>
                         <th style={{ width: 44, textAlign: 'center', whiteSpace: 'nowrap' }}>{tr('ល.រ', 'No.')}</th>
                         <th>{tr('ឈ្មោះដៃគូ', 'Partner Name')}</th>
                         <th>{tr('Email', 'Email')}</th>
@@ -3058,7 +4110,7 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
                 <div style={{ overflowX: 'auto', width: '100%', WebkitOverflowScrolling: 'touch' }}>
                   <table className="saas-custom-table" style={{ width: '100%', minWidth: 700, borderCollapse: 'collapse', textAlign: 'left' }}>
                     <thead>
-                      <tr style={{ background: '#2f55a5', color: '#ffffff' }}>
+                      <tr style={{ background: '#2b529a', color: '#ffffff' }}>
                         <th style={{ width: 44, textAlign: 'center', whiteSpace: 'nowrap' }}>{tr('ល.រ', 'No.')}</th>
                         <th>Partner Name</th>
                         <th>{tr('ទឹកប្រាក់កម្រៃ', 'Commission Amount')}</th>
@@ -3318,6 +4370,346 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
                     </button>
                   </div>
                 </form>
+              </div>
+            </div>
+          )}
+
+          {/* TAB: PAYMENT OPTIONS MANAGEMENT */}
+          {activeMenu === 'payment-options' && (
+            <div>
+              {/* Top 3 Summary KPI Cards */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16, marginBottom: 20 }}>
+                {/* Card 1: Offline Payment Option */}
+                <div style={{ background: '#ffffff', borderRadius: 14, padding: '18px 20px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                    <div style={{ width: 40, height: 40, borderRadius: 10, background: '#eff6ff', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <MdAccountBalance size={22} />
+                    </div>
+                    <span style={{ background: '#ecfdf5', color: '#059669', border: '1px solid #a7f3d0', padding: '2px 8px', borderRadius: 20, fontSize: 11, fontWeight: 700 }}>
+                      ● {tr('សកម្ម (Active)', 'Active')}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: 14.5, fontWeight: 800, color: '#0f172a', marginBottom: 4 }}>
+                    {tr('ការទូទាត់តាមធនាគារ (Offline)', 'Offline Bank Transfer')}
+                  </div>
+                  <div style={{ fontSize: 12, color: '#64748b', lineHeight: 1.4 }}>
+                    {tr('អតិថិជនផ្ទេរប្រាក់ និងបញ្ចូលលេខប្រតិបត្តិការ (តម្រូវឱ្យ Admin អនុម័ត)', 'Tenants transfer and submit Tx ID (Requires Admin approval)')}
+                  </div>
+                </div>
+
+                {/* Card 2: ABA Direct Bank Integration */}
+                <div style={{ background: '#ffffff', borderRadius: 14, padding: '18px 20px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                    <div style={{ width: 40, height: 40, borderRadius: 10, background: '#fff7ed', color: '#ea580c', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <MdPayment size={22} />
+                    </div>
+                    <span style={{ background: '#fff7ed', color: '#ea580c', border: '1px solid #fed7aa', padding: '2px 8px', borderRadius: 20, fontSize: 11, fontWeight: 700 }}>
+                      ⏳ {tr('រង់ចាំតភ្ជាប់ (Pending)', 'Pending API')}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: 14.5, fontWeight: 800, color: '#0f172a', marginBottom: 4 }}>
+                    {tr('ABA PayWay / KHQR API', 'ABA PayWay Direct')}
+                  </div>
+                  <div style={{ fontSize: 12, color: '#64748b', lineHeight: 1.4 }}>
+                    {tr('កាត់ប្រាក់ស្វ័យប្រវត្តិតាម Bank API (កំពុងរៀបចំការតភ្ជាប់)', 'Automatic direct bank payment gateway (Integration pending)')}
+                  </div>
+                </div>
+
+                {/* Card 3: Pending Approval Queue */}
+                <div style={{ background: '#ffffff', borderRadius: 14, padding: '18px 20px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                    <div style={{ width: 40, height: 40, borderRadius: 10, background: pendingPaymentsCount > 0 ? '#fef2f2' : '#f8fafc', color: pendingPaymentsCount > 0 ? '#dc2626' : '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <MdReceiptLong size={22} />
+                    </div>
+                    <span style={{ fontSize: 20, fontWeight: 900, color: pendingPaymentsCount > 0 ? '#dc2626' : '#059669' }}>
+                      {pendingPaymentsCount}
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div>
+                      <div style={{ fontSize: 14.5, fontWeight: 800, color: '#0f172a', marginBottom: 4 }}>
+                        {tr('ការទូទាត់រង់ចាំពិនិត្យ', 'Pending Approvals')}
+                      </div>
+                      <div style={{ fontSize: 12, color: '#64748b' }}>
+                        {tr('ប្រតិបត្តិការទូទាត់ដែលត្រូវផ្ទៀងផ្ទាត់', 'Tenant payments awaiting verification')}
+                      </div>
+                    </div>
+                    {pendingPaymentsCount > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setActiveMenu('invoices');
+                          setInvoicesSubTab('approvals');
+                        }}
+                        style={{ background: '#eff6ff', border: '1px solid #bfdbfe', color: '#2563eb', fontWeight: 700, fontSize: 12, cursor: 'pointer', padding: '6px 12px', borderRadius: 8, whiteSpace: 'nowrap' }}
+                      >
+                        {tr('ពិនិត្យ →', 'Review →')}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Main Card with Payment Options Table */}
+              <div className="card" style={{ background: '#ffffff', borderRadius: 14, border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.03)', overflow: 'hidden' }}>
+                <div className="card-header" style={{ padding: '16px 20px', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+                  <div>
+                    <span style={{ fontSize: 16, fontWeight: 800, color: '#0f172a' }}>{tr('បញ្ជីជម្រើសទូទាត់ប្រាក់', 'All Payment Options')}</span>
+                    <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>
+                      {tr('គ្រប់គ្រងវិធីសាស្ត្រទូទាត់ប្រាក់ គណនីធនាគារ និងលក្ខខណ្ឌអនុម័ត', 'Manage payment gateways, bank accounts, and approval rules')}
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                    {/* Search Bar */}
+                    <div style={{ display: 'flex', alignItems: 'center', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: '0 10px', width: 220, height: 36 }}>
+                      <MdSearch size={16} color="#94a3b8" />
+                      <input
+                        type="text"
+                        placeholder={tr('ស្វែងរកជម្រើសទូទាត់...', 'Search Option / Bank...')}
+                        value={paymentOptionSearch}
+                        onChange={(e) => setPaymentOptionSearch(e.target.value)}
+                        style={{ border: 'none', background: 'transparent', outline: 'none', paddingLeft: 6, fontSize: 12.5, width: '100%', color: '#0f172a' }}
+                      />
+                    </div>
+
+                    {/* Filter Type */}
+                    <select
+                      value={paymentOptionTypeFilter}
+                      onChange={(e) => setPaymentOptionTypeFilter(e.target.value)}
+                      style={{ height: 36, padding: '0 10px', fontSize: 12.5, borderRadius: 8, border: '1px solid #e2e8f0', background: '#f8fafc', color: '#334155', fontWeight: 600, outline: 'none', cursor: 'pointer' }}
+                    >
+                      <option value="all">{tr('ប្រភេទទាំងអស់', 'All Types')}</option>
+                      <option value="offline">{tr('Offline Bank', 'Offline Bank')}</option>
+                      <option value="aba">{tr('ABA Direct API', 'ABA Direct API')}</option>
+                      <option value="khqr">{tr('Bakong KHQR', 'Bakong KHQR')}</option>
+                    </select>
+
+                    {/* Filter Status */}
+                    <select
+                      value={paymentOptionFilter}
+                      onChange={(e) => setPaymentOptionFilter(e.target.value)}
+                      style={{ height: 36, padding: '0 10px', fontSize: 12.5, borderRadius: 8, border: '1px solid #e2e8f0', background: '#f8fafc', color: '#334155', fontWeight: 600, outline: 'none', cursor: 'pointer' }}
+                    >
+                      <option value="all">{tr('ស្ថានភាពទាំងអស់', 'All Statuses')}</option>
+                      <option value="active">{tr('សកម្ម (Active)', 'Active')}</option>
+                      <option value="pending">{tr('រង់ចាំតភ្ជាប់ (Pending)', 'Pending')}</option>
+                      <option value="inactive">{tr('អសកម្ម (Inactive)', 'Inactive')}</option>
+                    </select>
+
+                    {/* Action Button */}
+                    <Link
+                      href="/admin/saas/payment-options/create"
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 6, height: 36, padding: '0 14px', borderRadius: 8, background: '#2563eb', color: '#ffffff', border: 'none', fontSize: 12.5, fontWeight: 700, textDecoration: 'none', transition: 'background 0.15s' }}
+                      onMouseEnter={(e) => (e.currentTarget.style.background = '#1d4ed8')}
+                      onMouseLeave={(e) => (e.currentTarget.style.background = '#2563eb')}
+                    >
+                      <FiPlusCircle size={15} />
+                      <span>{tr('បង្កើតជម្រើសថ្មី', 'Create Option')}</span>
+                    </Link>
+                  </div>
+                </div>
+
+                <div style={{ overflowX: 'auto', width: '100%', WebkitOverflowScrolling: 'touch' }}>
+                  <table className="saas-custom-table" style={{ width: '100%', minWidth: 800, borderCollapse: 'collapse', textAlign: 'left' }}>
+                    <thead>
+                      <tr style={{ background: '#2b529a', color: '#ffffff' }}>
+                        <th style={{ width: 44, textAlign: 'center', whiteSpace: 'nowrap', padding: '12px 14px', fontSize: 12.5, fontWeight: 700, color: '#ffffff' }}>{tr('ល.រ', 'No.')}</th>
+                        <th style={{ whiteSpace: 'nowrap', padding: '12px 16px', fontSize: 12.5, fontWeight: 700, color: '#ffffff' }}>{tr('ជម្រើសទូទាត់ & ធនាគារ', 'Payment Option')}</th>
+                        <th style={{ whiteSpace: 'nowrap', padding: '12px 16px', fontSize: 12.5, fontWeight: 700, color: '#ffffff' }}>{tr('ប្រភេទ', 'Type')}</th>
+                        <th style={{ whiteSpace: 'nowrap', padding: '12px 16px', fontSize: 12.5, fontWeight: 700, color: '#ffffff' }}>{tr('ព័ត៌មានគណនី', 'Account Details')}</th>
+                        <th style={{ whiteSpace: 'nowrap', padding: '12px 16px', fontSize: 12.5, fontWeight: 700, color: '#ffffff' }}>{tr('ការអនុម័ត', 'Approval')}</th>
+                        <th style={{ whiteSpace: 'nowrap', padding: '12px 16px', fontSize: 12.5, fontWeight: 700, color: '#ffffff' }}>{tr('ស្ថានភាព', 'Status')}</th>
+                        <th style={{ textAlign: 'right', whiteSpace: 'nowrap', padding: '12px 16px', fontSize: 12.5, fontWeight: 700, color: '#ffffff' }}>{tr('សកម្មភាព', 'Action')}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {paymentOptions.filter((opt) => {
+                        const matchStatus = paymentOptionFilter === 'all' || opt.status === paymentOptionFilter;
+                        const matchType = paymentOptionTypeFilter === 'all' || opt.type === paymentOptionTypeFilter;
+                        const term = paymentOptionSearch.toLowerCase();
+                        const matchSearch = !paymentOptionSearch ||
+                          opt.name?.toLowerCase().includes(term) ||
+                          opt.bankName?.toLowerCase().includes(term) ||
+                          opt.accountName?.toLowerCase().includes(term) ||
+                          opt.accountNumber?.toLowerCase().includes(term);
+                        return matchStatus && matchType && matchSearch;
+                      }).length === 0 ? (
+                        <tr>
+                          <td colSpan={7} style={{ textAlign: 'center', padding: '48px 0', color: '#94a3b8' }}>
+                            {tr('មិនមានជម្រើសទូទាត់ត្រូវបានរកឃើញទេ', 'No payment options found')}
+                          </td>
+                        </tr>
+                      ) : (
+                        paymentOptions
+                          .filter((opt) => {
+                            const matchStatus = paymentOptionFilter === 'all' || opt.status === paymentOptionFilter;
+                            const matchType = paymentOptionTypeFilter === 'all' || opt.type === paymentOptionTypeFilter;
+                            const term = paymentOptionSearch.toLowerCase();
+                            const matchSearch = !paymentOptionSearch ||
+                              opt.name?.toLowerCase().includes(term) ||
+                              opt.bankName?.toLowerCase().includes(term) ||
+                              opt.accountName?.toLowerCase().includes(term) ||
+                              opt.accountNumber?.toLowerCase().includes(term);
+                            return matchStatus && matchType && matchSearch;
+                          })
+                          .slice((paymentOptionsPage - 1) * paymentOptionsLimit, paymentOptionsPage * paymentOptionsLimit)
+                          .map((opt, idx) => (
+                            <tr key={opt.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                              <td style={{ textAlign: 'center', color: '#94a3b8', fontSize: 12.5, padding: '14px 14px' }}>
+                                {(paymentOptionsPage - 1) * paymentOptionsLimit + idx + 1}
+                              </td>
+                              <td style={{ padding: '14px 16px' }}>
+                                <div style={{ fontWeight: 700, color: '#0f172a', fontSize: 13.5 }}>
+                                  {opt.name}
+                                </div>
+                                {opt.bankName && (
+                                  <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>
+                                    {opt.bankName}
+                                  </div>
+                                )}
+                              </td>
+                              <td style={{ padding: '14px 16px' }}>
+                                <span style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: 5,
+                                  background: opt.type === 'offline' ? '#f1f5f9' : opt.type === 'aba' ? '#eff6ff' : '#fdf2f8',
+                                  color: opt.type === 'offline' ? '#334155' : opt.type === 'aba' ? '#1d4ed8' : '#be185d',
+                                  border: `1px solid ${opt.type === 'offline' ? '#e2e8f0' : opt.type === 'aba' ? '#bfdbfe' : '#fbcfe8'}`,
+                                  padding: '3px 8px',
+                                  borderRadius: 6,
+                                  fontSize: 11.5,
+                                  fontWeight: 600,
+                                }}>
+                                  {opt.type === 'offline' ? 'Offline Bank' : opt.type === 'aba' ? 'ABA Direct API' : opt.type === 'khqr' ? 'Bakong KHQR' : opt.type}
+                                </span>
+                              </td>
+                              <td style={{ padding: '14px 16px' }}>
+                                {opt.accountNumber ? (
+                                  <div>
+                                    <div style={{ fontFamily: 'monospace', fontWeight: 700, color: '#0f172a', fontSize: 13 }}>
+                                      {opt.accountNumber}
+                                    </div>
+                                    {opt.accountName && (
+                                      <div style={{ fontSize: 11.5, color: '#64748b', marginTop: 1 }}>
+                                        {opt.accountName}
+                                      </div>
+                                    )}
+                                    {opt.qrCodeUrl && (
+                                      <span
+                                        style={{
+                                          display: 'inline-flex',
+                                          alignItems: 'center',
+                                          gap: 3,
+                                          background: '#eff6ff',
+                                          color: '#2563eb',
+                                          border: '1px solid #bfdbfe',
+                                          padding: '1px 6px',
+                                          borderRadius: 4,
+                                          fontSize: 10.5,
+                                          fontWeight: 700,
+                                          marginTop: 3,
+                                        }}
+                                      >
+                                        📱 QR Code
+                                      </span>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <span style={{ color: '#94a3b8', fontSize: 13 }}>-</span>
+                                )}
+                              </td>
+                              <td style={{ padding: '14px 16px' }}>
+                                {opt.requiresApproval ? (
+                                  <span style={{ display: 'inline-flex', alignItems: 'center', background: '#fffbeb', color: '#b45309', border: '1px solid #fde68a', padding: '3px 8px', borderRadius: 6, fontSize: 11.5, fontWeight: 600 }}>
+                                    {tr('Admin អនុម័ត', 'Admin Approval')}
+                                  </span>
+                                ) : (
+                                  <span style={{ display: 'inline-flex', alignItems: 'center', background: '#ecfdf5', color: '#047857', border: '1px solid #a7f3d0', padding: '3px 8px', borderRadius: 6, fontSize: 11.5, fontWeight: 600 }}>
+                                    {tr('ស្វ័យប្រវត្តិ', 'Instant / Auto')}
+                                  </span>
+                                )}
+                              </td>
+                              <td style={{ padding: '14px 16px' }}>
+                                {opt.status === 'active' ? (
+                                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: '#16a34a', fontSize: 12, fontWeight: 700 }}>
+                                    <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#16a34a', display: 'inline-block' }} />
+                                    {tr('សកម្ម', 'Active')}
+                                  </span>
+                                ) : (
+                                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: '#94a3b8', fontSize: 12, fontWeight: 600 }}>
+                                    <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#94a3b8', display: 'inline-block' }} />
+                                    {tr('អសកម្ម', 'Inactive')}
+                                  </span>
+                                )}
+                              </td>
+                              <td style={{ textAlign: 'right', padding: '14px 16px' }}>
+                                <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end', alignItems: 'center' }}>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleToggleOptionStatus(opt)}
+                                    style={{
+                                      fontSize: 11.5,
+                                      fontWeight: 600,
+                                      padding: '4px 8px',
+                                      background: '#ffffff',
+                                      color: opt.status === 'active' ? '#d97706' : '#16a34a',
+                                      border: `1px solid ${opt.status === 'active' ? '#fde68a' : '#bbf7d0'}`,
+                                      borderRadius: 6,
+                                      cursor: 'pointer',
+                                      transition: 'all 0.15s',
+                                    }}
+                                  >
+                                    {opt.status === 'active' ? tr('ផ្អាក', 'Pause') : tr('បើក', 'Activate')}
+                                  </button>
+
+                                  <Link
+                                    href={`/admin/saas/payment-options/edit/${opt.id}`}
+                                    style={{ width: 28, height: 28, borderRadius: 6, border: '1px solid #e2e8f0', background: '#ffffff', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none', transition: 'all 0.15s' }}
+                                    onMouseEnter={(e) => (e.currentTarget.style.background = '#eff6ff')}
+                                    onMouseLeave={(e) => (e.currentTarget.style.background = '#ffffff')}
+                                    title={tr('កែប្រែ', 'Edit')}
+                                  >
+                                    <FaRegEdit size={13} />
+                                  </Link>
+
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeletePaymentOption(opt.id)}
+                                    style={{ width: 28, height: 28, borderRadius: 6, border: '1px solid #fee2e2', background: '#ffffff', color: '#dc2626', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.15s' }}
+                                    onMouseEnter={(e) => (e.currentTarget.style.background = '#fef2f2')}
+                                    onMouseLeave={(e) => (e.currentTarget.style.background = '#ffffff')}
+                                    title={tr('លុប', 'Delete')}
+                                  >
+                                    <FaTrashAlt size={12} />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+
+                <Pagination
+                  currentPage={paymentOptionsPage}
+                  totalItems={paymentOptions.filter((opt) => {
+                    const matchStatus = paymentOptionFilter === 'all' || opt.status === paymentOptionFilter;
+                    const matchType = paymentOptionTypeFilter === 'all' || opt.type === paymentOptionTypeFilter;
+                    const term = paymentOptionSearch.toLowerCase();
+                    const matchSearch = !paymentOptionSearch ||
+                      opt.name?.toLowerCase().includes(term) ||
+                      opt.bankName?.toLowerCase().includes(term) ||
+                      opt.accountName?.toLowerCase().includes(term) ||
+                      opt.accountNumber?.toLowerCase().includes(term);
+                    return matchStatus && matchType && matchSearch;
+                  }).length}
+                  pageSize={paymentOptionsLimit}
+                  onPageChange={setPaymentOptionsPage}
+                  onPageSizeChange={(s) => { setPaymentOptionsLimit(s); setPaymentOptionsPage(1); }}
+                />
               </div>
             </div>
           )}
@@ -3869,11 +5261,11 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
                           fontWeight: 800,
                           padding: '2px 8px',
                           borderRadius: 6,
-                          background: daysRemaining > 0 ? '#dcfce7' : '#fee2e2',
-                          color: daysRemaining > 0 ? '#15803d' : '#dc2626',
+                          background: daysRemaining > 60 ? '#dcfce7' : '#fee2e2',
+                          color: daysRemaining > 60 ? '#15803d' : '#dc2626',
                         }}
                       >
-                        {daysRemaining > 0 ? `នៅសល់ ${daysRemaining} ថ្ងៃ` : 'ផុតកំណត់ហើយ'}
+                        {daysRemaining > 0 ? formatRemainingDuration(daysRemaining, lang) : tr('ផុតកំណត់ហើយ', 'Expired')}
                       </span>
                     </div>
                   </div>
@@ -4358,6 +5750,194 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: Reject Payment Modal */}
+      {showRejectModal && selectedPaymentForReject && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(15, 23, 42, 0.7)',
+            backdropFilter: 'blur(8px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+            padding: 16,
+            fontFamily: "'Kantumruy Pro', 'Inter', sans-serif",
+          }}
+        >
+          <div
+            style={{
+              background: '#ffffff',
+              borderRadius: 20,
+              width: '100%',
+              maxWidth: 480,
+              boxShadow: '0 25px 70px -12px rgba(15, 23, 42, 0.35)',
+              overflow: 'hidden',
+            }}
+          >
+            {/* Header */}
+            <div
+              style={{
+                padding: '20px 24px 16px',
+                borderBottom: '1px solid #f1f5f9',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div
+                  style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 10,
+                    background: '#fee2e2',
+                    color: '#dc2626',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: 20,
+                  }}
+                >
+                  <MdCancel />
+                </div>
+                <div>
+                  <h3 style={{ fontSize: 16, fontWeight: 900, color: '#0f172a', margin: 0 }}>
+                    {tr('បដិសេធការទូទាត់ Offline', 'Reject Offline Payment')}
+                  </h3>
+                  <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>
+                    Payment ID: #{selectedPaymentForReject.id}
+                  </div>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowRejectModal(false)}
+                style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: 8,
+                  border: '1px solid #e2e8f0',
+                  background: '#ffffff',
+                  color: '#64748b',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  fontSize: 15,
+                  fontWeight: 700,
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Content */}
+            <div style={{ padding: '20px 24px' }}>
+              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 12, padding: '14px 16px', marginBottom: 16 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, fontSize: 12.5 }}>
+                  <div>
+                    <span style={{ color: '#64748b' }}>{tr('ក្រុមហ៊ុន:', 'Company:')}</span>
+                    <div style={{ fontWeight: 800, color: '#0f172a' }}>
+                      {selectedPaymentForReject.invoice?.subscription?.companyName || `Company #${selectedPaymentForReject.invoice?.subscriptionId || '-'}`}
+                    </div>
+                  </div>
+                  <div>
+                    <span style={{ color: '#64748b' }}>{tr('វិក្កយបត្រ:', 'Invoice:')}</span>
+                    <div style={{ fontWeight: 800, color: 'var(--accent)', fontFamily: 'monospace' }}>
+                      {selectedPaymentForReject.invoice?.invoiceNumber || `#${selectedPaymentForReject.invoiceId}`}
+                    </div>
+                  </div>
+                  <div>
+                    <span style={{ color: '#64748b' }}>{tr('ទឹកប្រាក់:', 'Amount:')}</span>
+                    <div style={{ fontWeight: 900, color: '#0f172a', fontSize: 14 }}>
+                      ${Number(selectedPaymentForReject.amount || selectedPaymentForReject.invoice?.totalAmount || 0).toFixed(2)}
+                    </div>
+                  </div>
+                  <div>
+                    <span style={{ color: '#64748b' }}>{tr('Transaction ID:', 'Transaction ID:')}</span>
+                    <div style={{ fontWeight: 800, color: '#b45309', fontFamily: 'monospace' }}>
+                      {selectedPaymentForReject.transactionId || '-'}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: 12.5, fontWeight: 700, color: '#334155', marginBottom: 6 }}>
+                  {tr('មូលហេតុនៃការបដិសេធ (Rejection Reason)', 'Rejection Reason')} *
+                </label>
+                <textarea
+                  rows={3}
+                  required
+                  placeholder={tr('ឧ. មិនឃើញប្រតិបត្តិការក្នុងគណនីធនាគារ ឬចំនួនទឹកប្រាក់មិនត្រូវ...', 'e.g. Transaction ID not found in bank account or incorrect amount...')}
+                  value={rejectReason}
+                  onChange={(e) => setRejectReason(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '10px 14px',
+                    borderRadius: 10,
+                    border: '1.5px solid #cbd5e1',
+                    fontSize: 13,
+                    outline: 'none',
+                    boxSizing: 'border-box',
+                    fontFamily: 'inherit',
+                    resize: 'none',
+                  }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
+                <button
+                  type="button"
+                  onClick={() => setShowRejectModal(false)}
+                  style={{
+                    flex: 1,
+                    padding: '11px 16px',
+                    borderRadius: 10,
+                    border: '1px solid #e2e8f0',
+                    background: '#ffffff',
+                    color: '#64748b',
+                    fontSize: 13,
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                  }}
+                >
+                  {tr('បោះបង់', 'Cancel')}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmRejectPayment}
+                  disabled={rejecting}
+                  style={{
+                    flex: 2,
+                    padding: '11px 16px',
+                    borderRadius: 10,
+                    border: 'none',
+                    background: '#dc2626',
+                    color: '#ffffff',
+                    fontSize: 13,
+                    fontWeight: 800,
+                    cursor: rejecting ? 'not-allowed' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 6,
+                  }}
+                >
+                  {rejecting ? tr('កំពុងបដិសេធ...', 'Rejecting...') : tr('បញ្ជាក់ការបដិសេធ', 'Confirm Reject')}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

@@ -28,7 +28,7 @@ export class Coupon {
   })
   discountType: DiscountType;
 
-  @Column('decimal', { name: 'discount_value', precision: 10, scale: 2 })
+  @Column('decimal', { name: 'discount_value', precision: 10, scale: 4 })
   discountValue: number; // e.g. 20.00 for 20% or 10.00 for $10
 
   @Column({ name: 'partner_id', nullable: true })
@@ -49,6 +49,9 @@ export class Coupon {
 
   @Column({ name: 'expires_at', type: 'timestamp', nullable: true })
   expiresAt: Date;
+
+  @Column({ name: 'status', type: 'varchar', length: 20, default: 'active' })
+  status: string; // 'active' | 'inactive' | 'expired'
 
   @Column({ name: 'is_active', default: true })
   isActive: boolean;

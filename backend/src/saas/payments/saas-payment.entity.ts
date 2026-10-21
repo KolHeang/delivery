@@ -33,7 +33,7 @@ export class SaasPayment {
   @Column({ name: 'payment_method', default: 'khqr' })
   paymentMethod: string; // khqr, aba_payway, credit_card, bank_transfer, mock
 
-  @Column('decimal', { precision: 10, scale: 2 })
+  @Column('decimal', { precision: 10, scale: 4 })
   amount: number;
 
   @Column({
@@ -44,6 +44,18 @@ export class SaasPayment {
 
   @Column('jsonb', { nullable: true })
   rawResponse: Record<string, any>;
+
+  @Column({ name: 'payment_option_id', nullable: true })
+  paymentOptionId: number;
+
+  @Column({ name: 'approved_at', type: 'timestamp', nullable: true })
+  approvedAt: Date;
+
+  @Column({ name: 'approved_by', nullable: true })
+  approvedBy: string;
+
+  @Column({ nullable: true, type: 'text' })
+  note: string;
 
   @OneToMany(() => Commission, (commission) => commission.payment)
   commissions: Commission[];

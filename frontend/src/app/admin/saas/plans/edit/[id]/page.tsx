@@ -1,10 +1,14 @@
 'use client';
 
+import { SaasMasterLayout } from '@/components/layout/SaasMasterLayout';
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, useParams } from 'next/navigation';
 import { saasApi } from '@/lib/saas-api';
 import { getUser, clearAuth } from '@/lib/auth';
+import { useLanguage } from '@/lib/LanguageContext';
+import { FlagKm, FlagEn } from '@/components/ui/Flags';
+import { SaasCloudIcon } from '@/components/ui/SaasCloudIcon';
 import {
   MdDashboard,
   MdBusiness,
@@ -25,12 +29,16 @@ import {
   MdLanguage,
   MdNotifications,
   MdVpnKey,
+  MdReceiptLong,
+  MdPayment,
 } from 'react-icons/md';
 
 export default function EditPlanPage() {
   const router = useRouter();
   const params = useParams();
   const planId = Number(params.id);
+  const { lang, setLang } = useLanguage();
+  const tr = (km: string, en: string) => (lang === 'km' ? km : en);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -106,11 +114,11 @@ export default function EditPlanPage() {
             description: data.description || '',
             priceMonthly: Number(data.priceMonthly) || 0,
             priceYearly: Number(data.priceYearly) || 0,
-            maxUsers: Number(data.maxUsers) || 10,
-            maxDrivers: Number(data.maxDrivers) || 15,
-            maxMerchants: Number(data.maxMerchants) || 50,
-            maxOrdersPerMonth: Number(data.maxOrdersPerMonth) || 2000,
-            maxVehicles: Number(data.maxVehicles) || 15,
+            maxUsers: data.maxUsers != null ? Number(data.maxUsers) : 10,
+            maxDrivers: data.maxDrivers != null ? Number(data.maxDrivers) : 15,
+            maxMerchants: data.maxMerchants != null ? Number(data.maxMerchants) : 50,
+            maxOrdersPerMonth: data.maxOrdersPerMonth != null ? Number(data.maxOrdersPerMonth) : 2000,
+            maxVehicles: data.maxVehicles != null ? Number(data.maxVehicles) : 15,
             isPopular: !!data.isPopular,
             isActive: data.isActive !== false,
             features: {
@@ -131,7 +139,7 @@ export default function EditPlanPage() {
         }
       } catch (err) {
         alert('បរាជ័យក្នុងការទាញយកព័ត៌មាន Plan');
-        router.push('/admin/saas?tab=plans');
+        router.push('/admin/saas/plans');
       } finally {
         setLoading(false);
       }
@@ -168,7 +176,7 @@ export default function EditPlanPage() {
       setSaving(true);
       await saasApi.updatePlan(planId, planForm);
       alert('បានកែប្រែ Plan ជោគជ័យ!');
-      router.push('/admin/saas?tab=plans');
+      router.push('/admin/saas/plans');
     } catch (err: any) {
       alert(err.response?.data?.message || 'បរាជ័យក្នុងការកែប្រែ Plan');
     } finally {
@@ -177,294 +185,11 @@ export default function EditPlanPage() {
   };
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: '#f8fafc', fontFamily: 'inherit' }}>
-      {/* 1. SIDEBAR */}
-      <aside
-        style={{
-          width: 270,
-          background: '#2b529a',
-          borderRight: '1px solid rgba(255, 255, 255, 0.12)',
-          display: 'flex',
-          flexDirection: 'column',
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          bottom: 0,
-          zIndex: 100,
-          boxShadow: '4px 0 24px rgba(0,0,0,0.15)',
-        }}
-      >
-        <div style={{ padding: '24px 20px', borderBottom: '1px solid rgba(255, 255, 255, 0.12)', display: 'flex', alignItems: 'center', gap: 12 }}>
-          <div style={{ width: 42, height: 42, borderRadius: 12, background: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, color: '#1e3b75', fontSize: 20 }}>
-            EBS
-          </div>
-          <div>
-            <div style={{ fontWeight: 900, fontSize: 16, color: '#ffffff' }}>EBS CLOUD</div>
-            <div style={{ fontSize: 11, color: '#bfdbfe', fontWeight: 600 }}>SaaS Management</div>
-          </div>
-        </div>
-
-        <div style={{ padding: '20px 14px', flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <Link
-            href="/admin/saas?tab=dashboard"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 12,
-              width: '100%',
-              padding: '11px 16px',
-              borderRadius: 10,
-              background: 'transparent',
-              color: '#ffffff',
-              fontSize: 14,
-              fontWeight: 600,
-              textDecoration: 'none',
-              borderLeft: '4px solid transparent',
-              transition: 'all 0.15s',
-            }}
-          >
-            <MdDashboard size={20} color="#bfdbfe" />
-            <span>ផ្ទាំងគ្រប់គ្រងទូទៅ</span>
-          </Link>
-
-          <Link
-            href="/admin/saas?tab=tenants"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 12,
-              width: '100%',
-              padding: '11px 16px',
-              borderRadius: 10,
-              background: 'transparent',
-              color: '#ffffff',
-              fontSize: 14,
-              fontWeight: 600,
-              textDecoration: 'none',
-              borderLeft: '4px solid transparent',
-              transition: 'all 0.15s',
-            }}
-          >
-            <MdBusiness size={20} color="#bfdbfe" />
-            <span>បញ្ជីក្រុមហ៊ុនជាវសេវា</span>
-          </Link>
-
-          <Link
-            href="/admin/saas?tab=users"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 12,
-              width: '100%',
-              padding: '11px 16px',
-              borderRadius: 10,
-              background: 'transparent',
-              color: '#ffffff',
-              fontSize: 14,
-              fontWeight: 600,
-              textDecoration: 'none',
-              borderLeft: '4px solid transparent',
-              transition: 'all 0.15s',
-            }}
-          >
-            <MdGroup size={20} color="#bfdbfe" />
-            <span>គណនី SaaS Admins</span>
-          </Link>
-
-          <Link
-            href="/admin/saas?tab=plans"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 12,
-              width: '100%',
-              padding: '11px 16px',
-              borderRadius: 10,
-              background: 'rgba(255, 255, 255, 0.15)',
-              color: '#ffffff',
-              fontSize: 14,
-              fontWeight: 700,
-              textDecoration: 'none',
-              borderLeft: '4px solid #60a5fa',
-              transition: 'all 0.15s',
-            }}
-          >
-            <MdWorkspacePremium size={20} color="#60a5fa" />
-            <span>កញ្ចប់សេវា</span>
-          </Link>
-
-          <Link
-            href="/admin/saas?tab=coupons"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 12,
-              width: '100%',
-              padding: '11px 16px',
-              borderRadius: 10,
-              background: 'transparent',
-              color: '#ffffff',
-              fontSize: 14,
-              fontWeight: 600,
-              textDecoration: 'none',
-              borderLeft: '4px solid transparent',
-              transition: 'all 0.15s',
-            }}
-          >
-            <MdLocalOffer size={20} color="#bfdbfe" />
-            <span>គូប៉ុងបញ្ចុះតម្លៃ</span>
-          </Link>
-
-          <Link
-            href="/admin/saas?tab=partners"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 12,
-              width: '100%',
-              padding: '11px 16px',
-              borderRadius: 10,
-              background: 'transparent',
-              color: '#ffffff',
-              fontSize: 14,
-              fontWeight: 600,
-              textDecoration: 'none',
-              borderLeft: '4px solid transparent',
-              transition: 'all 0.15s',
-            }}
-          >
-            <MdAttachMoney size={20} color="#bfdbfe" />
-            <span>ដៃគូសហការ</span>
-          </Link>
-        </div>
-      </aside>
-
-      {/* 2. MAIN CONTENT AREA */}
-      <div style={{ flex: 1, marginLeft: 270, display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-        {/* Topbar */}
-        <header
-          style={{
-            height: 64,
-            background: '#2b529a',
-            borderBottom: '1px solid rgba(255, 255, 255, 0.12)',
-            padding: '0 32px',
-            display: 'flex',
-            justifyContent: 'flex-end',
-            alignItems: 'center',
-            position: 'sticky',
-            top: 0,
-            zIndex: 80,
-            boxShadow: '0 4px 16px rgba(0,0,0,0.06)',
-          }}
-        >
-          <div style={{ position: 'relative', paddingLeft: 14, borderLeft: '1px solid rgba(255, 255, 255, 0.2)' }}>
-            <button
-              onClick={() => setShowProfileDropdown(!showProfileDropdown)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 10,
-                background: showProfileDropdown ? 'rgba(255, 255, 255, 0.18)' : 'rgba(255, 255, 255, 0.08)',
-                border: '1px solid rgba(255, 255, 255, 0.2)',
-                borderRadius: 12,
-                padding: '6px 12px',
-                cursor: 'pointer',
-                textAlign: 'left',
-              }}
-            >
-              <div
-                style={{
-                  width: 34,
-                  height: 34,
-                  borderRadius: '50%',
-                  background: 'linear-gradient(135deg, #3b82f6, #6366f1)',
-                  color: '#ffffff',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontWeight: 900,
-                  fontSize: 14,
-                }}
-              >
-                {user?.name ? user.name.charAt(0).toUpperCase() : 'A'}
-              </div>
-              <div>
-                <div style={{ fontSize: 13, fontWeight: 900, color: '#ffffff', lineHeight: 1.2 }}>{user?.name || 'Admin User'}</div>
-                <div style={{ fontSize: 11, color: '#bfdbfe', fontWeight: 600 }}>{user?.email || 'admin@gmail.com'}</div>
-              </div>
-              <MdKeyboardArrowDown
-                size={20}
-                color="#ffffff"
-                style={{
-                  marginLeft: 4,
-                  transform: showProfileDropdown ? 'rotate(180deg)' : 'rotate(0deg)',
-                }}
-              />
-            </button>
-
-            {showProfileDropdown && (
-              <>
-                <div
-                  onClick={() => setShowProfileDropdown(false)}
-                  style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 90 }}
-                />
-                <div
-                  style={{
-                    position: 'absolute',
-                    top: 'calc(100% + 8px)',
-                    right: 0,
-                    width: 250,
-                    background: '#ffffff',
-                    borderRadius: 16,
-                    boxShadow: '0 14px 35px -4px rgba(0,0,0,0.22)',
-                    border: '1px solid #e2e8f0',
-                    padding: '8px',
-                    zIndex: 95,
-                  }}
-                >
-                  <div style={{ padding: '10px 12px', borderBottom: '1px solid #f1f5f9' }}>
-                    <div style={{ fontSize: 13.5, fontWeight: 900, color: '#0f172a' }}>{user?.name || 'Admin User'}</div>
-                    <div style={{ fontSize: 11.5, color: '#64748b', marginTop: 1 }}>{user?.email || 'admin@gmail.com'}</div>
-                  </div>
-
-                  <div style={{ padding: '6px 0' }}>
-                    <button
-                      onClick={() => {
-                        setShowProfileDropdown(false);
-                        handleLogout();
-                      }}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 10,
-                        width: '100%',
-                        padding: '9px 12px',
-                        border: 'none',
-                        background: '#fef2f2',
-                        color: '#dc2626',
-                        fontSize: 13,
-                        fontWeight: 800,
-                        borderRadius: 10,
-                        cursor: 'pointer',
-                        textAlign: 'left',
-                      }}
-                    >
-                      <MdLogout size={18} />
-                      <span>ចាកចេញ (Logout)</span>
-                    </button>
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
-        </header>
-
-        {/* Page Content Body */}
-        <main style={{ flex: 1, padding: '24px 32px', width: '100%', minWidth: 0, boxSizing: 'border-box' }}>
+    <SaasMasterLayout activeTab="plans">
           {/* Back Button & Title */}
           <div style={{ marginBottom: 20 }}>
             <Link
-              href="/admin/saas?tab=plans"
+              href="/admin/saas/plans"
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -578,53 +303,105 @@ export default function EditPlanPage() {
 
                   <div className="form-row">
                     <div className="form-group">
-                      <label className="form-label">
-                        ចំនួនអ្នកដឹកជញ្ជូន <span style={{ color: '#ef4444' }}>*</span>
-                      </label>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                        <label className="form-label" style={{ margin: 0 }}>
+                          ចំនួនអ្នកដឹកជញ្ជូន <span style={{ color: '#ef4444' }}>*</span>
+                        </label>
+                        <span style={{ fontSize: 11.5, fontWeight: 700, color: Number(planForm.maxDrivers) === 0 ? '#10b981' : '#64748b' }}>
+                          {Number(planForm.maxDrivers) === 0 ? '✨ 0 = មិនកំណត់ (Unlimited)' : '0 = មិនកំណត់'}
+                        </span>
+                      </div>
                       <input
                         type="number"
+                        min={0}
                         className="form-control"
+                        placeholder="0 = មិនកំណត់ (Unlimited)"
                         value={planForm.maxDrivers}
-                        onChange={(e) => setPlanForm({ ...planForm, maxDrivers: Number(e.target.value) })}
+                        onChange={(e) => setPlanForm({ ...planForm, maxDrivers: e.target.value === '' ? 0 : Number(e.target.value) })}
+                        style={Number(planForm.maxDrivers) === 0 ? { borderColor: '#10b981', background: '#f0fdf4' } : undefined}
                       />
+                      {Number(planForm.maxDrivers) === 0 && (
+                        <div style={{ fontSize: 11.5, color: '#059669', fontWeight: 600, marginTop: 4 }}>
+                          ✓ មិនកំណត់ចំនួនអ្នកដឹកជញ្ជូន (Unlimited Drivers)
+                        </div>
+                      )}
                     </div>
 
                     <div className="form-group">
-                      <label className="form-label">
-                        ចំនួនហាងទំនិញ <span style={{ color: '#ef4444' }}>*</span>
-                      </label>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                        <label className="form-label" style={{ margin: 0 }}>
+                          ចំនួនហាងទំនិញ <span style={{ color: '#ef4444' }}>*</span>
+                        </label>
+                        <span style={{ fontSize: 11.5, fontWeight: 700, color: Number(planForm.maxMerchants) === 0 ? '#10b981' : '#64748b' }}>
+                          {Number(planForm.maxMerchants) === 0 ? '✨ 0 = មិនកំណត់ (Unlimited)' : '0 = មិនកំណត់'}
+                        </span>
+                      </div>
                       <input
                         type="number"
+                        min={0}
                         className="form-control"
+                        placeholder="0 = មិនកំណត់ (Unlimited)"
                         value={planForm.maxMerchants}
-                        onChange={(e) => setPlanForm({ ...planForm, maxMerchants: Number(e.target.value) })}
+                        onChange={(e) => setPlanForm({ ...planForm, maxMerchants: e.target.value === '' ? 0 : Number(e.target.value) })}
+                        style={Number(planForm.maxMerchants) === 0 ? { borderColor: '#10b981', background: '#f0fdf4' } : undefined}
                       />
+                      {Number(planForm.maxMerchants) === 0 && (
+                        <div style={{ fontSize: 11.5, color: '#059669', fontWeight: 600, marginTop: 4 }}>
+                          ✓ មិនកំណត់ចំនួនហាងទំនិញ (Unlimited Merchants)
+                        </div>
+                      )}
                     </div>
                   </div>
 
                   <div className="form-row">
                     <div className="form-group">
-                      <label className="form-label">
-                        ចំនួនកញ្ចប់ឥវ៉ាន់ប្រចាំខែ <span style={{ color: '#ef4444' }}>*</span>
-                      </label>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                        <label className="form-label" style={{ margin: 0 }}>
+                          ចំនួនកញ្ចប់ឥវ៉ាន់ប្រចាំខែ <span style={{ color: '#ef4444' }}>*</span>
+                        </label>
+                        <span style={{ fontSize: 11.5, fontWeight: 700, color: Number(planForm.maxOrdersPerMonth) === 0 ? '#10b981' : '#64748b' }}>
+                          {Number(planForm.maxOrdersPerMonth) === 0 ? '✨ 0 = មិនកំណត់ (Unlimited)' : '0 = មិនកំណត់'}
+                        </span>
+                      </div>
                       <input
                         type="number"
+                        min={0}
                         className="form-control"
+                        placeholder="0 = មិនកំណត់ (Unlimited)"
                         value={planForm.maxOrdersPerMonth}
-                        onChange={(e) => setPlanForm({ ...planForm, maxOrdersPerMonth: Number(e.target.value) })}
+                        onChange={(e) => setPlanForm({ ...planForm, maxOrdersPerMonth: e.target.value === '' ? 0 : Number(e.target.value) })}
+                        style={Number(planForm.maxOrdersPerMonth) === 0 ? { borderColor: '#10b981', background: '#f0fdf4' } : undefined}
                       />
+                      {Number(planForm.maxOrdersPerMonth) === 0 && (
+                        <div style={{ fontSize: 11.5, color: '#059669', fontWeight: 600, marginTop: 4 }}>
+                          ✓ មិនកំណត់ចំនួនកញ្ចប់ឥវ៉ាន់ (Unlimited Monthly Orders)
+                        </div>
+                      )}
                     </div>
 
                     <div className="form-group">
-                      <label className="form-label">
-                        ចំនួនយានយន្ត <span style={{ color: '#ef4444' }}>*</span>
-                      </label>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                        <label className="form-label" style={{ margin: 0 }}>
+                          ចំនួនយានយន្ត <span style={{ color: '#ef4444' }}>*</span>
+                        </label>
+                        <span style={{ fontSize: 11.5, fontWeight: 700, color: Number(planForm.maxVehicles) === 0 ? '#10b981' : '#64748b' }}>
+                          {Number(planForm.maxVehicles) === 0 ? '✨ 0 = មិនកំណត់ (Unlimited)' : '0 = មិនកំណត់'}
+                        </span>
+                      </div>
                       <input
                         type="number"
+                        min={0}
                         className="form-control"
+                        placeholder="0 = មិនកំណត់ (Unlimited)"
                         value={planForm.maxVehicles}
-                        onChange={(e) => setPlanForm({ ...planForm, maxVehicles: Number(e.target.value) })}
+                        onChange={(e) => setPlanForm({ ...planForm, maxVehicles: e.target.value === '' ? 0 : Number(e.target.value) })}
+                        style={Number(planForm.maxVehicles) === 0 ? { borderColor: '#10b981', background: '#f0fdf4' } : undefined}
                       />
+                      {Number(planForm.maxVehicles) === 0 && (
+                        <div style={{ fontSize: 11.5, color: '#059669', fontWeight: 600, marginTop: 4 }}>
+                          ✓ មិនកំណត់ចំនួនយានយន្ត (Unlimited Vehicles)
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -814,7 +591,7 @@ export default function EditPlanPage() {
                   {/* Submit Buttons */}
                   <div style={{ marginTop: 24, display: 'flex', gap: 12, justifyContent: 'flex-end', borderTop: '1px solid var(--border)', paddingTop: 16 }}>
                     <Link
-                      href="/admin/saas?tab=plans"
+                      href="/admin/saas/plans"
                       className="btn btn-cancel"
                       style={{ background: '#dc2626', color: '#ffffff', border: '1px solid #dc2626', fontWeight: 700 }}
                     >
@@ -833,8 +610,6 @@ export default function EditPlanPage() {
               )}
             </div>
           </div>
-        </main>
-      </div>
-    </div>
+            </SaasMasterLayout>
   );
 }

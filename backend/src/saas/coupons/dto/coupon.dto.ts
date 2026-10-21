@@ -47,6 +47,15 @@ export class CreateCouponDto {
   @IsOptional()
   expiresAt?: Date;
 
+  @ApiPropertyOptional({
+    description: 'Coupon status',
+    enum: ['active', 'inactive', 'expired'],
+    default: 'active',
+  })
+  @IsOptional()
+  @IsString()
+  status?: string;
+
   @ApiPropertyOptional({ description: 'Is coupon active', default: true })
   @IsOptional()
   @IsBoolean()

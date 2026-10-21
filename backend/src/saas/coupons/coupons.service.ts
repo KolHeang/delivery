@@ -14,6 +14,22 @@ export class CouponsService {
     private readonly couponRepo: Repository<Coupon>,
   ) {}
 
+  private normalizeCoupon(coupon: Coupon): Coupon {
+    if (!coupon) return coupon;
+    const isExpired = Boolean(
+      coupon.expiresAt && new Date(coupon.expiresAt).getTime() < Date.now()
+    );
+    if (isExpired) {
+      coupon.status = 'expired';
+      coupon.isActive = false;
+    } else if (coupon.status) {
+      coupon.isActive = coupon.status === 'active';
+    } else {
+      coupon.status = coupon.isActive !== false ? 'active' : 'inactive';
+    }
+    return coupon;
+  }
+
   async findAll(query?: { page?: number; limit?: number; search?: string }): Promise<any> {
     const page = query?.page !== undefined ? Math.max(1, Number(query.page)) : undefined;
     const limit = query?.limit !== undefined ? Math.max(1, Number(query.limit)) : 10;
@@ -30,7 +46,8 @@ export class CouponsService {
     };
 
     if (page === undefined) {
-      return this.couponRepo.find(findOptions);
+      const items = await this.couponRepo.find(findOptions);
+      return items.map((c) => this.normalizeCoupon(c));
     }
 
     const [result, total] = await this.couponRepo.findAndCount({
@@ -39,9 +56,11 @@ export class CouponsService {
       take: limit,
     });
 
+    const normalized = result.map((c) => this.normalizeCoupon(c));
+
     return {
-      result,
-      data: result,
+      result: normalized,
+      data: normalized,
       total,
       page,
       limit,
@@ -55,12 +74,12 @@ export class CouponsService {
       relations: { partner: true },
     });
     if (!coupon) throw new NotFoundException('Coupon not found');
-    return coupon;
+    return this.normalizeCoupon(coupon);
   }
 
   async validateCoupon(code: string, subtotal: number) {
     const coupon = await this.couponRepo.findOne({
-      where: { code: code.toUpperCase().trim(), isActive: true },
+      where: { code: code.toUpperCase().trim() },
       relations: { partner: true },
     });
 
@@ -68,8 +87,14 @@ export class CouponsService {
       throw new BadRequestException('Coupon code is invalid or inactive');
     }
 
-    if (coupon.expiresAt && new Date(coupon.expiresAt) < new Date()) {
+    this.normalizeCoupon(coupon);
+
+    if (coupon.status === 'expired' || (coupon.expiresAt && new Date(coupon.expiresAt).getTime() < Date.now())) {
       throw new BadRequestException('Coupon code has expired');
+    }
+
+    if (coupon.status === 'inactive' || coupon.isActive === false) {
+      throw new BadRequestException('Coupon code is invalid or inactive');
     }
 
     if (coupon.usedCount >= coupon.usageLimit) {
@@ -93,6 +118,8 @@ export class CouponsService {
         code: coupon.code,
         discountType: coupon.discountType,
         discountValue: Number(coupon.discountValue),
+        status: coupon.status,
+        expiresAt: coupon.expiresAt,
         partner: coupon.partner
           ? {
               id: coupon.partner.id,
@@ -115,11 +142,22 @@ export class CouponsService {
       throw new BadRequestException('Coupon code already exists');
     }
 
+    // Auto-compute status based on expire date
+    if (data.expiresAt && new Date(data.expiresAt).getTime() < Date.now()) {
+      data.status = 'expired';
+      data.isActive = false;
+    } else if (data.status) {
+      data.isActive = data.status === 'active';
+    } else if (data.isActive !== undefined) {
+      data.status = data.isActive ? 'active' : 'inactive';
+    }
+
     const coupon = this.couponRepo.create({
       ...data,
       code: data.code?.toUpperCase().trim(),
     });
-    return this.couponRepo.save(coupon);
+    const saved = await this.couponRepo.save(coupon);
+    return this.normalizeCoupon(saved);
   }
 
   async update(id: number, data: Partial<Coupon>): Promise<Coupon> {
@@ -127,8 +165,27 @@ export class CouponsService {
     if (data.code) {
       data.code = data.code.toUpperCase().trim();
     }
+
+    // Auto-compute status based on expire date
+    if (data.expiresAt !== undefined) {
+      if (data.expiresAt && new Date(data.expiresAt).getTime() < Date.now()) {
+        data.status = 'expired';
+        data.isActive = false;
+      } else if (!data.status && coupon.status === 'expired') {
+        data.status = 'active';
+        data.isActive = true;
+      }
+    }
+
+    if (data.status) {
+      data.isActive = data.status === 'active';
+    } else if (data.isActive !== undefined) {
+      data.status = data.isActive ? 'active' : 'inactive';
+    }
+
     Object.assign(coupon, data);
-    return this.couponRepo.save(coupon);
+    const saved = await this.couponRepo.save(coupon);
+    return this.normalizeCoupon(saved);
   }
 
   async remove(id: number): Promise<void> {

@@ -7,8 +7,15 @@ import { Tenant } from '../saas/entities/tenant.entity';
 import { SettingsService } from './settings.service';
 import { SettingsController } from './settings.controller';
 
+import { MinioModule } from '../minio/minio.mudule';
+
+import { Currency } from './entities/currency.entity';
+
 @Module({
-  imports: [TypeOrmModule.forFeature([Organisation, GeneralSetting, FirebaseCredential, Tenant])],
+  imports: [
+    TypeOrmModule.forFeature([Organisation, GeneralSetting, FirebaseCredential, Tenant, Currency]),
+    MinioModule,
+  ],
   providers: [SettingsService],
   controllers: [SettingsController],
   exports: [SettingsService],

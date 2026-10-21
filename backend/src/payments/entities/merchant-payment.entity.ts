@@ -30,10 +30,10 @@ export class MerchantPayment {
   @Column({ name: 'merchant_id', nullable: true })
   merchantId: number;
 
-  @Column('decimal', { precision: 10, scale: 2, default: 0 })
+  @Column('decimal', { precision: 10, scale: 4, default: 0 })
   amount: number;
 
-  @Column('decimal', { precision: 12, scale: 2, default: 0, name: 'amount_khr' })
+  @Column('decimal', { precision: 12, scale: 4, default: 0, name: 'amount_khr' })
   amountKHR: number;
 
   @Column({ type: 'date', default: () => 'CURRENT_DATE' })

@@ -1,5 +1,6 @@
 'use client';
 
+import { SaasMasterLayout } from '@/components/layout/SaasMasterLayout';
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, useParams } from 'next/navigation';
@@ -42,6 +43,7 @@ import { FlagKm, FlagEn } from '@/components/ui/Flags';
 import { useLanguage } from '@/lib/LanguageContext';
 import { printInvoicePdf } from '@/lib/invoice-pdf';
 import { getTenantWorkspaceUrl } from '@/lib/domain';
+import { formatRemainingDuration } from '@/lib/date-utils';
 
 export default function TenantDetailPage() {
   const router = useRouter();
@@ -152,12 +154,12 @@ export default function TenantDetailPage() {
         setInvoices(combined);
       } else {
         alert(tr('រកមិនឃើញព័ត៌មានក្រុមហ៊ុននេះទេ', 'Company not found'));
-        router.push('/admin/saas?tab=tenants');
+        router.push('/admin/saas/tenants');
       }
     } catch (err: any) {
       console.error('Failed to load tenant:', err);
       alert(tr('បរាជ័យក្នុងការទាញយកព័ត៌មានក្រុមហ៊ុន', 'Failed to load company info'));
-      router.push('/admin/saas?tab=tenants');
+      router.push('/admin/saas/tenants');
     } finally {
       setLoading(false);
     }
@@ -404,422 +406,12 @@ export default function TenantDetailPage() {
   };
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: '#f8fafc', fontFamily: "'Kantumruy Pro', 'Inter', sans-serif", width: '100%', maxWidth: '100vw', overflowX: 'hidden' }}>
-      {/* 1. DEDICATED SAAS MASTER SIDEBAR */}
-      <aside
-        style={{
-          width: 260,
-          minWidth: 260,
-          background: '#2b529a',
-          color: '#ffffff',
-          display: 'flex',
-          flexDirection: 'column',
-          position: 'fixed',
-          top: 0,
-          bottom: 0,
-          left: 0,
-          zIndex: 90,
-          boxShadow: '4px 0 20px rgba(0,0,0,0.1)',
-        }}
-      >
-        {/* Brand Header */}
-        <div style={{ height: 64, padding: '0 20px', display: 'flex', alignItems: 'center', gap: 12, borderBottom: '1px solid rgba(255,255,255,0.12)', boxSizing: 'border-box' }}>
-          <div
-            style={{
-              width: 40,
-              height: 40,
-              borderRadius: 12,
-              background: '#ffffff',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: '0 4px 14px rgba(0,0,0,0.18)',
-              padding: 2,
-              boxSizing: 'border-box',
-              flexShrink: 0,
-            }}
-          >
-            <SaasCloudIcon size={34} />
-          </div>
-          <div>
-            <div style={{ fontSize: 15, fontWeight: 900, color: '#ffffff', letterSpacing: '-0.2px', lineHeight: 1.2 }}>
-              EBS Master SaaS
-            </div>
-            <div style={{ fontSize: 10.5, color: '#93c5fd', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-              ● {tr('ផ្ទាំងគ្រប់គ្រង SUPER ADMIN', 'SUPER ADMIN PORTAL')}
-            </div>
-          </div>
-        </div>
-
-        {/* Sidebar Nav Items */}
-        <div style={{ padding: '16px 12px', display: 'flex', flexDirection: 'column', gap: 6, flex: 1, overflowY: 'auto' }}>
-          <div style={{ fontSize: 11, fontWeight: 800, color: '#93c5fd', padding: '8px 12px', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
-            {tr('ម៉ឺនុយមេ', 'Main Menu')}
-          </div>
-
-          <Link
-            href="/admin/saas?tab=dashboard"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 12,
-              width: '100%',
-              padding: '11px 16px',
-              borderRadius: 10,
-              border: 'none',
-              background: 'transparent',
-              color: '#ffffff',
-              fontSize: 14,
-              fontWeight: 600,
-              textDecoration: 'none',
-              transition: 'all 0.15s',
-              borderLeft: '4px solid transparent',
-              boxSizing: 'border-box',
-            }}
-          >
-            <MdDashboard size={20} color="#bfdbfe" />
-            <span>{tr('ផ្ទាំងគ្រប់គ្រង', 'Dashboard')}</span>
-          </Link>
-
-          <Link
-            href="/admin/saas?tab=tenants"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 12,
-              width: '100%',
-              padding: '11px 16px',
-              borderRadius: 10,
-              border: 'none',
-              background: 'rgba(255, 255, 255, 0.18)',
-              color: '#ffffff',
-              fontSize: 14,
-              fontWeight: 900,
-              textDecoration: 'none',
-              transition: 'all 0.15s',
-              borderLeft: '4px solid #ffffff',
-              boxSizing: 'border-box',
-            }}
-          >
-            <MdBusiness size={20} color="#ffffff" />
-            <span>{tr('ក្រុមហ៊ុនទាំងអស់', 'All Companies')}</span>
-          </Link>
-
-          <Link
-            href="/admin/saas?tab=invoices"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 12,
-              width: '100%',
-              padding: '11px 16px',
-              borderRadius: 10,
-              border: 'none',
-              background: 'transparent',
-              color: '#ffffff',
-              fontSize: 14,
-              fontWeight: 600,
-              textDecoration: 'none',
-              transition: 'all 0.15s',
-              borderLeft: '4px solid transparent',
-              boxSizing: 'border-box',
-            }}
-          >
-            <MdReceiptLong size={20} color="#bfdbfe" />
-            <span>{tr('ប្រវត្តិវិក្កយបត្រ', 'Billing Invoices')}</span>
-          </Link>
-
-          <Link
-            href="/admin/saas?tab=users"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 12,
-              width: '100%',
-              padding: '11px 16px',
-              borderRadius: 10,
-              border: 'none',
-              background: 'transparent',
-              color: '#ffffff',
-              fontSize: 14,
-              fontWeight: 600,
-              textDecoration: 'none',
-              transition: 'all 0.15s',
-              borderLeft: '4px solid transparent',
-              boxSizing: 'border-box',
-            }}
-          >
-            <MdGroup size={20} color="#bfdbfe" />
-            <span>{tr('គណនី SaaS Admins', 'SaaS Admins')}</span>
-          </Link>
-
-          <Link
-            href="/admin/saas?tab=plans"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 12,
-              width: '100%',
-              padding: '11px 16px',
-              borderRadius: 10,
-              border: 'none',
-              background: 'transparent',
-              color: '#ffffff',
-              fontSize: 14,
-              fontWeight: 600,
-              textDecoration: 'none',
-              transition: 'all 0.15s',
-              borderLeft: '4px solid transparent',
-              boxSizing: 'border-box',
-            }}
-          >
-            <MdWorkspacePremium size={20} color="#bfdbfe" />
-            <span>{tr('កញ្ចប់សេវា', 'Subscription Plans')}</span>
-          </Link>
-
-          <Link
-            href="/admin/saas?tab=coupons"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 12,
-              width: '100%',
-              padding: '11px 16px',
-              borderRadius: 10,
-              border: 'none',
-              background: 'transparent',
-              color: '#ffffff',
-              fontSize: 14,
-              fontWeight: 600,
-              textDecoration: 'none',
-              transition: 'all 0.15s',
-              borderLeft: '4px solid transparent',
-              boxSizing: 'border-box',
-            }}
-          >
-            <MdLocalOffer size={20} color="#bfdbfe" />
-            <span>{tr('គូប៉ុងបញ្ចុះតម្លៃ', 'Promo Coupons')}</span>
-          </Link>
-
-          <Link
-            href="/admin/saas?tab=partners"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 12,
-              width: '100%',
-              padding: '11px 16px',
-              borderRadius: 10,
-              border: 'none',
-              background: 'transparent',
-              color: '#ffffff',
-              fontSize: 14,
-              fontWeight: 600,
-              textDecoration: 'none',
-              transition: 'all 0.15s',
-              borderLeft: '4px solid transparent',
-              boxSizing: 'border-box',
-            }}
-          >
-            <MdAttachMoney size={20} color="#bfdbfe" />
-            <span>{tr('ដៃគូសហការ', 'Affiliate Partners')}</span>
-          </Link>
-        </div>
-      </aside>
-
-      {/* 2. MAIN CONTENT AREA WITH DEDICATED TOPBAR */}
-      <div style={{ flex: 1, marginLeft: 260, minWidth: 0, maxWidth: 'calc(100vw - 260px)', display: 'flex', flexDirection: 'column', minHeight: '100vh', overflowX: 'hidden' }}>
-        {/* Dedicated SaaS Master Topbar / Navbar */}
-        <header
-          style={{
-            height: 64,
-            background: '#2b529a',
-            borderBottom: '1px solid rgba(255, 255, 255, 0.12)',
-            padding: '0 28px',
-            display: 'flex',
-            justifyContent: 'flex-end',
-            alignItems: 'center',
-            position: 'sticky',
-            top: 0,
-            zIndex: 80,
-            boxShadow: '0 4px 16px rgba(0,0,0,0.06)',
-            width: '100%',
-            boxSizing: 'border-box',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-            {/* Language Switcher Button */}
-            <button
-              onClick={() => setLang(lang === 'en' ? 'km' : 'en')}
-              title={tr('ប្តូរភាសា (Switch Language)', 'Switch Language')}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 8,
-                height: 38,
-                padding: '0 14px',
-                borderRadius: 10,
-                border: '1px solid rgba(255, 255, 255, 0.25)',
-                background: 'rgba(255, 255, 255, 0.15)',
-                color: '#ffffff',
-                fontSize: 13,
-                fontWeight: 800,
-                cursor: 'pointer',
-                transition: 'all 0.15s',
-              }}
-            >
-              {lang === 'km' ? (
-                <>
-                  <FlagKm size={22} />
-                  <span>ភាសាខ្មែរ</span>
-                </>
-              ) : (
-                <>
-                  <FlagEn size={22} />
-                  <span>English</span>
-                </>
-              )}
-            </button>
-
-            {/* User Profile Dropdown */}
-            <div style={{ position: 'relative', paddingLeft: 14, borderLeft: '1px solid rgba(255, 255, 255, 0.2)' }}>
-              <button
-                onClick={() => setShowProfileDropdown(!showProfileDropdown)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 10,
-                  background: showProfileDropdown ? 'rgba(255, 255, 255, 0.18)' : 'rgba(255, 255, 255, 0.08)',
-                  border: '1px solid rgba(255, 255, 255, 0.2)',
-                  borderRadius: 12,
-                  padding: '6px 12px',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s',
-                  textAlign: 'left',
-                }}
-              >
-                <div
-                  style={{
-                    width: 34,
-                    height: 34,
-                    borderRadius: '50%',
-                    background: 'linear-gradient(135deg, #3b82f6, #6366f1)',
-                    color: '#ffffff',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontWeight: 900,
-                    fontSize: 14,
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-                  }}
-                >
-                  {user?.name ? user.name.charAt(0).toUpperCase() : 'M'}
-                </div>
-                <div>
-                  <div style={{ fontSize: 13, fontWeight: 900, color: '#ffffff', lineHeight: 1.2 }}>{user?.name || 'Master Super Admin'}</div>
-                  <div style={{ fontSize: 11, color: '#bfdbfe', fontWeight: 600 }}>{user?.email || 'superadmin@gmail.com'}</div>
-                </div>
-                <MdKeyboardArrowDown
-                  size={20}
-                  color="#ffffff"
-                  style={{
-                    marginLeft: 4,
-                    transform: showProfileDropdown ? 'rotate(180deg)' : 'rotate(0deg)',
-                    transition: 'transform 0.2s',
-                  }}
-                />
-              </button>
-
-              {/* Dropdown Menu Card */}
-              {showProfileDropdown && (
-                <>
-                  <div
-                    onClick={() => setShowProfileDropdown(false)}
-                    style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 90 }}
-                  />
-                  <div
-                    style={{
-                      position: 'absolute',
-                      top: 'calc(100% + 8px)',
-                      right: 0,
-                      width: 250,
-                      background: '#ffffff',
-                      borderRadius: 16,
-                      boxShadow: '0 14px 35px -4px rgba(0,0,0,0.22), 0 4px 12px rgba(0,0,0,0.08)',
-                      border: '1px solid #e2e8f0',
-                      padding: '8px',
-                      zIndex: 95,
-                    }}
-                  >
-                    <div style={{ padding: '10px 12px', borderBottom: '1px solid #f1f5f9' }}>
-                      <div style={{ fontSize: 13.5, fontWeight: 900, color: '#0f172a' }}>{user?.name || 'Master Super Admin'}</div>
-                      <div style={{ fontSize: 11.5, color: '#64748b', marginTop: 1 }}>{user?.email || 'superadmin@gmail.com'}</div>
-                      <span
-                        style={{
-                          display: 'inline-block',
-                          marginTop: 6,
-                          background: '#eff6ff',
-                          color: '#2563eb',
-                          fontSize: 10.5,
-                          fontWeight: 800,
-                          padding: '2px 8px',
-                          borderRadius: 6,
-                          border: '1px solid #dbeafe',
-                        }}
-                      >
-                        👑 {tr('Super Admin ពេញសិទ្ធិ', 'Full Super Admin')}
-                      </span>
-                    </div>
-
-                    <div style={{ padding: '6px 4px 2px' }}>
-                      <button
-                        onClick={() => {
-                          setShowProfileDropdown(false);
-                          handleLogout();
-                        }}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 10,
-                          width: '100%',
-                          padding: '9px 12px',
-                          border: 'none',
-                          background: '#fef2f2',
-                          color: '#dc2626',
-                          fontSize: 13,
-                          fontWeight: 800,
-                          borderRadius: 10,
-                          cursor: 'pointer',
-                          textAlign: 'left',
-                          transition: 'all 0.15s',
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.background = '#dc2626';
-                          e.currentTarget.style.color = '#ffffff';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.background = '#fef2f2';
-                          e.currentTarget.style.color = '#dc2626';
-                        }}
-                      >
-                        <MdLogout size={18} />
-                        <span>{tr('ចាកចេញ', 'Logout')}</span>
-                      </button>
-                    </div>
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-        </header>
-
-        {/* 3. DYNAMIC CONTENT BODY */}
-        <main style={{ flex: 1, padding: '24px 28px 80px', width: '100%', maxWidth: '100%', minWidth: 0, boxSizing: 'border-box' }}>
+    <SaasMasterLayout activeTab="tenants">
           {/* Breadcrumbs & Page Header */}
           <div style={{ marginBottom: 20 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
               <Link
-                href="/admin/saas?tab=tenants"
+                href="/admin/saas/tenants"
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
@@ -1070,12 +662,12 @@ export default function TenantDetailPage() {
                           fontWeight: 700,
                           padding: '2px 8px',
                           borderRadius: 12,
-                          background: daysRemaining > 30 ? '#ecfdf5' : daysRemaining > 7 ? '#fffbeb' : '#fef2f2',
-                          color: daysRemaining > 30 ? '#047857' : daysRemaining > 7 ? '#b45309' : '#b91c1c',
-                          border: `1px solid ${daysRemaining > 30 ? '#a7f3d0' : daysRemaining > 7 ? '#fde68a' : '#fecaca'}`,
+                          background: daysRemaining > 60 ? '#ecfdf5' : '#fef2f2',
+                          color: daysRemaining > 60 ? '#047857' : '#dc2626',
+                          border: `1px solid ${daysRemaining > 60 ? '#a7f3d0' : '#fecaca'}`,
                         }}
                       >
-                        {daysRemaining > 0 ? tr(`នៅសល់ ${daysRemaining} ថ្ងៃ`, `${daysRemaining} days left`) : tr('ផុតកំណត់', 'Expired')}
+                        {daysRemaining > 0 ? formatRemainingDuration(daysRemaining, lang) : tr('ផុតកំណត់', 'Expired')}
                       </span>
                     ) : (
                       <span style={{ fontSize: 12, color: '#64748b' }}>-</span>
@@ -1780,8 +1372,6 @@ export default function TenantDetailPage() {
               )}
             </div>
           )}
-        </main>
-      </div>
 
       {/* RENEW SUBSCRIPTION MODAL */}
       {showRenewModal && activeSub && (
@@ -2099,6 +1689,6 @@ export default function TenantDetailPage() {
           </div>
         </div>
       )}
-    </div>
+    </SaasMasterLayout>
   );
 }

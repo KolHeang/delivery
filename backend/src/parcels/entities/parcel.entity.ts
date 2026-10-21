@@ -58,7 +58,7 @@ export class Parcel {
   @Column({ name: 'receiver_address', type: 'text' })
   receiverAddress: string;
 
-  @Column('decimal', { precision: 8, scale: 2, default: 0 })
+  @Column('decimal', { precision: 8, scale: 4, default: 0 })
   weight: number;
 
   @Column({ default: 'small' })
@@ -67,7 +67,7 @@ export class Parcel {
   @Column({ nullable: true, type: 'text' })
   note: string;
 
-  @Column('decimal', { precision: 10, scale: 2, default: 0 })
+  @Column('decimal', { precision: 10, scale: 4, default: 0 })
   cod: number;
 
   @Column({ name: 'cod_currency', default: 'USD' })
@@ -76,7 +76,7 @@ export class Parcel {
   @Column('decimal', {
     name: 'delivery_fee',
     precision: 10,
-    scale: 2,
+    scale: 4,
     default: 0,
   })
   deliveryFee: number;
@@ -84,7 +84,7 @@ export class Parcel {
   @Column('decimal', {
     name: 'driver_fee',
     precision: 10,
-    scale: 2,
+    scale: 4,
     default: 1000,
   })
   driverFee: number;

@@ -58,6 +58,42 @@ export class AuthService {
     const access_token = this.jwtService.sign(payload);
     const refresh_token = this.jwtService.sign(payload, { expiresIn: '30d' });
 
+    // Calculate expiration date from the signed JWT access token or tenant subscription
+    const decoded: any = this.jwtService.decode(access_token);
+    let expire_date = decoded?.exp
+      ? new Date(decoded.exp * 1000).toISOString()
+      : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+    let isExpired = false;
+
+    try {
+      if (user.tenantId || user.id) {
+        let subQuery = this.refreshTokenRepository.manager
+          .createQueryBuilder()
+          .select('s.current_period_end', 'current_period_end')
+          .addSelect('s.status', 'status')
+          .from('saas_subscriptions', 's');
+
+        if (user.tenantId) {
+          subQuery = subQuery.where('s.tenant_id = :tenantId', { tenantId: user.tenantId });
+        } else {
+          subQuery = subQuery.where('s.user_id = :userId', { userId: user.id });
+        }
+
+        const sub = await subQuery.orderBy('s.created_at', 'DESC').getRawOne();
+        if (sub && sub.current_period_end) {
+          expire_date = new Date(sub.current_period_end).toISOString();
+          if (new Date(sub.current_period_end) < new Date() || sub.status === 'expired') {
+            isExpired = true;
+          }
+        }
+      }
+    } catch {}
+
+    if (new Date(expire_date) < new Date()) {
+      isExpired = true;
+    }
+    const status = isExpired ? 'expire' : (user.isActive ? 'active' : 'inactive');
+
     // Store refresh token in database
     const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
     const tokenEntity = this.refreshTokenRepository.create({
@@ -70,6 +106,9 @@ export class AuthService {
     return {
       access_token,
       refresh_token,
+      expire_date,
+      expires_at: expire_date,
+      status,
       user: {
         id: user.id,
         code: user.code,
@@ -79,8 +118,10 @@ export class AuthService {
         email: user.email,
         role: 'driver',
         isActive: user.isActive,
+        status,
         zoneId: user.zoneId,
         vehicleId: user.vehicleId,
+        expire_date,
       },
     };
   }
@@ -115,6 +156,38 @@ export class AuthService {
     const access_token = this.jwtService.sign(payload);
     const refresh_token = this.jwtService.sign(payload, { expiresIn: '30d' });
 
+    // Calculate expiration date from the signed JWT access token or tenant subscription
+    const decoded: any = this.jwtService.decode(access_token);
+    let expire_date = decoded?.exp
+      ? new Date(decoded.exp * 1000).toISOString()
+      : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+    let isExpired = false;
+
+    try {
+      if (user.tenantId) {
+        const sub = await this.refreshTokenRepository.manager
+          .createQueryBuilder()
+          .select('s.current_period_end', 'current_period_end')
+          .addSelect('s.status', 'status')
+          .from('saas_subscriptions', 's')
+          .where('s.tenant_id = :tenantId', { tenantId: user.tenantId })
+          .orderBy('s.created_at', 'DESC')
+          .getRawOne();
+
+        if (sub && sub.current_period_end) {
+          expire_date = new Date(sub.current_period_end).toISOString();
+          if (new Date(sub.current_period_end) < new Date() || sub.status === 'expired') {
+            isExpired = true;
+          }
+        }
+      }
+    } catch {}
+
+    if (new Date(expire_date) < new Date()) {
+      isExpired = true;
+    }
+    const status = isExpired ? 'expire' : (user.active ? 'active' : 'inactive');
+
     // Store refresh token in database
     const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
     const tokenEntity = this.refreshTokenRepository.create({
@@ -127,6 +200,9 @@ export class AuthService {
     return {
       access_token,
       refresh_token,
+      expire_date,
+      expires_at: expire_date,
+      status,
       user: {
         id: user.id,
         name: user.name,
@@ -136,7 +212,9 @@ export class AuthService {
         address: user.address,
         role: 'merchant',
         active: user.active,
+        status,
         balance: user.balance,
+        expire_date,
       },
     };
   }
@@ -161,6 +239,14 @@ export class AuthService {
       const newAccessToken = this.jwtService.sign(cleanPayload);
       const newRefreshToken = this.jwtService.sign(cleanPayload, { expiresIn: '30d' });
 
+      // Calculate exact expiration date from the new access token
+      const decoded: any = this.jwtService.decode(newAccessToken);
+      const expire_date = decoded?.exp
+        ? new Date(decoded.exp * 1000).toISOString()
+        : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+      const isExpired = new Date(expire_date) < new Date();
+      const status = isExpired ? 'expire' : 'active';
+
       // Save the new refresh token
       const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
       const newRefreshTokenEntity = this.refreshTokenRepository.create({
@@ -174,6 +260,9 @@ export class AuthService {
       return {
         access_token: newAccessToken,
         refresh_token: newRefreshToken,
+        expire_date,
+        expires_at: expire_date,
+        status,
       };
     } catch {
       throw new UnauthorizedException('Invalid or expired refresh token');

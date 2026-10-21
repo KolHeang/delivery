@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import MainLayout from '@/components/layout/MainLayout';
-import { saasApi, SubscriptionInfo, SaasInvoice } from '@/lib/saas-api';
+import { saasApi, SubscriptionInfo, SaasInvoice, SaasPaymentOption } from '@/lib/saas-api';
 import {
   MdWorkspacePremium,
   MdReceiptLong,
@@ -25,6 +25,7 @@ import { useTenant } from '@/lib/TenantContext';
 import { useLanguage } from '@/lib/LanguageContext';
 import { printInvoicePdf } from '@/lib/invoice-pdf';
 import { getTenantWorkspaceUrl } from '@/lib/domain';
+import { formatRemainingDuration } from '@/lib/date-utils';
 
 export default function BillingPage() {
   const router = useRouter();
@@ -34,16 +35,20 @@ export default function BillingPage() {
 
   const [subInfo, setSubInfo] = useState<SubscriptionInfo | null>(null);
   const [invoices, setInvoices] = useState<SaasInvoice[]>([]);
+  const [paymentOptions, setPaymentOptions] = useState<SaasPaymentOption[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Payment Modal State
   const [selectedInvoice, setSelectedInvoice] = useState<SaasInvoice | null>(null);
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<'khqr' | 'bank_transfer'>('khqr');
+  const [paymentFlowType, setPaymentFlowType] = useState<'offline' | 'aba'>('offline');
+  const [offlineSubMethod, setOfflineSubMethod] = useState<'bank_transfer' | 'khqr'>('bank_transfer');
   const [txIdInput, setTxIdInput] = useState('');
+  const [txIdError, setTxIdError] = useState<string | null>(null);
   const [paying, setPaying] = useState(false);
   const [copySuccess, setCopySuccess] = useState<string | null>(null);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
+  const [submissionMessage, setSubmissionMessage] = useState('');
 
   useEffect(() => {
     fetchData();
@@ -52,10 +57,12 @@ export default function BillingPage() {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [subData, invData] = await Promise.all([
+      const [subData, invData, optionsData] = await Promise.all([
         saasApi.getMySubscription().catch(() => null),
         saasApi.getMyInvoices().catch(() => []),
+        saasApi.getPaymentOptions().catch(() => []),
       ]);
+      setPaymentOptions(optionsData || []);
 
       if (subData && subData.hasSubscription) {
         setSubInfo(subData);
@@ -127,33 +134,42 @@ export default function BillingPage() {
         } as SaasInvoice);
       }
     }
+    setPaymentFlowType('offline');
+    setOfflineSubMethod('bank_transfer');
+    setSubmissionMessage('');
     setPaymentSuccess(false);
     setTxIdInput('');
+    setTxIdError(null);
     setPaymentModalOpen(true);
   };
 
   const handleConfirmPayment = async () => {
     if (!selectedInvoice) return;
+    if (!txIdInput.trim()) {
+      setTxIdError(tr('សូមបញ្ចូលលេខកូដប្រតិបត្តិការ (Transaction ID)', 'Please enter Transaction ID'));
+      return;
+    }
+    setTxIdError(null);
     try {
       setPaying(true);
-      await saasApi.processPayment({
+      const res = await saasApi.processPayment({
         invoiceId: selectedInvoice.id,
-        paymentMethod: paymentMethod,
-        transactionId: txIdInput.trim() || undefined,
+        paymentMethod: 'offline',
+        transactionId: txIdInput.trim(),
       });
       setPaymentSuccess(true);
+      setSubmissionMessage(
+        res?.message ||
+          tr(
+            'ការទូទាត់ត្រូវបានផ្ញើជោគជ័យ! សូមរង់ចាំ Admin ពិនិត្យនិងអនុម័ត (Payment submitted! Waiting for Admin SaaS approval).',
+            'Payment submitted successfully! Waiting for Admin SaaS approval.'
+          )
+      );
       setTimeout(() => {
-        setPaymentModalOpen(false);
-        setPaymentSuccess(false);
         fetchData();
       }, 1500);
     } catch (err: any) {
-      setPaymentSuccess(true);
-      setTimeout(() => {
-        setPaymentModalOpen(false);
-        setPaymentSuccess(false);
-        fetchData();
-      }, 1500);
+      alert(err.response?.data?.message || tr('បរាជ័យក្នុងការទូទាត់', 'Payment submission failed'));
     } finally {
       setPaying(false);
     }
@@ -277,9 +293,30 @@ export default function BillingPage() {
                     <span style={{ width: 8, height: 8, borderRadius: '50%', background: subInfo.status === 'active' ? '#10b981' : '#ef4444' }} />
                     {subInfo.status === 'active' ? tr('សកម្ម', 'ACTIVE') : subInfo.status.toUpperCase()}
                   </span>
-                  <div style={{ fontSize: 12, color: '#64748b', marginTop: 8, fontWeight: 700 }}>
-                    {tr(`នៅសល់ ${subInfo.daysRemaining || 30} ថ្ងៃ ទៀត`, `${subInfo.daysRemaining || 30} days remaining`)}
-                  </div>
+                  {(() => {
+                    const isExpiringSoon = typeof subInfo.daysRemaining === 'number' && subInfo.daysRemaining <= 60;
+                    return (
+                      <div style={{ marginTop: 8 }}>
+                        <div
+                          style={{
+                            fontSize: 13,
+                            color: isExpiringSoon ? '#dc2626' : '#2563eb',
+                            fontWeight: 800,
+                          }}
+                        >
+                          {formatRemainingDuration(subInfo.daysRemaining, lang)}
+                        </div>
+                        {subInfo.currentPeriodEnd && (
+                          <div style={{ fontSize: 11.5, color: '#64748b', marginTop: 3, fontWeight: 600 }}>
+                            {tr('ផុតកំណត់៖', 'Expires:')}{' '}
+                            <span style={{ color: isExpiringSoon ? '#dc2626' : '#0f172a', fontWeight: 700 }}>
+                              {formatDate(subInfo.currentPeriodEnd)}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
 
@@ -676,391 +713,355 @@ export default function BillingPage() {
               </div>
 
               {/* Success Screen */}
+              {/* Success Screen: Pending Admin Approval */}
               {paymentSuccess ? (
-                <div style={{ padding: '48px 24px', textAlign: 'center' }}>
+                <div style={{ padding: '40px 24px', textAlign: 'center' }}>
                   <div
                     style={{
                       width: 68,
                       height: 68,
                       borderRadius: '50%',
-                      background: '#ecfdf5',
-                      color: '#10b981',
+                      background: '#fef3c7',
+                      color: '#d97706',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      fontSize: 36,
+                      fontSize: 34,
                       margin: '0 auto 16px',
+                      border: '2px solid #fde68a',
                     }}
                   >
-                    <MdCheckCircle />
+                    ⏳
                   </div>
+                  <span
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      padding: '4px 14px',
+                      borderRadius: 20,
+                      fontSize: 11.5,
+                      fontWeight: 800,
+                      background: '#ecfdf5',
+                      color: '#059669',
+                      border: '1px solid #a7f3d0',
+                      marginBottom: 10,
+                    }}
+                  >
+                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#10b981' }} />
+                    {tr('បានផ្ញើការទូទាត់ជោគជ័យ', 'SUBMITTED SUCCESSFULLY')}
+                  </span>
                   <h3 style={{ fontSize: 19, fontWeight: 900, color: '#0f172a', margin: '0 0 8px' }}>
-                    {tr('ការបង់ប្រាក់បានជោគជ័យ', 'Payment Successful')}
+                    {tr('រង់ចាំការពិនិត្យ និងអនុម័តពី Admin SAAS', 'Pending Admin SaaS Approval')}
                   </h3>
-                  <p style={{ fontSize: 13.5, color: '#64748b', margin: '0 auto', maxWidth: 320, lineHeight: 1.6 }}>
-                    {tr('គម្រោងរបស់អ្នកត្រូវបានបន្តសុពលភាពដោយស្វ័យប្រវត្តិ។ សូមអរគុណ!', 'Your subscription has been renewed and activated automatically.')}
+                  <p style={{ fontSize: 13, color: '#64748b', margin: '0 auto 20px', maxWidth: 360, lineHeight: 1.6 }}>
+                    {submissionMessage ||
+                      tr(
+                        'យើងបានទទួលព័ត៌មានផ្ទេរប្រាក់របស់អ្នករួចហើយ។ ក្រុមការងារ Admin នឹងពិនិត្យផ្ទៀងផ្ទាត់ និងបើកដំណើរការគម្រោងរបស់អ្នកក្នុងពេលឆាប់ៗ។',
+                        'We have received your payment details. Admin will verify and activate your subscription shortly.'
+                      )}
                   </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPaymentModalOpen(false);
+                      setPaymentSuccess(false);
+                      fetchData();
+                    }}
+                    className="btn btn-primary btn-sm"
+                    style={{ padding: '8px 24px', borderRadius: 10, fontWeight: 700 }}
+                  >
+                    {tr('យល់ព្រម', 'Got it')}
+                  </button>
                 </div>
               ) : (
-                <div style={{ padding: '20px 24px' }}>
-                  {/* Clean Amount Card */}
+                <div style={{ padding: '24px' }}>
+                  {/* Amount & Invoice Info Card */}
                   <div
                     style={{
-                      background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
-                      borderRadius: 16,
+                      background: '#f8fafc',
+                      borderRadius: 14,
                       padding: '16px 20px',
                       border: '1px solid #e2e8f0',
                       display: 'flex',
                       justifyContent: 'space-between',
                       alignItems: 'center',
-                      marginBottom: 16,
-                    }}
-                  >
-                    <div>
-                      <div style={{ fontSize: 12, color: '#64748b', fontWeight: 700 }}>
-                        {tr('ទឹកប្រាក់សរុបត្រូវបង់', 'Total Amount Due')}
-                      </div>
-                      <div style={{ fontSize: 26, fontWeight: 900, color: '#0f172a', letterSpacing: '-0.5px', marginTop: 2 }}>
-                        ${Number(selectedInvoice?.totalAmount || subInfo?.plan?.priceYearly || 490).toFixed(2)}
-                      </div>
-                    </div>
-                    <span
-                      style={{
-                        background: '#ffffff',
-                        color: '#2563eb',
-                        border: '1px solid #e2e8f0',
-                        padding: '4px 12px',
-                        borderRadius: 20,
-                        fontSize: 12,
-                        fontWeight: 800,
-                        boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
-                      }}
-                    >
-                      USD
-                    </span>
-                  </div>
-
-                  {/* Payment Tabs: KHQR vs Bank Transfer */}
-                  <div
-                    style={{
-                      display: 'flex',
-                      background: '#f1f5f9',
-                      padding: 4,
-                      borderRadius: 14,
-                      gap: 4,
                       marginBottom: 18,
                     }}
                   >
-                    <button
-                      type="button"
-                      onClick={() => setPaymentMethod('khqr')}
-                      style={{
-                        flex: 1,
-                        padding: '8px 12px',
-                        borderRadius: 10,
-                        border: 'none',
-                        background: paymentMethod === 'khqr' ? '#ffffff' : 'transparent',
-                        color: paymentMethod === 'khqr' ? '#e11d48' : '#64748b',
-                        fontWeight: 800,
-                        fontSize: 12.5,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: 6,
-                        cursor: 'pointer',
-                        boxShadow: paymentMethod === 'khqr' ? '0 2px 6px rgba(0,0,0,0.06)' : 'none',
-                        transition: 'all 0.15s',
-                      }}
-                    >
-                      <MdQrCodeScanner size={16} />
-                      <span>Bakong KHQR</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setPaymentMethod('bank_transfer')}
-                      style={{
-                        flex: 1,
-                        padding: '8px 12px',
-                        borderRadius: 10,
-                        border: 'none',
-                        background: paymentMethod === 'bank_transfer' ? '#ffffff' : 'transparent',
-                        color: paymentMethod === 'bank_transfer' ? '#2563eb' : '#64748b',
-                        fontWeight: 800,
-                        fontSize: 12.5,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: 6,
-                        cursor: 'pointer',
-                        boxShadow: paymentMethod === 'bank_transfer' ? '0 2px 6px rgba(0,0,0,0.06)' : 'none',
-                        transition: 'all 0.15s',
-                      }}
-                    >
-                      <MdAccountBalance size={16} />
-                      <span>{tr('ផ្ទេរតាមធនាគារ', 'Bank Transfer')}</span>
-                    </button>
+                    <div>
+                      <div style={{ fontSize: 12, color: '#64748b', fontWeight: 600 }}>
+                        {tr('ទឹកប្រាក់សរុបត្រូវបង់', 'Total Amount Due')}
+                      </div>
+                      <div style={{ fontSize: 26, fontWeight: 900, color: '#0f172a', letterSpacing: '-0.5px', marginTop: 2 }}>
+                        {'$'}{Number(selectedInvoice?.totalAmount || subInfo?.plan?.priceYearly || 490).toFixed(2)}
+                      </div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <span
+                        style={{
+                          background: '#ffffff',
+                          color: '#2563eb',
+                          border: '1px solid #bfdbfe',
+                          padding: '3px 10px',
+                          borderRadius: 20,
+                          fontSize: 11.5,
+                          fontWeight: 800,
+                          display: 'inline-block',
+                          marginBottom: 4,
+                        }}
+                      >
+                        USD
+                      </span>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: '#64748b', fontFamily: 'monospace' }}>
+                        {selectedInvoice?.invoiceNumber || '#INV-PENDING'}
+                      </div>
+                    </div>
                   </div>
 
-                  {/* KHQR VIEW */}
-                  {paymentMethod === 'khqr' ? (
-                    <div
-                      style={{
-                        border: '1.5px solid #fecdd3',
-                        borderRadius: 18,
-                        padding: '16px',
-                        textAlign: 'center',
-                        background: '#ffffff',
-                        marginBottom: 16,
-                      }}
-                    >
-                      <div
-                        style={{
-                          background: '#e11d48',
-                          color: '#ffffff',
-                          borderRadius: 8,
-                          padding: '4px 12px',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: 6,
-                          fontSize: 12,
-                          fontWeight: 900,
-                          letterSpacing: '0.5px',
-                          marginBottom: 10,
-                        }}
-                      >
-                        <span>KHQR</span>
-                      </div>
-
-                      <div style={{ fontSize: 13, fontWeight: 800, color: '#0f172a' }}>
-                        EBS LOGISTICS SAAS CO., LTD.
-                      </div>
-                      <div style={{ fontSize: 11.5, color: '#64748b', marginBottom: 10 }}>
-                        {tr('ស្កេនតាម ABA Mobile, ACLEDA ឬ Bakong', 'Scan via ABA Mobile, ACLEDA or Bakong')}
-                      </div>
-
-                      {/* KHQR Pattern Frame */}
-                      <div
-                        style={{
-                          width: 160,
-                          height: 160,
-                          background: '#ffffff',
-                          border: '1.5px solid #f1f5f9',
-                          borderRadius: 14,
-                          padding: 8,
-                          margin: '0 auto 8px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                        }}
-                      >
-                        <svg viewBox="0 0 100 100" width="100%" height="100%" style={{ display: 'block' }}>
-                          <rect x="5" y="5" width="26" height="26" fill="#0f172a" rx="4" />
-                          <rect x="9" y="9" width="18" height="18" fill="#ffffff" rx="2" />
-                          <rect x="13" y="13" width="10" height="10" fill="#e11d48" rx="1.5" />
-
-                          <rect x="69" y="5" width="26" height="26" fill="#0f172a" rx="4" />
-                          <rect x="73" y="9" width="18" height="18" fill="#ffffff" rx="2" />
-                          <rect x="77" y="13" width="10" height="10" fill="#e11d48" rx="1.5" />
-
-                          <rect x="5" y="69" width="26" height="26" fill="#0f172a" rx="4" />
-                          <rect x="9" y="73" width="18" height="18" fill="#ffffff" rx="2" />
-                          <rect x="13" y="77" width="10" height="10" fill="#e11d48" rx="1.5" />
-
-                          <circle cx="40" cy="15" r="3" fill="#0f172a" />
-                          <circle cx="50" cy="15" r="3" fill="#0f172a" />
-                          <circle cx="60" cy="15" r="3" fill="#0f172a" />
-                          <circle cx="40" cy="25" r="3" fill="#0f172a" />
-                          <circle cx="60" cy="25" r="3" fill="#0f172a" />
-                          <circle cx="15" cy="40" r="3" fill="#0f172a" />
-                          <circle cx="25" cy="40" r="3" fill="#0f172a" />
-                          <circle cx="35" cy="40" r="3" fill="#0f172a" />
-                          <circle cx="65" cy="40" r="3" fill="#0f172a" />
-                          <circle cx="75" cy="40" r="3" fill="#0f172a" />
-                          <circle cx="85" cy="40" r="3" fill="#0f172a" />
-
-                          <circle cx="35" cy="50" r="3" fill="#0f172a" />
-                          <circle cx="45" cy="50" r="3" fill="#0f172a" />
-                          <circle cx="55" cy="50" r="3" fill="#0f172a" />
-                          <circle cx="65" cy="50" r="3" fill="#0f172a" />
-
-                          <circle cx="15" cy="60" r="3" fill="#0f172a" />
-                          <circle cx="25" cy="60" r="3" fill="#0f172a" />
-                          <circle cx="75" cy="60" r="3" fill="#0f172a" />
-                          <circle cx="85" cy="60" r="3" fill="#0f172a" />
-
-                          <circle cx="40" cy="75" r="3" fill="#0f172a" />
-                          <circle cx="50" cy="75" r="3" fill="#0f172a" />
-                          <circle cx="60" cy="75" r="3" fill="#0f172a" />
-                          <circle cx="75" cy="75" r="3" fill="#0f172a" />
-                          <circle cx="40" cy="85" r="3" fill="#0f172a" />
-                          <circle cx="60" cy="85" r="3" fill="#0f172a" />
-                          <circle cx="85" cy="85" r="3" fill="#0f172a" />
-
-                          <rect x="42" y="42" width="16" height="16" fill="#ffffff" rx="3" />
-                          <circle cx="50" cy="50" r="5.5" fill="#e11d48" />
-                          <text x="50" y="52.5" fill="#ffffff" fontSize="7" fontWeight="bold" textAnchor="middle">
-                            $
-                          </text>
-                        </svg>
-                      </div>
-
-                      <div style={{ fontSize: 13, fontWeight: 900, color: '#e11d48' }}>
-                        ${Number(selectedInvoice?.totalAmount || 490).toFixed(2)} USD
-                      </div>
+                  {/* Bank Account Details */}
+                  <div style={{ marginBottom: 16 }}>
+                    <div style={{ fontSize: 12.5, fontWeight: 700, color: '#334155', marginBottom: 8 }}>
+                      {tr('ព័ត៌មានគណនីធនាគារសម្រាប់ផ្ទេរប្រាក់', 'Bank Account Transfer Details')}:
                     </div>
-                  ) : (
-                    /* CLEAN BANK CARDS */
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
-                      <div
-                        style={{
-                          background: '#f8fafc',
-                          padding: '12px 16px',
-                          borderRadius: 14,
-                          border: '1.5px solid #e2e8f0',
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          alignItems: 'center',
-                        }}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                          <div
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                      {paymentOptions.filter((o) => o.status === 'active').length > 0 ? (
+                        paymentOptions
+                          .filter((o) => o.status === 'active')
+                          .map((opt) => (
+                            <div
+                              key={opt.id}
+                              style={{
+                                background: '#ffffff',
+                                padding: '14px 16px',
+                                borderRadius: 12,
+                                border: '1.5px solid #e2e8f0',
+                              }}
+                            >
+                              <div
+                                style={{
+                                  display: 'flex',
+                                  justifyContent: 'space-between',
+                                  alignItems: 'center',
+                                }}
+                              >
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                                  <div
+                                    style={{
+                                      width: 38,
+                                      height: 38,
+                                      borderRadius: 10,
+                                      background: opt.bankName?.toLowerCase().includes('acleda') ? '#0f3b7a' : '#007ba4',
+                                      color: '#ffffff',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      fontWeight: 900,
+                                      fontSize: 10,
+                                      letterSpacing: '0.5px',
+                                      textTransform: 'uppercase',
+                                      flexShrink: 0,
+                                    }}
+                                  >
+                                    {opt.bankName?.slice(0, 3) || 'BANK'}
+                                  </div>
+                                  <div>
+                                    <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a' }}>
+                                      {opt.bankName || opt.name} {opt.accountName && `• ${opt.accountName}`}
+                                    </div>
+                                    <div style={{ fontSize: 15, fontWeight: 900, color: '#0f172a', fontFamily: 'monospace', marginTop: 1 }}>
+                                      {opt.accountNumber || '-'}
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {opt.accountNumber && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleCopy(opt.accountNumber!, `opt-${opt.id}`)}
+                                    style={{
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: 5,
+                                      padding: '6px 12px',
+                                      borderRadius: 8,
+                                      border: '1px solid #e2e8f0',
+                                      background: copySuccess === `opt-${opt.id}` ? '#ecfdf5' : '#f8fafc',
+                                      color: copySuccess === `opt-${opt.id}` ? '#059669' : '#2563eb',
+                                      fontSize: 11.5,
+                                      fontWeight: 700,
+                                      cursor: 'pointer',
+                                      transition: 'all 0.15s',
+                                    }}
+                                  >
+                                    {copySuccess === `opt-${opt.id}` ? (
+                                      '✅ Copied'
+                                    ) : (
+                                      <>
+                                        <MdContentCopy size={13} />
+                                        <span>Copy</span>
+                                      </>
+                                    )}
+                                  </button>
+                                )}
+                              </div>
+
+                              {/* Clean QR Code Section */}
+                              {opt.qrCodeUrl && (
+                                <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid #f1f5f9', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                                  <div style={{ fontSize: 11.5, fontWeight: 700, color: '#64748b', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 5 }}>
+                                    <span>📱</span>
+                                    <span>{tr('ស្កេនទូទាត់តាម KHQR / QR Code', 'Scan KHQR Code to Pay')}</span>
+                                  </div>
+                                  <div style={{ padding: 10, background: '#ffffff', borderRadius: 12, border: '1.5px solid #e2e8f0', boxShadow: '0 2px 8px rgba(0,0,0,0.04)', display: 'inline-flex', justifyContent: 'center', alignItems: 'center' }}>
+                                    <img
+                                      src={opt.qrCodeUrl}
+                                      alt="Payment QR Code"
+                                      style={{ maxWidth: 200, maxHeight: 250, width: 'auto', height: 'auto', objectFit: 'contain', display: 'block', borderRadius: 6 }}
+                                    />
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          ))
+                      ) : (
+                        <div
+                          style={{
+                            background: '#ffffff',
+                            padding: '14px 16px',
+                            borderRadius: 12,
+                            border: '1.5px solid #e2e8f0',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                            <div
+                              style={{
+                                width: 38,
+                                height: 38,
+                                borderRadius: 10,
+                                background: '#007ba4',
+                                color: '#ffffff',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontWeight: 900,
+                                fontSize: 10,
+                              }}
+                            >
+                              ABA
+                            </div>
+                            <div>
+                              <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a' }}>
+                                ABA Bank • EBS LOGISTICS SAAS CO., LTD.
+                              </div>
+                              <div style={{ fontSize: 15, fontWeight: 900, color: '#0f172a', fontFamily: 'monospace', marginTop: 1 }}>
+                                000 123 456
+                              </div>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleCopy('000123456', 'aba')}
                             style={{
-                              width: 34,
-                              height: 34,
-                              borderRadius: 10,
-                              background: '#007ba4',
-                              color: '#fff',
-                              display: 'flex',
+                              display: 'inline-flex',
                               alignItems: 'center',
-                              justifyContent: 'center',
-                              fontWeight: 900,
-                              fontSize: 10,
-                              letterSpacing: '0.5px',
+                              gap: 5,
+                              padding: '6px 12px',
+                              borderRadius: 8,
+                              border: '1px solid #e2e8f0',
+                              background: '#f8fafc',
+                              color: '#2563eb',
+                              fontSize: 11.5,
+                              fontWeight: 700,
+                              cursor: 'pointer',
                             }}
                           >
-                            ABA
-                          </div>
-                          <div>
-                            <div style={{ fontSize: 14, fontWeight: 900, color: '#0f172a', fontFamily: 'monospace' }}>
-                              000 123 456
-                            </div>
-                            <div style={{ fontSize: 11, color: '#64748b' }}>EBS LOGISTICS SAAS CO., LTD.</div>
-                          </div>
+                            <MdContentCopy size={13} /> Copy
+                          </button>
                         </div>
-
-                        <button
-                          type="button"
-                          onClick={() => handleCopy('000123456', 'aba')}
-                          className="btn btn-ghost btn-sm"
-                          style={{ fontSize: 11.5, fontWeight: 700, padding: '4px 8px' }}
-                        >
-                          {copySuccess === 'aba' ? '✅ Copied' : <><MdContentCopy size={13} /> Copy</>}
-                        </button>
-                      </div>
-
-                      <div
-                        style={{
-                          background: '#f8fafc',
-                          padding: '12px 16px',
-                          borderRadius: 14,
-                          border: '1.5px solid #e2e8f0',
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          alignItems: 'center',
-                        }}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                          <div
-                            style={{
-                              width: 34,
-                              height: 34,
-                              borderRadius: 10,
-                              background: '#0f3b7a',
-                              color: '#fff',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              fontWeight: 900,
-                              fontSize: 9,
-                              letterSpacing: '0.5px',
-                            }}
-                          >
-                            ACLEDA
-                          </div>
-                          <div>
-                            <div style={{ fontSize: 14, fontWeight: 900, color: '#0f172a', fontFamily: 'monospace' }}>
-                              010 888 999
-                            </div>
-                            <div style={{ fontSize: 11, color: '#64748b' }}>EBS LOGISTICS SAAS CO., LTD.</div>
-                          </div>
-                        </div>
-
-                        <button
-                          type="button"
-                          onClick={() => handleCopy('010888999', 'acleda')}
-                          className="btn btn-ghost btn-sm"
-                          style={{ fontSize: 11.5, fontWeight: 700, padding: '4px 8px' }}
-                        >
-                          {copySuccess === 'acleda' ? '✅ Copied' : <><MdContentCopy size={13} /> Copy</>}
-                        </button>
-                      </div>
+                      )}
                     </div>
-                  )}
+                  </div>
 
-                  {/* Clean Note / Ref Input */}
-                  <div style={{ marginBottom: 18 }}>
-                    <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#475569', marginBottom: 6 }}>
-                      {tr('លេខកូដប្រតិបត្តិការ (បើមាន)', 'Transaction ID (Optional)')}
+                  {/* Clean Helper Note */}
+                  <div style={{ fontSize: 12, color: '#64748b', marginBottom: 18, lineHeight: 1.5, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span>💡</span>
+                    <span>{tr('សូមផ្ទេរប្រាក់តាមគណនីខាងលើ រួចបញ្ចូលលេខប្រតិបត្តិការ (Transaction ID)។', 'Please transfer to the bank account above and enter your Transaction ID.')}</span>
+                  </div>
+
+                  {/* Transaction ID Input */}
+                  <div style={{ marginBottom: 20 }}>
+                    <label style={{ display: 'block', fontSize: 12.5, fontWeight: 700, color: '#334155', marginBottom: 6 }}>
+                      {tr('លេខកូដប្រតិបត្តិការ (Transaction ID)', 'Transaction ID / Reference')} <span style={{ color: '#ef4444' }}>*</span>
                     </label>
                     <input
                       type="text"
-                      placeholder={tr('ឧ. ABA-987654321', 'e.g. ABA-987654321')}
+                      required
+                      placeholder={tr('ឧ. 0987654321 ឬ លេខយោងផ្ទេរប្រាក់', 'e.g. 0987654321 or transfer reference')}
                       value={txIdInput}
-                      onChange={(e) => setTxIdInput(e.target.value)}
+                      onChange={(e) => {
+                        setTxIdInput(e.target.value);
+                        if (txIdError) setTxIdError(null);
+                      }}
                       style={{
                         width: '100%',
-                        padding: '9px 14px',
-                        borderRadius: 12,
-                        border: '1.5px solid #e2e8f0',
+                        padding: '11px 14px',
+                        borderRadius: 10,
+                        border: txIdError ? '1.5px solid #ef4444' : '1.5px solid #cbd5e1',
                         fontSize: 13,
                         outline: 'none',
-                        background: '#f8fafc',
+                        background: '#ffffff',
+                        boxSizing: 'border-box',
+                        transition: 'border-color 0.15s',
                       }}
+                      onFocus={(e) => (e.currentTarget.style.borderColor = txIdError ? '#ef4444' : '#2563eb')}
+                      onBlur={(e) => (e.currentTarget.style.borderColor = txIdError ? '#ef4444' : '#cbd5e1')}
                     />
+                    {txIdError && (
+                      <div style={{ color: '#ef4444', fontSize: 11.5, fontWeight: 600, marginTop: 4 }}>
+                        {txIdError}
+                      </div>
+                    )}
                   </div>
 
-                  {/* Single Clean Action Button */}
+                  {/* Confirm Button */}
                   <button
+                    type="button"
                     onClick={handleConfirmPayment}
                     disabled={paying}
                     style={{
                       width: '100%',
-                      padding: '11px 20px',
-                      borderRadius: 12,
+                      padding: '12px 20px',
+                      borderRadius: 10,
                       background: '#2563eb',
                       color: '#ffffff',
                       fontSize: 14,
                       fontWeight: 800,
                       border: 'none',
-                      cursor: 'pointer',
+                      cursor: paying ? 'not-allowed' : 'pointer',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       gap: 8,
-                      boxShadow: '0 4px 14px rgba(37,99,235,0.25)',
+                      boxShadow: '0 4px 12px rgba(37,99,235,0.2)',
                       transition: 'background 0.15s',
                     }}
+                    onMouseEnter={(e) => { if (!paying) e.currentTarget.style.background = '#1d4ed8'; }}
+                    onMouseLeave={(e) => { if (!paying) e.currentTarget.style.background = '#2563eb'; }}
                   >
                     {paying ? (
                       <>
                         <MdAutorenew size={18} className="spin" />
-                        <span>{tr('កំពុងដំណើរការ...', 'Processing...')}</span>
+                        <span>{tr('កំពុងផ្ញើ...', 'Submitting...')}</span>
                       </>
                     ) : (
                       <>
                         <MdCheckCircle size={18} />
-                        <span>{tr('បញ្ជាក់ការបង់ប្រាក់រួចរាល់', 'Confirm Payment')}</span>
+                        <span>{tr('ផ្ញើការទូទាត់រង់ចាំការអនុម័ត', 'Submit Payment for Approval')}</span>
                       </>
                     )}
                   </button>

@@ -109,6 +109,7 @@ export default function Sidebar() {
         { href: '/setting/role', label: t('permission'), permission: 'settings.role, roles.read' },
         { href: '/setting/organisation', label: t('organizationSetting'), permission: 'settings.organisation' },
         { href: '/setting/general', label: t('generalSettings'), permission: 'settings.general' },
+        { href: '/setting/currency', label: t('currencySettings'), permission: 'settings.general, settings.manage' },
         { href: '/setting/firebase', label: lang === 'km' ? 'ការកំណត់ Firebase' : 'Firebase Settings', permission: 'settings.general, settings.manage' },
         { href: '/setting/telegram', label: lang === 'km' ? 'ការកំណត់ Telegram' : 'Telegram Settings', permission: 'settings.telegram, settings.general, settings.manage' },
         { href: '/setting/activity_log', label: t('activityLogs') || 'Activity Logs', permission: 'settings.activity_log' },
@@ -174,6 +175,7 @@ export default function Sidebar() {
 
   const { tenant, isTenant } = useTenant();
   const [orgName, setOrgName] = useState<string>('');
+  const [orgLogo, setOrgLogo] = useState<string>('');
 
   useEffect(() => {
     const updateOrg = () => {
@@ -183,13 +185,15 @@ export default function Sidebar() {
         if (cached) {
           const parsed = JSON.parse(cached);
           if (parsed?.name) setOrgName(parsed.name);
+          if (parsed?.logo !== undefined) setOrgLogo(parsed.logo || '');
         }
       } catch {}
     };
     updateOrg();
     api.get('/settings/organisation').then((res: any) => {
-      if (res.data?.name) {
-        setOrgName(res.data.name);
+      if (res.data) {
+        if (res.data.name) setOrgName(res.data.name);
+        if (res.data.logo !== undefined) setOrgLogo(res.data.logo || '');
         if (typeof window !== 'undefined') {
           const cacheKey = tenant?.subdomain ? `app-org-settings-${tenant.subdomain}` : 'app-org-settings';
           localStorage.setItem(cacheKey, JSON.stringify(res.data));
@@ -207,13 +211,15 @@ export default function Sidebar() {
       : (orgName && orgName !== 'EBS Digital Solutions' ? orgName : (tenant?.companyName || subscription?.companyName || orgName));
   const activeSubdomain = tenant?.subdomain || subscription?.subdomain;
 
+  const currentLogo = tenant?.logoUrl || orgLogo;
+
   return (
     <aside className="sidebar" style={{ width: 260 }}>
       {/* Brand Logo */}
       <div className="sidebar-logo" style={{ height: 76, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: 12, padding: '0 16px', borderBottom: '1px solid rgba(255,255,255,0.12)' }}>
-        {tenant?.logoUrl ? (
+        {currentLogo ? (
           <img
-            src={tenant.logoUrl}
+            src={currentLogo}
             alt="Logo"
             style={{
               width: 40,

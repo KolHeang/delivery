@@ -79,10 +79,10 @@ export class User {
   @Column({ nullable: true })
   gender: string;
 
-  @Column('decimal', { precision: 10, scale: 2, default: 0.0 })
+  @Column('decimal', { precision: 10, scale: 4, default: 0.0 })
   salary: number;
 
-  @Column('decimal', { name: 'driver_fee', precision: 10, scale: 2, default: 1000.0, nullable: true })
+  @Column('decimal', { name: 'driver_fee', precision: 10, scale: 4, default: 1000.0, nullable: true })
   driverFee: number;
 
   @ManyToOne(() => Zone, { nullable: true, eager: true })

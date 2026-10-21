@@ -1,5 +1,6 @@
 'use client';
 
+import { SaasMasterLayout } from '@/components/layout/SaasMasterLayout';
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -261,7 +262,7 @@ export default function CreateTenantPage() {
       });
 
       // Return immediately to the company list
-      router.push('/admin/saas?tab=tenants');
+      router.push('/admin/saas/tenants');
     } catch (err: any) {
       alert(err.response?.data?.message || 'បរាជ័យក្នុងការបង្កើតក្រុមហ៊ុន');
     } finally {
@@ -289,376 +290,11 @@ export default function CreateTenantPage() {
   };
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: '#f8fafc', fontFamily: "'Kantumruy Pro', 'Inter', sans-serif" }}>
-      {/* 1. DEDICATED SAAS MASTER SIDEBAR */}
-      <aside
-        style={{
-          width: 270,
-          background: '#2b529a',
-          color: '#ffffff',
-          display: 'flex',
-          flexDirection: 'column',
-          position: 'fixed',
-          top: 0,
-          bottom: 0,
-          left: 0,
-          zIndex: 90,
-          boxShadow: '4px 0 20px rgba(0,0,0,0.1)',
-        }}
-      >
-        {/* Brand Header */}
-        <div style={{ height: 64, padding: '0 20px', display: 'flex', alignItems: 'center', gap: 12, borderBottom: '1px solid rgba(255,255,255,0.12)', boxSizing: 'border-box' }}>
-          <div
-            style={{
-              width: 40,
-              height: 40,
-              borderRadius: 12,
-              background: '#ffffff',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: '0 4px 14px rgba(0,0,0,0.18)',
-              padding: 2,
-              boxSizing: 'border-box',
-              flexShrink: 0,
-            }}
-          >
-            <SaasCloudIcon size={34} />
-          </div>
-          <div>
-            <div style={{ fontSize: 15, fontWeight: 900, color: '#ffffff', letterSpacing: '-0.2px', lineHeight: 1.2 }}>
-              EBS Master SaaS
-            </div>
-            <div style={{ fontSize: 10.5, color: '#93c5fd', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-              ● SUPER ADMIN PORTAL
-            </div>
-          </div>
-        </div>
-
-        {/* Navigation List */}
-        <div style={{ flex: 1, padding: '16px 12px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <div style={{ fontSize: 11, fontWeight: 800, color: '#bfdbfe', textTransform: 'uppercase', padding: '8px 12px 6px', letterSpacing: '0.8px' }}>
-            Main Menu
-          </div>
-
-          <Link
-            href="/admin/saas"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 12,
-              width: '100%',
-              padding: '11px 16px',
-              borderRadius: 10,
-              background: 'transparent',
-              color: '#ffffff',
-              fontSize: 14,
-              fontWeight: 600,
-              textDecoration: 'none',
-              borderLeft: '4px solid transparent',
-              transition: 'all 0.15s',
-            }}
-          >
-            <MdDashboard size={20} color="#bfdbfe" />
-            <span>ផ្ទាំងគ្រប់គ្រង</span>
-          </Link>
-
-          <Link
-            href="/admin/saas"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 12,
-              width: '100%',
-              padding: '11px 16px',
-              borderRadius: 10,
-              background: 'rgba(255, 255, 255, 0.18)',
-              color: '#ffffff',
-              fontSize: 14,
-              fontWeight: 900,
-              textDecoration: 'none',
-              borderLeft: '4px solid #ffffff',
-              transition: 'all 0.15s',
-            }}
-          >
-            <MdBusiness size={20} color="#ffffff" />
-            <span>ក្រុមហ៊ុនទាំងអស់</span>
-          </Link>
-
-          <Link
-            href="/admin/saas"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 12,
-              width: '100%',
-              padding: '11px 16px',
-              borderRadius: 10,
-              background: 'transparent',
-              color: '#ffffff',
-              fontSize: 14,
-              fontWeight: 600,
-              textDecoration: 'none',
-              borderLeft: '4px solid transparent',
-              transition: 'all 0.15s',
-            }}
-          >
-            <MdGroup size={20} color="#bfdbfe" />
-            <span>គណនី SaaS Admins</span>
-          </Link>
-
-          <Link
-            href="/admin/saas"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 12,
-              width: '100%',
-              padding: '11px 16px',
-              borderRadius: 10,
-              background: 'transparent',
-              color: '#ffffff',
-              fontSize: 14,
-              fontWeight: 600,
-              textDecoration: 'none',
-              borderLeft: '4px solid transparent',
-              transition: 'all 0.15s',
-            }}
-          >
-            <MdWorkspacePremium size={20} color="#bfdbfe" />
-            <span>កញ្ចប់សេវា</span>
-          </Link>
-
-          <Link
-            href="/admin/saas"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 12,
-              width: '100%',
-              padding: '11px 16px',
-              borderRadius: 10,
-              background: 'transparent',
-              color: '#ffffff',
-              fontSize: 14,
-              fontWeight: 600,
-              textDecoration: 'none',
-              borderLeft: '4px solid transparent',
-              transition: 'all 0.15s',
-            }}
-          >
-            <MdLocalOffer size={20} color="#bfdbfe" />
-            <span>គូប៉ុងបញ្ចុះតម្លៃ</span>
-          </Link>
-
-          <Link
-            href="/admin/saas"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 12,
-              width: '100%',
-              padding: '11px 16px',
-              borderRadius: 10,
-              background: 'transparent',
-              color: '#ffffff',
-              fontSize: 14,
-              fontWeight: 600,
-              textDecoration: 'none',
-              borderLeft: '4px solid transparent',
-              transition: 'all 0.15s',
-            }}
-          >
-            <MdAttachMoney size={20} color="#bfdbfe" />
-            <span>ដៃគូសហការ</span>
-          </Link>
-        </div>
-      </aside>
-
-      {/* 2. MAIN CONTENT AREA */}
-      <div style={{ flex: 1, marginLeft: 270, display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-        {/* Topbar */}
-        <header
-          style={{
-            height: 64,
-            background: '#2b529a',
-            borderBottom: '1px solid rgba(255, 255, 255, 0.12)',
-            padding: '0 28px',
-            display: 'flex',
-            justifyContent: 'flex-end',
-            alignItems: 'center',
-            position: 'sticky',
-            top: 0,
-            zIndex: 80,
-            boxShadow: '0 4px 16px rgba(0,0,0,0.06)',
-          }}
-        >
-          {/* User Profile Dropdown */}
-          <div style={{ position: 'relative', paddingLeft: 14, borderLeft: '1px solid rgba(255, 255, 255, 0.2)' }}>
-            <button
-              onClick={() => setShowProfileDropdown(!showProfileDropdown)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 10,
-                background: showProfileDropdown ? 'rgba(255, 255, 255, 0.18)' : 'rgba(255, 255, 255, 0.08)',
-                border: '1px solid rgba(255, 255, 255, 0.2)',
-                borderRadius: 12,
-                padding: '6px 12px',
-                cursor: 'pointer',
-                transition: 'all 0.15s',
-                textAlign: 'left',
-              }}
-            >
-              <div
-                style={{
-                  width: 34,
-                  height: 34,
-                  borderRadius: '50%',
-                  background: 'linear-gradient(135deg, #3b82f6, #6366f1)',
-                  color: '#ffffff',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontWeight: 900,
-                  fontSize: 14,
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-                }}
-              >
-                {user?.name ? user.name.charAt(0).toUpperCase() : 'A'}
-              </div>
-              <div>
-                <div style={{ fontSize: 13, fontWeight: 900, color: '#ffffff', lineHeight: 1.2 }}>{user?.name || 'Admin User'}</div>
-                <div style={{ fontSize: 11, color: '#bfdbfe', fontWeight: 600 }}>{user?.email || 'admin@gmail.com'}</div>
-              </div>
-              <MdKeyboardArrowDown
-                size={20}
-                color="#ffffff"
-                style={{
-                  marginLeft: 4,
-                  transform: showProfileDropdown ? 'rotate(180deg)' : 'rotate(0deg)',
-                  transition: 'transform 0.2s',
-                }}
-              />
-            </button>
-
-            {/* Dropdown Menu Card */}
-            {showProfileDropdown && (
-              <>
-                {/* Invisible backdrop to close on outside click */}
-                <div
-                  onClick={() => setShowProfileDropdown(false)}
-                  style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 90 }}
-                />
-                <div
-                  style={{
-                    position: 'absolute',
-                    top: 'calc(100% + 8px)',
-                    right: 0,
-                    width: 250,
-                    background: '#ffffff',
-                    borderRadius: 16,
-                    boxShadow: '0 14px 35px -4px rgba(0,0,0,0.22), 0 4px 12px rgba(0,0,0,0.08)',
-                    border: '1px solid #e2e8f0',
-                    padding: '8px',
-                    zIndex: 95,
-                  }}
-                >
-                  {/* Dropdown Header */}
-                  <div style={{ padding: '10px 12px', borderBottom: '1px solid #f1f5f9' }}>
-                    <div style={{ fontSize: 13.5, fontWeight: 900, color: '#0f172a' }}>{user?.name || 'Admin User'}</div>
-                    <div style={{ fontSize: 11.5, color: '#64748b', marginTop: 1 }}>{user?.email || 'admin@gmail.com'}</div>
-                    <span
-                      style={{
-                        display: 'inline-block',
-                        marginTop: 6,
-                        background: '#eff6ff',
-                        color: '#2563eb',
-                        fontSize: 10.5,
-                        fontWeight: 800,
-                        padding: '2px 8px',
-                        borderRadius: 6,
-                      }}
-                    >
-                      👑 Super Administrator
-                    </span>
-                  </div>
-
-                  {/* Dropdown Menu Links */}
-                  <div style={{ padding: '6px 0' }}>
-                    <Link
-                      href="/admin/saas"
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 10,
-                        width: '100%',
-                        padding: '9px 12px',
-                        textDecoration: 'none',
-                        color: '#334155',
-                        fontSize: 13,
-                        fontWeight: 700,
-                        borderRadius: 10,
-                        cursor: 'pointer',
-                        textAlign: 'left',
-                        transition: 'background 0.15s',
-                      }}
-                      onMouseEnter={(e) => (e.currentTarget.style.background = '#f8fafc')}
-                      onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
-                    >
-                      <MdGroup size={18} color="#64748b" />
-                      <span>គណនី SaaS Admins</span>
-                    </Link>
-                  </div>
-
-                  <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: 6 }}>
-                    {/* Logout Action */}
-                    <button
-                      onClick={() => {
-                        setShowProfileDropdown(false);
-                        handleLogout();
-                      }}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 10,
-                        width: '100%',
-                        padding: '9px 12px',
-                        border: 'none',
-                        background: '#fef2f2',
-                        color: '#dc2626',
-                        fontSize: 13,
-                        fontWeight: 800,
-                        borderRadius: 10,
-                        cursor: 'pointer',
-                        textAlign: 'left',
-                        transition: 'all 0.15s',
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.background = '#dc2626';
-                        e.currentTarget.style.color = '#ffffff';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.background = '#fef2f2';
-                        e.currentTarget.style.color = '#dc2626';
-                      }}
-                    >
-                      <MdLogout size={18} />
-                      <span>ចាកចេញ (Logout)</span>
-                    </button>
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
-        </header>
-
-        {/* Page Content Body */}
-        <main style={{ flex: 1, padding: '24px 32px', width: '100%', minWidth: 0, boxSizing: 'border-box' }}>
+    <SaasMasterLayout activeTab="tenants">
           {/* Back Button & Title */}
           <div style={{ marginBottom: 20 }}>
             <Link
-              href="/admin/saas?tab=tenants"
+              href="/admin/saas/tenants"
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -1064,7 +700,7 @@ export default function CreateTenantPage() {
                   {/* Submit Buttons */}
                   <div style={{ marginTop: 24, display: 'flex', gap: 12, justifyContent: 'flex-end', borderTop: '1px solid var(--border)', paddingTop: 16 }}>
                     <Link
-                      href="/admin/saas?tab=tenants"
+                      href="/admin/saas/tenants"
                       className="btn btn-cancel"
                       style={{ background: '#dc2626', color: '#ffffff', border: '1px solid #dc2626', fontWeight: 700 }}
                     >
@@ -1083,8 +719,6 @@ export default function CreateTenantPage() {
               </div>
             </div>
           )}
-        </main>
-      </div>
-    </div>
+            </SaasMasterLayout>
   );
 }

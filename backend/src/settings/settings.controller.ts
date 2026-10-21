@@ -1,17 +1,45 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards, Req } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth, ApiOperation, ApiParam, ApiQuery } from '@nestjs/swagger';
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Delete,
+  Body,
+  Param,
+  Query,
+  UseGuards,
+  Req,
+  UploadedFile,
+  UseInterceptors,
+  BadRequestException,
+} from '@nestjs/common';
+import {
+  ApiTags,
+  ApiBearerAuth,
+  ApiOperation,
+  ApiParam,
+  ApiQuery,
+  ApiConsumes,
+} from '@nestjs/swagger';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { SettingsService } from './settings.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/permissions.guard';
 import { RequirePermissions } from '../auth/permissions.decorator';
 import { LogActivity } from '../activity-logs/activity.decorator';
+import { MinioService } from '../minio/minio.service';
+import { createMulterOptions } from '../config/multer';
+import { CreateCurrencyDto, UpdateCurrencyDto } from './dto/currency.dto';
 
 @ApiTags('Settings')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 @Controller('settings')
 export class SettingsController {
-  constructor(private readonly settingsService: SettingsService) {}
+  constructor(
+    private readonly settingsService: SettingsService,
+    private readonly minioService: MinioService,
+  ) {}
 
   @Get('organisation')
   @ApiOperation({ summary: 'Get organisation settings' })
@@ -32,6 +60,25 @@ export class SettingsController {
     return this.settingsService.updateOrganisation(body, tenantId, tenantSubdomain);
   }
 
+  @RequirePermissions('settings.organisation', 'settings.manage')
+  @ApiOperation({ summary: 'Upload organisation logo' })
+  @Post('organisation/logo')
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(
+    FileInterceptor(
+      'file',
+      createMulterOptions({
+        allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp', 'image/jpg', 'image/svg+xml'],
+        maxFileSize: 5 * 1024 * 1024,
+      }),
+    ),
+  )
+  async uploadLogo(@UploadedFile() file: any) {
+    if (!file) throw new BadRequestException('No file provided');
+    const url = await this.minioService.uploadFile(file, 'organisations');
+    return { url };
+  }
+
   @Get('general')
   @ApiOperation({ summary: 'Get general application settings' })
   @RequirePermissions('settings.general', 'settings.manage')
@@ -49,6 +96,88 @@ export class SettingsController {
     const tenantId = req.headers['x-tenant-id'] ? +req.headers['x-tenant-id'] : (req.user?.tenantId ? +req.user.tenantId : undefined);
     const tenantSubdomain = (req.headers['x-tenant-subdomain'] as string) || req.user?.tenantSubdomain;
     return this.settingsService.updateGeneralSetting(body.key, body.value, tenantId, tenantSubdomain);
+  }
+
+  // ── Currency Management Endpoints ──
+  @Get('currencies')
+  @ApiOperation({ summary: 'Get all currencies for selection and rate management' })
+  @ApiQuery({ name: 'activeOnly', required: false, type: Boolean })
+  @RequirePermissions('settings.general', 'settings.manage')
+  getCurrencies(
+    @Query('activeOnly') activeOnly?: string,
+    @Req() req?: any,
+  ) {
+    const tenantId = req.headers['x-tenant-id']
+      ? +req.headers['x-tenant-id']
+      : (req.user?.tenantId ? +req.user.tenantId : undefined);
+    const tenantSubdomain = (req.headers['x-tenant-subdomain'] as string) || req.user?.tenantSubdomain;
+    return this.settingsService.getCurrencies(activeOnly === 'true' || activeOnly === '1', tenantId, tenantSubdomain);
+  }
+
+  @Get('currencies/catalog')
+  @ApiOperation({ summary: 'Get world currencies catalog from internet reference' })
+  @RequirePermissions('settings.general', 'settings.manage')
+  getCurrenciesCatalog() {
+    return this.settingsService.getInternetCatalog();
+  }
+
+  @Post('currencies/sync')
+  @ApiOperation({ summary: 'Fetch and sync live currency exchange rates from internet' })
+  @RequirePermissions('settings.general', 'settings.manage')
+  @LogActivity({ action: 'SYNC_CURRENCIES_INTERNET', entityName: 'Currency', description: 'Synced currency exchange rates from internet' })
+  syncCurrenciesFromInternet(@Req() req: any) {
+    const tenantId = req.headers['x-tenant-id']
+      ? +req.headers['x-tenant-id']
+      : (req.user?.tenantId ? +req.user.tenantId : undefined);
+    const tenantSubdomain = (req.headers['x-tenant-subdomain'] as string) || req.user?.tenantSubdomain;
+    return this.settingsService.syncRatesFromInternet(tenantId, tenantSubdomain);
+  }
+
+  @Post('currencies')
+  @ApiOperation({ summary: 'Add a new currency' })
+  @RequirePermissions('settings.general', 'settings.manage')
+  @LogActivity({ action: 'CREATE_CURRENCY', entityName: 'Currency', description: 'Created currency' })
+  createCurrency(@Body() dto: CreateCurrencyDto, @Req() req: any) {
+    const tenantId = req.headers['x-tenant-id']
+      ? +req.headers['x-tenant-id']
+      : (req.user?.tenantId ? +req.user.tenantId : undefined);
+    const tenantSubdomain = (req.headers['x-tenant-subdomain'] as string) || req.user?.tenantSubdomain;
+    return this.settingsService.createCurrency(dto, tenantId, tenantSubdomain);
+  }
+
+  @Put('currencies/:id')
+  @ApiOperation({ summary: 'Update currency details or exchange rate' })
+  @ApiParam({ name: 'id', type: Number })
+  @RequirePermissions('settings.general', 'settings.manage')
+  @LogActivity({ action: 'UPDATE_CURRENCY', entityName: 'Currency', description: 'Updated currency' })
+  updateCurrency(@Param('id') id: string, @Body() dto: UpdateCurrencyDto, @Req() req: any) {
+    const tenantId = req.headers['x-tenant-id']
+      ? +req.headers['x-tenant-id']
+      : (req.user?.tenantId ? +req.user.tenantId : undefined);
+    const tenantSubdomain = (req.headers['x-tenant-subdomain'] as string) || req.user?.tenantSubdomain;
+    return this.settingsService.updateCurrency(+id, dto, tenantId, tenantSubdomain);
+  }
+
+  @Post('currencies/:id/set-base')
+  @ApiOperation({ summary: 'Set currency as primary base currency' })
+  @ApiParam({ name: 'id', type: Number })
+  @RequirePermissions('settings.general', 'settings.manage')
+  @LogActivity({ action: 'SET_BASE_CURRENCY', entityName: 'Currency', description: 'Set currency as base' })
+  setBaseCurrency(@Param('id') id: string, @Req() req: any) {
+    const tenantId = req.headers['x-tenant-id']
+      ? +req.headers['x-tenant-id']
+      : (req.user?.tenantId ? +req.user.tenantId : undefined);
+    const tenantSubdomain = (req.headers['x-tenant-subdomain'] as string) || req.user?.tenantSubdomain;
+    return this.settingsService.setBaseCurrency(+id, tenantId, tenantSubdomain);
+  }
+
+  @Delete('currencies/:id')
+  @ApiOperation({ summary: 'Delete currency' })
+  @ApiParam({ name: 'id', type: Number })
+  @RequirePermissions('settings.general', 'settings.manage')
+  @LogActivity({ action: 'DELETE_CURRENCY', entityName: 'Currency', description: 'Deleted currency' })
+  deleteCurrency(@Param('id') id: string) {
+    return this.settingsService.deleteCurrency(+id);
   }
 
   // ── Firebase Configuration CRUD Endpoints ──

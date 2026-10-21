@@ -30,7 +30,7 @@ import { createMulterOptions } from '../../config/multer';
 export class UploadController {
   constructor(private readonly minioService: MinioService) {}
 
-  @Post()
+  @Post(['', 'single'])
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Upload single image/file for mobile app (proof, signature, chat, etc.)' })

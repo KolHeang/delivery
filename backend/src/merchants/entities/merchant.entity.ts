@@ -56,7 +56,7 @@ export class Merchant {
   @Column({ name: 'pricing_tier', default: 'standard' })
   pricingTier: PricingTier;
 
-  @Column('decimal', { precision: 10, scale: 2, default: 0 })
+  @Column('decimal', { precision: 10, scale: 4, default: 0 })
   balance: number;
 
   @Column({ default: true })
@@ -69,10 +69,10 @@ export class Merchant {
   @Column({ name: 'zone_id', nullable: true })
   zoneId: number;
 
-  @Column('decimal', { name: 'delivery_fee', precision: 10, scale: 2, default: 0, nullable: true })
+  @Column('decimal', { name: 'delivery_fee', precision: 10, scale: 4, default: 0, nullable: true })
   deliveryFee: number;
 
-  @Column('decimal', { name: 'exchange_rate', precision: 10, scale: 2, default: 4100, nullable: true })
+  @Column('decimal', { name: 'exchange_rate', precision: 10, scale: 4, default: 4100, nullable: true })
   exchangeRate: number;
 
   @Column({ type: 'text', nullable: true })

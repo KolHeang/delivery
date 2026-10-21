@@ -25,7 +25,7 @@ export class Expense {
   @Column()
   description: string;
 
-  @Column('decimal', { precision: 10, scale: 2, default: 0 })
+  @Column('decimal', { precision: 10, scale: 4, default: 0 })
   amount: number;
 
   @Column({ type: 'date', default: () => 'CURRENT_DATE' })

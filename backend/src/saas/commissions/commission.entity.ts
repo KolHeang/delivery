@@ -46,10 +46,10 @@ export class Commission {
   @JoinColumn({ name: 'payment_id' })
   payment: SaasPayment;
 
-  @Column('decimal', { name: 'calculated_amount', precision: 10, scale: 2 })
+  @Column('decimal', { name: 'calculated_amount', precision: 10, scale: 4 })
   calculatedAmount: number;
 
-  @Column('decimal', { name: 'commission_rate', precision: 5, scale: 2 })
+  @Column('decimal', { name: 'commission_rate', precision: 7, scale: 4 })
   commissionRate: number; // e.g. 15.00 for 15%
 
   @Column({

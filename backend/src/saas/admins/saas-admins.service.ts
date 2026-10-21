@@ -14,7 +14,7 @@ export class SaasAdminsService {
   ) { }
 
 
-  async login(email: string, password: string): Promise<{ access_token: string; admin: Partial<SaasAdmin> }> {
+  async login(email: string, password: string): Promise<{ access_token: string; expire_date: string; expires_at: string; status: string; admin: Partial<SaasAdmin> }> {
     const normalizedEmail = email.trim().toLowerCase();
     const admin = await this.findByEmail(normalizedEmail);
     if (!admin) {
@@ -41,10 +41,19 @@ export class SaasAdminsService {
       isSaasAdmin: true,
     };
     const access_token = this.jwtService.sign(payload);
+    const decoded: any = this.jwtService.decode(access_token);
+    const expire_date = decoded?.exp
+      ? new Date(decoded.exp * 1000).toISOString()
+      : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+    const isExpired = new Date(expire_date) < new Date();
+    const status = isExpired ? 'expire' : 'active';
 
     const { password: _, ...adminWithoutPassword } = admin;
     return {
       access_token,
+      expire_date,
+      expires_at: expire_date,
+      status,
       admin: adminWithoutPassword,
     };
   }

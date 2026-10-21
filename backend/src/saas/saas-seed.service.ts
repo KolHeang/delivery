@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { Plan } from './plans/plan.entity';
 import { Partner } from './partners/partner.entity';
 import { Coupon, DiscountType } from './coupons/coupon.entity';
+import { SaasPaymentOption } from './payments/saas-payment-option.entity';
 
 @Injectable()
 export class SaasSeedService implements OnModuleInit {
@@ -14,11 +15,14 @@ export class SaasSeedService implements OnModuleInit {
     private readonly partnerRepo: Repository<Partner>,
     @InjectRepository(Coupon)
     private readonly couponRepo: Repository<Coupon>,
+    @InjectRepository(SaasPaymentOption)
+    private readonly optionRepo: Repository<SaasPaymentOption>,
   ) {}
 
   async onModuleInit() {
     await this.seedPlans();
     await this.seedPartnersAndCoupons();
+    await this.seedPaymentOptions();
   }
 
   private async seedPlans() {
@@ -149,6 +153,42 @@ export class SaasSeedService implements OnModuleInit {
     for (const c of defaultCoupons) {
       const coupon = this.couponRepo.create(c);
       await this.couponRepo.save(coupon);
+    }
+  }
+
+  private async seedPaymentOptions() {
+    const count = await this.optionRepo.count();
+    if (count > 0) return;
+
+    const defaultOptions = [
+      {
+        name: 'Offline Bank Transfer',
+        type: 'offline' as const,
+        status: 'active' as const,
+        bankName: 'ABA Bank & ACLEDA Bank',
+        accountName: 'EBS LOGISTICS SAAS CO., LTD.',
+        accountNumber: 'ABA: 000 123 456 | ACLEDA: 010 888 999',
+        instructions:
+          'សូមផ្ទេរប្រាក់ទៅគណនីធនាគារខាងលើ និងបញ្ចូលលេខយោងប្រតិបត្តិការ (Transaction ID)។ ការទូទាត់នឹងត្រូវបានបើកដំណើរការបន្ទាប់ពី Admin SaaS ពិនិត្យនិងអនុម័ត។ (Transfer and enter Transaction ID. Requires Admin SaaS approval).',
+        requiresApproval: true,
+        sortOrder: 1,
+      },
+      {
+        name: 'ABA PayWay (Direct Bank API)',
+        type: 'aba' as const,
+        status: 'pending' as const,
+        bankName: 'ABA Bank',
+        accountName: 'EBS LOGISTICS SAAS CO., LTD.',
+        instructions:
+          'ការតភ្ជាប់ដោយផ្ទាល់ជាមួយប្រព័ន្ធធនាគារ ABA PayWay API កំពុងស្ថិតក្នុងដំណើរការតភ្ជាប់ (Pending bank integration). Coming soon!',
+        requiresApproval: false,
+        sortOrder: 2,
+      },
+    ];
+
+    for (const opt of defaultOptions) {
+      const option = this.optionRepo.create(opt);
+      await this.optionRepo.save(option);
     }
   }
 }

@@ -36,8 +36,8 @@ export class Organisation {
   @Column({ default: 'Phnom Penh, Cambodia' })
   address: string;
 
-  @Column({ nullable: true })
-  logo: string;
+  @Column({ type: 'text', nullable: true })
+  logo: string | null;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;

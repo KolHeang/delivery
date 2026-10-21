@@ -29,7 +29,7 @@ export class DriverPayment {
   @Column({ name: 'driver_id', nullable: true })
   driverId: number;
 
-  @Column('decimal', { precision: 10, scale: 2, default: 0 })
+  @Column('decimal', { precision: 10, scale: 4, default: 0 })
   amount: number;
 
   @Column({ default: 'KHR', nullable: true })

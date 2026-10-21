@@ -59,6 +59,21 @@ export interface CouponValidation {
   finalAmount: number;
 }
 
+export interface SaasPaymentOption {
+  id: number;
+  name: string;
+  type: 'offline' | 'aba' | 'khqr';
+  status: 'active' | 'pending' | 'inactive';
+  bankName?: string;
+  accountName?: string;
+  accountNumber?: string;
+  qrCodeUrl?: string;
+  instructions?: string;
+  requiresApproval: boolean;
+  sortOrder: number;
+  createdAt: string;
+}
+
 export interface SaasInvoice {
   id: number;
   invoiceNumber: string;
@@ -70,6 +85,7 @@ export interface SaasInvoice {
   paidAt?: string;
   createdAt: string;
   subscription?: any;
+  payments?: any[];
 }
 
 export const saasApi = {
@@ -176,8 +192,45 @@ export const saasApi = {
     invoiceId: number;
     paymentMethod: string;
     transactionId?: string;
+    paymentOptionId?: number;
+    note?: string;
   }) => {
     const res = await api.post('/saas/payments/checkout-pay', data);
+    return res.data;
+  },
+
+  getPaymentOptions: async (all = false): Promise<SaasPaymentOption[]> => {
+    const res = await api.get('/saas/payments/options', { params: { all: all ? 'true' : 'false' } });
+    return res.data;
+  },
+
+  createPaymentOption: async (data: any): Promise<SaasPaymentOption> => {
+    const res = await api.post('/saas/payments/options', data);
+    return res.data;
+  },
+
+  updatePaymentOption: async (id: number, data: any): Promise<SaasPaymentOption> => {
+    const res = await api.put(`/saas/payments/options/${id}`, data);
+    return res.data;
+  },
+
+  deletePaymentOption: async (id: number): Promise<{ success: boolean }> => {
+    const res = await api.delete(`/saas/payments/options/${id}`);
+    return res.data;
+  },
+
+  getAllPayments: async (): Promise<any[]> => {
+    const res = await api.get('/saas/payments');
+    return res.data;
+  },
+
+  approvePayment: async (id: number) => {
+    const res = await api.post(`/saas/payments/${id}/approve`);
+    return res.data;
+  },
+
+  rejectPayment: async (id: number, reason?: string) => {
+    const res = await api.post(`/saas/payments/${id}/reject`, { reason });
     return res.data;
   },
 

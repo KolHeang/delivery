@@ -25,10 +25,10 @@ export class Plan {
   @Column({ nullable: true })
   description: string;
 
-  @Column('decimal', { precision: 10, scale: 2, default: 0.0 })
+  @Column('decimal', { precision: 10, scale: 4, default: 0.0 })
   priceMonthly: number;
 
-  @Column('decimal', { precision: 10, scale: 2, default: 0.0 })
+  @Column('decimal', { precision: 10, scale: 4, default: 0.0 })
   priceYearly: number;
 
   @Column({ name: 'max_users', default: 5 })
@@ -39,6 +39,9 @@ export class Plan {
 
   @Column({ name: 'max_drivers', default: 5 })
   maxDrivers: number;
+
+  @Column({ name: 'max_merchants', default: 50 })
+  maxMerchants: number;
 
   @Column({ name: 'max_vehicles', default: 5 })
   maxVehicles: number;

@@ -14,15 +14,18 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from 'recharts';
 import { MdHome, MdLocalPostOffice, MdSearch } from 'react-icons/md';
+import DateInput, { getLocalDateString } from '@/components/ui/DateInput';
+import { StatsSkeleton, ChartSkeleton, Skeleton } from '@/components/ui/Skeleton';
 
 const STATUS_COLORS: Record<string, string> = {
-  pending: '#f59e0b', assigned: '#6366f1', 'picked-up': '#3b82f6', 'in-transit': '#8b5cf6',
+  pending: '#f59e0b', 'in-warehouse': '#0f766e', assigned: '#6366f1',
+  'picked-up': '#3b82f6', 'in-transit': '#8b5cf6',
   delivered: '#10b981', failed: '#ef4444', returned: '#6b7280',
 };
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const [stats, setStats] = useState<any>(null);
   const [chartData, setChartData] = useState<any>(null);
   const [recentOrders, setRecentOrders] = useState<any[]>([]);
@@ -35,16 +38,16 @@ export default function DashboardPage() {
   }, []);
 
   // Date range filters
-  const [rangeType, setRangeType] = useState('all');
-  const [customStart, setCustomStart] = useState('');
-  const [customEnd, setCustomEnd] = useState('');
+  const [rangeType, setRangeType] = useState('today');
+  const [customStart, setCustomStart] = useState(() => getLocalDateString());
+  const [customEnd, setCustomEnd] = useState(() => getLocalDateString());
 
   const getDates = useCallback((type: string) => {
     const today = new Date();
     let start = '';
     let end = '';
 
-    const formatDate = (d: Date) => d.toISOString().split('T')[0];
+    const formatDate = (d: Date) => getLocalDateString(d);
 
     if (type === 'today') {
       start = formatDate(today);
@@ -91,9 +94,11 @@ export default function DashboardPage() {
       ]);
       setStats(s.data);
       setChartData(c.data);
-      setRecentOrders(r.data);
-      setTopDrivers(d.data);
-    } catch { }
+      setRecentOrders(Array.isArray(r.data) ? r.data : (r.data?.result || []));
+      setTopDrivers(Array.isArray(d.data) ? d.data : (d.data?.result || []));
+    } catch (err) {
+      console.error('Failed to load dashboard:', err);
+    }
     setLoading(false);
   }, []);
 
@@ -114,20 +119,85 @@ export default function DashboardPage() {
     <div className="app-layout">
       <Sidebar />
       <div className="main-content">
-        <div className="loading-wrapper"><div className="spinner" /></div>
+        <Topbar title={t('dashboard')} subtitle={t('dashboardSubtitle')} />
+        <div className="page-content">
+          {/* Skeleton Stats Grid */}
+          <StatsSkeleton count={12} />
+
+          {/* Skeleton Summary Flow */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, margin: '20px 0' }}>
+            <Skeleton height={100} borderRadius={12} />
+            <Skeleton height={100} borderRadius={12} />
+            <Skeleton height={100} borderRadius={12} />
+          </div>
+
+          {/* Skeleton Charts */}
+          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 20 }}>
+            <ChartSkeleton height={320} />
+            <ChartSkeleton height={320} />
+          </div>
+
+          {/* Skeleton Drivers Card */}
+          <div className="card" style={{ marginTop: 20, padding: 20 }}>
+            <Skeleton width={180} height={20} style={{ marginBottom: 16 }} />
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 12 }}>
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', borderRadius: 12, background: '#f8fafc' }}>
+                  <Skeleton width={34} height={34} borderRadius="50%" />
+                  <div style={{ flex: 1 }}>
+                    <Skeleton width="60%" height={14} style={{ marginBottom: 6 }} />
+                    <Skeleton width="40%" height={10} />
+                  </div>
+                  <Skeleton width={30} height={20} />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
 
-  const pieData = chartData?.statusBreakdown?.map((s: any) => ({
-    name: s.status, value: parseInt(s.count),
-  })) || [];
+  const STATUS_LABELS: Record<string, { km: string; en: string }> = {
+    pending: { km: 'រង់ចាំ', en: 'Pending' },
+    'in-warehouse': { km: 'ក្នុងឃ្លាំង', en: 'In Warehouse' },
+    assigned: { km: 'បានចាត់តាំង', en: 'Assigned' },
+    'picked-up': { km: 'ទទួលអីវ៉ាន់', en: 'Picked Up' },
+    'in-transit': { km: 'កំពុងដឹក', en: 'In Transit' },
+    delivered: { km: 'ដឹកជោគជ័យ', en: 'Delivered' },
+    failed: { km: 'បរាជ័យ', en: 'Failed' },
+    returned: { km: 'ត្រឡប់មកវិញ', en: 'Returned' },
+  };
+
+  const formatDateTick = (dateStr: string) => {
+    if (!dateStr) return '';
+    const parts = dateStr.split('-');
+    if (parts.length === 3) {
+      return `${parts[2]}/${parts[1]}`;
+    }
+    return dateStr;
+  };
+
+  const pieData = (chartData?.statusBreakdown || [])
+    .filter((s: any) => parseInt(s.count) > 0)
+    .map((s: any) => {
+      const statusKey = s.status;
+      const labelObj = STATUS_LABELS[statusKey];
+      const label = lang === 'km' ? (labelObj?.km || statusKey) : (labelObj?.en || statusKey);
+      return {
+        rawStatus: statusKey,
+        name: label,
+        value: parseInt(s.count),
+      };
+    });
+
+  const totalStatusCount = pieData.reduce((sum: number, item: any) => sum + item.value, 0);
 
   return (
     <div className="app-layout">
       <Sidebar />
       <div className="main-content">
-        <Topbar title="Dashboard" subtitle="Welcome back! Here's what's happening today." />
+        <Topbar title={t('dashboard')} subtitle={t('dashboardSubtitle')} />
         <div className="page-content">
           {/* Date Filter */}
           <div className="card" style={{ marginBottom: 20, padding: '12px 16px' }}>
@@ -152,24 +222,20 @@ export default function DashboardPage() {
 
               {rangeType === 'custom' && (
                 <>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                    <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)' }}>{t('fromDate')}</span>
-                    <input
-                      type="date"
-                      className="form-control"
-                      value={customStart}
-                      onChange={e => setCustomStart(e.target.value)}
-                    />
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                    <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)' }}>{t('toDate')}</span>
-                    <input
-                      type="date"
-                      className="form-control"
-                      value={customEnd}
-                      onChange={e => setCustomEnd(e.target.value)}
-                    />
-                  </div>
+                  <DateInput
+                    labelEn="Start Date"
+                    labelKh="ចាប់ពីថ្ងៃ"
+                    value={customStart}
+                    onChange={setCustomStart}
+                    style={{ background: '#f8f9fa', borderRadius: 4 }}
+                  />
+                  <DateInput
+                    labelEn="End Date"
+                    labelKh="ដល់"
+                    value={customEnd}
+                    onChange={setCustomEnd}
+                    style={{ background: '#f8f9fa', borderRadius: 4 }}
+                  />
                 </>
               )}
             </div>
@@ -178,38 +244,213 @@ export default function DashboardPage() {
           {/* Stats Grid */}
           <div className="stats-grid">
             <StatsCard icon="/3d/3d_box.png" label={t('totalParcelDashboard')} value={stats?.totalOrders ?? 0} color="#2f55a5" bg="#eef2fa" />
-            <StatsCard icon="/3d/3d_check.png" label={t('totalCompleteParcel')} value={stats?.delivered ?? 0} color="#10b981" bg="#ecfdf5" />
+            <StatsCard icon="/3d/3d_box.png" label={lang === 'km' ? 'ចំនួនកញ្ចប់រង់ចាំ' : 'Pending Parcels'} value={stats?.pending ?? 0} color="#d97706" bg="#fef3c7" />
+            <StatsCard icon="/3d/3d_truck.png" label={lang === 'km' ? 'ចំនួនកញ្ចប់បានចាត់តាំង' : 'Assigned Parcels'} value={stats?.assigned ?? 0} color="#4338ca" bg="#e0e7ff" />
             <StatsCard icon="/3d/3d_truck.png" label={t('totalProcessParcel')} value={stats?.inTransit ?? 0} color="#8b5cf6" bg="#f5f3ff" />
+            <StatsCard icon="/3d/3d_check.png" label={t('totalCompleteParcel')} value={stats?.delivered ?? 0} color="#10b981" bg="#ecfdf5" />
             <StatsCard icon="/3d/3d_cross.png" label={t('totalCanceledParcel')} value={stats?.failed ?? 0} color="#ef4444" bg="#fef2f2" />
             <StatsCard icon="/3d/3d_refresh.png" label={t('totalReturnParcel')} value={stats?.returned ?? 0} color="#6b7280" bg="#f3f4f6" />
             <StatsCard icon="/3d/3d_cash.png" label={t('totalDeliveryFeeDashboard')} value={`$${(stats?.totalDeliveryFee ?? 0).toFixed(2)}`} color="#10b981" bg="#ecfdf5" />
             <StatsCard icon="/3d/3d_money_bag.png" label={t('amountCollectedUSD')} value={`$${(stats?.collectedCashUSD ?? 0).toFixed(2)}`} color="#2f55a5" bg="#eef2fa" />
-            <StatsCard icon="/3d/3d_khr_coin.png" label={t('amountCollectedKHR')} value={`${(stats?.collectedCashKHR ?? 0).toLocaleString()} ៛`} color="#f16222" bg="#fef4ef" />
+            <StatsCard icon="/3d/3d_khr_coin.png" label={t('amountCollectedKHR')} value={`${(stats?.collectedCashKHR ?? 0).toLocaleString()}៛`} color="#f16222" bg="#fef4ef" />
             <StatsCard icon="/3d/3d_scooter.png" label={t('totalDrivers')} value={stats?.totalDrivers ?? 0} color="#8b5cf6" bg="#f5f3ff" />
-            <StatsCard icon="/3d/3d_users.png" label={t('totalStaff')} value={stats?.totalUser ?? 0} color="#2f55a5" bg="#eef2fa" />
+            <StatsCard icon="/3d/3d_shop.png" label={t('totalMerchants')} value={stats?.totalMerchants ?? 0} color="#2f55a5" bg="#eef2fa" />
+          </div>
+
+          {/* Delivery Flow Status Summary */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 20, alignItems: 'stretch' }}>
+            {/* Pick-up Summary */}
+            <a href="/summary/pickup" style={{ textDecoration: 'none', display: 'flex', flexDirection: 'column', height: '100%' }}>
+              <div className="card" style={{ padding: 0, overflow: 'hidden', cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s', height: '100%', display: 'flex', flexDirection: 'column', flex: 1 }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(-3px)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 8px 24px rgba(217,119,6,0.15)'; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = ''; (e.currentTarget as HTMLElement).style.boxShadow = ''; }}>
+                <div style={{ background: 'linear-gradient(135deg, #d97706, #f59e0b)', padding: '14px 20px', display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <span style={{ fontSize: 28 }}>🏪</span>
+                  <div>
+                    <div style={{ color: '#fff', fontWeight: 800, fontSize: 15 }}>{t('pickupSummary')}</div>
+                  </div>
+                  <div style={{ marginLeft: 'auto', color: 'rgba(255,255,255,0.7)', fontSize: 18 }}>→</div>
+                </div>
+                <div style={{ padding: '14px 20px', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6, flex: 1 }}>
+                  <div style={{ textAlign: 'center', padding: '10px 2px', borderRadius: 10, background: '#fef3c7', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: '#d97706' }}>{stats?.pending ?? 0}</div>
+                    <div style={{ fontSize: 10, color: '#92400e', fontWeight: 600 }}>{t('pending')}</div>
+                  </div>
+                  <div style={{ textAlign: 'center', padding: '10px 2px', borderRadius: 10, background: '#dbeafe', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: '#1e40af' }}>{stats?.pickedUp ?? 0}</div>
+                    <div style={{ fontSize: 10, color: '#1e3a8a', fontWeight: 600 }}>{t('pickedUp')}</div>
+                  </div>
+                  <div style={{ textAlign: 'center', padding: '10px 2px', borderRadius: 10, background: '#ccfbf1', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: '#0f766e' }}>{stats?.inWarehouse ?? 0}</div>
+                    <div style={{ fontSize: 10, color: '#134e4a', fontWeight: 600 }}>{t('inWarehouse')}</div>
+                  </div>
+                </div>
+              </div>
+            </a>
+
+            {/* Delivery Summary */}
+            <a href="/summary/delivery" style={{ textDecoration: 'none', display: 'flex', flexDirection: 'column', height: '100%' }}>
+              <div className="card" style={{ padding: 0, overflow: 'hidden', cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s', height: '100%', display: 'flex', flexDirection: 'column', flex: 1 }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(-3px)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 8px 24px rgba(99,102,241,0.15)'; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = ''; (e.currentTarget as HTMLElement).style.boxShadow = ''; }}>
+                <div style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', padding: '14px 20px', display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <span style={{ fontSize: 28 }}>🚚</span>
+                  <div>
+                    <div style={{ color: '#fff', fontWeight: 800, fontSize: 15 }}>{t('deliverySummary')}</div>
+                  </div>
+                  <div style={{ marginLeft: 'auto', color: 'rgba(255,255,255,0.7)', fontSize: 18 }}>→</div>
+                </div>
+                <div style={{ padding: '14px 20px', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6, flex: 1 }}>
+                  <div style={{ textAlign: 'center', padding: '8px 2px', borderRadius: 10, background: '#e0e7ff', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: '#4338ca' }}>{stats?.assigned ?? 0}</div>
+                    <div style={{ fontSize: 10, color: '#3730a3', fontWeight: 600 }}>{t('assigned')}</div>
+                  </div>
+                  <div style={{ textAlign: 'center', padding: '8px 2px', borderRadius: 10, background: '#f3e8ff', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: '#6b21a8' }}>{stats?.inTransit ?? 0}</div>
+                    <div style={{ fontSize: 10, color: '#581c87', fontWeight: 600 }}>{t('inTransit')}</div>
+                  </div>
+                  <div style={{ textAlign: 'center', padding: '8px 2px', borderRadius: 10, background: '#ecfdf5', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: '#065f46' }}>{stats?.delivered ?? 0}</div>
+                    <div style={{ fontSize: 10, color: '#064e3b', fontWeight: 600 }}>{t('delivered')}</div>
+                  </div>
+                  <div style={{ textAlign: 'center', padding: '8px 2px', borderRadius: 10, background: '#fef2f2', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: '#991b1b' }}>{stats?.failed ?? 0}</div>
+                    <div style={{ fontSize: 10, color: '#7f1d1d', fontWeight: 600 }}>{t('failed')}</div>
+                  </div>
+                </div>
+              </div>
+            </a>
+
+            {/* Shop Summary */}
+            <a href="/summary/shop" style={{ textDecoration: 'none', display: 'flex', flexDirection: 'column', height: '100%' }}>
+              <div className="card" style={{ padding: 0, overflow: 'hidden', cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s', height: '100%', display: 'flex', flexDirection: 'column', flex: 1 }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(-3px)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 8px 24px rgba(16,185,129,0.15)'; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = ''; (e.currentTarget as HTMLElement).style.boxShadow = ''; }}>
+                <div style={{ background: 'linear-gradient(135deg, #059669, #10b981)', padding: '14px 20px', display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <span style={{ fontSize: 28 }}>🏪</span>
+                  <div>
+                    <div style={{ color: '#fff', fontWeight: 800, fontSize: 15 }}>{t('shopSummary')}</div>
+                  </div>
+                  <div style={{ marginLeft: 'auto', color: 'rgba(255,255,255,0.7)', fontSize: 18 }}>→</div>
+                </div>
+                <div style={{ padding: '14px 20px', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6, flex: 1 }}>
+                  <div style={{ textAlign: 'center', padding: '8px 2px', borderRadius: 10, background: '#ecfdf5', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: '#065f46' }}>{stats?.totalOrders ?? 0}</div>
+                    <div style={{ fontSize: 10, color: '#064e3b', fontWeight: 600 }}>{t('parcels')}</div>
+                  </div>
+                  <div style={{ textAlign: 'center', padding: '8px 2px', borderRadius: 10, background: '#ecfdf5', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: '#065f46' }}>{stats?.delivered ?? 0}</div>
+                    <div style={{ fontSize: 10, color: '#064e3b', fontWeight: 600 }}>{t('delivered')}</div>
+                  </div>
+                  <div style={{ textAlign: 'center', padding: '8px 2px', borderRadius: 10, background: '#fef2f2', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: '#ef4444' }}>{stats?.failed ?? 0}</div>
+                    <div style={{ fontSize: 10, color: '#991b1b', fontWeight: 600 }}>{t('failed')}</div>
+                  </div>
+                  <div style={{ textAlign: 'center', padding: '8px 2px', borderRadius: 10, background: '#fef2f2', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: '#991b1b' }}>{stats?.returned ?? 0}</div>
+                    <div style={{ fontSize: 10, color: '#7f1d1d', fontWeight: 600 }}>{t('returned')}</div>
+                  </div>
+                </div>
+              </div>
+            </a>
           </div>
 
           {/* Charts */}
           <div className="charts-grid">
-            {/* Area Chart */}
+            {/* Area Chart: Daily Deliveries */}
             <div className="card">
-              <div className="card-header"><span className="card-title">📊 Daily Deliveries (Last 30 Days)</span></div>
-              <div className="card-body" style={{ height: 240 }}>
-                {isMounted && chartData?.dailyData?.length > 0 ? (
-                  <ResponsiveContainer width="100%" height="100%" minWidth={0}>
-                    <AreaChart data={chartData.dailyData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+              <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span className="card-title">📊 {t('dailyDeliveries')}</span>
+                <span style={{ fontSize: '12px', fontWeight: '700', color: '#64748b' }}>
+                  {lang === 'km' ? 'និន្នាការតាមថ្ងៃ' : 'Daily Trends'}
+                </span>
+              </div>
+              <div className="card-body" style={{ height: 260 }}>
+                {chartData?.dailyData?.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+                    <AreaChart data={chartData.dailyData} margin={{ top: 10, right: 15, left: -20, bottom: 0 }}>
                       <defs>
+                        <linearGradient id="colorTotalOrders" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#2563eb" stopOpacity={0.25} />
+                          <stop offset="95%" stopColor="#2563eb" stopOpacity={0} />
+                        </linearGradient>
                         <linearGradient id="colorDelivered" x1="0" y1="0" x2="0" y2="1">
                           <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
                           <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
                         </linearGradient>
+                        <linearGradient id="colorFailed" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#ef4444" stopOpacity={0.2} />
+                          <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
+                        </linearGradient>
                       </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                      <XAxis dataKey="day" tick={{ fontSize: 11 }} />
-                      <YAxis tick={{ fontSize: 11 }} />
-                      <Tooltip />
-                      <Area type="monotone" dataKey="delivered" stroke="#10b981" fill="url(#colorDelivered)" name="Delivered" />
-                      <Area type="monotone" dataKey="failed" stroke="#ef4444" fill="rgba(239,68,68,0.1)" name="Failed" />
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                      <XAxis
+                        dataKey="day"
+                        tickFormatter={formatDateTick}
+                        tick={{ fontSize: 11, fill: '#64748b', fontWeight: '600' }}
+                        axisLine={{ stroke: '#e2e8f0' }}
+                        tickLine={false}
+                      />
+                      <YAxis
+                        tick={{ fontSize: 11, fill: '#64748b', fontWeight: '600' }}
+                        axisLine={{ stroke: '#e2e8f0' }}
+                        tickLine={false}
+                        allowDecimals={false}
+                      />
+                      <Tooltip content={({ active, payload, label }) => {
+                        if (active && payload && payload.length) {
+                          return (
+                            <div style={{
+                              backgroundColor: '#ffffff',
+                              border: '1.5px solid #e2e8f0',
+                              borderRadius: '12px',
+                              padding: '10px 14px',
+                              boxShadow: '0 8px 24px rgba(15, 23, 42, 0.08)'
+                            }}>
+                              <div style={{ fontSize: '12px', fontWeight: '800', color: '#0f172a', marginBottom: '6px' }}>
+                                📅 {label}
+                              </div>
+                              {payload.map((entry: any, index: number) => (
+                                <div key={index} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11.5px', color: '#475569', marginTop: '2px' }}>
+                                  <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: entry.color }} />
+                                  <span>{entry.name}:</span>
+                                  <strong style={{ color: '#0f172a', marginLeft: 'auto' }}>{entry.value}</strong>
+                                </div>
+                              ))}
+                            </div>
+                          );
+                        }
+                        return null;
+                      }} />
+                      <Area
+                        type="monotone"
+                        dataKey="total"
+                        stroke="#2563eb"
+                        strokeWidth={2.5}
+                        fill="url(#colorTotalOrders)"
+                        name={lang === 'km' ? 'កញ្ចប់សរុប' : 'Total Parcels'}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="delivered"
+                        stroke="#10b981"
+                        strokeWidth={2.5}
+                        fill="url(#colorDelivered)"
+                        name={lang === 'km' ? 'ដឹកជោគជ័យ' : 'Delivered'}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="failed"
+                        stroke="#ef4444"
+                        strokeWidth={2}
+                        fill="url(#colorFailed)"
+                        name={lang === 'km' ? 'បរាជ័យ' : 'Failed'}
+                      />
+                      <Legend
+                        wrapperStyle={{ fontSize: '11.5px', fontWeight: '700', paddingTop: '10px' }}
+                        iconType="circle"
+                        iconSize={8}
+                      />
                     </AreaChart>
                   </ResponsiveContainer>
                 ) : (
@@ -222,26 +463,82 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {/* Pie Chart */}
+            {/* Pie / Doughnut Chart: Order Status Breakdown */}
             <div className="card">
-              <div className="card-header"><span className="card-title">🥧 Order Status Breakdown</span></div>
-              <div className="card-body" style={{ height: 240 }}>
-                {isMounted && pieData.length > 0 ? (
-                  <ResponsiveContainer width="100%" height="100%" minWidth={0}>
-                    <PieChart>
-                      <Pie data={pieData} cx="50%" cy="50%" innerRadius={60} outerRadius={90}
-                        paddingAngle={3} dataKey="value">
-                        {pieData.map((entry: any, i: number) => (
-                          <Cell key={i} fill={STATUS_COLORS[entry.name] || '#6b7280'} />
-                        ))}
-                      </Pie>
-                      <Tooltip formatter={(v: any, n: any) => [v, n]} />
-                      <Legend iconSize={10} />
-                    </PieChart>
-                  </ResponsiveContainer>
+              <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span className="card-title">🎨 {t('orderStatusBreakdown')}</span>
+                <span style={{ fontSize: '12px', fontWeight: '800', color: '#2563eb', backgroundColor: '#eff6ff', padding: '3px 8px', borderRadius: '8px' }}>
+                  {totalStatusCount} {lang === 'km' ? 'កញ្ចប់' : 'parcels'}
+                </span>
+              </div>
+              <div className="card-body" style={{ height: 260, position: 'relative' }}>
+                {pieData.length > 0 ? (
+                  <>
+                    <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+                      <PieChart>
+                        <Pie
+                          data={pieData}
+                          cx="50%"
+                          cy="48%"
+                          innerRadius={62}
+                          outerRadius={92}
+                          paddingAngle={4}
+                          dataKey="value"
+                          stroke="#ffffff"
+                          strokeWidth={2}
+                        >
+                          {pieData.map((entry: any, i: number) => (
+                            <Cell key={i} fill={STATUS_COLORS[entry.rawStatus] || '#64748b'} />
+                          ))}
+                        </Pie>
+                        <Tooltip content={({ active, payload }) => {
+                          if (active && payload && payload.length) {
+                            const p = payload[0];
+                            const percent = totalStatusCount > 0 ? ((p.value as number / totalStatusCount) * 100).toFixed(1) : '0';
+                            return (
+                              <div style={{
+                                backgroundColor: '#ffffff',
+                                border: '1.5px solid #e2e8f0',
+                                borderRadius: '12px',
+                                padding: '8px 12px',
+                                boxShadow: '0 8px 24px rgba(15, 23, 42, 0.08)',
+                                fontSize: '12px'
+                              }}>
+                                <div style={{ fontWeight: '800', color: '#0f172a' }}>{p.name}</div>
+                                <div style={{ color: '#64748b', marginTop: '2px' }}>
+                                  <strong style={{ color: '#2563eb' }}>{p.value}</strong> {lang === 'km' ? 'កញ្ចប់' : 'parcels'} ({percent}%)
+                                </div>
+                              </div>
+                            );
+                          }
+                          return null;
+                        }} />
+                        <Legend
+                          wrapperStyle={{ fontSize: '11px', fontWeight: '700', bottom: 0 }}
+                          iconType="circle"
+                          iconSize={8}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <div style={{
+                      position: 'absolute',
+                      top: '46%',
+                      left: '50%',
+                      transform: 'translate(-50%, -50%)',
+                      textAlign: 'center',
+                      pointerEvents: 'none'
+                    }}>
+                      <div style={{ fontSize: '24px', fontWeight: '900', color: '#0f172a', lineHeight: 1 }}>
+                        {totalStatusCount}
+                      </div>
+                      <div style={{ fontSize: '10px', fontWeight: '800', color: '#64748b', marginTop: '4px', textTransform: 'uppercase' }}>
+                        {lang === 'km' ? 'សរុប' : 'Total'}
+                      </div>
+                    </div>
+                  </>
                 ) : (
                   <div className="empty-state">
-                    <div className="empty-state-icon">🥧</div>
+                    <div className="empty-state-icon">🎨</div>
                     <div className="empty-state-title">No status data yet</div>
                   </div>
                 )}
@@ -249,76 +546,45 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Bottom Grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 20 }}>
-            {/* Recent Orders */}
-            <div className="card">
-              <div className="card-header">
-                <span className="card-title">🕐 Recent Orders</span>
-                <a href="/orders" className="btn btn-outline btn-sm">View All</a>
-              </div>
-              <div style={{ overflowX: 'auto' }}>
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Tracking</th>
-                      <th>Receiver</th>
-                      <th>Merchant</th>
-                      <th>Zone</th>
-                      <th>Fee</th>
-                      <th>Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {recentOrders.length === 0 ? (
-                      <tr><td colSpan={6} className="text-center text-muted" style={{ padding: 32 }}>No orders yet</td></tr>
-                    ) : recentOrders.map((o: any) => (
-                      <tr key={o.id}>
-                        <td><code style={{ fontSize: 12 }}>{o.trackingCode}</code></td>
-                        <td>
-                          <div style={{ fontWeight: 600, fontSize: 13 }}>{o.receiverPhone}</div>
-                        </td>
-                        <td style={{ fontSize: 12 }}>{o.merchant?.name || '—'}</td>
-                        <td style={{ fontSize: 12 }}>{o.zone?.name || '—'}</td>
-                        <td style={{ fontWeight: 600 }}>${o.deliveryFee}</td>
-                        <td><Badge status={o.status} /></td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+          {/* Top Drivers Card */}
+          <div className="card" style={{ marginTop: 20 }}>
+            <div className="card-header">
+              <span className="card-title">🏆 {t('topDriversTitle')}</span>
             </div>
-
-            {/* Top Drivers */}
-            <div className="card">
-              <div className="card-header">
-                <span className="card-title">🏆 Top Drivers</span>
-              </div>
-              <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
-                {topDrivers.length === 0 ? (
-                  <div className="empty-state"><div className="empty-state-text">No driver data</div></div>
-                ) : topDrivers.map((d: any, i: number) => (
-                  <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <div style={{
-                      width: 32, height: 32, borderRadius: '50%',
-                      background: i === 0 ? '#f59e0b' : i === 1 ? '#94a3b8' : i === 2 ? '#cd7f32' : 'var(--accent-light)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      color: i < 3 ? '#fff' : 'var(--accent)',
-                      fontWeight: 700, fontSize: 13, flexShrink: 0,
-                    }}>
-                      {i + 1}
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontWeight: 600, fontSize: 13 }}>{d.name}</div>
-                      <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{d.zone?.name || 'No zone'}</div>
-                    </div>
-                    <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontWeight: 700, fontSize: 14 }}>{d.totalDeliveries}</div>
-                      <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>deliveries</div>
-                    </div>
+            <div style={{ padding: 16, display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 12 }}>
+              {topDrivers.length === 0 ? (
+                <div className="empty-state" style={{ gridColumn: '1 / -1' }}><div className="empty-state-text">No driver data</div></div>
+              ) : topDrivers.map((d: any, i: number) => (
+                <div key={d.id} style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 12,
+                  backgroundColor: '#f8fafc',
+                  padding: '12px 14px',
+                  borderRadius: 12,
+                  border: '1px solid #f1f5f9'
+                }}>
+                  <div style={{
+                    width: 34, height: 34, borderRadius: '50%',
+                    background: i === 0 ? '#f59e0b' : i === 1 ? '#94a3b8' : i === 2 ? '#cd7f32' : 'var(--accent-light)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    color: i < 3 ? '#fff' : 'var(--accent)',
+                    fontWeight: 700, fontSize: 13, flexShrink: 0,
+                  }}>
+                    {i + 1}
                   </div>
-                ))}
-              </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 700, fontSize: 13.5, color: '#1e293b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.name}</div>
+                    {d.zone?.name && (
+                      <div style={{ fontSize: 11.5, color: 'var(--text-muted)' }}>📍 {d.zone.name}</div>
+                    )}
+                  </div>
+                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                    <div style={{ fontWeight: 800, fontSize: 15, color: '#2563eb' }}>{d.totalDeliveries}</div>
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{t('deliveriesLabel')}</div>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </div>

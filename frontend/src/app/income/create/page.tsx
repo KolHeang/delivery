@@ -6,12 +6,16 @@ import { isAuthenticated } from '@/lib/auth';
 import Sidebar from '@/components/layout/Sidebar';
 import Topbar from '@/components/layout/Topbar';
 import api from '@/lib/api';
+import { useLanguage } from '@/lib/LanguageContext';
+import FormField from '@/components/ui/FormField';
 
 export default function AddIncomePage() {
   const router = useRouter();
+  const { lang, t } = useLanguage();
   const [types, setTypes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [form, setForm] = useState({
     description: '',
     amount: '',
@@ -32,9 +36,40 @@ export default function AddIncomePage() {
       .finally(() => setLoading(false));
   }, [router]);
 
+  const handleFieldChange = (field: string, val: string) => {
+    setForm(prev => ({ ...prev, [field]: val }));
+    if (errors[field]) {
+      setErrors(prev => {
+        const next = { ...prev };
+        delete next[field];
+        return next;
+      });
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.description || !form.amount || !form.typeId) return alert('Fill required fields');
+
+    const newErrors: Record<string, string> = {};
+    if (!form.description.trim()) {
+      newErrors.description = lang === 'km' ? 'សូមបញ្ចូលការពិពណ៌នា' : 'Please enter description';
+    }
+    if (!form.typeId) {
+      newErrors.typeId = lang === 'km' ? 'សូមជ្រើសរើសប្រភេទចំណូល' : 'Please select income category';
+    }
+    if (!form.amount || parseFloat(form.amount) <= 0) {
+      newErrors.amount = lang === 'km' ? 'សូមបញ្ចូលចំនួនទឹកប្រាក់' : 'Please enter valid amount';
+    }
+    if (!form.date) {
+      newErrors.date = lang === 'km' ? 'សូមជ្រើសរើសកាលបរិច្ឆេទ' : 'Please select date';
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+    setErrors({});
+
     setSaving(true);
     try {
       const payload = {
@@ -46,7 +81,7 @@ export default function AddIncomePage() {
       await api.post('/incomes', payload);
       router.push('/income');
     } catch {
-      alert('Failed to add income');
+      alert(t('failedToAddIncome') || 'Failed to add income');
     }
     setSaving(false);
   };
@@ -64,70 +99,73 @@ export default function AddIncomePage() {
     <div className="app-layout">
       <Sidebar />
       <div className="main-content">
-        <Topbar title="Add Income" subtitle="Record a new company revenue entry" />
+        <Topbar title={t('addIncome') || 'Add Income'} subtitle={t('addIncomeSubtitle') || 'Record a new company revenue entry'} />
         <div className="page-content">
           <div className="card">
-            <div className="card-header"><span className="card-title">💰 Income Details</span></div>
+            <div className="card-header"><span className="card-title">{t('incomeDetails') || 'Income Details'}</span></div>
             <div className="card-body">
-              <form onSubmit={handleSubmit}>
-                <div className="form-group">
-                  <label className="form-label">Description / Source <span>*</span></label>
+              <form noValidate onSubmit={handleSubmit}>
+                <FormField label={t('descOrSource') || 'Description / Source'} required error={errors.description}>
                   <input
                     type="text"
-                    className="form-control"
-                    placeholder="e.g. Delivery fees week 24, Sponsor payment"
+                    className={`form-control ${errors.description ? 'is-invalid' : ''}`}
+                    placeholder={t('placeholderDescIncome') || 'e.g. Delivery fees week 24, Sponsor payment'}
                     value={form.description}
-                    onChange={e => setForm({ ...form, description: e.target.value })}
-                    required
+                    onChange={e => handleFieldChange('description', e.target.value)}
                   />
-                </div>
+                </FormField>
 
-                <div className="form-group">
-                  <label className="form-label">Income Category / Type <span>*</span></label>
+                <FormField label={t('incomeCategory') || 'Income Category / Type'} required error={errors.typeId}>
                   <select
-                    className="form-control"
+                    className={`form-control ${errors.typeId ? 'is-invalid' : ''}`}
                     value={form.typeId}
-                    onChange={e => setForm({ ...form, typeId: e.target.value })}
-                    required
+                    onChange={e => handleFieldChange('typeId', e.target.value)}
                   >
+                    <option value="">{lang === 'km' ? '-- ជ្រើសរើសប្រភេទចំណូល --' : '-- Select Income Category --'}</option>
                     {types.map(t => (
                       <option key={t.id} value={t.id}>{t.name}</option>
                     ))}
                   </select>
-                </div>
+                </FormField>
 
                 <div className="form-row">
-                  <div className="form-group">
-                    <label className="form-label">Amount ($) <span>*</span></label>
+                  <FormField label={t('amountUSD') || 'Amount ($)'} required error={errors.amount}>
                     <input
                       type="number"
                       step="0.01"
                       min="0"
-                      className="form-control"
+                      className={`form-control ${errors.amount ? 'is-invalid' : ''}`}
                       placeholder="0.00"
                       value={form.amount}
-                      onChange={e => setForm({ ...form, amount: e.target.value })}
-                      required
+                      onChange={e => handleFieldChange('amount', e.target.value)}
                     />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Date <span>*</span></label>
+                  </FormField>
+                  <FormField label={t('dateLabel') || 'Date'} required error={errors.date}>
                     <input
                       type="date"
-                      className="form-control"
+                      className={`form-control ${errors.date ? 'is-invalid' : ''}`}
                       value={form.date}
-                      onChange={e => setForm({ ...form, date: e.target.value })}
-                      required
+                      onChange={e => handleFieldChange('date', e.target.value)}
                     />
-                  </div>
+                  </FormField>
                 </div>
 
                 <div style={{ marginTop: 20, display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
-                  <button type="button" className="btn btn-outline" onClick={() => router.push('/income')}>
-                    Cancel
+                  <button
+                    type="button"
+                    className="btn btn-cancel"
+                    style={{ background: '#dc2626', color: '#ffffff', border: '1px solid #dc2626', fontWeight: 700 }}
+                    onClick={() => router.push('/income')}
+                  >
+                    {t('cancel') || 'បោះបង់'}
                   </button>
-                  <button type="submit" className="btn btn-primary" disabled={saving}>
-                    {saving ? 'Saving...' : 'Add Income'}
+                  <button
+                    type="submit"
+                    className="btn btn-primary"
+                    style={{ background: '#2563eb', color: '#ffffff', border: '1px solid #2563eb', fontWeight: 700 }}
+                    disabled={saving}
+                  >
+                    {saving ? t('saving') || 'Saving...' : t('addIncome') || 'Add Income'}
                   </button>
                 </div>
               </form>

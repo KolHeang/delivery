@@ -1,12 +1,21 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { Organisation } from './organisation.entity';
-import { GeneralSetting } from './general-setting.entity';
+import { Organisation } from './entities/organisation.entity';
+import { GeneralSetting } from './entities/general-setting.entity';
+import { FirebaseCredential } from './entities/firebase-credential.entity';
+import { Tenant } from '../saas/entities/tenant.entity';
 import { SettingsService } from './settings.service';
 import { SettingsController } from './settings.controller';
 
+import { MinioModule } from '../minio/minio.mudule';
+
+import { Currency } from './entities/currency.entity';
+
 @Module({
-  imports: [TypeOrmModule.forFeature([Organisation, GeneralSetting])],
+  imports: [
+    TypeOrmModule.forFeature([Organisation, GeneralSetting, FirebaseCredential, Tenant, Currency]),
+    MinioModule,
+  ],
   providers: [SettingsService],
   controllers: [SettingsController],
   exports: [SettingsService],

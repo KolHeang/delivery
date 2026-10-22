@@ -2,17 +2,19 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { isAuthenticated } from '@/lib/auth';
+import { detectTenantSubdomain } from '@/lib/domain';
 
 export default function RootPage() {
   const router = useRouter();
 
   useEffect(() => {
-    if (isAuthenticated()) {
-      router.replace('/dashboard');
-    } else {
+    const sub = detectTenantSubdomain();
+    if (sub) {
       router.replace('/auth');
+      return;
     }
+
+    router.replace('/admin/saas');
   }, [router]);
 
   return (

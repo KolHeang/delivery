@@ -2,7 +2,13 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   /* config options here */
-  allowedDevOrigins: ['10.1.52.220','127.0.0.1'],
+  allowedDevOrigins: [
+    '*.new-delivery.rithyboth.work',
+    'new-delivery.rithyboth.work',
+    '*.localhost',
+    'localhost',
+    '10.1.52.220',
+  ],
 };
 
 export default nextConfig;

@@ -8,11 +8,49 @@ import Topbar from '@/components/layout/Topbar';
 import Badge from '@/components/ui/Badge';
 import Modal from '@/components/ui/Modal';
 import api from '@/lib/api';
-import { MdAdd, MdSearch, MdEdit, MdDelete, MdVisibility, MdFilterList, MdPrint } from 'react-icons/md';
+import { MdSearch, MdVisibility, MdFilterList, MdPrint } from 'react-icons/md';
+import { FaRegEdit, FaTrashAlt } from 'react-icons/fa';
+import { FiPlusCircle } from 'react-icons/fi';
 import { useLanguage } from '@/lib/LanguageContext';
+import DateInput, { formatDateToDDMMYYYY, getLocalDateString } from '@/components/ui/DateInput';
+import Pagination from '@/components/ui/Pagination';
+import { TableSkeleton } from '@/components/ui/Skeleton';
+import Thumbnail from '@/components/ui/Thumbnail';
+import SearchableSelect from '@/components/ui/SearchableSelect';
 
-const STATUS_OPTIONS = ['all', 'pending', 'picked-up', 'in-transit', 'delivered', 'failed', 'returned'];
+const getLocalFirstDayOfMonthString = () => {
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  return `${year}-${month}-01`;
+};
+const STATUS_OPTIONS = ['all', 'pending', 'in-warehouse', 'assigned', 'picked-up', 'in-transit', 'delivered', 'failed', 'returned'];
 const SIZE_OPTIONS = ['small', 'medium', 'large'];
+
+const PREDEFINED_REMARKS: Record<string, string[]> = {
+  failed: [
+    'ភ្ញៀវសុំស្អែក',
+    'ខលមិនលើក',
+    'ភ្ញៀវសុំលើកថ្ងៃ',
+    'ភ្ញៀវសុំប្តូរទីតាំង',
+    'ទៅដល់អត់មានអ្នកទទួល',
+    'លេខភ្ញៀវខុស',
+    'ភ្ញៀវអត់លុយយក',
+  ],
+  pending: [
+    'ភ្ញៀវសុំស្អែក',
+    'ខលមិនលើក',
+    'ភ្ញៀវសុំលើកថ្ងៃ',
+  ],
+  returned: [
+    'អីវ៉ាន់ខ្វះ',
+    'ភ្ញៀវឈប់យក',
+    'ទាក់ទងមិនបានច្រើនថ្ងៃ',
+    'ហាងអោយត្រឡប់ទៅវិញ',
+    'ភ្ញៀវថាអត់បានកម្មង់',
+    'ភ្ញៀវសុំ Cancel',
+  ],
+};
 
 
 
@@ -27,69 +65,173 @@ export default function DeliveriesPage() {
   const [filtered, setFiltered] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [totalItems, setTotalItems] = useState(0);
   const [statusFilter, setStatusFilter] = useState('all');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  const [startDate, setStartDate] = useState(() => getLocalDateString());
+  const [endDate, setEndDate] = useState(() => getLocalDateString());
   const [driverFilter, setDriverFilter] = useState('');
   const [merchantFilter, setMerchantFilter] = useState('');
   const [viewModal, setViewModal] = useState<any>(null);
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  // Remark modal state
+  const [remarkModal, setRemarkModal] = useState<{ orderId: number; newStatus: string } | null>(null);
+  const [remarkText, setRemarkText] = useState('');
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+      setCurrentPage(1);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  const handleUpdatePickupDriver = async (orderId: number, driverId: string) => {
+    try {
+      const val = driverId ? parseInt(driverId) : null;
+      await api.patch(`/parcels/${orderId}`, { pickupDriverId: val });
+      await load();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleUpdateDeliveryDriver = async (orderId: number, driverId: string) => {
+    try {
+      const val = driverId ? parseInt(driverId) : null;
+      await api.patch(`/parcels/${orderId}`, { driverId: val });
+      await load();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleToggleDeliveryStatus = (orderId: number, currentStatus: string) => {
+    const nextStatus = currentStatus === 'delivered' ? 'failed' : 'delivered';
+    const order = orders.find((o: any) => o.id === orderId);
+    const latestNote = order?.histories
+      ?.slice()
+      .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .find((h: any) => h.note)?.note || order?.note || '';
+    setRemarkText(latestNote);
+    setRemarkModal({ orderId, newStatus: nextStatus });
+  };
+
+  const formatDateTime = (dateStr: string) => {
+    if (!dateStr) return '';
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return String(dateStr);
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+    
+    let hours = d.getHours();
+    const minutes = String(d.getMinutes()).padStart(2, '0');
+    const seconds = String(d.getSeconds()).padStart(2, '0');
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12;
+    hours = hours ? hours : 12;
+    const hoursStr = String(hours).padStart(2, '0');
+
+    return `${day}/${month}/${year} ${hoursStr}:${minutes}:${seconds} ${ampm}`;
+  };
+
+  const getStatusLabel = (status: string) => {
+    if (lang === 'en') {
+      switch (status) {
+        case 'pending': return 'Pending';
+        case 'in-warehouse': return 'In Warehouse';
+        case 'assigned': return 'Assigned';
+        case 'picked-up': return 'Picked Up';
+        case 'in-transit': return 'In Transit';
+        case 'delivered': return 'Delivered';
+        case 'failed': return 'Failed';
+        case 'returned': return 'Returned';
+        default: return status;
+      }
+    }
+    switch (status) {
+      case 'pending': return 'រង់ចាំ';
+      case 'in-warehouse': return 'ក្នុងឃ្លាំង';
+      case 'assigned': return 'បានចាត់ចែង';
+      case 'picked-up': return 'បានប្រមូល';
+      case 'in-transit': return 'កំពុងដឹក';
+      case 'delivered': return 'បានដឹកជោគជ័យ';
+      case 'failed': return 'មិនជោគជ័យ';
+      case 'returned': return 'បានត្រឡប់';
+      default: return status;
+    }
+  };
+
+  const toggleSelectRow = (id: number) => {
+    setSelectedIds(prev =>
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    );
+  };
+
+  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const checked = e.target.checked;
+    if (checked) {
+      const idsToAdd = filtered.map(item => item.id);
+      setSelectedIds(prev => Array.from(new Set([...prev, ...idsToAdd])));
+    } else {
+      const idsToRemove = filtered.map(item => item.id);
+      setSelectedIds(prev => prev.filter(id => !idsToRemove.includes(id)));
+    }
+  };
 
   const [merchants, setMerchants] = useState<any[]>([]);
   const [customers, setCustomers] = useState<any[]>([]);
   const [drivers, setDrivers] = useState<any[]>([]);
   const [zones, setZones] = useState<any[]>([]);
-  const { t } = useLanguage();
+  const { lang, t } = useLanguage();
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await api.get('/orders');
-      setOrders(res.data);
+      const res = await api.get('/parcels', {
+        params: {
+          page: currentPage,
+          limit: pageSize,
+          search: debouncedSearch || undefined,
+          status: statusFilter !== 'all' ? statusFilter : undefined,
+          driverId: driverFilter || undefined,
+          merchantId: merchantFilter || undefined,
+          startDate: startDate || undefined,
+          endDate: endDate || undefined,
+        }
+      });
+      if (res.data && (res.data.results !== undefined || res.data.result !== undefined)) {
+        setOrders(res.data.results || res.data.result || []);
+        setTotalItems(res.data.total ?? 0);
+      } else {
+        setOrders(Array.isArray(res.data) ? res.data : []);
+        setTotalItems(Array.isArray(res.data) ? res.data.length : 0);
+      }
     } catch {}
     setLoading(false);
-  }, []);
+  }, [currentPage, pageSize, debouncedSearch, statusFilter, driverFilter, merchantFilter, startDate, endDate]);
 
   useEffect(() => {
     if (!isAuthenticated()) { router.push('/'); return; }
     load();
     Promise.all([
-      api.get('/merchants'), api.get('/customers'),
-      api.get('/drivers'), api.get('/zones'),
+      api.get('/select/merchants'), api.get('/select/customers'),
+      api.get('/select/drivers'), api.get('/select/zones'),
     ]).then(([m, c, d, z]) => {
-      setMerchants(m.data); setCustomers(c.data);
-      setDrivers(d.data); setZones(z.data);
+      setMerchants(Array.isArray(m.data) ? m.data : (m.data?.result || []));
+      setCustomers(Array.isArray(c.data) ? c.data : (c.data?.result || []));
+      setDrivers(Array.isArray(d.data) ? d.data : (d.data?.result || []));
+      setZones(Array.isArray(z.data) ? z.data : (z.data?.result || []));
     }).catch(() => {});
   }, [router, load]);
 
   useEffect(() => {
-    let list = orders;
-    if (statusFilter !== 'all') list = list.filter(o => o.status === statusFilter);
-    if (driverFilter) list = list.filter(o => o.driverId === parseInt(driverFilter));
-    if (merchantFilter) list = list.filter(o => o.merchantId === parseInt(merchantFilter));
-    if (startDate) {
-      const start = new Date(startDate);
-      start.setHours(0, 0, 0, 0);
-      list = list.filter(o => new Date(o.createdAt) >= start);
-    }
-    if (endDate) {
-      const end = new Date(endDate);
-      end.setHours(23, 59, 59, 999);
-      list = list.filter(o => new Date(o.createdAt) <= end);
-    }
-    if (search) {
-      const q = search.toLowerCase();
-      list = list.filter(o =>
-        o.trackingCode?.toLowerCase().includes(q) ||
-        o.receiverName?.toLowerCase().includes(q) ||
-        o.receiverPhone?.includes(q) ||
-        o.merchant?.name?.toLowerCase().includes(q) ||
-        o.merchant?.nameKh?.toLowerCase().includes(q) ||
-        o.driver?.name?.toLowerCase().includes(q) ||
-        o.driver?.nameKh?.toLowerCase().includes(q)
-      );
-    }
-    setFiltered(list);
-  }, [orders, search, statusFilter, driverFilter, merchantFilter, startDate, endDate]);
+    setFiltered(Array.isArray(orders) ? orders : []);
+  }, [orders]);
 
   const openCreate = () => { router.push('/delivery/entry_data_item'); };
   const openEdit = (o: any) => {
@@ -100,11 +242,51 @@ export default function DeliveriesPage() {
 
   const handleDelete = async (id: number) => {
     if (!confirm('Delete this delivery?')) return;
-    try { await api.delete(`/orders/${id}`); await load(); } catch {}
+    try { await api.delete(`/parcels/${id}`); await load(); } catch {}
   };
 
-  const handleStatusChange = async (id: number, status: string) => {
-    try { await api.patch(`/orders/${id}/status`, { status }); await load(); } catch {}
+  const handleStatusChange = (id: number, status: string) => {
+    const order = orders.find((o: any) => o.id === id);
+    const latestNote = order?.histories
+      ?.slice()
+      .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .find((h: any) => h.note)?.note || order?.note || '';
+    setRemarkText(latestNote);
+    setRemarkModal({ orderId: id, newStatus: status });
+  };
+
+  const submitStatusWithRemark = async () => {
+    if (!remarkModal) return;
+    try {
+      await api.patch(`/parcels/${remarkModal.orderId}/status`, {
+        status: remarkModal.newStatus,
+        note: remarkText.trim() || undefined,
+      });
+      await load();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setRemarkModal(null);
+      setRemarkText('');
+    }
+  };
+
+  const handleBatchReceive = async () => {
+    const pickedUpIds = selectedIds.filter(id => orders.find(o => o.id === id)?.status === 'picked-up');
+    if (pickedUpIds.length === 0) return;
+    if (!confirm(lang === 'km' ? `ទទួលកញ្ចប់អីវ៉ាន់ចំនួន ${pickedUpIds.length} ចូលឃ្លាំង?` : `Receive ${pickedUpIds.length} parcel(s) into warehouse?`)) return;
+    setLoading(true);
+    try {
+      await Promise.all(pickedUpIds.map(id => api.patch(`/parcels/${id}/status`, { status: 'in-warehouse' })));
+      setSelectedIds(prev => prev.filter(id => !pickedUpIds.includes(id)));
+      await load();
+      alert(lang === 'km' ? 'បានទទួលចូលឃ្លាំងដោយជោគជ័យ!' : 'Received into warehouse successfully!');
+    } catch (err) {
+      console.error(err);
+      alert('Failed to receive some orders.');
+    } finally {
+      setLoading(false);
+    }
   };
 
 
@@ -113,7 +295,7 @@ export default function DeliveriesPage() {
     <div className="app-layout">
       <Sidebar />
       <div className="main-content">
-        <Topbar title={t('deliveryPageTitle')} subtitle={`${filtered.length} ${t('deliveryPageSubtitle')}`} />
+        <Topbar title={t('deliveryPageTitle')} subtitle={`${totalItems} ${t('deliveryPageSubtitle')}`} />
         <div className="page-content">
           {/* Filters */}
           <div className="card" style={{ marginBottom: 16 }}>
@@ -121,35 +303,53 @@ export default function DeliveriesPage() {
               {/* Advanced Filters */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
                 <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label className="form-label" style={{ fontSize: 11, marginBottom: 4 }}>Status</label>
-                  <select className="form-control" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
-                    <option value="all">Select Status</option>
-                    {STATUS_OPTIONS.filter(s => s !== 'all').map(s => (
-                      <option key={s} value={s} style={{ textTransform: 'capitalize' }}>{s}</option>
+                  <label className="form-label" style={{ fontSize: 11, marginBottom: 4 }}>{lang === 'km' ? 'ស្ថានភាព' : 'Status'}</label>
+                  <select className="form-control" value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setCurrentPage(1); }}>
+                    <option value="all">{lang === 'km' ? 'ទាំងអស់' : 'All'}</option>
+                    {['pending', 'in-warehouse', 'in-transit', 'delivered', 'failed', 'returned'].map(s => (
+                      <option key={s} value={s}>{getStatusLabel(s)}</option>
                     ))}
                   </select>
                 </div>
+                <DateInput
+                  labelEn="Start Date"
+                  labelKh="កាលបរិច្ឆេទបញ្ជូល"
+                  value={startDate}
+                  onChange={(val: string) => { setStartDate(val); setCurrentPage(1); }}
+                />
+                <DateInput
+                  labelEn="End Date"
+                  labelKh="កាលបរិច្ឆេទបញ្ចប់"
+                  value={endDate}
+                  onChange={(val: string) => { setEndDate(val); setCurrentPage(1); }}
+                />
                 <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label className="form-label" style={{ fontSize: 11, marginBottom: 4 }}>កាលបរិច្ឆេទបញ្ជូល</label>
-                  <input type="date" className="form-control" value={startDate} onChange={e => setStartDate(e.target.value)} />
+                  <label className="form-label" style={{ fontSize: 11, marginBottom: 4 }}>{lang === 'km' ? 'អ្នកដឹក' : 'Driver'}</label>
+                  <SearchableSelect
+                    value={driverFilter}
+                    onChange={(val: string) => { setDriverFilter(val); setCurrentPage(1); }}
+                    options={[
+                      { value: '', label: `-- ${lang === 'km' ? 'ទាំងអស់' : 'All'} --` },
+                      ...drivers.map(d => ({
+                        value: String(d.id),
+                        label: `${d.name}${d.nameKh ? ` (${d.nameKh})` : ''}` + (d.phone ? ` (${d.phone})` : ''),
+                      })),
+                    ]}
+                  />
                 </div>
                 <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label className="form-label" style={{ fontSize: 11, marginBottom: 4 }}>កាលបរិច្ឆេទបញ្ចប់</label>
-                  <input type="date" className="form-control" value={endDate} onChange={e => setEndDate(e.target.value)} />
-                </div>
-                <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label className="form-label" style={{ fontSize: 11, marginBottom: 4 }}>អ្នកដឹក</label>
-                  <select className="form-control" value={driverFilter} onChange={e => setDriverFilter(e.target.value)}>
-                    <option value="">-- ទាំងអស់ --</option>
-                    {drivers.map(d => <option key={d.id} value={d.id}>{d.name} {d.nameKh ? `(${d.nameKh})` : ''}</option>)}
-                  </select>
-                </div>
-                <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label className="form-label" style={{ fontSize: 11, marginBottom: 4 }}>ហាង</label>
-                  <select className="form-control" value={merchantFilter} onChange={e => setMerchantFilter(e.target.value)}>
-                    <option value="">-- ទាំងអស់ --</option>
-                    {merchants.map(m => <option key={m.id} value={m.id}>{m.name} {m.nameKh ? `(${m.nameKh})` : ''}</option>)}
-                  </select>
+                  <label className="form-label" style={{ fontSize: 11, marginBottom: 4 }}>{lang === 'km' ? 'ហាង' : 'Merchant'}</label>
+                  <SearchableSelect
+                    value={merchantFilter}
+                    onChange={(val: string) => { setMerchantFilter(val); setCurrentPage(1); }}
+                    options={[
+                      { value: '', label: `-- ${lang === 'km' ? 'ទាំងអស់' : 'All'} --` },
+                      ...merchants.map(m => ({
+                        value: String(m.id),
+                        label: `${m.name}${m.nameKh ? ` (${m.nameKh})` : ''}` + (m.phone ? ` (${m.phone})` : ''),
+                      })),
+                    ]}
+                  />
                 </div>
               </div>
 
@@ -157,7 +357,7 @@ export default function DeliveriesPage() {
               <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
                 <div className="search-input-wrapper" style={{ flex: 1, minWidth: 200 }}>
                   <MdSearch className="search-icon" />
-                  <input className="form-control search-input" placeholder="Search by tracking, receiver, merchant..." value={search} onChange={e => setSearch(e.target.value)} />
+                  <input className="form-control search-input" placeholder={lang === 'km' ? 'ស្វែងរកតាមលេខកូដ អ្នកទទួល ហាង...' : 'Search by tracking, receiver, merchant...'} value={search} onChange={e => setSearch(e.target.value)} />
                 </div>
               </div>
             </div>
@@ -167,83 +367,283 @@ export default function DeliveriesPage() {
           <div className="card">
             <div className="card-header">
               <span className="card-title">📦 {t('deliveryParcels')}</span>
-              <button id="create-order-btn" className="btn btn-primary btn-sm" onClick={openCreate}><MdAdd size={14} /> {t('batchEntryData')}</button>
-            </div>
-            {loading ? (
-              <div className="loading-wrapper"><div className="spinner" /></div>
-            ) : filtered.length === 0 ? (
-              <div className="empty-state">
-                <div className="empty-state-icon">📦</div>
-                <div className="empty-state-title">No orders found</div>
-                <div className="empty-state-text">Create your first order to get started</div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  className="btn btn-outline btn-sm"
+                  onClick={() => router.push(selectedIds.length > 0 ? `/delivery/print_invoice?id=${selectedIds.join(',')}` : '/delivery/print_invoice')}
+                  style={{ display: 'flex', alignItems: 'center', gap: 6, borderColor: '#2563eb', color: '#2563eb', fontWeight: 600 }}
+                >
+                  <MdPrint size={17} /> {lang === 'km' ? 'បោះពុម្ពវិក្កយបត្រ (QR)' : 'Print Invoice (QR)'}{selectedIds.length > 0 ? ` (${selectedIds.length})` : ''}
+                </button>
+                <button id="create-order-btn" className="btn btn-primary btn-sm" onClick={openCreate}><FiPlusCircle size={15} /> {t('batchEntryData')}</button>
               </div>
-            ) : (
-              <table>
+            </div>
+            <div className="table-responsive" style={{ overflowX: 'auto' }}>
+              <table style={{ minWidth: 1850, width: '100%' }}>
                 <thead>
                   <tr>
-                    <th>#</th>
-                    <th>{t('trackingCode')}</th>
-                    <th>{t('sender')}</th>
-                    <th>{t('receiver')}</th>
-                    <th>{t('zone')}</th>
-                    <th>{t('driver')}</th>
-                    <th>{t('cod')}</th>
-                    <th>{t('deliveryFee')}</th>
-                    <th>{t('status')}</th>
-                    <th>{t('date')}</th>
-                    <th>{t('actions')}</th>
+                    <th style={{ width: 50, textAlign: 'center' }}>{lang === 'km' ? 'ល.រ' : 'No.'}</th>
+                    <th style={{ width: 60, textAlign: 'center' }}>{lang === 'km' ? 'រូបភាព' : 'Photo'}</th>
+                    <th style={{ minWidth: 140 }}>{lang === 'km' ? 'លេខ' : 'Tracking'}</th>
+                    <th style={{ textAlign: 'center', width: 40 }}>
+                      <input
+                        type="checkbox"
+                        checked={filtered.length > 0 && filtered.every(item => selectedIds.includes(item.id))}
+                        onChange={handleSelectAll}
+                        style={{ cursor: 'pointer', width: 16, height: 16 }}
+                      />
+                    </th>
+                    <th style={{ minWidth: 150 }}>{lang === 'km' ? 'កាលបរិច្ឆេទ' : 'Date'}</th>
+                    <th style={{ minWidth: 160 }}>{lang === 'km' ? 'ឈ្មោះហាង' : 'Merchant'}</th>
+                    <th style={{ minWidth: 200 }}>{lang === 'km' ? 'អាសយដ្ឋានអ្នកទទួល' : 'Receiver Address'}</th>
+                    <th style={{ minWidth: 120 }}>{lang === 'km' ? 'លេខទូរស័ព្ទ' : 'Receiver Phone'}</th>
+                    <th style={{ minWidth: 100 }}>{lang === 'km' ? 'ចំនួន$' : 'Amount USD'}</th>
+                    <th style={{ minWidth: 110 }}>{lang === 'km' ? 'ចំនួន៛' : 'Amount KHR'}</th>
+                    <th style={{ minWidth: 130 }}>{lang === 'km' ? 'អ្នកយកកញ្ចប់' : 'Pickup Driver'}</th>
+                    <th style={{ minWidth: 130 }}>{lang === 'km' ? 'អ្នកដឹក' : 'Delivery Driver'}</th>
+                    <th style={{ textAlign: 'center', width: 100 }}>{lang === 'km' ? 'ស្ថានភាពដឹក ✓ ✕' : 'Delivery Status ✓ ✕'}</th>
+                    <th style={{ minWidth: 130 }}>{lang === 'km' ? 'ស្ថានភាព' : 'Status'}</th>
+                    <th style={{ minWidth: 160 }}>{lang === 'km' ? 'សម្គាល់' : 'Remarks/Notes'}</th>
+                    <th style={{ minWidth: 120 }}>{lang === 'km' ? 'ស្ថានភាពទូទាត់' : 'Payment Status'}</th>
+                    <th style={{ minWidth: 120 }}>{lang === 'km' ? 'បញ្ចូលដោយ' : 'Created By'}</th>
+                    <th style={{ minWidth: 120 }}>{lang === 'km' ? 'បញ្ចប់ដោយ' : 'Completed By'}</th>
+                    <th style={{ minWidth: 100, textAlign: 'center' }}>{lang === 'km' ? 'សកម្មភាព' : 'Actions'}</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filtered.map((o: any, idx) => (
-                    <tr key={o.id}>
-                      <td style={{ color: 'var(--text-muted)', fontSize: 12 }}>{idx + 1}</td>
-                      <td><code style={{ fontSize: 11, background: 'var(--bg-primary)', padding: '2px 6px', borderRadius: 4 }}>{o.trackingCode}</code></td>
-                      <td>
-                        <div style={{ fontWeight: 600, fontSize: 13 }}>{o.senderName}</div>
-                        <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-                          {o.merchant?.name}
-                          {o.merchant?.nameKh && <span style={{ color: 'var(--accent)', fontWeight: 600 }}> ({o.merchant.nameKh})</span>}
-                        </div>
-                      </td>
-                      <td>
-                        <div style={{ fontWeight: 600, fontSize: 13 }}>{o.receiverPhone}</div>
-                      </td>
-                      <td style={{ fontSize: 12 }}>{o.zone?.name || '—'}</td>
-                      <td style={{ fontSize: 12 }}>
-                        {o.driver ? (
-                          <>
-                            <div>{o.driver.name}</div>
-                            {o.driver.nameKh && <div style={{ fontSize: 11, color: 'var(--accent)', fontWeight: 600 }}>{o.driver.nameKh}</div>}
-                          </>
-                        ) : <span style={{ color: 'var(--warning)' }}>Unassigned</span>}
-                      </td>
-                      <td style={{ fontWeight: 600 }}>{formatCOD(o.cod, o.codCurrency || 'USD')}</td>
-                      <td style={{ fontWeight: 600, color: 'var(--success)' }}>${parseFloat(o.deliveryFee).toFixed(2)}</td>
-                      <td>
-                        <select value={o.status} onChange={e => handleStatusChange(o.id, e.target.value)}
-                          style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 12 }}>
-                          {['pending','picked-up','in-transit','delivered','failed','returned'].map(s => (
-                            <option key={s} value={s}>{s}</option>
-                          ))}
-                        </select>
-                        <Badge status={o.status} />
-                      </td>
-                      <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                        {new Date(o.createdAt).toLocaleDateString()}
-                      </td>
-                      <td>
-                        <div style={{ display: 'flex', gap: 4 }}>
-                          <button className="btn btn-ghost btn-icon btn-sm" onClick={() => setViewModal(o)} title="View"><MdVisibility size={15} /></button>
-                          <button className="btn btn-ghost btn-icon btn-sm" onClick={() => router.push(`/delivery/list_print_qrcode?id=${o.id}`)} title="Print"><MdPrint size={15} /></button>
-                          <button className="btn btn-ghost btn-icon btn-sm" onClick={() => openEdit(o)} title="Edit"><MdEdit size={15} /></button>
-                          <button className="btn btn-ghost btn-icon btn-sm" style={{ color: 'var(--danger)' }} onClick={() => handleDelete(o.id)} title="Delete"><MdDelete size={15} /></button>
-                        </div>
+                  {loading ? (
+                    <TableSkeleton columns={19} rows={8} hasThumbnail />
+                  ) : filtered.length === 0 ? (
+                    <tr>
+                      <td colSpan={19} style={{ padding: '36px 20px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
+                        {lang === 'km' ? 'គ្មានទិន្នន័យ' : 'No data'}
                       </td>
                     </tr>
-                  ))}
+                  ) : (
+                    filtered.map((o: any, idx) => {
+                      const isSelected = selectedIds.includes(o.id);
+                      const parcelPhoto = o.itemPhoto || (Array.isArray(o.proofPhotos) ? o.proofPhotos[0] : o.proofPhotos) || null;
+                      const hasMultipleProofs = Array.isArray(o.proofPhotos) && o.proofPhotos.length > 1;
+
+                      return (
+                        <tr key={o.id} style={{ backgroundColor: isSelected ? '#eff6ff' : 'transparent', transition: 'background-color 0.15s ease' }}>
+                          <td style={{ color: 'var(--text-muted)', fontSize: 12 }}>{(currentPage - 1) * pageSize + idx + 1}</td>
+                          <td style={{ textAlign: 'center', padding: '6px' }}>
+                            <Thumbnail
+                              src={parcelPhoto}
+                              alt={o.trackingCode || 'Parcel'}
+                              size={36}
+                              type="parcel"
+                              badge={hasMultipleProofs ? `+${o.proofPhotos.length}` : undefined}
+                            />
+                          </td>
+                          <td>
+                            <span 
+                              style={{ color: '#2563eb', cursor: 'pointer', fontWeight: 600, textDecoration: 'underline' }}
+                              onClick={() => openEdit(o)}
+                            >
+                              {o.trackingCode}
+                            </span>
+                          </td>
+                          <td style={{ textAlign: 'center' }}>
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => toggleSelectRow(o.id)}
+                              style={{ cursor: 'pointer', width: 16, height: 16 }}
+                            />
+                          </td>
+                          <td style={{ fontSize: 11, whiteSpace: 'nowrap' }}>{formatDateTime(o.createdAt)}</td>
+                          <td>
+                            <span style={{ color: '#2563eb', cursor: 'pointer', textDecoration: 'underline' }} onClick={() => router.push(`/merchants?search=${o.merchant?.name || ''}`)}>
+                              {o.merchant?.nameKh || o.merchant?.name || ''}
+                            </span>
+                          </td>
+                          <td style={{ fontSize: 12 }}>{o.receiverAddress || ''}</td>
+                          <td style={{ fontWeight: 600 }}>{o.receiverPhone}</td>
+                          <td>
+                            <span style={{ color: 'var(--danger, #ef4444)', textDecoration: 'underline', fontWeight: 600 }}>
+                              {o.codCurrency === 'USD' ? `$${parseFloat(o.cod || 0).toFixed(2)}` : '$0.00'}
+                            </span>
+                          </td>
+                          <td>
+                            <span style={{ color: 'var(--danger, #ef4444)', textDecoration: 'underline', fontWeight: 600 }}>
+                              {o.codCurrency === 'KHR' ? `៛${parseInt(o.cod || 0).toLocaleString()}` : '៛0'}
+                            </span>
+                          </td>
+                          <td>
+                            <select
+                              className="form-control"
+                              value={o.pickupDriverId || ''}
+                              onChange={e => handleUpdatePickupDriver(o.id, e.target.value)}
+                              style={{ height: '32px', padding: '2px 6px', fontSize: '12px', minWidth: '120px' }}
+                            >
+                              <option value="">--ជ្រើសរើស--</option>
+                              {drivers.map(d => (
+                                <option key={d.id} value={d.id}>
+                                  {d.nameKh || d.name}
+                                </option>
+                              ))}
+                            </select>
+                          </td>
+                          <td>
+                            <select
+                              className="form-control"
+                              value={o.driverId || ''}
+                              onChange={e => handleUpdateDeliveryDriver(o.id, e.target.value)}
+                              style={{ height: '32px', padding: '2px 6px', fontSize: '12px', minWidth: '120px' }}
+                            >
+                              <option value="">--ជ្រើសរើស--</option>
+                              {drivers.map(d => (
+                                <option key={d.id} value={d.id}>
+                                  {d.nameKh || d.name}
+                                </option>
+                              ))}
+                            </select>
+                          </td>
+                          <td style={{ textAlign: 'center' }}>
+                            <div 
+                              onClick={() => {
+                                if (o.status === 'delivered') return;
+                                handleToggleDeliveryStatus(o.id, o.status);
+                              }}
+                              style={{
+                                width: 50,
+                                height: 24,
+                                borderRadius: 12,
+                                background: o.status === 'delivered' ? 'var(--success, #10b981)' : '#e5e7eb',
+                                position: 'relative',
+                                cursor: o.status === 'delivered' ? 'not-allowed' : 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                padding: '0 4px',
+                                boxSizing: 'border-box',
+                                transition: 'background-color 0.2s',
+                                userSelect: 'none',
+                                opacity: o.status === 'delivered' ? 0.8 : 1
+                              }}
+                            >
+                              <div 
+                                style={{
+                                  width: 16,
+                                  height: 16,
+                                  borderRadius: '50%',
+                                  background: '#fff',
+                                  position: 'absolute',
+                                  left: o.status === 'delivered' ? 30 : 4,
+                                  transition: 'left 0.2s',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  fontSize: 9,
+                                  fontWeight: 'bold',
+                                  color: o.status === 'delivered' ? '#10b981' : '#9ca3af'
+                                }}
+                              >
+                                {o.status === 'delivered' ? '✓' : '✕'}
+                              </div>
+                            </div>
+                          </td>
+                          <td>
+                            <select
+                              className="form-control"
+                              value={o.status}
+                              onChange={e => handleStatusChange(o.id, e.target.value)}
+                              disabled={o.status === 'delivered'}
+                              style={{ 
+                                height: '32px', 
+                                padding: '2px 6px', 
+                                fontSize: '12px', 
+                                minWidth: '130px',
+                                fontWeight: 600,
+                                color: o.status === 'delivered' ? '#10b981' : 
+                                       o.status === 'returned' ? '#ef4444' : 
+                                       (o.status === 'failed' || o.status === 'pending' || o.status === 'in-transit' || o.status === 'picked-up' || o.status === 'in-warehouse' || o.status === 'assigned') ? '#f59e0b' : 'inherit',
+                                borderColor: o.status === 'delivered' ? '#10b981' : 
+                                             o.status === 'returned' ? '#ef4444' : 
+                                             (o.status === 'failed' || o.status === 'pending' || o.status === 'in-transit' || o.status === 'picked-up' || o.status === 'in-warehouse' || o.status === 'assigned') ? '#f59e0b' : '#cbd5e1',
+                                cursor: o.status === 'delivered' ? 'not-allowed' : 'pointer',
+                              }}
+                            >
+                              {Array.from(new Set([
+                                o.status,
+                                'pending',
+                                'in-warehouse',
+                                'assigned',
+                                'picked-up',
+                                'in-transit',
+                                'delivered',
+                                'failed',
+                                'returned'
+                              ])).map(s => (
+                                <option key={s} value={s}>
+                                  {getStatusLabel(s)}
+                                </option>
+                              ))}
+                            </select>
+                          </td>
+                          <td style={{ fontSize: 12, maxWidth: 180 }}>
+                            {(() => {
+                              const latestNote = o.histories
+                                ?.slice()
+                                .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                                .find((h: any) => h.note)?.note || o.note || '';
+                              if (!latestNote) return null;
+                              const isLong = latestNote.length > 40;
+                              return (
+                                <span
+                                  title={latestNote}
+                                  style={{
+                                    display: 'block',
+                                    whiteSpace: 'nowrap',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    maxWidth: 170,
+                                    color: '#334155',
+                                    cursor: isLong ? 'help' : 'default',
+                                  }}
+                                >
+                                  📝 {latestNote}
+                                </span>
+                              );
+                            })()}
+                          </td>
+                          <td>
+                            <Badge 
+                              status={o.paymentStatus === 'paid' ? 'paid' : 'pending'} 
+                              label={o.paymentStatus === 'paid' ? 'បង់លុយហើយ' : 'មិនទាន់បង់'} 
+                            />
+                          </td>
+                          <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                            {o.creator?.nameKh || o.creator?.name || o.merchant?.nameKh || o.merchant?.name || 'admin'}
+                          </td>
+                          <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                            {o.updater?.nameKh || o.updater?.name || (['delivered', 'failed', 'returned'].includes(o.status) 
+                              ? (o.driver?.nameKh || o.driver?.name || 'admin') 
+                              : '')}
+                          </td>
+                          <td>
+                            <div style={{ display: 'flex', gap: 4 }}>
+                              <button className="btn btn-ghost btn-icon btn-sm" onClick={() => setViewModal(o)} title="View"><MdVisibility size={15} /></button>
+                              <button className="btn btn-ghost btn-icon btn-sm" onClick={() => openEdit(o)} title="Edit"><FaRegEdit size={14} /></button>
+                              <button className="btn btn-ghost btn-icon btn-sm" style={{ color: 'var(--danger)' }} onClick={() => handleDelete(o.id)} title="Delete"><FaTrashAlt size={13} /></button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
                 </tbody>
               </table>
+            </div>
+            {filtered.length > 0 && (
+              <Pagination
+                currentPage={currentPage}
+                totalItems={totalItems}
+                pageSize={pageSize}
+                onPageChange={setCurrentPage}
+                onPageSizeChange={setPageSize}
+              />
             )}
           </div>
         </div>
@@ -257,9 +657,7 @@ export default function DeliveriesPage() {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
             <div>
               <h4 style={{ fontWeight: 700, marginBottom: 12, color: 'var(--text-secondary)', fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Sender</h4>
-              <p style={{ fontWeight: 600 }}>{viewModal.senderName}</p>
-              <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>{viewModal.senderPhone}</p>
-              {viewModal.merchant && <p style={{ fontSize: 12, color: 'var(--accent)', marginTop: 4 }}>{viewModal.merchant.name}</p>}
+              <p style={{ fontWeight: 600 }}>{viewModal.merchant?.name || '—'}</p>
             </div>
             <div>
               <h4 style={{ fontWeight: 700, marginBottom: 12, color: 'var(--text-secondary)', fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Receiver</h4>
@@ -269,16 +667,16 @@ export default function DeliveriesPage() {
             </div>
           </div>
           <hr className="divider" />
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 16 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 16, marginBottom: 16 }}>
             {[
               { label: 'Status', value: <Badge status={viewModal.status} /> },
-              { label: 'Size', value: viewModal.size },
-              { label: 'Weight', value: `${viewModal.weight} kg` },
-              { label: 'Zone', value: viewModal.zone?.name || '—' },
               { label: 'COD', value: formatCOD(viewModal.cod, viewModal.codCurrency || 'USD') },
               { label: 'Delivery Fee', value: `$${parseFloat(viewModal.deliveryFee).toFixed(2)}` },
-              { label: 'Driver', value: viewModal.driver?.name || 'Unassigned' },
-              { label: 'Created', value: new Date(viewModal.createdAt).toLocaleDateString() },
+              { label: 'Pickup Driver', value: viewModal.pickupDriver?.name || 'None' },
+              { label: 'Delivery Driver', value: viewModal.driver?.name || 'Unassigned' },
+              { label: lang === 'km' ? 'ទូទាត់ហាង (Shop Payout)' : 'Shop Payout', value: <Badge status={viewModal.merchantPaymentStatus === 'paid' ? 'paid' : 'pending'} label={viewModal.merchantPaymentStatus === 'paid' ? (lang === 'km' ? 'ទូទាត់រួច' : 'Paid') : (lang === 'km' ? 'មិនទាន់ទូទាត់' : 'Unpaid')} /> },
+              { label: lang === 'km' ? 'ទូទាត់អ្នកដឹក (Driver Payout)' : 'Driver Payout', value: <Badge status={viewModal.driverPaymentStatus === 'paid' ? 'paid' : 'pending'} label={viewModal.driverPaymentStatus === 'paid' ? (lang === 'km' ? 'ទូទាត់រួច' : 'Paid') : (lang === 'km' ? 'មិនទាន់ទូទាត់' : 'Unpaid')} /> },
+              { label: 'Created', value: formatDateToDDMMYYYY(viewModal.createdAt) },
             ].map(({ label, value }) => (
               <div key={label}>
                 <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 4 }}>{label}</div>
@@ -287,10 +685,207 @@ export default function DeliveriesPage() {
             ))}
           </div>
           {viewModal.note && (
-            <div style={{ background: 'var(--bg-primary)', padding: '10px 14px', borderRadius: 'var(--radius)', fontSize: 13 }}>
+            <div style={{ background: 'var(--bg-primary)', padding: '10px 14px', borderRadius: 'var(--radius)', fontSize: 13, marginBottom: 16 }}>
               📝 {viewModal.note}
             </div>
           )}
+          {viewModal.histories && viewModal.histories.length > 0 && (
+            <div style={{ marginTop: 20, borderTop: '1px solid var(--border)', paddingTop: 16 }}>
+              <h4 style={{ fontWeight: 700, marginBottom: 16, color: 'var(--text-secondary)', fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                📋 {lang === 'km' ? 'ប្រវត្តិស្ថានភាពលម្អិត' : 'Detailed Status History'}
+              </h4>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16, paddingLeft: 8 }}>
+                {[...viewModal.histories]
+                  .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                  .map((h: any, idx: number) => {
+                    const isLast = idx === viewModal.histories.length - 1;
+                    let pointColor = '#cbd5e1';
+                    if (h.status === 'delivered') pointColor = '#10b981';
+                    else if (h.status === 'failed') pointColor = '#ef4444';
+                    else if (h.status === 'returned') pointColor = '#6b7280';
+                    else if (['in-transit', 'picked-up', 'assigned'].includes(h.status)) pointColor = '#f59e0b';
+                    else if (h.status === 'in-warehouse') pointColor = '#10b981';
+                    else pointColor = '#3b82f6';
+                    
+                    return (
+                      <div key={h.id} style={{ display: 'flex', gap: 16, position: 'relative' }}>
+                        {/* Vertical Line */}
+                        {!isLast && (
+                          <div style={{
+                            position: 'absolute',
+                            left: 7,
+                            top: 20,
+                            bottom: -20,
+                            width: '2px',
+                            background: '#e2e8f0',
+                            zIndex: 1
+                          }} />
+                        )}
+                        
+                        {/* Bullet Point */}
+                        <div style={{
+                          width: 16,
+                          height: 16,
+                          borderRadius: '50%',
+                          backgroundColor: '#fff',
+                          border: `3px solid ${pointColor}`,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          flexShrink: 0,
+                          zIndex: 2,
+                          marginTop: 4
+                        }} />
+
+                        {/* Content Block */}
+                        <div style={{ flex: 1, paddingBottom: isLast ? 0 : 20 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 8 }}>
+                            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                              <Badge status={h.status} label={getStatusLabel(h.status)} />
+                            </div>
+                            <div style={{ color: 'var(--text-muted)', fontSize: 11.5 }}>
+                              <span>{new Date(h.createdAt).toLocaleString(lang === 'km' ? 'kh-KH' : 'en-US', {
+                                month: 'short',
+                                day: 'numeric',
+                                year: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                                hour12: true,
+                              })}</span>
+                            </div>
+                          </div>
+
+                          {/* Note / Remarks */}
+                          {h.note && (
+                            <div style={{ 
+                              marginTop: 8, 
+                              padding: '8px 12px', 
+                              background: h.status === 'failed' || h.status === 'returned' ? '#fef2f2' : '#f8fafc',
+                              borderLeft: `3px solid ${h.status === 'failed' || h.status === 'returned' ? '#ef4444' : '#cbd5e1'}`,
+                              borderRadius: '0 6px 6px 0', 
+                              fontSize: 12.5, 
+                              color: '#334155',
+                              fontWeight: 500,
+                              maxWidth: '90%'
+                            }}>
+                              📝 {lang === 'km' ? 'សម្គាល់៖' : 'Remark:'} {h.note}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
+            </div>
+          )}
+        </Modal>
+      )}
+
+      {/* Remark Modal */}
+      {remarkModal && (
+        <Modal
+          open={!!remarkModal}
+          onClose={() => { setRemarkModal(null); setRemarkText(''); }}
+          title={lang === 'km' ? 'បញ្ជូលសម្គាល់' : 'Add Remark'}
+          size="md"
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div style={{
+              padding: '10px 14px',
+              background: remarkModal.newStatus === 'failed' || remarkModal.newStatus === 'returned'
+                ? '#fef2f2' : '#f0fdf4',
+              borderRadius: 8,
+              fontSize: 13,
+              borderLeft: `4px solid ${
+                remarkModal.newStatus === 'failed' ? '#ef4444'
+                : remarkModal.newStatus === 'returned' ? '#f59e0b'
+                : '#10b981'
+              }`
+            }}>
+              <strong>{lang === 'km' ? 'ស្ថានភាពថ្មី៖' : 'New Status:'}</strong>{' '}
+              {getStatusLabel(remarkModal.newStatus)}
+            </div>
+
+            {/* Predefined remark chips */}
+            {(() => {
+              const presets = PREDEFINED_REMARKS[remarkModal.newStatus] || [];
+              if (presets.length === 0) return null;
+              return (
+                <div>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 8, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    {lang === 'km' ? 'ជ្រើសរើសសម្គាល់ស្តងត្រទួស' : 'Quick Select'}
+                  </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                    {presets.map((preset) => (
+                      <button
+                        key={preset}
+                        type="button"
+                        onClick={() => setRemarkText(preset)}
+                        style={{
+                          padding: '5px 12px',
+                          borderRadius: 20,
+                          border: `1.5px solid ${remarkText === preset ? '#2563eb' : '#d1d5db'}`,
+                          background: remarkText === preset ? '#eff6ff' : '#f9fafb',
+                          color: remarkText === preset ? '#1d4ed8' : '#374151',
+                          fontSize: 12,
+                          fontWeight: remarkText === preset ? 700 : 400,
+                          cursor: 'pointer',
+                          transition: 'all 0.15s',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {preset}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="form-label">
+                {lang === 'km' ? 'សម្គាល់ / មូលហេតុ' : 'Remark / Reason'}
+                {(remarkModal.newStatus === 'failed' || remarkModal.newStatus === 'returned') && (
+                  <span style={{ color: '#ef4444', marginLeft: 4 }}>*</span>
+                )}
+              </label>
+              <textarea
+                className="form-control"
+                rows={3}
+                placeholder={
+                  lang === 'km'
+                    ? 'បញ្ចូលមូលហេតុ ឬ កត់សម្គាល់...'
+                    : 'Enter reason or remark...'
+                }
+                value={remarkText}
+                onChange={e => setRemarkText(e.target.value)}
+                style={{ resize: 'vertical', fontSize: 13 }}
+                autoFocus
+              />
+            </div>
+
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button
+                className="btn btn-cancel btn-sm"
+                style={{ background: '#dc2626', color: '#ffffff', border: '1px solid #dc2626', fontWeight: 700 }}
+                onClick={() => { setRemarkModal(null); setRemarkText(''); }}
+              >
+                {lang === 'km' ? 'បោះបង់' : 'Cancel'}
+              </button>
+              <button
+                className="btn btn-primary btn-sm"
+                style={{ background: '#2563eb', color: '#ffffff', border: '1px solid #2563eb', fontWeight: 700 }}
+                onClick={submitStatusWithRemark}
+                disabled={
+                  (remarkModal.newStatus === 'failed' || remarkModal.newStatus === 'returned')
+                    ? remarkText.trim() === ''
+                    : false
+                }
+              >
+                {lang === 'km' ? 'បញ្ជាក់' : 'Confirm'}
+              </button>
+            </div>
+          </div>
         </Modal>
       )}
     </div>

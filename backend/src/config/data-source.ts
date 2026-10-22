@@ -15,5 +15,4 @@ export const dataSourceOptions: DataSourceOptions = {
   synchronize: true,
 };
 
-
 export const AppDataSource = new DataSource(dataSourceOptions);

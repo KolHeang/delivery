@@ -1,0 +1,434 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { getUser, isAuthenticated } from "@/lib/auth";
+import api from "@/lib/api";
+import { useLanguage } from "@/lib/LanguageContext";
+import LiveLocationTracker from "@/components/driver/LiveLocationTracker";
+import {
+  MdNotifications,
+  MdCalendarToday,
+  MdInventory2,
+  MdLocalShipping,
+  MdCheckCircle,
+  MdErrorOutline,
+  MdAssignmentReturn,
+  MdAttachMoney,
+  MdAccountBalanceWallet,
+  MdChevronRight,
+} from "react-icons/md";
+
+export default function DriverDashboardPage() {
+  const router = useRouter();
+  const { lang } = useLanguage();
+  const [data, setData] = useState<any>(null);
+  const [driver, setDriver] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [tasks, setTasks] = useState<any[]>([]);
+  const [selectedDate, setSelectedDate] = useState<string>(() => new Date().toISOString().split("T")[0]);
+
+  const loadDashboard = async (targetDate?: string) => {
+    try {
+      const activeDate = targetDate !== undefined ? targetDate : selectedDate;
+      const dateParam = activeDate ? `&date=${activeDate}` : '';
+      const [dashRes, profRes, taskRes] = await Promise.all([
+        api.get(`/mobile/driver/dashboard?period=${activeDate ? 'custom' : 'all'}${dateParam}`).catch(() => null),
+        api.get("/mobile/driver/profile").catch(() => null),
+        api.get(`/mobile/driver/tasks${activeDate ? `?date=${activeDate}` : ""}`).catch(() => null),
+      ]);
+      if (dashRes?.data) setData(dashRes.data);
+      if (profRes?.data) setDriver(profRes.data);
+      if (taskRes?.data) {
+        const list = Array.isArray(taskRes.data)
+          ? taskRes.data
+          : taskRes.data?.results || taskRes.data?.data || [];
+        setTasks(list);
+      }
+    } catch (err) {
+      console.error("Failed to load driver dashboard", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!isAuthenticated()) {
+      router.push("/driver/login");
+      return;
+    }
+    const user = getUser();
+    if (user?.role !== "driver") {
+      router.push("/driver/login");
+      return;
+    }
+    setDriver(user);
+    loadDashboard();
+  }, [router]);
+
+  const stats = data?.statistics || {};
+  const taskTotal = tasks.length;
+  const taskAssigned = tasks.filter((t: any) => t.status === "assigned" || t.status === "in-transit" || t.status === "picked-up").length;
+  const taskDelivered = tasks.filter((t: any) => t.status === "delivered").length;
+  const taskProblems = tasks.filter((t: any) => t.status === "failed" || t.status === "cancelled").length;
+  const taskReturned = tasks.filter((t: any) => t.status === "returned").length;
+
+  const totalCount = stats.totalPackage !== undefined ? stats.totalPackage : (taskTotal > 0 ? taskTotal : 0);
+  const assignedCount = stats.assignedParcels !== undefined ? stats.assignedParcels : (taskTotal > 0 ? taskAssigned : 0);
+  const deliveredCount = stats.totalSuccessful !== undefined ? stats.totalSuccessful : (taskTotal > 0 ? taskDelivered : 0);
+  const problemCount = stats.totalProblem !== undefined ? stats.totalProblem : (taskTotal > 0 ? taskProblems : 0);
+  const returnCount = stats.totalReturn !== undefined ? stats.totalReturn : (taskTotal > 0 ? taskReturned : 0);
+
+  const amountToCollectUSD = Number(data?.amountToCollect?.usd ?? data?.amountToCollectUSD ?? (typeof data?.amountToCollect === 'number' ? data?.amountToCollect : 0)) || 0.0;
+  const amountToCollectKHR = Number(data?.amountToCollect?.khr ?? data?.amountToCollectKHR) || 0;
+
+  const amountCollectedUSD = Number(data?.amountCollected?.usd ?? data?.amountCollectedUSD ?? data?.wallets?.find((w: any) => w.currency === "USD")?.balance) || 0.0;
+  const amountCollectedKHR = Number(data?.amountCollected?.khr ?? data?.amountCollectedKHR ?? data?.wallets?.find((w: any) => w.currency === "KHR")?.balance) || 0;
+
+  const displayName = driver?.name || driver?.nameKh || "Rider";
+
+  // Format date display: Mon, 23 Dec 2024
+  const formatDateDisplay = (dStr: string) => {
+    try {
+      const d = new Date(dStr);
+      return d.toLocaleDateString("en-US", { weekday: "short", day: "numeric", month: "short", year: "numeric" });
+    } catch {
+      return dStr;
+    }
+  };
+
+  const displayTasks = tasks.length > 0 ? tasks.slice(0, 5) : (data?.recentTasks || []).slice(0, 5);
+
+  if (loading) {
+    return (
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "80vh", backgroundColor: "#f8fafc" }}>
+        <div style={{ width: "36px", height: "36px", border: "3px solid #bfdbfe", borderTopColor: "#2563eb", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
+        <style dangerouslySetInnerHTML={{ __html: `@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }` }} />
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", backgroundColor: "#f8fafc", fontFamily: "'Inter', 'Kantumruy Pro', sans-serif" }}>
+      <LiveLocationTracker silent={true} />
+
+      {/* Screen 2 Top Header */}
+      <div style={{
+        backgroundColor: "#1d4ed8",
+        background: "linear-gradient(135deg, #1e40af 0%, #2563eb 100%)",
+        padding: "20px 18px 24px",
+        borderBottomLeftRadius: "24px",
+        borderBottomRightRadius: "24px",
+        color: "#ffffff",
+        boxShadow: "0 10px 25px rgba(37, 99, 235, 0.2)",
+      }}>
+        {/* Rider Greeting & Notification Bell */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+            <div style={{
+              width: "44px",
+              height: "44px",
+              borderRadius: "50%",
+              backgroundColor: "#ffffff",
+              border: "2px solid rgba(255, 255, 255, 0.8)",
+              overflow: "hidden",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              boxShadow: "0 4px 10px rgba(0,0,0,0.15)",
+              flexShrink: 0,
+            }}>
+              {driver?.photo ? (
+                <img src={driver.photo} alt={displayName} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              ) : (
+                <span style={{ fontSize: "24px" }}>👨‍✈️</span>
+              )}
+            </div>
+
+            <div>
+              <div style={{ fontSize: "11px", color: "#bfdbfe", fontWeight: "600" }}>
+                {lang === "km" ? "សួស្តីពេលព្រឹក," : "Good Morning,"}
+              </div>
+              <div style={{ fontSize: "16px", fontWeight: "900", letterSpacing: "-0.3px", marginTop: "1px" }}>
+                {displayName}
+              </div>
+            </div>
+          </div>
+
+          {/* Notification Bell with Red Badge */}
+          <div style={{ position: "relative", cursor: "pointer" }}>
+            <div style={{
+              width: "38px",
+              height: "38px",
+              borderRadius: "50%",
+              backgroundColor: "rgba(255, 255, 255, 0.15)",
+              backdropFilter: "blur(4px)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}>
+              <MdNotifications size={22} color="#ffffff" />
+            </div>
+            <span style={{
+              position: "absolute",
+              top: "-2px",
+              right: "-2px",
+              backgroundColor: "#ef4444",
+              color: "#ffffff",
+              fontSize: "10px",
+              fontWeight: "900",
+              width: "18px",
+              height: "18px",
+              borderRadius: "50%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              border: "2px solid #1e40af",
+            }}>
+              3
+            </span>
+          </div>
+        </div>
+
+        {/* Date Selector Row */}
+        <div style={{
+          backgroundColor: "rgba(255, 255, 255, 0.95)",
+          borderRadius: "14px",
+          padding: "10px 14px",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          color: "#0f172a",
+          boxShadow: "0 4px 12px rgba(0, 0, 0, 0.08)",
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <MdCalendarToday size={18} color="#2563eb" />
+            <span style={{ fontSize: "13.5px", fontWeight: "700" }}>
+              {formatDateDisplay(selectedDate)}
+            </span>
+          </div>
+          <input
+            type="date"
+            value={selectedDate}
+            onChange={(e) => {
+              const newDate = e.target.value;
+              setSelectedDate(newDate);
+              loadDashboard(newDate);
+            }}
+            style={{ border: "none", outline: "none", background: "transparent", fontSize: "12px", cursor: "pointer", fontWeight: "600", color: "#64748b" }}
+          />
+        </div>
+      </div>
+
+      {/* Main Content Area */}
+      <div style={{ padding: "16px", display: "flex", flexDirection: "column", gap: "18px" }}>
+
+        {/* 1. Work Statistics Section */}
+        <div>
+          <h2 style={{ fontSize: "15px", fontWeight: "800", color: "#0f172a", margin: "0 0 10px 2px" }}>
+            {lang === "km" ? "ស្ថិតិការងារ (Work Statistics)" : "Work Statistics"}
+          </h2>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "10px" }}>
+            {/* Card 1: Total Parcels */}
+            <div style={{ backgroundColor: "#ffffff", borderRadius: "16px", padding: "12px", boxShadow: "0 2px 8px rgba(0,0,0,0.04)", border: "1px solid #f1f5f9" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "6px", color: "#64748b", marginBottom: "6px" }}>
+                <MdInventory2 size={16} color="#2563eb" />
+                <span style={{ fontSize: "11px", fontWeight: "700" }}>{lang === "km" ? "កញ្ចប់សរុប" : "Total Parcels"}</span>
+              </div>
+              <div style={{ fontSize: "20px", fontWeight: "900", color: "#0f172a" }}>{totalCount}</div>
+            </div>
+
+            {/* Card 2: Assigned */}
+            <div style={{ backgroundColor: "#ffffff", borderRadius: "16px", padding: "12px", boxShadow: "0 2px 8px rgba(0,0,0,0.04)", border: "1px solid #f1f5f9" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "6px", color: "#2563eb", marginBottom: "6px" }}>
+                <MdLocalShipping size={16} color="#2563eb" />
+                <span style={{ fontSize: "11px", fontWeight: "700" }}>{lang === "km" ? "បានចាត់តាំង" : "Assigned"}</span>
+              </div>
+              <div style={{ fontSize: "20px", fontWeight: "900", color: "#2563eb" }}>{assignedCount}</div>
+            </div>
+
+            {/* Card 3: Delivered */}
+            <div style={{ backgroundColor: "#ffffff", borderRadius: "16px", padding: "12px", boxShadow: "0 2px 8px rgba(0,0,0,0.04)", border: "1px solid #f1f5f9" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "6px", color: "#16a34a", marginBottom: "6px" }}>
+                <MdCheckCircle size={16} color="#16a34a" />
+                <span style={{ fontSize: "11px", fontWeight: "700" }}>{lang === "km" ? "បានដឹកជូន" : "Delivered"}</span>
+              </div>
+              <div style={{ fontSize: "20px", fontWeight: "900", color: "#16a34a" }}>{deliveredCount}</div>
+            </div>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginTop: "10px" }}>
+            {/* Card 4: Problems */}
+            <div style={{ backgroundColor: "#ffffff", borderRadius: "16px", padding: "12px", boxShadow: "0 2px 8px rgba(0,0,0,0.04)", border: "1px solid #f1f5f9", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div>
+                <span style={{ fontSize: "11px", fontWeight: "700", color: "#64748b" }}>{lang === "km" ? "មានបញ្ហា" : "Problems"}</span>
+                <div style={{ fontSize: "18px", fontWeight: "900", color: "#ea580c", marginTop: "2px" }}>{problemCount}</div>
+              </div>
+              <div style={{ width: "32px", height: "32px", borderRadius: "50%", backgroundColor: "#ffedd5", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <MdErrorOutline size={18} color="#ea580c" />
+              </div>
+            </div>
+
+            {/* Card 5: Returned */}
+            <div style={{ backgroundColor: "#ffffff", borderRadius: "16px", padding: "12px", boxShadow: "0 2px 8px rgba(0,0,0,0.04)", border: "1px solid #f1f5f9", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div>
+                <span style={{ fontSize: "11px", fontWeight: "700", color: "#64748b" }}>{lang === "km" ? "បានត្រឡប់" : "Returned"}</span>
+                <div style={{ fontSize: "18px", fontWeight: "900", color: "#7c3aed", marginTop: "2px" }}>{returnCount}</div>
+              </div>
+              <div style={{ width: "32px", height: "32px", borderRadius: "50%", backgroundColor: "#ede9fe", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <MdAssignmentReturn size={18} color="#7c3aed" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* 2. Financial Information Section */}
+        <div>
+          <h2 style={{ fontSize: "15px", fontWeight: "800", color: "#0f172a", margin: "0 0 10px 2px" }}>
+            {lang === "km" ? "ព័ត៌មានហិរញ្ញវត្ថុ (Financial Information)" : "Financial Information"}
+          </h2>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+            {/* Amount to Collect */}
+            <div style={{
+              backgroundColor: "#ffffff",
+              borderRadius: "18px",
+              padding: "14px",
+              border: "1.5px solid #fed7aa",
+              boxShadow: "0 4px 12px rgba(249, 115, 22, 0.08)",
+              display: "flex",
+              alignItems: "center",
+              gap: "10px",
+            }}>
+              <div style={{ width: "38px", height: "38px", borderRadius: "12px", backgroundColor: "#fff7ed", display: "flex", alignItems: "center", justifyContent: "center", color: "#f97316" }}>
+                <MdAttachMoney size={22} />
+              </div>
+              <div>
+                <div style={{ fontSize: "15px", fontWeight: "900", color: "#ea580c", display: "flex", flexWrap: "wrap", alignItems: "baseline", gap: "4px" }}>
+                  <span>${amountToCollectUSD.toFixed(2)}</span>
+                  {amountToCollectKHR > 0 && <span style={{ fontSize: "11px", color: "#c2410c", fontWeight: "700" }}>/ {amountToCollectKHR.toLocaleString()} ៛</span>}
+                </div>
+                <div style={{ fontSize: "10.5px", fontWeight: "700", color: "#64748b" }}>{lang === "km" ? "ត្រូវប្រមូល" : "Amount to Collect"}</div>
+              </div>
+            </div>
+
+            {/* Amount Collected */}
+            <div style={{
+              backgroundColor: "#ffffff",
+              borderRadius: "18px",
+              padding: "14px",
+              border: "1.5px solid #bbf7d0",
+              boxShadow: "0 4px 12px rgba(22, 163, 74, 0.08)",
+              display: "flex",
+              alignItems: "center",
+              gap: "10px",
+            }}>
+              <div style={{ width: "38px", height: "38px", borderRadius: "12px", backgroundColor: "#f0fdf4", display: "flex", alignItems: "center", justifyContent: "center", color: "#16a34a" }}>
+                <MdAccountBalanceWallet size={20} />
+              </div>
+              <div>
+                <div style={{ fontSize: "15px", fontWeight: "900", color: "#15803d", display: "flex", flexWrap: "wrap", alignItems: "baseline", gap: "4px" }}>
+                  <span>${amountCollectedUSD.toFixed(2)}</span>
+                  {amountCollectedKHR > 0 && <span style={{ fontSize: "11px", color: "#166534", fontWeight: "700" }}>/ {amountCollectedKHR.toLocaleString()} ៛</span>}
+                </div>
+                <div style={{ fontSize: "10.5px", fontWeight: "700", color: "#64748b" }}>{lang === "km" ? "ប្រមូលបាន" : "Amount Collected"}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* 3. Recent Tasks Section */}
+        <div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+            <h2 style={{ fontSize: "15px", fontWeight: "800", color: "#0f172a", margin: 0 }}>
+              {lang === "km" ? "កិច្ចការថ្មីៗ (Recent Tasks)" : "Recent Tasks"}
+            </h2>
+            <Link href="/driver/tasks" style={{ fontSize: "12.5px", fontWeight: "800", color: "#2563eb", textDecoration: "none" }}>
+              {lang === "km" ? "មើលទាំងអស់" : "See All"}
+            </Link>
+          </div>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+            {displayTasks.length === 0 ? (
+              <div style={{ backgroundColor: "#ffffff", borderRadius: "18px", padding: "28px", textAlign: "center", border: "1px dashed #cbd5e1", color: "#94a3b8", display: "flex", flexDirection: "column", alignItems: "center", gap: "6px" }}>
+                <MdInventory2 size={32} />
+                <div style={{ fontSize: "13px", fontWeight: "700" }}>{lang === "km" ? "មិនទាន់មានកិច្ចការត្រូវបានចាត់តាំងទេ" : "No recent tasks assigned yet"}</div>
+              </div>
+            ) : (
+              displayTasks.map((tItem: any, idx: number) => {
+                const code = tItem.trackingCode || tItem.trackingNumber || tItem.code || `#${tItem.id || idx + 1}`;
+                const shopName = tItem.merchant?.name || tItem.merchantName || tItem.shopName || (lang === "km" ? "ហាង" : "Store");
+                const isDelivered = tItem.status === "delivered";
+                const isFailed = tItem.status === "failed";
+                const isTransit = tItem.status === "in-transit" || tItem.status === "picked-up" || tItem.status === "assigned" || tItem.status === "delivery";
+
+                return (
+                  <div
+                    key={tItem.id || idx}
+                    onClick={() => router.push(`/driver/tasks/${tItem.id || 1}`)}
+                    style={{
+                      backgroundColor: "#ffffff",
+                      borderRadius: "16px",
+                      padding: "12px 14px",
+                      boxShadow: "0 2px 8px rgba(0,0,0,0.03)",
+                      border: "1px solid #f1f5f9",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      cursor: "pointer",
+                      transition: "transform 0.15s ease, box-shadow 0.15s ease",
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                      <div style={{
+                        width: "42px",
+                        height: "42px",
+                        borderRadius: "50%",
+                        backgroundColor: "#fffbeb",
+                        border: "1px solid #fef3c7",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: "20px",
+                        flexShrink: 0,
+                        boxShadow: "0 1px 4px rgba(245, 158, 11, 0.08)",
+                      }}>
+                        📦
+                      </div>
+                      <div>
+                        <div style={{ fontSize: "14px", fontWeight: "800", color: "#0f172a", letterSpacing: "-0.2px" }}>
+                          {code.startsWith("#") ? code : `#${code}`}
+                        </div>
+                        <div style={{ fontSize: "12px", color: "#64748b", fontWeight: "600", marginTop: "1px" }}>
+                          {shopName}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Status Badge & Chevron */}
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      <span style={{
+                        fontSize: "12px",
+                        fontWeight: "700",
+                        padding: "5px 14px",
+                        borderRadius: "16px",
+                        backgroundColor: isDelivered ? "#dcfce7" : isFailed ? "#fee2e2" : isTransit ? "#e0f2fe" : "#ffedd5",
+                        color: isDelivered ? "#16a34a" : isFailed ? "#ef4444" : isTransit ? "#0284c7" : "#ea580c",
+                      }}>
+                        {isDelivered ? "Delivered" : isFailed ? "Failed" : isTransit ? "Delivery" : "Pending"}
+                      </span>
+                      <MdChevronRight size={20} color="#64748b" />
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+
+      </div>
+    </div>
+  );
+}

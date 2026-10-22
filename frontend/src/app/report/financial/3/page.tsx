@@ -7,7 +7,9 @@ import Sidebar from '@/components/layout/Sidebar';
 import Topbar from '@/components/layout/Topbar';
 import api from '@/lib/api';
 import { useLanguage } from '@/lib/LanguageContext';
+import DateInput, { formatDateToDDMMYYYY } from '@/components/ui/DateInput';
 import { MdPrint, MdSearch, MdArrowBack } from 'react-icons/md';
+import ReportHeader from '@/components/ui/ReportHeader';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 interface Row { label: string; income: number; expense: number; profit: number; }
@@ -15,7 +17,7 @@ interface Row { label: string; income: number; expense: number; profit: number; 
 export default function Frpt3Page() {
   const router = useRouter();
   const { t } = useLanguage();
-  const [startDate, setStartDate] = useState(() => { const d = new Date(); d.setDate(1); return d.toISOString().split('T')[0]; });
+  const [startDate, setStartDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [endDate, setEndDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [rows, setRows] = useState<Row[]>([]);
   const [summary, setSummary] = useState({ totalIncome: 0, totalExpense: 0, netProfit: 0 });
@@ -52,11 +54,7 @@ export default function Frpt3Page() {
       <div className="main-content">
         <Topbar title={t('frpt3Title')} subtitle={t('financialReportTitle')} />
         <div className="page-content">
-          <div className="print-only" style={{ marginBottom: 20, paddingBottom: 10, borderBottom: '2px solid #000', textAlign: 'center' }}>
-            <h1 style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>EBS Digital Solutions</h1>
-            <h2 style={{ fontSize: 14, margin: '4px 0 0' }}>{t('frpt3Title')}</h2>
-            <p style={{ fontSize: 11, margin: '4px 0 0', color: '#64748b' }}>{t('startDate')}: {startDate} — {t('endDate')}: {endDate}</p>
-          </div>
+          <ReportHeader title={t('frpt3Title')} startDate={startDate} endDate={endDate} />
           <div className="no-print" style={{ marginBottom: 14 }}>
             <button className="btn btn-outline btn-sm" onClick={() => router.push('/report')} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <MdArrowBack size={16} /> {t('report')}
@@ -82,15 +80,21 @@ export default function Frpt3Page() {
 
           <div className="card no-print" style={{ marginBottom: 18, padding: '14px 18px' }}>
             <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', alignItems: 'flex-end' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)' }}>{t('startDate')}</span>
-                <input type="date" className="form-control" value={startDate} onChange={e => setStartDate(e.target.value)} style={{ minWidth: 140 }} />
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)' }}>{t('endDate')}</span>
-                <input type="date" className="form-control" value={endDate} onChange={e => setEndDate(e.target.value)} style={{ minWidth: 140 }} />
-              </div>
-              <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
+              <DateInput
+                labelEn="Start Date"
+                labelKh="ចាប់ពីថ្ងៃ"
+                value={startDate}
+                onChange={setStartDate}
+                style={{ minWidth: 210 }}
+              />
+              <DateInput
+                labelEn="End Date"
+                labelKh="ដល់"
+                value={endDate}
+                onChange={setEndDate}
+                style={{ minWidth: 210 }}
+              />
+              <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', marginLeft: 'auto' }}>
                 <button className="btn btn-primary" onClick={load} style={{ display: 'flex', alignItems: 'center', gap: 6 }}><MdSearch size={16} /> {t('filterBtn')}</button>
                 <button className="btn btn-outline" onClick={() => window.print()} style={{ display: 'flex', alignItems: 'center', gap: 6 }}><MdPrint size={16} /> {t('downloadAndPrint')}</button>
               </div>
@@ -103,8 +107,8 @@ export default function Frpt3Page() {
               <div className="card" style={{ marginBottom: 18 }}>
                 <div className="card-header"><span className="card-title">📊 {t('frpt3Title')}</span></div>
                 <div className="card-body" style={{ height: 280 }}>
-                  {isMounted && rows.length > 0 ? (
-                    <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                  {rows.length > 0 ? (
+                    <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                       <BarChart data={rows} margin={{ top: 5, right: 20, left: -10, bottom: 0 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                         <XAxis dataKey="label" tick={{ fontSize: 11 }} />

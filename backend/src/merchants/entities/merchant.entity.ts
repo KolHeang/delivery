@@ -1,0 +1,108 @@
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  ManyToOne,
+  OneToMany,
+  JoinColumn,
+} from 'typeorm';
+import { Zone } from '../../zones/entities/zone.entity';
+import { Tenant } from '../../saas/entities/tenant.entity';
+import { MerchantBranch } from './merchant-branch.entity';
+import { numericTransformer } from '../../common/numeric.transformer';
+
+export type PricingTier = 'basic' | 'standard' | 'premium';
+
+@Entity('merchants')
+export class Merchant {
+  @PrimaryGeneratedColumn()
+  id: number;
+
+  @ManyToOne(() => Tenant, { nullable: true, onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'tenant_id' })
+  tenant: Tenant;
+
+  @Column({ name: 'tenant_id', nullable: true })
+  tenantId: number;
+
+  @Column()
+  name: string;
+
+  @Column({ name: 'name_kh', nullable: true })
+  nameKh: string;
+
+  @Column({ nullable: true })
+  contact: string;
+
+  @Column()
+  phone: string;
+
+  @Column({ nullable: true })
+  email: string;
+
+  @Column({ nullable: true, select: false })
+  password?: string;
+
+  @Column({ nullable: true })
+  address: string;
+
+  @Column('decimal', { precision: 10, scale: 7, nullable: true })
+  latitude: number;
+
+  @Column('decimal', { precision: 10, scale: 7, nullable: true })
+  longitude: number;
+
+  @Column({ name: 'pricing_tier', default: 'standard' })
+  pricingTier: PricingTier;
+
+  @Column('decimal', { precision: 10, scale: 4, default: 0, transformer: numericTransformer })
+  balance: number;
+
+  @Column({ default: true })
+  active: boolean;
+
+  @ManyToOne(() => Zone, { nullable: true, eager: true })
+  @JoinColumn({ name: 'zone_id' })
+  zone: Zone;
+
+  @Column({ name: 'zone_id', nullable: true })
+  zoneId: number;
+
+  @Column('decimal', { name: 'delivery_fee', precision: 10, scale: 4, default: 0, nullable: true, transformer: numericTransformer })
+  deliveryFee: number;
+
+  @Column('decimal', { name: 'exchange_rate', precision: 10, scale: 4, default: 4100, nullable: true, transformer: numericTransformer })
+  exchangeRate: number;
+
+  @Column({ type: 'text', nullable: true })
+  note: string;
+
+  @Column({ nullable: true })
+  telegram: string;
+
+  @Column({ nullable: true })
+  photo: string;
+
+  @Column({ name: 'qr_link_khr', nullable: true })
+  qrLinkKhr: string;
+
+  @Column({ name: 'qr_link_usd', nullable: true })
+  qrLinkUsd: string;
+
+  @Column({ name: 'qr_image_khr', type: 'text', nullable: true, select: false })
+  qrImageKhr: string;
+
+  @Column({ name: 'qr_image_usd', type: 'text', nullable: true, select: false })
+  qrImageUsd: string;
+
+  @OneToMany(() => MerchantBranch, (branch) => branch.merchant)
+  branches: MerchantBranch[];
+
+  @CreateDateColumn({ name: 'created_at' })
+  createdAt: Date;
+
+  @UpdateDateColumn({ name: 'updated_at' })
+  updatedAt: Date;
+}

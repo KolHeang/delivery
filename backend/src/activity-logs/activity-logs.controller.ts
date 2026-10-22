@@ -1,0 +1,41 @@
+import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
+import { ActivityLogsService } from './activity-logs.service';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { PermissionsGuard } from '../auth/permissions.guard';
+import { RequirePermissions } from '../auth/permissions.decorator';
+
+@ApiTags('Activity Logs')
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard, PermissionsGuard)
+@Controller('activity-logs')
+export class ActivityLogsController {
+  constructor(private readonly activityLogsService: ActivityLogsService) {}
+
+  @Get()
+  @RequirePermissions('settings.activity_log', 'settings.manage')
+  @ApiOperation({ summary: 'Get paginated list of activity logs' })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiQuery({ name: 'action', required: false, type: String })
+  @ApiQuery({ name: 'entityName', required: false, type: String })
+  @ApiQuery({ name: 'userId', required: false, type: Number })
+  @ApiQuery({ name: 'merchantId', required: false, type: Number })
+  findAll(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('action') action?: string,
+    @Query('entityName') entityName?: string,
+    @Query('userId') userId?: string,
+    @Query('merchantId') merchantId?: string,
+  ) {
+    return this.activityLogsService.findAll({
+      page: page ? +page : undefined,
+      limit: limit ? +limit : undefined,
+      action,
+      entityName,
+      userId: userId ? +userId : undefined,
+      merchantId: merchantId ? +merchantId : undefined,
+    });
+  }
+}

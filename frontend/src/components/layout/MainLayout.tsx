@@ -1,16 +1,25 @@
+'use client';
+
 import React from 'react';
 import Sidebar from './Sidebar';
-import styles from './MainLayout.module.css';
+import Topbar from './Topbar';
 
-export default function MainLayout({ children }: { children: React.ReactNode }) {
+interface MainLayoutProps {
+  children: React.ReactNode;
+  title?: string;
+  subtitle?: string;
+}
+
+export default function MainLayout({ children, title = '', subtitle }: MainLayoutProps) {
   return (
-    <div className={styles.layout}>
+    <div className="app-layout">
       <Sidebar />
-      <main className={styles.mainContent}>
-        <div className={styles.content}>
+      <div className="main-content">
+        <Topbar title={title} subtitle={subtitle} />
+        <div className="page-content" style={{ padding: '28px 32px', minHeight: 'calc(100vh - 60px)' }}>
           {children}
         </div>
-      </main>
+      </div>
     </div>
   );
 }

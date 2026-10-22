@@ -6,8 +6,10 @@ import { isAuthenticated } from '@/lib/auth';
 import Sidebar from '@/components/layout/Sidebar';
 import Topbar from '@/components/layout/Topbar';
 import api from '@/lib/api';
-import { MdDelete } from 'react-icons/md';
+import { MdDelete, MdAdd, MdSave } from 'react-icons/md';
 import { useLanguage } from '@/lib/LanguageContext';
+import SearchableSelect from '@/components/ui/SearchableSelect';
+import DateInput, { getLocalDateString } from '@/components/ui/DateInput';
 
 export default function BatchEntryPage() {
   const router = useRouter();
@@ -16,96 +18,219 @@ export default function BatchEntryPage() {
   const [drivers, setDrivers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const [selectedMerchantId, setSelectedMerchantId] = useState('');
-  const [date] = useState(() => new Date().toISOString().split('T')[0]);
-  const [deliveryFee, setDeliveryFee] = useState('0');
-  const [entryType, setEntryType] = useState<'zone' | 'delivery'>('zone');
+  const [merchantError, setMerchantError] = useState('');
+  const [rowErrors, setRowErrors] = useState<Record<number, { receiverAddress?: string; receiverPhone?: string }>>({});
+  const [parcelDate, setParcelDate] = useState(() => getLocalDateString());
+  const [deliveryFee, setDeliveryFee] = useState('1.25');
 
   const [rows, setRows] = useState<any[]>([
-    { receiverAddress: '', receiverPhone: '', codCurrency: 'USD', cod: '0', pickupId: '', driverId: '', note: '' }
+    { receiverName: '-', receiverAddress: '', receiverPhone: '', deliveryFee: '1.25', codUSD: '0', codKHR: '0', pickupId: '', driverId: '', note: '' }
   ]);
 
   useEffect(() => {
     if (!isAuthenticated()) { router.push('/'); return; }
-    Promise.all([api.get('/merchants'), api.get('/zones'), api.get('/drivers')])
+    Promise.all([api.get('/select/merchants'), api.get('/select/zones'), api.get('/select/drivers')])
       .then(([m, z, d]) => {
-        setMerchants(m.data || []);
-        setZones(z.data || []);
-        setDrivers(d.data || []);
-        if (m.data.length > 0) {
-          setSelectedMerchantId(m.data[0].id.toString());
-        }
+        const mList = Array.isArray(m.data) ? m.data : (m.data?.result || []);
+        const zList = Array.isArray(z.data) ? z.data : (z.data?.result || []);
+        const dList = Array.isArray(d.data) ? d.data : (d.data?.result || []);
+        setMerchants(mList);
+        setZones(zList);
+        setDrivers(dList);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [router]);
 
+  const [merchantBranches, setMerchantBranches] = useState<any[]>([]);
+  const [selectedBranchId, setSelectedBranchId] = useState('');
+
+  useEffect(() => {
+    if (selectedMerchantId) {
+      api.get(`/merchants/${selectedMerchantId}/branches`)
+        .then(res => {
+          const list = Array.isArray(res.data) ? res.data : (res.data?.data || []);
+          setMerchantBranches(list);
+          const def = list.find((b: any) => b.isDefault);
+          if (def) setSelectedBranchId(def.id.toString());
+          else if (list.length > 0) setSelectedBranchId(list[0].id.toString());
+          else setSelectedBranchId('');
+        })
+        .catch(() => {
+          setMerchantBranches([]);
+          setSelectedBranchId('');
+        });
+    } else {
+      setMerchantBranches([]);
+      setSelectedBranchId('');
+    }
+  }, [selectedMerchantId]);
+
   useEffect(() => {
     const merchant = merchants.find(m => m.id.toString() === selectedMerchantId);
     if (merchant) {
-      setDeliveryFee(merchant.deliveryFee?.toString() || '0');
+      let fee = merchant.deliveryFee?.toString() || '0';
+      if (parseFloat(fee) === 0) {
+        fee = '1.25';
+      }
+      const prevDeliveryFee = deliveryFee;
+      setDeliveryFee(fee);
+      
+      // Update any rows that have default/unset delivery fee, or matching previous merchant's default fee
+      setRows(prev => prev.map(row => {
+        if (!row.deliveryFee || parseFloat(row.deliveryFee) === 0 || row.deliveryFee === prevDeliveryFee) {
+          return { ...row, deliveryFee: fee };
+        }
+        return row;
+      }));
     }
   }, [selectedMerchantId, merchants]);
 
   const addRow = () => {
     setRows(prev => [
       ...prev,
-      { receiverAddress: '', receiverPhone: '', codCurrency: 'USD', cod: '0', pickupId: '', driverId: '', note: '' }
+      { receiverName: '-', receiverAddress: '', receiverPhone: '', deliveryFee: deliveryFee || '1.25', codUSD: '0', codKHR: '0', pickupId: '', driverId: '', note: '' }
     ]);
   };
 
   const removeRow = (index: number) => {
     if (rows.length === 1) return;
     setRows(prev => prev.filter((_, i) => i !== index));
+    setRowErrors(prev => {
+      const next = { ...prev };
+      delete next[index];
+      return next;
+    });
   };
 
   const handleRowChange = (index: number, key: string, val: any) => {
-    setRows(prev => prev.map((row, i) => i === index ? { ...row, [key]: val } : row));
+    setRows(prev => prev.map((row, i) => {
+      if (i === index) {
+        return { ...row, [key]: val };
+      }
+      return row;
+    }));
+    if (rowErrors[index] && (rowErrors[index] as any)[key]) {
+      setRowErrors(prev => ({
+        ...prev,
+        [index]: {
+          ...prev[index],
+          [key]: undefined
+        }
+      }));
+    }
   };
 
   const handleSaveBatch = async () => {
-    if (!selectedMerchantId) return alert('Please select a Shop/Merchant');
+    let hasError = false;
+
+    if (!selectedMerchantId) {
+      setMerchantError(lang === 'km' ? 'សូមជ្រើសរើសហាង' : 'Please select a shop');
+      hasError = true;
+    } else {
+      setMerchantError('');
+    }
     
     // Validation
+    const errs: Record<number, { receiverAddress?: string; receiverPhone?: string }> = {};
     for (let i = 0; i < rows.length; i++) {
       const r = rows[i];
-      if (!r.receiverAddress || !r.receiverPhone) {
-        return alert(`Please fill required fields (Location and Receiver Phone) in Row #${i + 1}`);
+      const rowErr: { receiverAddress?: string; receiverPhone?: string } = {};
+      if (!r.receiverAddress?.trim()) {
+        rowErr.receiverAddress = 'សូមបំពេញអាសយដ្ឋាន';
+        hasError = true;
+      }
+      if (!r.receiverPhone?.trim()) {
+        rowErr.receiverPhone = 'សូមបំពេញលេខទូរស័ព្ទ';
+        hasError = true;
+      }
+      if (Object.keys(rowErr).length > 0) {
+        errs[i] = rowErr;
       }
     }
 
+    if (hasError) {
+      setRowErrors(errs);
+      return;
+    }
+
+    setRowErrors({});
     setSaving(true);
     try {
       const merchant = merchants.find(m => m.id.toString() === selectedMerchantId);
-      const promises = rows.map(r => {
-        const driverIdVal = entryType === 'delivery' ? r.driverId : r.pickupId;
-        const payload = {
-          senderName: merchant?.name || 'Shop',
-          senderPhone: merchant?.phone || '000',
+
+      const itemsToCreate: any[] = [];
+      for (const r of rows) {
+        const codUSDNum = parseFloat(r.codUSD) || 0;
+        const codKHRNum = parseFloat(r.codKHR) || 0;
+
+        const customDate = new Date();
+        if (parcelDate) {
+          const [year, month, day] = parcelDate.split('-').map(Number);
+          customDate.setFullYear(year);
+          customDate.setMonth(month - 1);
+          customDate.setDate(day);
+        }
+
+        const basePayload = {
           merchantId: parseInt(selectedMerchantId),
-          receiverName: `Customer ${r.receiverPhone}`,
+          branchId: selectedBranchId ? parseInt(selectedBranchId) : undefined,
+          receiverName: r.receiverName,
           receiverPhone: r.receiverPhone,
           receiverAddress: r.receiverAddress,
           weight: 0.5,
           size: 'small',
-          cod: parseFloat(r.cod) || 0,
-          codCurrency: r.codCurrency || 'USD',
-          deliveryFee: parseFloat(deliveryFee) || 0,
-          zoneId: merchant?.zoneId ? parseInt(merchant.zoneId) : undefined,
+          zoneId: r.zoneId ? parseInt(r.zoneId) : (merchant?.zoneId ? parseInt(merchant.zoneId) : undefined),
           note: r.note,
-          driverId: driverIdVal ? parseInt(driverIdVal) : undefined,
-          status: driverIdVal ? 'picked-up' : 'pending',
+          pickupDriverId: r.pickupId ? parseInt(r.pickupId) : undefined,
+          driverId: r.driverId ? parseInt(r.driverId) : undefined,
+          status: r.driverId ? 'picked-up' : 'pending',
+          createdAt: customDate.toISOString(),
         };
-        return api.post('/orders', payload);
-      });
-      await Promise.all(promises);
+
+        if (codUSDNum > 0 && codKHRNum > 0) {
+          itemsToCreate.push({
+            ...basePayload,
+            cod: codUSDNum,
+            codCurrency: 'USD',
+            deliveryFee: parseFloat(r.deliveryFee) || 0,
+          });
+          itemsToCreate.push({
+            ...basePayload,
+            cod: codKHRNum,
+            codCurrency: 'KHR',
+            deliveryFee: 0,
+          });
+        } else if (codKHRNum > 0) {
+          itemsToCreate.push({
+            ...basePayload,
+            cod: codKHRNum,
+            codCurrency: 'KHR',
+            deliveryFee: parseFloat(r.deliveryFee) || 0,
+          });
+        } else {
+          itemsToCreate.push({
+            ...basePayload,
+            cod: codUSDNum || 0,
+            codCurrency: 'USD',
+            deliveryFee: parseFloat(r.deliveryFee) || 0,
+          });
+        }
+      }
+
+      await api.post('/parcels/batch', { items: itemsToCreate });
       router.push('/delivery');
-    } catch {
-      alert('Error saving batch deliveries');
+    } catch (err: any) {
+      console.error('Batch save failed', err);
+      alert('Error saving batch deliveries: ' + (err.response?.data?.message || err.message));
     }
     setSaving(false);
   };
+
+  const totalCodUSD = rows.reduce((acc, r) => acc + (parseFloat(r.codUSD) || 0), 0);
+  const totalCodKHR = rows.reduce((acc, r) => acc + (parseFloat(r.codKHR) || 0), 0);
 
   if (loading) return (
     <div className="app-layout">
@@ -123,219 +248,214 @@ export default function BatchEntryPage() {
         <Topbar title={t('batchEntryTitle')} subtitle={t('batchEntrySubtitle')} />
         <div className="page-content" style={{ maxWidth: '100%' }}>
           {/* Top Panel Controls */}
-          <div className="card" style={{ marginBottom: 20, padding: 20 }}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, alignItems: 'end' }}>
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label">{t('shopCustomerLabel')} <span>*</span></label>
-                <select
-                  className="form-control"
-                  value={selectedMerchantId}
-                  onChange={e => setSelectedMerchantId(e.target.value)}
-                >
-                  {merchants.map(m => (
-                    <option key={m.id} value={m.id}>
-                      {m.id}-{m.nameKh ? `${m.nameKh} (${m.name})` : m.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label">{t('dateLabel')}</label>
-                <input
-                  type="text"
-                  className="form-control"
-                  value={date}
-                  disabled
-                  style={{ background: '#f1f5f9', color: '#64748b' }}
-                />
-              </div>
-
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label">{t('deliveryFee')} <span>*</span></label>
-                <input
-                  type="number"
-                  step="0.01"
-                  className="form-control"
-                  value={deliveryFee}
-                  onChange={e => setDeliveryFee(e.target.value)}
-                  style={{ background: '#f1f5f9' }}
-                />
-              </div>
-
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label" style={{ display: 'block', marginBottom: 8 }}>{t('typeEntryData')} <span>*</span></label>
-                <div style={{ display: 'flex', gap: 16, height: 38, alignItems: 'center' }}>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>
-                    <input
-                      type="radio"
-                      name="entryType"
-                      checked={entryType === 'zone'}
-                      onChange={() => setEntryType('zone')}
-                      style={{ width: 16, height: 16 }}
-                    />
-                    {t('byZone')}
-                  </label>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>
-                    <input
-                      type="radio"
-                      name="entryType"
-                      checked={entryType === 'delivery'}
-                      onChange={() => setEntryType('delivery')}
-                      style={{ width: 16, height: 16 }}
-                    />
-                    {t('byDelivery')}
-                  </label>
+          <div className="card" style={{ marginBottom: 20, padding: 20, overflow: 'hidden' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 16, alignItems: 'start' }}>
+              <div className={`form-group ${merchantError ? 'has-error' : ''}`} style={{ marginBottom: 0 }}>
+                <label className="form-label" style={{ fontWeight: 600 }}>
+                  {t('shopCustomerLabel')} <span style={{ color: 'var(--danger)' }}>*</span>
+                </label>
+                <div className="input-error-wrapper">
+                  <SearchableSelect
+                    value={selectedMerchantId}
+                    onChange={(val: string) => {
+                      setSelectedMerchantId(val);
+                      if (merchantError) setMerchantError('');
+                    }}
+                    style={{ height: 42, fontSize: 13.5 }}
+                    placeholder={lang === 'km' ? '-- ជ្រើសរើសហាង --' : '-- Select Shop --'}
+                    error={!!merchantError}
+                    options={[
+                      { value: '', label: lang === 'km' ? '-- ជ្រើសរើសហាង --' : '-- Select Shop --' },
+                      ...merchants.map(m => ({
+                        value: String(m.id),
+                        label: `#${m.id} - ${m.nameKh ? `${m.nameKh} (${m.name})` : m.name}` + (m.phone ? ` (${m.phone})` : ''),
+                      })),
+                    ]}
+                  />
                 </div>
+                {merchantError && <div className="form-error-text">{merchantError}</div>}
               </div>
+
+              {merchantBranches.length > 0 && (
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label" style={{ fontWeight: 600 }}>
+                    🏢 {lang === 'km' ? 'សាខាយកអីវ៉ាន់' : 'Pickup Branch'}
+                  </label>
+                  <SearchableSelect
+                    value={selectedBranchId}
+                    onChange={setSelectedBranchId}
+                    style={{ height: 42, fontSize: 13.5, background: '#f0fdf4', borderColor: '#86efac' }}
+                    placeholder={lang === 'km' ? '-- ទីស្នាក់ការកណ្តាល (HQ) --' : '-- Main Store (HQ) --'}
+                    options={[
+                      { value: '', label: lang === 'km' ? '-- ទីស្នាក់ការកណ្តាល (HQ) --' : '-- Main Store (HQ) --' },
+                      ...merchantBranches.map((b: any) => ({
+                        value: String(b.id),
+                        label: `${b.name} ${b.code ? `[${b.code}]` : ''} ${b.isDefault ? `⭐ (${lang === 'km' ? 'ដើម' : 'Default'})` : ''}`,
+                      })),
+                    ]}
+                  />
+                </div>
+              )}
+
+              <DateInput
+                labelEn="Parcel Date"
+                labelKh="កាលបរិច្ឆេទបញ្ចូល"
+                value={parcelDate}
+                onChange={setParcelDate}
+              />
             </div>
           </div>
 
           {/* Grid list */}
-          <div className="card">
-            <div style={{ overflowX: 'auto', padding: '16px' }}>
-              <table style={{ minWidth: 1000 }}>
+          <div className="card" style={{ overflow: 'hidden' }}>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ minWidth: 1050, width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
-                  <tr>
-                    <th style={{ width: 50 }}>#</th>
-                    <th>{t('locationCol')} *</th>
-                    <th style={{ width: 180 }}>{t('receiverPhoneColRequired')} *</th>
-                    <th style={{ width: 110 }}>{t('currencyCol')} *</th>
-                    <th style={{ width: 150 }}>{t('codPodCol')} *</th>
-                    <th style={{ width: 180 }}>{t('pickupPerson')}</th>
-                    {entryType === 'delivery' && (
-                      <th style={{ width: 180 }}>{t('deliveryPerson')}</th>
-                    )}
-                    <th style={{ width: 160 }}>{t('note')}</th>
-                    <th style={{ width: 180, textAlign: 'center' }}>{t('actions')}</th>
+                  <tr style={{ background: '#2f55a5' }}>
+                    <th style={{ width: 45, padding: '12px 8px', textAlign: 'center', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'ល.រ' : 'No.'}</th>
+                    <th style={{ width: 180, padding: '12px 8px', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('receiverAddressCol')}</th>
+                    <th style={{ width: 130, padding: '12px 8px', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('receiverPhoneColRequired')}</th>
+                    <th style={{ width: 85, padding: '12px 8px', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('deliveryFee')}</th>
+                    <th style={{ width: 95, padding: '12px 8px', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('amountUSD')}</th>
+                    <th style={{ width: 105, padding: '12px 8px', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('amountKHR')}</th>
+                    <th style={{ width: 145, padding: '12px 8px', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('pickupPerson')}</th>
+                    <th style={{ width: 145, padding: '12px 8px', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('deliveryPerson')}</th>
+                    <th style={{ width: 120, padding: '12px 8px', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('note')}</th>
+                    <th style={{ width: 60, padding: '12px 8px', textAlign: 'center', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('actions')}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {rows.map((row, idx) => (
-                    <tr key={idx}>
-                      <td style={{ fontSize: 13, fontWeight: 'bold', color: 'var(--text-muted)' }}>{idx + 1}</td>
-                      <td>
+                    <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                      <td style={{ padding: '8px 6px', textAlign: 'center', fontSize: 13, fontWeight: 700, color: 'var(--text-muted)' }}>{idx + 1}</td>
+                      <td style={{ padding: '8px 6px' }}>
                         <input
                           type="text"
-                          className="form-control"
-                          placeholder="Address location"
+                          className={`form-control ${rowErrors[idx]?.receiverAddress ? 'is-invalid' : ''}`}
+                          placeholder={lang === 'km' ? 'ទីតាំង / អាសយដ្ឋាន' : 'Address location'}
                           value={row.receiverAddress}
                           onChange={e => handleRowChange(idx, 'receiverAddress', e.target.value)}
-                          required
+                          style={{ height: 38, fontSize: 13 }}
                         />
+                        {rowErrors[idx]?.receiverAddress && (
+                          <div className="form-error-text" style={{ fontSize: '11px', marginTop: '2px' }}>
+                            {rowErrors[idx].receiverAddress}
+                          </div>
+                        )}
                       </td>
-                      <td>
+                      <td style={{ padding: '8px 6px' }}>
                         <input
                           type="text"
-                          className="form-control"
-                          placeholder="e.g. 012345678"
+                          className={`form-control ${rowErrors[idx]?.receiverPhone ? 'is-invalid' : ''}`}
+                          placeholder={lang === 'km' ? 'ឧ. 012345678' : 'e.g. 012345678'}
                           value={row.receiverPhone}
                           onChange={e => handleRowChange(idx, 'receiverPhone', e.target.value)}
-                          required
+                          style={{ height: 38, fontSize: 13 }}
                         />
+                        {rowErrors[idx]?.receiverPhone && (
+                          <div className="form-error-text" style={{ fontSize: '11px', marginTop: '2px' }}>
+                            {rowErrors[idx].receiverPhone}
+                          </div>
+                        )}
                       </td>
-                      <td>
-                        <select
-                          className="form-control"
-                          value={row.codCurrency}
-                          onChange={e => handleRowChange(idx, 'codCurrency', e.target.value)}
-                          required
-                        >
-                          <option value="USD">USD</option>
-                          <option value="KHR">KHR</option>
-                        </select>
-                      </td>
-                      <td>
+                      <td style={{ padding: '8px 6px' }}>
                         <input
                           type="number"
-                          step={row.codCurrency === 'KHR' ? '100' : '0.01'}
+                          step="0.01"
                           min="0"
                           className="form-control"
-                          value={row.cod}
-                          onChange={e => handleRowChange(idx, 'cod', e.target.value)}
+                          value={row.deliveryFee}
+                          onChange={e => handleRowChange(idx, 'deliveryFee', e.target.value)}
                           required
+                          style={{ height: 38, fontSize: 13, textAlign: 'right' }}
                         />
                       </td>
-                      <td>
+                      <td style={{ padding: '8px 6px' }}>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          className="form-control"
+                          value={row.codUSD}
+                          onChange={e => handleRowChange(idx, 'codUSD', e.target.value)}
+                          required
+                          style={{ height: 38, fontSize: 13, textAlign: 'right' }}
+                        />
+                      </td>
+                      <td style={{ padding: '8px 6px' }}>
+                        <input
+                          type="number"
+                          step="100"
+                          min="0"
+                          className="form-control"
+                          value={row.codKHR}
+                          onChange={e => handleRowChange(idx, 'codKHR', e.target.value)}
+                          required
+                          style={{ height: 38, fontSize: 13, textAlign: 'right' }}
+                        />
+                      </td>
+                      <td style={{ padding: '8px 6px' }}>
                         <select
                           className="form-control"
                           value={row.pickupId}
                           onChange={e => handleRowChange(idx, 'pickupId', e.target.value)}
+                          style={{ height: 38, fontSize: 12.5 }}
                         >
-                          <option value="">— Select Driver —</option>
+                          <option value="">{lang === 'km' ? '— ជ្រើសរើសអ្នកដឹក —' : '— Select Driver —'}</option>
                           {drivers.map(d => (
                             <option key={d.id} value={d.id}>
-                              {d.name} {d.nameKh ? `(${d.nameKh})` : ''}
+                              {lang === 'km' ? (d.nameKh || d.name) : (d.name || d.nameKh)}
                             </option>
                           ))}
                         </select>
                       </td>
-                      {entryType === 'delivery' && (
-                        <td>
-                          <select
-                            className="form-control"
-                            value={row.driverId}
-                            onChange={e => handleRowChange(idx, 'driverId', e.target.value)}
-                          >
-                            <option value="">— Select Driver —</option>
-                            {drivers.map(d => (
-                              <option key={d.id} value={d.id}>
-                                {d.name} {d.nameKh ? `(${d.nameKh})` : ''}
-                              </option>
-                            ))}
-                          </select>
-                        </td>
-                      )}
-                      <td>
+                      <td style={{ padding: '8px 6px' }}>
+                        <select
+                          className="form-control"
+                          value={row.driverId}
+                          onChange={e => handleRowChange(idx, 'driverId', e.target.value)}
+                          style={{ height: 38, fontSize: 12.5 }}
+                        >
+                          <option value="">{lang === 'km' ? '— ជ្រើសរើសអ្នកដឹក —' : '— Select Driver —'}</option>
+                          {drivers.map(d => (
+                            <option key={d.id} value={d.id}>
+                              {lang === 'km' ? (d.nameKh || d.name) : (d.name || d.nameKh)}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                      <td style={{ padding: '8px 6px' }}>
                         <input
                           type="text"
                           className="form-control"
-                          placeholder="Note..."
+                          placeholder={lang === 'km' ? 'ចំណាំ...' : 'Note...'}
                           value={row.note}
                           onChange={e => handleRowChange(idx, 'note', e.target.value)}
+                          style={{ height: 38, fontSize: 13 }}
                         />
                       </td>
-                      <td>
-                        <div style={{ display: 'flex', gap: 8 }}>
-                          <button
-                            type="button"
-                            onClick={addRow}
-                            style={{
-                              background: 'var(--accent)',
-                              color: '#fff',
-                              border: 'none',
-                              borderRadius: 4,
-                              padding: '8px 12px',
-                              fontSize: 12,
-                              fontWeight: 'bold',
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: 4
-                            }}
-                          >
-                            {t('addNewBtn')}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => removeRow(idx)}
-                            disabled={rows.length === 1}
-                            style={{
-                              background: '#dc2626',
-                              color: '#fff',
-                              border: 'none',
-                              borderRadius: 4,
-                              padding: '8px',
-                              cursor: rows.length === 1 ? 'not-allowed' : 'pointer',
-                              opacity: rows.length === 1 ? 0.5 : 1,
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center'
-                            }}
-                          >
-                            <MdDelete size={16} />
-                          </button>
-                        </div>
+                      <td style={{ padding: '8px 6px', textAlign: 'center' }}>
+                        <button
+                          type="button"
+                          onClick={() => removeRow(idx)}
+                          disabled={rows.length === 1}
+                          title={lang === 'km' ? 'លុបជួរនេះ' : 'Delete Row'}
+                          style={{
+                            background: '#fee2e2',
+                            color: '#dc2626',
+                            border: '1px solid #fecaca',
+                            borderRadius: 8,
+                            padding: '8px 10px',
+                            cursor: rows.length === 1 ? 'not-allowed' : 'pointer',
+                            opacity: rows.length === 1 ? 0.4 : 1,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            transition: 'all 0.15s'
+                          }}
+                        >
+                          <MdDelete size={16} />
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -343,27 +463,69 @@ export default function BatchEntryPage() {
               </table>
             </div>
 
-            {/* Save Button */}
-            <div style={{ padding: '20px 16px', display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid var(--border)' }}>
-              <button
-                type="button"
-                onClick={handleSaveBatch}
-                disabled={saving}
-                style={{
-                  background: 'var(--accent)',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: 6,
-                  padding: '12px 28px',
-                  fontWeight: 'bold',
-                  cursor: 'pointer',
-                  fontSize: 14,
-                  boxShadow: '0 4px 6px rgba(47, 85, 165, 0.2)',
-                  transition: 'opacity 0.2s'
-                }}
-              >
-                {saving ? t('savingBatch') : t('save')}
-              </button>
+            {/* Footer summary & actions */}
+            <div style={{
+              padding: '16px 20px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: 12,
+              borderTop: '1px solid var(--border)',
+              background: 'var(--bg-card)'
+            }}>
+              {/* Left metrics */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)' }}>
+                  📦 {rows.length} {lang === 'km' ? 'កញ្ចប់' : 'parcels'}
+                </span>
+                {(totalCodUSD > 0 || totalCodKHR > 0) && (
+                  <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--accent)', background: 'var(--accent-light)', padding: '3px 10px', borderRadius: 8 }}>
+                    💰 COD: {totalCodUSD > 0 ? `$${totalCodUSD.toFixed(2)}` : ''} {totalCodUSD > 0 && totalCodKHR > 0 ? ' | ' : ''} {totalCodKHR > 0 ? `${totalCodKHR.toLocaleString()} ៛` : ''}
+                  </span>
+                )}
+              </div>
+
+              {/* Center & Right buttons */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <button
+                  type="button"
+                  className="btn btn-outline"
+                  onClick={addRow}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    padding: '8px 18px',
+                    fontSize: 13.5,
+                    fontWeight: 600,
+                    borderRadius: 8,
+                  }}
+                >
+                  <MdAdd size={18} /> {lang === 'km' ? 'បន្ថែមជួរថ្មី' : t('addNewBtn')}
+                </button>
+
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={handleSaveBatch}
+                  disabled={saving}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    padding: '8px 24px',
+                    fontSize: 13.5,
+                    fontWeight: 700,
+                    borderRadius: 8,
+                    minHeight: 38,
+                    boxShadow: '0 4px 12px rgba(47, 85, 165, 0.25)',
+                  }}
+                >
+                  <MdSave size={18} />
+                  {saving ? (lang === 'km' ? 'កំពុងរក្សាទុក...' : t('savingBatch')) : (lang === 'km' ? 'រក្សាទុកទាំងអស់' : t('save'))}
+                </button>
+              </div>
             </div>
           </div>
         </div>

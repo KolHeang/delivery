@@ -3,20 +3,16 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-      # Add this to speed up subsequent builds
+      # បន្ថែម args នៅទីនេះដើម្បីបញ្ជូនទិន្នន័យពេល Build
+      args:
+        - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
       cache_from:
         - next-app:latest
     container_name: delivery-frontend
     ports:
       - "3000:3000"
     environment:
-      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
       - PORT=3000
-      - NODE_ENV=development
-      - WATCHPACK_POLLING=true # Helps HMR work better in Docker on some OSs
-    volumes:
-      - .:/app
-      - /app/node_modules
-      - /app/.next
-    # Ensures the container doesn't hog resources if it keeps crashing
+      # បងអាចទុកវានៅទីនេះមួយទៀតក៏បាន ដើម្បីសុវត្ថិភាព
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL} 
     restart: unless-stopped

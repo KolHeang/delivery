@@ -7,7 +7,9 @@ import Sidebar from '@/components/layout/Sidebar';
 import Topbar from '@/components/layout/Topbar';
 import api from '@/lib/api';
 import { useLanguage } from '@/lib/LanguageContext';
+import DateInput, { formatDateToDDMMYYYY } from '@/components/ui/DateInput';
 import { MdPrint, MdSearch, MdArrowBack } from 'react-icons/md';
+import ReportHeader from '@/components/ui/ReportHeader';
 
 interface Row {
   id: number; trackingCode: string; driver: string; shopName: string;
@@ -27,7 +29,7 @@ const statusBadge = (status: string) => {
 export default function Rpt1Page() {
   const router = useRouter();
   const { t } = useLanguage();
-  const [startDate, setStartDate] = useState(() => { const d = new Date(); d.setDate(1); return d.toISOString().split('T')[0]; });
+  const [startDate, setStartDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [endDate, setEndDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [driverFilter, setDriverFilter] = useState('');
   const [merchantFilter, setMerchantFilter] = useState('');
@@ -64,12 +66,7 @@ export default function Rpt1Page() {
       <div className="main-content">
         <Topbar title={t('rpt1Title')} subtitle={t('operationReportTitle')} />
         <div className="page-content">
-          {/* Print header */}
-          <div className="print-only" style={{ marginBottom: 20, paddingBottom: 10, borderBottom: '2px solid #000', textAlign: 'center' }}>
-            <h1 style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>EBS Digital Solutions</h1>
-            <h2 style={{ fontSize: 14, margin: '4px 0 0' }}>{t('rpt1Title')}</h2>
-            <p style={{ fontSize: 11, margin: '4px 0 0', color: '#64748b' }}>{t('startDate')}: {startDate} — {t('endDate')}: {endDate}</p>
-          </div>
+          <ReportHeader title={t('rpt1Title')} startDate={startDate} endDate={endDate} />
 
           {/* Back */}
           <div className="no-print" style={{ marginBottom: 14 }}>
@@ -82,14 +79,20 @@ export default function Rpt1Page() {
           <div className="card no-print" style={{ marginBottom: 18, padding: '14px 18px' }}>
             <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 12 }}>{t('rpt1Title')}</div>
             <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', alignItems: 'flex-end' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)' }}>{t('startDate')}</span>
-                <input type="date" className="form-control" value={startDate} onChange={e => setStartDate(e.target.value)} style={{ minWidth: 140 }} />
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)' }}>{t('endDate')}</span>
-                <input type="date" className="form-control" value={endDate} onChange={e => setEndDate(e.target.value)} style={{ minWidth: 140 }} />
-              </div>
+              <DateInput
+                labelEn="Start Date"
+                labelKh="ចាប់ពីថ្ងៃ"
+                value={startDate}
+                onChange={setStartDate}
+                style={{ minWidth: 210 }}
+              />
+              <DateInput
+                labelEn="End Date"
+                labelKh="ដល់"
+                value={endDate}
+                onChange={setEndDate}
+                style={{ minWidth: 210 }}
+              />
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                 <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)' }}>{t('colDriver')}</span>
                 <select className="form-control" value={driverFilter} onChange={e => setDriverFilter(e.target.value)} style={{ minWidth: 170 }}>
@@ -104,7 +107,7 @@ export default function Rpt1Page() {
                   {merchants.map((m: any) => <option key={m.id} value={m.id}>{m.name}</option>)}
                 </select>
               </div>
-              <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', marginLeft: 'auto' }}>
                 <button className="btn btn-primary" onClick={load} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                   <MdSearch size={16} /> {t('filterBtn')}
                 </button>
@@ -138,10 +141,14 @@ export default function Rpt1Page() {
                           <td style={{ fontSize: 12 }}>{r.shopName}</td>
                           <td style={{ fontSize: 12 }}>{r.receiverPhone}</td>
                           <td style={{ fontSize: 12 }}>{r.location}</td>
-                          <td style={{ fontSize: 12 }}>{r.date}</td>
+                          <td style={{ fontSize: 12 }}>{formatDateToDDMMYYYY(r.date)}</td>
                           <td>{statusBadge(r.status)}</td>
                           <td style={{ fontSize: 12 }}>{r.currency}</td>
-                          <td style={{ fontWeight: 600 }}>${(r.codAmount || 0).toFixed(2)}</td>
+                          <td style={{ fontWeight: 600 }}>
+                            {(r.currency || 'USD') === 'USD'
+                              ? `$${(r.codAmount || 0).toFixed(2)}`
+                              : `${(r.codAmount || 0).toLocaleString()} ៛`}
+                          </td>
                           <td style={{ color: 'var(--success)' }}>${(r.deliveryFee || 0).toFixed(2)}</td>
                           <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>{r.note}</td>
                         </tr>
@@ -150,7 +157,20 @@ export default function Rpt1Page() {
                     {rows.length > 0 && (
                       <tr style={{ background: 'var(--bg-secondary)', fontWeight: 700 }}>
                         <td colSpan={9} style={{ textAlign: 'right' }}>{t('totalRow')}</td>
-                        <td>${rows.reduce((s, r) => s + (r.codAmount || 0), 0).toFixed(2)}</td>
+                        <td>
+                          {(() => {
+                            const usdSum = rows.filter(r => (r.currency || 'USD') === 'USD').reduce((s, r) => s + (r.codAmount || 0), 0);
+                            const khrSum = rows.filter(r => r.currency === 'KHR').reduce((s, r) => s + (r.codAmount || 0), 0);
+                            return (
+                              <>
+                                {usdSum > 0 && `$${usdSum.toFixed(2)}`}
+                                {usdSum > 0 && khrSum > 0 && ' / '}
+                                {khrSum > 0 && `${khrSum.toLocaleString()} ៛`}
+                                {usdSum === 0 && khrSum === 0 && '$0.00'}
+                              </>
+                            );
+                          })()}
+                        </td>
                         <td style={{ color: 'var(--success)' }}>${rows.reduce((s, r) => s + (r.deliveryFee || 0), 0).toFixed(2)}</td>
                         <td></td>
                       </tr>

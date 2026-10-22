@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { Zone } from './zone.entity';
-import { SubZone } from './subzone.entity';
+import { Zone } from './entities/zone.entity';
+import { SubZone } from './entities/subzone.entity';
 import { ZonesService } from './zones.service';
 import { ZonesController } from './zones.controller';
 

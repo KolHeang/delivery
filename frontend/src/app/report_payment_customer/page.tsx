@@ -1,0 +1,477 @@
+'use client';
+
+import { useEffect, useState, useRef } from 'react';
+import api from '@/lib/api';
+import { formatDateToDDMMYYYY } from '@/components/ui/DateInput';
+import { useSettings } from '@/lib/SettingsContext';
+import { useTenant } from '@/lib/TenantContext';
+
+const getKhmerDateString = (date: Date = new Date()) => {
+  const days = ['អាទិត្យ', 'ចន្ទ', 'អង្គារ', 'ពុធ', 'ព្រហស្បតិ៍', 'សុក្រ', 'សៅរ៍'];
+  const months = [
+    'មករា', 'កម្ភៈ', 'មីនា', 'មេសា', 'ឧសភា', 'មិថុនា',
+    'កក្កដា', 'សីហា', 'កញ្ញា', 'តុលា', 'វិច្ឆិកា', 'ធ្នូ'
+  ];
+  const khmerNums = ['០', '១', '២', '៣', '៤', '៥', '៦', '៧', '៨', '៩'];
+  const toKhmerNum = (num: number) => {
+    return String(num).split('').map(char => {
+      const idx = parseInt(char);
+      return isNaN(idx) ? char : khmerNums[idx];
+    }).join('');
+  };
+
+  const dayName = days[date.getDay()];
+  const day = toKhmerNum(date.getDate());
+  const monthName = months[date.getMonth()];
+  const year = toKhmerNum(date.getFullYear());
+
+  return `ថ្ងៃ ${dayName} ទី ${day} ខែ ${monthName} ឆ្នាំ ${year}`;
+};
+
+export default function ReportPaymentCustomerPage() {
+  const { khrRate } = useSettings();
+  const { tenant } = useTenant();
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const hasAutoPrintedRef = useRef(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('token');
+    const clientId = params.get('client_id');
+    const reference = params.get('reference');
+
+    if (!token && (!clientId || !reference)) {
+      setError('ខ្វះប៉ារ៉ាម៉ែត្រក្នុង URL (Missing token or credentials)');
+      setLoading(false);
+      return;
+    }
+
+    const queryUrl = token
+      ? `/payments/public/invoice?token=${encodeURIComponent(token)}`
+      : `/payments/public/invoice?client_id=${clientId}&reference=${reference}`;
+
+    api.get(queryUrl)
+      .then((res) => {
+        setData(res.data);
+      })
+      .catch((err) => {
+        console.error('Error fetching public payment invoice:', err);
+        setError('រកមិនឃើញរបាយការណ៍ទូទាត់ប្រាក់ទេ (Payment settlement report not found)');
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  }, []);
+
+  useEffect(() => {
+    if (!loading && data && !error && !hasAutoPrintedRef.current) {
+      hasAutoPrintedRef.current = true;
+      const timer = setTimeout(() => {
+        window.print();
+      }, 700);
+      return () => clearTimeout(timer);
+    }
+  }, [loading, data, error]);
+
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', background: '#f3f4f6' }}>
+        <div style={{ width: '40px', height: '40px', border: '4px solid #d1d5db', borderTopColor: '#2563eb', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+        <style dangerouslySetInnerHTML={{ __html: `@keyframes spin { to { transform: rotate(360deg); } }` }} />
+      </div>
+    );
+  }
+
+  if (error || !data) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', background: '#f3f4f6', fontFamily: 'Kantumruy Pro, sans-serif' }}>
+        <div style={{ background: '#fff', padding: '30px', borderRadius: '8px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)', textAlign: 'center', maxWidth: '400px' }}>
+          <div style={{ fontSize: '48px', marginBottom: '16px' }}>⚠️</div>
+          <h3 style={{ fontSize: '18px', fontWeight: 'bold', color: '#dc2626', marginBottom: '8px' }}>មានកំហុស</h3>
+          <p style={{ color: '#4b5563', fontSize: '14px' }}>{error}</p>
+        </div>
+      </div>
+    );
+  }
+
+  const parcels = data.parcels || data.orders || [];
+  const orders = parcels;
+  const payment = data.payment;
+  const orgInfo = data.orgInfo || {};
+  const merchant = payment?.merchant;
+
+  const dynamicLogo = orgInfo.logo || orgInfo.logoUrl || data.tenant?.logo || data.tenant?.logoUrl || tenant?.logoUrl;
+
+  const getDynamicCompanyName = () => {
+    if (orgInfo.name && orgInfo.name !== 'Delivery Express' && orgInfo.name !== 'EBS Digital Solutions') {
+      return orgInfo.name;
+    }
+    if (data.tenant?.name) return data.tenant.name;
+    if (tenant?.companyName) return tenant.companyName;
+    if (typeof window !== 'undefined') {
+      const hostname = window.location.hostname;
+      const parts = hostname.split('.');
+      if (parts.length > 1 && parts[0] !== 'www' && parts[0] !== 'localhost') {
+        return parts[0]
+          .split('-')
+          .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+          .join(' ');
+      }
+    }
+    return orgInfo.name || 'Delivery Express';
+  };
+
+  const dynamicCompanyName = getDynamicCompanyName();
+  const dynamicAddress = orgInfo.address || data.tenant?.address || tenant?.address || 'Phnom Penh, Cambodia';
+  const dynamicPhone = orgInfo.phone || data.tenant?.phone || tenant?.phone || '012345676';
+
+  const deliveredOrders = orders.filter((o: any) => o.status === 'delivered');
+  const inTransitOrders = orders.filter((o: any) => o.status === 'in-transit' || o.status === 'picked-up' || o.status === 'pending' || o.status === 'failed');
+  const returnedOrders = orders.filter((o: any) => o.status === 'returned');
+
+  const delUSD = deliveredOrders.filter((o: any) => o.codCurrency === 'USD').reduce((sum: number, o: any) => sum + parseFloat(o.cod || 0), 0);
+  const delKHR = deliveredOrders.filter((o: any) => o.codCurrency === 'KHR').reduce((sum: number, o: any) => sum + parseFloat(o.cod || 0), 0);
+  const delFee = deliveredOrders.reduce((sum: number, o: any) => sum + parseFloat(o.deliveryFee || 0), 0);
+
+  const customerRate = merchant ? parseFloat(merchant.exchangeRate as any || (khrRate || 4100)) : (khrRate || 4100);
+  const payableUSD = Math.max(0, delUSD - delFee);
+  const remainingUSD = Math.max(0, delFee - delUSD);
+  const payableKHR = Math.max(0, delKHR - (remainingUSD * customerRate));
+
+  const formattedDate = payment.date ? formatDateToDDMMYYYY(payment.date) : formatDateToDDMMYYYY(new Date().toISOString());
+
+  return (
+    <div className="receipt-page-wrapper" style={{ background: '#94a3b8', minHeight: '100vh', padding: '40px 20px', display: 'flex', justifyContent: 'center', alignItems: 'flex-start', boxSizing: 'border-box' }}>
+      <style dangerouslySetInnerHTML={{ __html: `
+        @page {
+          size: auto;
+          margin: 0mm;
+        }
+        @media print {
+          @page {
+            size: auto;
+            margin: 0mm;
+          }
+          body, .receipt-page-wrapper {
+            background: #ffffff !important;
+            padding: 0 !important;
+            margin: 0 !important;
+          }
+          .receipt-card {
+            box-shadow: none !important;
+            padding: 15px 20px !important;
+            max-width: 100% !important;
+            width: 100% !important;
+          }
+          th, td, tr, img {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+        }
+        @media screen and (max-width: 768px) {
+          .receipt-page-wrapper {
+            padding: 10px 6px !important;
+          }
+          .receipt-card {
+            padding: 24px 16px !important;
+            border-radius: 6px !important;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1) !important;
+          }
+          .receipt-header {
+            flex-direction: column !important;
+            align-items: center !important;
+            text-align: center !important;
+            gap: 16px !important;
+            border-bottom: 2px solid #e2e8f0 !important;
+            padding-bottom: 16px !important;
+          }
+          .receipt-header-left, .receipt-header-center, .receipt-header-right {
+            text-align: center !important;
+            width: 100% !important;
+            flex: none !important;
+          }
+          .receipt-header-left {
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: center !important;
+          }
+          .receipt-table-container {
+            width: 100% !important;
+            overflow-x: auto !important;
+            -webkit-overflow-scrolling: touch !important;
+            margin-top: 12px !important;
+            border: 1px solid #dee2e6 !important;
+            border-radius: 4px !important;
+          }
+          .receipt-table-container table {
+            min-width: 680px !important;
+            margin-top: 0 !important;
+          }
+          .receipt-signatures {
+            flex-direction: column !important;
+            gap: 32px !important;
+            align-items: center !important;
+            padding-left: 0 !important;
+            padding-right: 0 !important;
+          }
+        }
+      `}} />
+
+      <div className="receipt-card" style={{
+        background: '#ffffff',
+        width: '100%',
+        maxWidth: '800px',
+        padding: '40px 48px',
+        boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+        boxSizing: 'border-box',
+        fontFamily: 'Kantumruy Pro, Inter, sans-serif'
+      }}>
+        {/* Header Section */}
+        <div className="receipt-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20, borderBottom: '2px solid #000', paddingBottom: 15 }}>
+          {/* Left: Company Details */}
+          <div className="receipt-header-left" style={{ fontSize: 11, lineHeight: '1.6', flex: 1 }}>
+            <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 6 }}>
+              {dynamicLogo ? (
+                <img 
+                  src={dynamicLogo} 
+                  alt="Logo" 
+                  style={{ 
+                    width: 42, 
+                    height: 42, 
+                    borderRadius: 8, 
+                    objectFit: 'contain',
+                    flexShrink: 0,
+                    WebkitPrintColorAdjust: 'exact',
+                    printColorAdjust: 'exact'
+                  }} 
+                />
+              ) : (
+                <div style={{
+                  width: 36, height: 36, borderRadius: 10,
+                  background: 'linear-gradient(135deg, #2563eb, #6366f1)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  color: '#fff', fontSize: 18, boxShadow: '0 4px 10px rgba(37,99,235,0.2)',
+                  flexShrink: 0,
+                  WebkitPrintColorAdjust: 'exact',
+                  printColorAdjust: 'exact'
+                }}>
+                  📦
+                </div>
+              )}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ fontSize: 18, fontWeight: 800, color: '#1e3a8a', letterSpacing: '0.5px', lineHeight: 1.1, WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
+                  {dynamicCompanyName}
+                </span>
+              </div>
+            </div>
+            <div><strong>អាសយដ្ឋាន៖</strong> {dynamicAddress}</div>
+            <div><strong>ទូរស័ព្ទ៖</strong> {dynamicPhone}</div>
+          </div>
+
+          {/* Center: Title */}
+          <div className="receipt-header-center" style={{ textAlign: 'center', alignSelf: 'center', flex: 1.2 }}>
+            <h2 style={{ margin: 0, fontSize: 18, fontWeight: 'bold', fontFamily: 'Kantumruy Pro, sans-serif', color: '#000' }}>
+              របាយការណ៍ទូទាត់ប្រចាំថ្ងៃ
+            </h2>
+          </div>
+
+          {/* Right: Merchant Details */}
+          <div className="receipt-header-right" style={{ fontSize: 11, textAlign: 'right', lineHeight: '1.6', flex: 1 }}>
+            <div><strong>ឈ្មោះហាង៖</strong> <span style={{ fontStyle: 'italic', fontWeight: 'bold' }}>{merchant.nameKh || merchant.name}</span></div>
+            <div><strong>ទូរស័ព្ទ៖</strong> {merchant.phone || '—'}</div>
+            <div><strong>កាលបរិច្ឆេទ៖</strong> {formattedDate}</div>
+          </div>
+        </div>
+
+        {/* Table of Orders wrapper */}
+        <div className="receipt-table-container">
+          <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 16, fontSize: 11 }}>
+            <thead>
+              <tr style={{ backgroundColor: '#244f96', color: '#fff', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
+                <th rowSpan={2} style={{ padding: '6px 4px', textAlign: 'center', border: '1px solid #000', fontWeight: 'bold', color: '#fff', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>ល.រ</th>
+                <th colSpan={2} style={{ padding: '6px 4px', textAlign: 'center', border: '1px solid #000', fontWeight: 'bold', color: '#fff', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>កាលបរិច្ឆេទ</th>
+                <th rowSpan={2} style={{ padding: '6px 4px', textAlign: 'center', border: '1px solid #000', fontWeight: 'bold', color: '#fff', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>លេខកូដ</th>
+                <th rowSpan={2} style={{ padding: '6px 4px', textAlign: 'center', border: '1px solid #000', fontWeight: 'bold', color: '#fff', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>លេខអ្នកទទួល</th>
+                <th rowSpan={2} style={{ padding: '6px 4px', textAlign: 'center', border: '1px solid #000', fontWeight: 'bold', color: '#fff', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>អាសយដ្ឋាន</th>
+                <th colSpan={2} style={{ padding: '6px 4px', textAlign: 'center', border: '1px solid #000', fontWeight: 'bold', color: '#fff', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>ទឹកប្រាក់ដើមមាន<br/>(ដុល្លារ / ខ្មែរ)</th>
+                <th rowSpan={2} style={{ padding: '6px 4px', textAlign: 'center', border: '1px solid #000', fontWeight: 'bold', color: '#fff', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>សេវាដឹក</th>
+                <th rowSpan={2} style={{ padding: '6px 4px', textAlign: 'center', border: '1px solid #000', fontWeight: 'bold', color: '#fff', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>ផ្សេងៗ</th>
+              </tr>
+              <tr style={{ backgroundColor: '#3060a8', color: '#fff', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
+                <th style={{ border: '1px solid #000', padding: '2px', fontSize: '9px', fontWeight: 'normal', textAlign: 'center', color: '#fff', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>បង្កើតវិក្កយបត្រ</th>
+                <th style={{ border: '1px solid #000', padding: '2px', fontSize: '9px', fontWeight: 'normal', textAlign: 'center', color: '#fff', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>បញ្ចប់វិក្កយបត្រ</th>
+                <th style={{ border: '1px solid #000', padding: '2px', fontSize: '9px', fontWeight: 'normal', textAlign: 'center', color: '#fff', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>ដុល្លារ</th>
+                <th style={{ border: '1px solid #000', padding: '2px', fontSize: '9px', fontWeight: 'normal', textAlign: 'center', color: '#fff', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>ខ្មែរ</th>
+              </tr>
+            </thead>
+            <tbody>
+              {/* Delivered Section */}
+              {deliveredOrders.length > 0 && (
+                <>
+                  <tr>
+                    <td colSpan={10} style={{ backgroundColor: '#10b981', color: '#fff', fontWeight: 'bold', padding: '7px 10px', border: '1px solid #000', fontSize: 12, WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
+                      អីវ៉ាន់ដែលបានជោគជ័យ ({deliveredOrders.length} កញ្ចប់)
+                    </td>
+                  </tr>
+                  {deliveredOrders.map((o: any, idx: number) => {
+                    const isUSD = o.codCurrency === 'USD';
+                    const codVal = parseFloat(o.cod || 0);
+                    return (
+                      <tr key={o.id}>
+                        <td style={{ textAlign: 'center', padding: '6px 4px', border: '1px solid #000' }}>{idx + 1}</td>
+                        <td style={{ padding: '6px 4px', border: '1px solid #000', textAlign: 'center' }}>{formatDateToDDMMYYYY(o.createdAt)}</td>
+                        <td style={{ padding: '6px 4px', border: '1px solid #000', textAlign: 'center' }}>{o.deliveredAt ? formatDateToDDMMYYYY(o.deliveredAt) : '—'}</td>
+                        <td style={{ padding: '6px 4px', border: '1px solid #000' }}>{o.trackingCode}</td>
+                        <td style={{ padding: '6px 4px', border: '1px solid #000' }}>{o.receiverPhone || '—'}</td>
+                        <td style={{ padding: '6px 4px', border: '1px solid #000' }}>{o.receiverAddress || '—'}</td>
+                        <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000' }}>{isUSD ? `$ ${codVal.toFixed(2)}` : '$ 0'}</td>
+                        <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000' }}>{!isUSD ? `${codVal.toLocaleString()} ៛` : '0 ៛'}</td>
+                        <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000' }}>$ {parseFloat(o.deliveryFee || 0).toFixed(2)}</td>
+                        <td style={{ padding: '6px 4px', border: '1px solid #000', textAlign: 'center' }}></td>
+                      </tr>
+                    );
+                  })}
+                  <tr>
+                    <td colSpan={6} style={{ textAlign: 'right', fontWeight: 'bold', padding: '6px 4px', border: '1px solid #000' }}>សរុប</td>
+                    <td style={{ textAlign: 'right', fontWeight: 'bold', padding: '6px 4px', border: '1px solid #000' }}>$ {delUSD.toFixed(2)}</td>
+                    <td style={{ textAlign: 'right', fontWeight: 'bold', padding: '6px 4px', border: '1px solid #000' }}>{delKHR.toLocaleString()} រៀល</td>
+                    <td style={{ textAlign: 'right', fontWeight: 'bold', padding: '6px 4px', border: '1px solid #000' }}>$ {delFee.toFixed(2)}</td>
+                    <td style={{ border: '1px solid #000' }}></td>
+                  </tr>
+                </>
+              )}
+
+              {/* In Transit / Failed Section */}
+              {inTransitOrders.length > 0 && (
+                <>
+                  <tr>
+                    <td colSpan={10} style={{ backgroundColor: '#f59e0b', color: '#000', fontWeight: 'bold', padding: '7px 10px', border: '1px solid #000', fontSize: 12, WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
+                      អីវ៉ាន់ដឹកបន្ត ({inTransitOrders.length} កញ្ចប់)
+                    </td>
+                  </tr>
+                  {inTransitOrders.map((o: any, idx: number) => {
+                    const isUSD = o.codCurrency === 'USD';
+                    const codVal = parseFloat(o.cod || 0);
+
+                    // Get Khmer status translation
+                    let statusLabel = '';
+                    if (o.status === 'failed') {
+                      statusLabel = 'មិនជោគជ័យ';
+                    } else if (o.status === 'pending') {
+                      statusLabel = 'រង់ចាំ';
+                    } else if (o.status === 'picked-up') {
+                      statusLabel = 'ក្នុងឃ្លាំង';
+                    } else {
+                      statusLabel = 'កំពុងដឹក';
+                    }
+
+                    const latestNote = o.histories
+                      ?.slice()
+                      .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                      .find((h: any) => h.note)?.note || o.note || statusLabel;
+
+                    return (
+                      <tr key={o.id}>
+                        <td style={{ textAlign: 'center', padding: '6px 4px', border: '1px solid #000' }}>{idx + 1}</td>
+                        <td style={{ padding: '6px 4px', border: '1px solid #000', textAlign: 'center' }}>{formatDateToDDMMYYYY(o.createdAt)}</td>
+                        <td style={{ padding: '6px 4px', border: '1px solid #000', textAlign: 'center' }}>{o.deliveredAt ? formatDateToDDMMYYYY(o.deliveredAt) : '—'}</td>
+                        <td style={{ padding: '6px 4px', border: '1px solid #000' }}>{o.trackingCode}</td>
+                        <td style={{ padding: '6px 4px', border: '1px solid #000' }}>{o.receiverPhone || '—'}</td>
+                        <td style={{ padding: '6px 4px', border: '1px solid #000' }}>{o.receiverAddress || '—'}</td>
+                        <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000' }}>{isUSD ? `$ ${codVal.toFixed(2)}` : '$ 0'}</td>
+                        <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000' }}>{!isUSD ? `${codVal.toLocaleString()} ៛` : '0'}</td>
+                        <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000' }}>$ {parseFloat(o.deliveryFee || 0).toFixed(2)}</td>
+                        <td style={{ padding: '6px 4px', border: '1px solid #000', textAlign: 'center' }}>{latestNote}</td>
+                      </tr>
+                    );
+                  })}
+                </>
+              )}
+
+              {/* Returned Section */}
+              {returnedOrders.length > 0 && (
+                <>
+                  <tr>
+                    <td colSpan={10} style={{ backgroundColor: '#ef4444', color: '#fff', fontWeight: 'bold', padding: '7px 10px', border: '1px solid #000', fontSize: 12, WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
+                      អីវ៉ាន់ត្រឡប់ទៅហាង (Return) ({returnedOrders.length} កញ្ចប់)
+                    </td>
+                  </tr>
+                  {returnedOrders.map((o: any, idx: number) => {
+                    const isUSD = o.codCurrency === 'USD';
+                    const codVal = parseFloat(o.cod || 0);
+                    const latestNote = o.histories
+                      ?.slice()
+                      .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                      .find((h: any) => h.note)?.note || o.note || 'ត្រឡប់';
+                    return (
+                      <tr key={o.id} style={{ background: '#fff5f5' }}>
+                        <td style={{ textAlign: 'center', padding: '6px 4px', border: '1px solid #000' }}>{idx + 1}</td>
+                        <td style={{ padding: '6px 4px', border: '1px solid #000', textAlign: 'center' }}>{formatDateToDDMMYYYY(o.createdAt)}</td>
+                        <td style={{ padding: '6px 4px', border: '1px solid #000', textAlign: 'center' }}>{o.deliveredAt ? formatDateToDDMMYYYY(o.deliveredAt) : '—'}</td>
+                        <td style={{ padding: '6px 4px', border: '1px solid #000' }}>{o.trackingCode}</td>
+                        <td style={{ padding: '6px 4px', border: '1px solid #000' }}>{o.receiverPhone || '—'}</td>
+                        <td style={{ padding: '6px 4px', border: '1px solid #000' }}>{o.receiverAddress || '—'}</td>
+                        <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000' }}>{isUSD ? `$ ${codVal.toFixed(2)}` : '$ 0'}</td>
+                        <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000' }}>{!isUSD ? `${codVal.toLocaleString()} ៛` : '0 ៛'}</td>
+                        <td style={{ textAlign: 'right', padding: '6px 4px', border: '1px solid #000' }}>$ 0.00</td>
+                        <td style={{ padding: '6px 4px', border: '1px solid #000', textAlign: 'left', color: '#ef4444', fontSize: 10 }}>{latestNote}</td>
+                      </tr>
+                    );
+                  })}
+                </>
+              )}
+
+              {deliveredOrders.length === 0 && inTransitOrders.length === 0 && returnedOrders.length === 0 && (
+                <tr>
+                  <td colSpan={10} style={{ textAlign: 'center', padding: '12px', border: '1px solid #000', color: '#6b7280' }}>
+                    គ្មានទិន្នន័យ
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Financial Summaries Box */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', marginTop: 20 }}>
+          <table style={{ borderCollapse: 'collapse', fontSize: 11, width: '280px', border: '1px solid #000' }}>
+            <tbody>
+              <tr>
+                <td style={{ padding: '6px 12px', border: '1px solid #000', textAlign: 'right' }}>ប្រាក់សរុប</td>
+                <td style={{ padding: '6px 12px', border: '1px solid #000', fontWeight: 'bold', textAlign: 'right' }}>$ {delUSD.toFixed(2)} / {delKHR.toLocaleString()} រៀល</td>
+              </tr>
+              <tr>
+                <td style={{ padding: '6px 12px', border: '1px solid #000', textAlign: 'right' }}>សេវាដឹក</td>
+                <td style={{ padding: '6px 12px', border: '1px solid #000', fontWeight: 'bold', textAlign: 'right' }}>$ {delFee.toFixed(2)}</td>
+              </tr>
+              <tr>
+                <td style={{ padding: '6px 12px', border: '1px solid #000', textAlign: 'right' }}>ប្រាក់ត្រូវទទួលបាន</td>
+                <td style={{ padding: '6px 12px', border: '1px solid #000', fontWeight: 'bold', color: '#dc2626', textAlign: 'right' }}>$ {payableUSD.toFixed(2)} / {payableKHR.toLocaleString()} រៀល</td>
+              </tr>
+            </tbody>
+          </table>
+
+          {/* Localized Khmer Date */}
+          <div style={{ marginTop: 8, fontSize: 11, fontWeight: 'bold', fontStyle: 'italic', color: '#000' }}>
+            {getKhmerDateString(payment.date ? new Date(payment.date) : new Date())}
+          </div>
+        </div>
+
+        {/* Signatures Section */}
+        <div className="receipt-signatures" style={{ marginTop: 40, display: 'flex', justifyContent: 'space-between', paddingLeft: 20, paddingRight: 20 }}>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: 11, fontWeight: 'bold', marginBottom: 50 }}>តំណាងហាង</div>
+            <div style={{ fontSize: 11, color: '#000' }}>..........................................</div>
+          </div>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: 11, fontWeight: 'bold', marginBottom: 50 }}>គណនេយ្យករ</div>
+            <div style={{ fontSize: 11, color: '#000' }}>..........................................</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  );
+}

@@ -1,4 +1,6 @@
 import { Module } from '@nestjs/common';
+import { APP_INTERCEPTOR, APP_GUARD } from '@nestjs/core';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { typeOrmConfig } from './config/typeorm.config';
@@ -9,7 +11,7 @@ import { VehiclesModule } from './vehicles/vehicles.module';
 import { DriversModule } from './drivers/drivers.module';
 import { CustomersModule } from './customers/customers.module';
 import { MerchantsModule } from './merchants/merchants.module';
-import { OrdersModule } from './orders/orders.module';
+import { ParcelsModule } from './parcels/parcels.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { ReportsModule } from './reports/reports.module';
 import { ExpensesModule } from './expenses/expenses.module';
@@ -19,6 +21,14 @@ import { SettingsModule } from './settings/settings.module';
 import { MobileModule } from './mobile/mobile.module';
 import { InvoicesModule } from './invoices/invoices.module';
 import { RolesModule } from './roles/roles.module';
+import { ActivityLogsModule } from './activity-logs/activity-logs.module';
+import { ActivityLogInterceptor } from './activity-logs/activity-log.interceptor';
+import { SelectModule } from './select/select.module';
+import { SaasModule } from './saas/saas.module';
+import { SeedModule } from './seed/seed.module';
+import { TelegramModule } from './telegram/telegram.module';
+import { TrackingModule } from './tracking/tracking.module';
+import { FirebaseModule } from './firebase/firebase.module';
 
 @Module({
   imports: [
@@ -35,7 +45,7 @@ import { RolesModule } from './roles/roles.module';
     DriversModule,
     CustomersModule,
     MerchantsModule,
-    OrdersModule,
+    ParcelsModule,
     DashboardModule,
     ReportsModule,
     ExpensesModule,
@@ -45,6 +55,35 @@ import { RolesModule } from './roles/roles.module';
     MobileModule,
     InvoicesModule,
     RolesModule,
+    ActivityLogsModule,
+    SelectModule,
+    SaasModule,
+    SeedModule,
+    TelegramModule,
+    TrackingModule,
+    FirebaseModule,
+    ThrottlerModule.forRoot([
+      {
+        name: 'short',
+        ttl: 1000,
+        limit: 25, // 25 requests per second max
+      },
+      {
+        name: 'medium',
+        ttl: 60000,
+        limit: 150, // 150 requests per minute
+      },
+    ]),
+  ],
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: ActivityLogInterceptor,
+    },
   ],
 })
 export class AppModule { }

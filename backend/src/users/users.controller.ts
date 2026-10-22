@@ -1,3 +1,4 @@
+import { getEffectiveTenantId } from '../common/tenant.util';
 import {
   Controller,
   Get,
@@ -10,14 +11,17 @@ import {
   ParseIntPipe,
   UseInterceptors,
   UploadedFile,
+  Query,
+  Request,
 } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth, ApiOperation, ApiConsumes } from '@nestjs/swagger';
+import { ApiTags, ApiBearerAuth, ApiOperation, ApiConsumes, ApiQuery, ApiParam } from '@nestjs/swagger';
 import { UsersService } from './users.service';
 import { CreateUserDto, UpdateUserDto } from './dto/user.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/permissions.guard';
 import { RequirePermissions } from '../auth/permissions.decorator';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { LogActivity } from '../activity-logs/activity.decorator';
 import { createMulterOptions } from '../config/multer';
 import { MinioService } from '../minio/minio.service';
 
@@ -34,19 +38,43 @@ export class UsersController {
   @Get()
   @RequirePermissions('users.read')
   @ApiOperation({ summary: 'Get all users' })
-  findAll() {
-    return this.usersService.findAll();
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiQuery({ name: 'search', required: false, type: String })
+  @ApiQuery({ name: 'tenantId', required: false, type: Number })
+  @ApiQuery({ name: 'tenantSubdomain', required: false, type: String })
+  findAll(
+    @Request() req: any,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('search') search?: string,
+    @Query('tenantId') tenantId?: string,
+    @Query('tenantSubdomain') tenantSubdomain?: string,
+  ) {
+    const effectiveTenantId = getEffectiveTenantId(req);
+    const effectiveSubdomain =
+      tenantSubdomain || (req.headers['x-tenant-subdomain'] as string) || req.user?.tenantSubdomain;
+
+    return this.usersService.findAll({
+      page: page ? +page : undefined,
+      limit: limit ? +limit : undefined,
+      search,
+      tenantId: effectiveTenantId ? +effectiveTenantId : undefined,
+      tenantSubdomain: effectiveSubdomain || undefined,
+    });
   }
 
   @Get(':id')
   @RequirePermissions('users.read')
   @ApiOperation({ summary: 'Get user by ID' })
-  findOne(@Param('id', ParseIntPipe) id: number) {
-    return this.usersService.findOne(id);
+  @ApiParam({ name: 'id', type: Number, description: 'User ID' })
+  findOne(@Param('id', ParseIntPipe) id: number, @Request() req: any) {
+    return this.usersService.findOne(id, getEffectiveTenantId(req));
   }
 
   @Post()
   @RequirePermissions('users.create')
+  @LogActivity({ action: 'CREATE_USER', entityName: 'User', description: 'Created new user/staff' })
   @UseInterceptors(
     FileInterceptor('photo', createMulterOptions({ 
       allowedMimeTypes: ['image/jpeg', 'image/png'],
@@ -55,15 +83,22 @@ export class UsersController {
   )
   @ApiConsumes('multipart/form-data')
   @ApiOperation({ summary: 'Create user' })
-  async create(@Body() dto: CreateUserDto, @UploadedFile() file?: any) {
+  async create(@Request() req: any, @Body() dto: CreateUserDto, @UploadedFile() file?: any) {
     if (file) {
       dto.photo = await this.minioService.uploadFile(file, 'users');
     }
-    return this.usersService.create(dto);
+    const tenantContext = {
+      tenantId: getEffectiveTenantId(req),
+      tenantSubdomain: (req.headers['x-tenant-subdomain'] as string) || req.user?.tenantSubdomain,
+    };
+    return this.usersService.create(dto, tenantContext);
   }
 
   @Patch(':id')
   @RequirePermissions('users.update')
+  @ApiOperation({ summary: 'Update user' })
+  @ApiParam({ name: 'id', type: Number, description: 'User ID' })
+  @LogActivity({ action: 'UPDATE_USER', entityName: 'User', description: 'Updated user/staff details' })
   @UseInterceptors(
     FileInterceptor('photo', createMulterOptions({ 
       allowedMimeTypes: ['image/jpeg', 'image/png'],
@@ -71,22 +106,24 @@ export class UsersController {
     }))
   )
   @ApiConsumes('multipart/form-data')
-  @ApiOperation({ summary: 'Update user' })
   async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateUserDto,
+    @Request() req: any,
     @UploadedFile() file?: any,
   ) {
     if (file) {
       dto.photo = await this.minioService.uploadFile(file, 'users');
     }
-    return this.usersService.update(id, dto);
+    return this.usersService.update(id, dto, getEffectiveTenantId(req));
   }
 
   @Delete(':id')
   @RequirePermissions('users.delete')
   @ApiOperation({ summary: 'Delete user' })
-  remove(@Param('id', ParseIntPipe) id: number) {
-    return this.usersService.remove(id);
+  @ApiParam({ name: 'id', type: Number, description: 'User ID' })
+  @LogActivity({ action: 'DELETE_USER', entityName: 'User', description: 'Deleted user/staff' })
+  remove(@Param('id', ParseIntPipe) id: number, @Request() req: any) {
+    return this.usersService.remove(id, getEffectiveTenantId(req));
   }
 }

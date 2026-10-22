@@ -1,6 +1,7 @@
 import {
   IsEmail,
   IsEnum,
+  IsIn,
   IsNotEmpty,
   IsOptional,
   IsString,
@@ -9,11 +10,17 @@ import {
   Min,
   Max,
   IsBoolean,
+  ValidateIf,
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { Type, Transform } from 'class-transformer';
 
 export class CreateUserDto {
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  code?: string;
+
   @ApiProperty()
   @IsNotEmpty()
   @IsString()
@@ -21,6 +28,8 @@ export class CreateUserDto {
 
   @ApiProperty({ required: false })
   @IsOptional()
+  @Transform(({ value }) => (!value || typeof value !== 'string' || value.trim() === '' ? null : value.trim()))
+  @ValidateIf((o) => o.email !== null && o.email !== undefined && o.email !== '')
   @IsEmail()
   email?: string;
 
@@ -30,10 +39,16 @@ export class CreateUserDto {
   @MinLength(6)
   password?: string;
 
-  @ApiProperty({ enum: ['admin', 'staff', 'driver'], default: 'staff' })
-  @IsEnum(['admin', 'staff', 'driver'])
+  @ApiProperty({ required: false })
   @IsOptional()
-  role?: 'admin' | 'staff' | 'driver';
+  @IsNumber()
+  @Type(() => Number)
+  roleId?: number;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  role?: string;
 
   @ApiProperty({ required: false })
   @IsOptional()
@@ -50,23 +65,54 @@ export class CreateUserDto {
     required: false,
   })
   @IsOptional()
-  @IsEnum(['available', 'on-delivery', 'offline'])
+  @Transform(({ value }) => value || undefined)
+  @IsIn(['available', 'on-delivery', 'offline'])
   status?: string;
 
   @ApiProperty({ required: false })
   @IsOptional()
+  @Transform(({ value }) => (value === '' || value === null || value === undefined ? undefined : Number(value)))
   @IsNumber()
   @Type(() => Number)
   zoneId?: number;
 
   @ApiProperty({ required: false })
   @IsOptional()
+  @Transform(({ value }) => (value === '' || value === null || value === undefined ? undefined : Number(value)))
   @IsNumber()
   @Type(() => Number)
   vehicleId?: number;
 
   @ApiProperty({ required: false })
   @IsOptional()
+  @IsString()
+  vehiclePlate?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  vehicleType?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  vehicleBrand?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  vehicleModel?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @Transform(({ value }) => (value === '' || value === null || value === undefined ? undefined : Number(value)))
+  @IsNumber()
+  @Type(() => Number)
+  vehicleYear?: number;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
   joinDate?: string;
 
   @ApiProperty({ required: false })
@@ -74,6 +120,12 @@ export class CreateUserDto {
   @IsNumber()
   @Type(() => Number)
   salary?: number;
+
+  @ApiProperty({ required: false, default: 1000 })
+  @IsOptional()
+  @IsNumber()
+  @Type(() => Number)
+  driverFee?: number;
 
   @ApiProperty({ required: false })
   @IsOptional()
@@ -98,17 +150,9 @@ export class CreateUserDto {
     return value;
   })
   @IsBoolean()
-  active?: boolean;
-}
+  isActive?: boolean;
 
-export class UpdateUserDto {
-  @IsOptional() @IsString() name?: string;
-  @IsOptional() @IsEmail() email?: string;
-  @IsOptional() @MinLength(6) password?: string;
-  @IsOptional() @IsEnum(['admin', 'staff', 'driver']) role?:
-    | 'admin'
-    | 'staff'
-    | 'driver';
+  @ApiProperty({ required: false, default: true })
   @IsOptional()
   @Transform(({ value }) => {
     if (value === 'true') return true;
@@ -117,16 +161,40 @@ export class UpdateUserDto {
   })
   @IsBoolean()
   active?: boolean;
-  @IsOptional() @IsString() nameKh?: string;
-  @IsOptional() @IsString() phone?: string;
+
+  @ApiProperty({ required: false, default: false })
   @IsOptional()
-  @IsEnum(['available', 'on-delivery', 'offline'])
-  status?: string;
-  @IsOptional() @IsNumber() @Min(0) @Max(5) @Type(() => Number) rating?: number;
-  @IsOptional() @IsNumber() @Type(() => Number) zoneId?: number;
-  @IsOptional() @IsNumber() @Type(() => Number) vehicleId?: number;
-  @IsOptional() @IsNumber() @Type(() => Number) salary?: number;
-  @IsOptional() @IsString() photo?: string;
-  @IsOptional() @IsString() dob?: string;
-  @IsOptional() @IsString() gender?: string;
+  @Transform(({ value }) => {
+    if (value === 'true') return true;
+    if (value === 'false') return false;
+    return value;
+  })
+  @IsBoolean()
+  isStaff?: boolean;
+
+  @ApiProperty({ required: false, default: false })
+  @IsOptional()
+  @Transform(({ value }) => {
+    if (value === 'true') return true;
+    if (value === 'false') return false;
+    return value;
+  })
+  @IsBoolean()
+  isDriver?: boolean;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsNumber()
+  @Type(() => Number)
+  tenantId?: number;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  tenantSubdomain?: string;
 }
+
+import { PartialType } from '@nestjs/swagger';
+
+export class UpdateUserDto extends PartialType(CreateUserDto) {}
+

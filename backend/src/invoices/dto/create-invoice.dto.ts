@@ -5,5 +5,5 @@ export class CreateInvoiceDto {
   @ApiProperty({ type: [Number] })
   @IsArray()
   @IsNumber({}, { each: true })
-  orderIds: number[];
+  parcelIds: number[];
 }

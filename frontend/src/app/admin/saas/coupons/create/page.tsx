@@ -1,0 +1,288 @@
+'use client';
+
+import { SaasMasterLayout } from '@/components/layout/SaasMasterLayout';
+import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { saasApi } from '@/lib/saas-api';
+import { getUser, clearAuth } from '@/lib/auth';
+import { useLanguage } from '@/lib/LanguageContext';
+import { FlagKm, FlagEn } from '@/components/ui/Flags';
+import { SaasCloudIcon } from '@/components/ui/SaasCloudIcon';
+import {
+  MdDashboard,
+  MdBusiness,
+  MdArrowBack,
+  MdGroup,
+  MdWorkspacePremium,
+  MdLocalOffer,
+  MdAttachMoney,
+  MdLogout,
+  MdKeyboardArrowDown,
+  MdReceiptLong,
+  MdPayment,
+} from 'react-icons/md';
+
+export default function CreateCouponPage() {
+  const router = useRouter();
+  const { lang, setLang } = useLanguage();
+  const tr = (km: string, en: string) => (lang === 'km' ? km : en);
+  const [saving, setSaving] = useState(false);
+  const [user, setUser] = useState<any>(null);
+  const [showProfileDropdown, setShowProfileDropdown] = useState(false);
+
+  const [newCoupon, setNewCoupon] = useState({
+    code: '',
+    discountType: 'percentage',
+    discountValue: 20,
+    usageLimit: 100,
+    expiresAt: '',
+    status: 'active',
+  });
+
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
+
+  const handleExpireDateChange = (dateVal: string) => {
+    let newStatus = newCoupon.status;
+    if (dateVal) {
+      const selected = new Date(dateVal + 'T23:59:59');
+      if (selected.getTime() < Date.now()) {
+        newStatus = 'expired';
+      } else if (newCoupon.status === 'expired') {
+        newStatus = 'active';
+      }
+    }
+    setNewCoupon(prev => ({
+      ...prev,
+      expiresAt: dateVal,
+      status: newStatus,
+    }));
+  };
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const token = localStorage.getItem('access_token');
+    const saasAdminRaw = localStorage.getItem('saas_admin');
+    const currentUser = getUser();
+
+    if (!token && !saasAdminRaw && !currentUser) {
+      router.push('/admin/saas/login');
+      return;
+    }
+
+    let adminObj = null;
+    if (saasAdminRaw) {
+      try {
+        adminObj = JSON.parse(saasAdminRaw);
+      } catch (e) {
+        // ignore
+      }
+    }
+
+    if (adminObj) {
+      setUser(adminObj);
+    } else if (currentUser) {
+      setUser(currentUser);
+    } else {
+      setUser({ name: 'Master Super Admin', email: 'superadmin@ebsexpress.com', role: 'super_admin' });
+    }
+  }, [router]);
+
+  const handleLogout = () => {
+    if (confirm('តើអ្នកពិតជាចង់ចាកចេញពីប្រព័ន្ធ (Logout) មែនទេ?')) {
+      clearAuth();
+      localStorage.removeItem('saas_admin');
+      router.push('/admin/saas/login');
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const newErrors: { [key: string]: string } = {};
+    if (!newCoupon.code.trim()) newErrors.code = 'សូមបញ្ចូល Coupon Code';
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      alert('សូមបញ្ចូល Coupon Code');
+      return;
+    }
+
+    try {
+      setSaving(true);
+      const payload: any = {
+        code: newCoupon.code.toUpperCase().trim(),
+        discountType: newCoupon.discountType,
+        discountValue: Number(newCoupon.discountValue),
+        usageLimit: Number(newCoupon.usageLimit),
+        status: newCoupon.status,
+        isActive: newCoupon.status === 'active',
+        expiresAt: newCoupon.expiresAt ? new Date(newCoupon.expiresAt + 'T23:59:59').toISOString() : null,
+      };
+      await saasApi.createCoupon(payload);
+      alert('បានបង្កើត Coupon ថ្មីជោគជ័យ!');
+      router.push('/admin/saas/coupons');
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'បរាជ័យក្នុងការបង្កើត Coupon');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <SaasMasterLayout activeTab="coupons">
+          {/* Back Button & Title */}
+          <div style={{ marginBottom: 20 }}>
+            <Link
+              href="/admin/saas/coupons"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                color: 'var(--text-muted)',
+                textDecoration: 'none',
+                fontSize: 13,
+                fontWeight: 600,
+                marginBottom: 10,
+              }}
+            >
+              <MdArrowBack size={16} />
+              <span>ត្រឡប់ទៅបញ្ជីគូប៉ុង</span>
+            </Link>
+
+            <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 4px' }}>
+              បង្កើត Promo Coupon ថ្មី
+            </h1>
+            <p style={{ fontSize: 12.5, color: 'var(--text-muted)', margin: 0 }}>
+              កូដបញ្ចុះតម្លៃសម្រាប់អតិថិជនប្រើប្រាស់ពេលចុះឈ្មោះជាវ Subscription
+            </p>
+          </div>
+
+          {/* Form Card */}
+          <div className="card">
+            <div className="card-header">
+              <span className="card-title">ព័ត៌មាន Promo Coupon</span>
+            </div>
+
+            <div className="card-body">
+              <form onSubmit={handleSubmit}>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label className="form-label">
+                      Coupon Code <span style={{ color: '#ef4444' }}>*</span>
+                    </label>
+                    <input
+                      type="text"
+                      className={`form-control ${errors.code ? 'is-invalid' : ''}`}
+                      placeholder="ឧ. PROMO2026, SUMMER20"
+                      value={newCoupon.code}
+                      onChange={(e) => {
+                        setNewCoupon({ ...newCoupon, code: e.target.value.toUpperCase() });
+                        if (errors.code) setErrors(prev => { const n = { ...prev }; delete n.code; return n; });
+                      }}
+                    />
+                    {errors.code && <div className="form-error-text" style={{ color: '#ef4444', fontSize: 11.5, marginTop: 4, fontWeight: 600 }}>{errors.code}</div>}
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">
+                      ប្រភេទបញ្ចុះតម្លៃ <span style={{ color: '#ef4444' }}>*</span>
+                    </label>
+                    <select
+                      className="form-control"
+                      value={newCoupon.discountType}
+                      onChange={(e) => setNewCoupon({ ...newCoupon, discountType: e.target.value })}
+                    >
+                      <option value="percentage">ភាគរយ (%)</option>
+                      <option value="fixed">ចំនួនទឹកប្រាក់ថេរ ($)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="form-row">
+                  <div className="form-group">
+                    <label className="form-label">
+                      តម្លៃបញ្ចុះ {newCoupon.discountType === 'percentage' ? '(%)' : '($)'} <span style={{ color: '#ef4444' }}>*</span>
+                    </label>
+                    <input
+                      type="number"
+                      min={1}
+                      max={newCoupon.discountType === 'percentage' ? 100 : 10000}
+                      className="form-control"
+                      value={newCoupon.discountValue}
+                      onChange={(e) => setNewCoupon({ ...newCoupon, discountValue: Number(e.target.value) })}
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">
+                      ចំនួនប្រើប្រាស់អតិបរមា
+                    </label>
+                    <input
+                      type="number"
+                      min={1}
+                      className="form-control"
+                      value={newCoupon.usageLimit}
+                      onChange={(e) => setNewCoupon({ ...newCoupon, usageLimit: Number(e.target.value) })}
+                    />
+                  </div>
+                </div>
+
+                <div className="form-row">
+                  <div className="form-group">
+                    <label className="form-label">
+                      ថ្ងៃផុតកំណត់ (Expire Date)
+                    </label>
+                    <input
+                      type="date"
+                      className="form-control"
+                      value={newCoupon.expiresAt}
+                      onChange={(e) => handleExpireDateChange(e.target.value)}
+                    />
+                    {newCoupon.expiresAt && new Date(newCoupon.expiresAt + 'T23:59:59').getTime() < Date.now() && (
+                      <div style={{ color: '#ef4444', fontSize: 11.5, marginTop: 4, fontWeight: 600 }}>
+                        ⚠️ កាលបរិច្ឆេទនេះបានផុតកំណត់ហើយ — ស្ថានភាពនឹងក្លាយជា Expired
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">
+                      ស្ថានភាព (Status) <span style={{ color: '#ef4444' }}>*</span>
+                    </label>
+                    <select
+                      className="form-control"
+                      value={newCoupon.status}
+                      onChange={(e) => setNewCoupon({ ...newCoupon, status: e.target.value })}
+                    >
+                      <option value="active">សកម្ម (Active)</option>
+                      <option value="inactive">អសកម្ម (Inactive)</option>
+                      <option value="expired">ផុតកំណត់ (Expired)</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Submit Buttons */}
+                <div style={{ marginTop: 24, display: 'flex', gap: 12, justifyContent: 'flex-end', borderTop: '1px solid var(--border)', paddingTop: 16 }}>
+                  <Link
+                    href="/admin/saas/coupons"
+                    className="btn btn-cancel"
+                    style={{ background: '#dc2626', color: '#ffffff', border: '1px solid #dc2626', fontWeight: 700 }}
+                  >
+                    បោះបង់
+                  </Link>
+                  <button
+                    type="submit"
+                    disabled={saving}
+                    className="btn btn-primary"
+                    style={{ background: '#2563eb', color: '#ffffff', border: '1px solid #2563eb', fontWeight: 700 }}
+                  >
+                    {saving ? 'កំពុងរក្សាទុក...' : 'រក្សាទុក'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+            </SaasMasterLayout>
+  );
+}

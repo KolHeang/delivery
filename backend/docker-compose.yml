@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   delivery-api:
     build:
@@ -8,13 +6,13 @@ services:
     container_name: delivery-api
     restart: unless-stopped
     ports:
-      - "3001:3001"
+      - '3001:3001'
     env_file:
       - .env
     environment:
       NODE_ENV: development
-      CHOKIDAR_USEPOLLING: "true"
-      CHOKIDAR_INTERVAL: "500"
+      CHOKIDAR_USEPOLLING: 'true'
+      CHOKIDAR_INTERVAL: '500'
       DATABASE_HOST: delivery-db
       # Use Docker service name 'minio' for internal network access
       MINIO_ENDPOINT: ${MINIO_ENDPOINT}
@@ -43,9 +41,9 @@ services:
       POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
       POSTGRES_DB: ${DATABASE_NAME}
     ports:
-      - "5432:5432"
+      - '5432:5432'
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U ${DATABASE_USER} -d ${DATABASE_NAME}" ]
+      test: ['CMD-SHELL', 'pg_isready -U ${DATABASE_USER} -d ${DATABASE_NAME}']
       interval: 5s
       timeout: 5s
       retries: 5
@@ -54,12 +52,12 @@ services:
     volumes:
       - delivery_db_data:/var/lib/postgresql/data
   minio:
-    image: minio/minio
+    image: cgr.dev/chainguard/minio:latest
     container_name: minio
     restart: unless-stopped
     ports:
-      - "9000:9000" # API Port
-      - "9001:9001" # Console Port
+      - '9000:9000' # API Port
+      - '9001:9001' # Console Port
     environment:
       MINIO_ROOT_USER: ${MINIO_ACCESS_KEY}
       MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY}
@@ -68,6 +66,17 @@ services:
       - app-network
     volumes:
       - minio_data:/data
+  redis:
+    image: redis:7-alpine
+    container_name: delivery-redis
+    restart: unless-stopped
+    # command: redis-server --requirepass "redis@2026$$"
+    ports:
+      - '6379:6379'
+    networks:
+      - app-network
+    volumes:
+      - redis_data:/data
 
 networks:
   app-network:
@@ -76,3 +85,4 @@ networks:
 volumes:
   delivery_db_data:
   minio_data:
+  redis_data:

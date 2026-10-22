@@ -6,41 +6,88 @@ import {
   Delete,
   Param,
   Body,
+  Req,
   UseGuards,
   ParseIntPipe,
+  Query,
 } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiBearerAuth, ApiOperation, ApiQuery, ApiParam } from '@nestjs/swagger';
 import { ZonesService } from './zones.service';
 import { CreateZoneDto, UpdateZoneDto, CreateSubZoneDto } from './dto/zone.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { PermissionsGuard } from '../auth/permissions.guard';
+import { RequirePermissions } from '../auth/permissions.decorator';
+import { LogActivity } from '../activity-logs/activity.decorator';
 
 @ApiTags('Zones')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, PermissionsGuard)
 @Controller('zones')
 export class ZonesController {
   constructor(private readonly zonesService: ZonesService) {}
 
-  @Get() findAll() {
-    return this.zonesService.findAll();
+  @Get()
+  @RequirePermissions('zones.read')
+  @ApiOperation({ summary: 'Get all zones' })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  findAll(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Req() req?: any,
+  ) {
+    const tenantId = req?.user?.tenantId;
+    return this.zonesService.findAll({
+      page: page ? +page : undefined,
+      limit: limit ? +limit : undefined,
+    }, tenantId);
   }
-  @Get(':id') findOne(@Param('id', ParseIntPipe) id: number) {
+
+  @Get(':id')
+  @RequirePermissions('zones.read')
+  @ApiOperation({ summary: 'Get zone by ID' })
+  @ApiParam({ name: 'id', type: Number, description: 'Zone ID' })
+  findOne(@Param('id', ParseIntPipe) id: number) {
     return this.zonesService.findOne(id);
   }
-  @Post() create(@Body() dto: CreateZoneDto) {
+
+  @Post()
+  @RequirePermissions('zones.create')
+  @ApiOperation({ summary: 'Create zone' })
+  @LogActivity({ action: 'CREATE_ZONE', entityName: 'Zone', description: 'Created new zone' })
+  create(@Body() dto: CreateZoneDto, @Req() req?: any) {
+    if (req?.user?.tenantId) {
+      (dto as any).tenantId = req.user.tenantId;
+    }
     return this.zonesService.create(dto);
   }
-  @Patch(':id') update(
+
+  @Patch(':id')
+  @RequirePermissions('zones.update')
+  @ApiOperation({ summary: 'Update zone' })
+  @ApiParam({ name: 'id', type: Number, description: 'Zone ID' })
+  @LogActivity({ action: 'UPDATE_ZONE', entityName: 'Zone', description: 'Updated zone details' })
+  update(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateZoneDto,
   ) {
     return this.zonesService.update(id, dto);
   }
-  @Delete(':id') remove(@Param('id', ParseIntPipe) id: number) {
+
+  @Delete(':id')
+  @RequirePermissions('zones.delete')
+  @ApiOperation({ summary: 'Delete zone' })
+  @ApiParam({ name: 'id', type: Number, description: 'Zone ID' })
+  @LogActivity({ action: 'DELETE_ZONE', entityName: 'Zone', description: 'Deleted zone' })
+  remove(@Param('id', ParseIntPipe) id: number) {
     return this.zonesService.remove(id);
   }
 
   @Post(':id/subzones')
+  @RequirePermissions('zones.update')
+  @ApiOperation({ summary: 'Add subzone to zone' })
+  @ApiParam({ name: 'id', type: Number, description: 'Zone ID' })
+  @LogActivity({ action: 'CREATE_SUB_ZONE', entityName: 'SubZone', description: 'Added subzone to zone' })
   addSubZone(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: CreateSubZoneDto,
@@ -49,6 +96,10 @@ export class ZonesController {
   }
 
   @Delete('subzones/:id')
+  @RequirePermissions('zones.update')
+  @ApiOperation({ summary: 'Delete subzone' })
+  @ApiParam({ name: 'id', type: Number, description: 'Subzone ID' })
+  @LogActivity({ action: 'DELETE_SUB_ZONE', entityName: 'SubZone', description: 'Deleted subzone' })
   removeSubZone(@Param('id', ParseIntPipe) id: number) {
     return this.zonesService.removeSubZone(id);
   }

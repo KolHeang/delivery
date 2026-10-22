@@ -2,34 +2,226 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
+import { HttpExceptionFilter } from './filters/http-exception.filter';
+import { ResponseInterceptor } from './interceptors/response.interceptor';
+
+import { json, urlencoded } from 'express';
+import helmet from 'helmet';
+import { DataSource } from 'typeorm';
+import { TenantDomain } from './saas/entities/tenant-domain.entity';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  // Security headers via Helmet
+  app.use(
+    helmet({
+      contentSecurityPolicy: false, // Ensures Swagger UI works without blocking scripts
+      crossOriginEmbedderPolicy: false,
+    }),
+  );
+
+  // Increase payload limit for base64 images (POD photos, signature)
+  app.use(json({ limit: '50mb' }));
+  app.use(urlencoded({ extended: true, limit: '50mb' }));
+
+  // Enable CORS with dynamic wildcard subdomain & database-driven custom domain matching
+  const baseDomain = (process.env.BASE_DOMAIN || 'e-express.com').replace(/^\./, '').toLowerCase();
+  const configuredOrigins = process.env.CORS_ORIGIN
+    ? process.env.CORS_ORIGIN.split(',').map((o) => o.trim().toLowerCase())
+    : [];
+
+  // Cached set of verified custom domains from database
+  let customDomainCache = new Set<string>();
+  let lastCustomDomainCheck = 0;
+
+  const isCustomDomainAllowed = async (host: string): Promise<boolean> => {
+    try {
+      const now = Date.now();
+      // Cache for 60 seconds to avoid querying DB on every request
+      if (now - lastCustomDomainCheck > 60000) {
+        const dataSource = app.get(DataSource);
+        if (dataSource && dataSource.isInitialized) {
+          const domainRepo = dataSource.getRepository(TenantDomain);
+          const verifiedRecords = await domainRepo.find({
+            select: { domain: true },
+            where: { isVerified: true },
+          });
+          customDomainCache = new Set(
+            verifiedRecords.map((d) => d.domain.toLowerCase().trim()),
+          );
+          lastCustomDomainCheck = now;
+        }
+      }
+      return customDomainCache.has(host);
+    } catch {
+      return false;
+    }
+  };
+
   app.enableCors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    origin: async (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+      // 1. Allow mobile apps, curl, server-to-server (requests with no origin header)
+      if (!origin) {
+        return callback(null, true);
+      }
+
+      const lowerOrigin = origin.toLowerCase();
+
+      // 2. In non-production, if CORS_ORIGIN is '*' or not set, allow all origins
+      if (
+        process.env.NODE_ENV !== 'production' ||
+        configuredOrigins.includes('*') ||
+        configuredOrigins.length === 0
+      ) {
+        return callback(null, true);
+      }
+
+      // 3. Exact match with any domain in configuredOrigins
+      if (configuredOrigins.includes(lowerOrigin)) {
+        return callback(null, true);
+      }
+
+      // 4. Match any tenant subdomain (*.yourdomain.com) of base domain or configured domains
+      const rootsToCheck = [
+        baseDomain,
+        ...configuredOrigins.map((o) => o.replace(/^https?:\/\//, '').replace(/:\d+$/, '')),
+      ];
+
+      const isSubdomainMatch = rootsToCheck.some((root) => {
+        if (!root || root === '*') return false;
+        const cleanRoot = root.replace(/^\*\./, '').replace(/^\./, '');
+        const escaped = cleanRoot.replace(/\./g, '\\.');
+        const subRegex = new RegExp(`^https?:\\/\\/([a-zA-Z0-9-]+\\.)*${escaped}(:\\d+)?$`, 'i');
+        return subRegex.test(lowerOrigin);
+      });
+
+      if (isSubdomainMatch) {
+        return callback(null, true);
+      }
+
+      // 5. Allow local dev origins (localhost & 127.0.0.1)
+      if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(lowerOrigin)) {
+        return callback(null, true);
+      }
+
+      // 6. Check database for verified Tenant Custom Domains (e.g. mycompany.com)
+      const cleanHost = lowerOrigin.replace(/^https?:\/\//, '').replace(/:\d+$/, '');
+      const isCustomAllowed = await isCustomDomainAllowed(cleanHost);
+      if (isCustomAllowed) {
+        return callback(null, true);
+      }
+
+      return callback(new Error(`CORS blocked for origin: ${origin}`), false);
+    },
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
   });
 
-  app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
+  // Global exception filter
+  app.useGlobalFilters(new HttpExceptionFilter());
 
-  app.setGlobalPrefix('api');
+  // Global validation pipe
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+      transformOptions: { enableImplicitConversion: true },
+    }),
+  );
+
+  // Global response wrapper → { status: true, message: 'Successfully', data }
+  app.useGlobalInterceptors(new ResponseInterceptor());
+
+  app.setGlobalPrefix('api', {
+    exclude: ['health'],
+  });
 
   const config = new DocumentBuilder()
-    .setTitle('Delivery Management API')
-    .setDescription('REST API for Delivery Management System')
+    .setTitle('Mobile Merchant API')
+    .setDescription(
+      'REST API and Mobile Integration specifications for the Merchant Mobile App. All successful responses follow the standard envelope format: { status: true, message: "Successfully", data: ... }',
+    )
     .setVersion('1.0')
     .addBearerAuth()
+    .addTag(
+      'Mobile Merchant',
+      'Merchant authentication, profile (Show My Merchant), parcels, COD settlements, pickup requests, notifications, rider chat, and image uploads',
+    )
     .build();
-  SwaggerModule.setup(
-    'api/docs',
-    app,
-    SwaggerModule.createDocument(app, config),
-  );
+
+  const fullDocument = SwaggerModule.createDocument(app, config);
+
+  // Filter paths specifically for Mobile Merchant:
+  // - All endpoints under /api/mobile/merchant
+  // - Merchant auth endpoints (login, refresh, logout, device-token, forgot-password, reset-password)
+  // - Mobile upload endpoints (store logo & parcel photos)
+  const isMerchantPath = (path: string) => {
+    return (
+      path.startsWith('/api/mobile/merchant') ||
+      path === '/api/mobile/auth/merchant/login' ||
+      path === '/api/mobile/auth/refresh' ||
+      path === '/api/mobile/auth/logout' ||
+      path === '/api/mobile/auth/device-token' ||
+      path === '/api/mobile/auth/forgot-password' ||
+      path === '/api/mobile/auth/reset-password' ||
+      path.startsWith('/api/mobile/upload')
+    );
+  };
+
+  const merchantPaths: Record<string, any> = {};
+  for (const [path, methods] of Object.entries(fullDocument.paths)) {
+    if (isMerchantPath(path)) {
+      merchantPaths[path] = {};
+      for (const [method, op] of Object.entries(methods as Record<string, any>)) {
+        merchantPaths[path][method] = {
+          ...op,
+          tags: ['Mobile Merchant'], // Consolidate all operations strictly under "Mobile Merchant"
+        };
+      }
+    }
+  }
+
+  const merchantDocument = {
+    ...fullDocument,
+    info: {
+      title: 'Mobile Merchant API',
+      description:
+        'REST API documentation for Merchant Mobile Application. All responses follow the standard format: { status: true, message: "Successfully", data: ... }',
+      version: '1.0',
+    },
+    tags: [
+      {
+        name: 'Mobile Merchant',
+        description:
+          'Merchant authentication, profile (Show My Merchant), parcels, COD settlements, pickup requests, notifications, rider chat, and image uploads',
+      },
+    ],
+    paths: merchantPaths,
+  };
+
+  // Primary Swagger URL: Only shows Mobile Merchant
+  SwaggerModule.setup('api/docs', app, merchantDocument as any, {
+    swaggerOptions: {
+      persistAuthorization: true,
+      docExpansion: 'list',
+      filter: true,
+      showRequestDuration: true,
+    },
+  });
+
+  // Full API documentation for all services (Admin, Driver, SaaS)
+  SwaggerModule.setup('api/docs/all', app, fullDocument, {
+    swaggerOptions: {
+      persistAuthorization: true,
+    },
+  });
 
   const port = process.env.PORT ?? 3001;
   await app.listen(port);
   console.log(`🚀 Backend running on http://localhost:${port}`);
   console.log(`📚 Swagger: http://localhost:${port}/api/docs`);
+  // trigger restart - db reset
 }
 bootstrap();

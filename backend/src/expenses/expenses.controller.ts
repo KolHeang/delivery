@@ -1,3 +1,4 @@
+import { getEffectiveTenantId } from '../common/tenant.util';
 import {
   Controller,
   Get,
@@ -76,7 +77,7 @@ export class ExpensesController {
       body.amount,
       body.date,
       body.typeId,
-      req?.user?.tenantId,
+      getEffectiveTenantId(req),
     );
   }
 
@@ -90,7 +91,7 @@ export class ExpensesController {
     @Query('limit') limit?: string,
     @Req() req?: any,
   ) {
-    const tenantId = req?.user?.tenantId;
+    const tenantId = getEffectiveTenantId(req);
     return this.expensesService.findAll({
       page: page ? +page : undefined,
       limit: limit ? +limit : undefined,
@@ -101,23 +102,23 @@ export class ExpensesController {
   @RequirePermissions('expenses.read')
   @ApiOperation({ summary: 'Get expense by ID' })
   @ApiParam({ name: 'id', type: Number, description: 'Expense ID' })
-  findOne(@Param('id') id: string) {
-    return this.expensesService.findOne(parseInt(id, 10));
+  findOne(@Param('id') id: string, @Req() req: any) {
+    return this.expensesService.findOne(parseInt(id, 10), getEffectiveTenantId(req));
   }
 
   @Patch(':id')
   @RequirePermissions('expenses.update')
   @ApiOperation({ summary: 'Update expense entry' })
   @ApiParam({ name: 'id', type: Number, description: 'Expense ID' })
-  update(@Param('id') id: string, @Body() body: UpdateExpenseDto) {
-    return this.expensesService.update(parseInt(id, 10), body);
+  update(@Param('id') id: string, @Body() body: UpdateExpenseDto, @Req() req: any) {
+    return this.expensesService.update(parseInt(id, 10), body, getEffectiveTenantId(req));
   }
 
   @Delete(':id')
   @RequirePermissions('expenses.delete')
   @ApiOperation({ summary: 'Delete expense entry' })
   @ApiParam({ name: 'id', type: Number, description: 'Expense ID' })
-  remove(@Param('id') id: string) {
-    return this.expensesService.remove(parseInt(id, 10));
+  remove(@Param('id') id: string, @Req() req: any) {
+    return this.expensesService.remove(parseInt(id, 10), getEffectiveTenantId(req));
   }
 }

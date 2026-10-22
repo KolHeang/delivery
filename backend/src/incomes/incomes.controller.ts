@@ -1,3 +1,4 @@
+import { getEffectiveTenantId } from '../common/tenant.util';
 import {
   Controller,
   Get,
@@ -76,7 +77,7 @@ export class IncomesController {
       body.amount,
       body.date,
       body.typeId,
-      req?.user?.tenantId,
+      getEffectiveTenantId(req),
     );
   }
 
@@ -90,7 +91,7 @@ export class IncomesController {
     @Query('limit') limit?: string,
     @Req() req?: any,
   ) {
-    const tenantId = req?.user?.tenantId;
+    const tenantId = getEffectiveTenantId(req);
     return this.incomesService.findAll({
       page: page ? +page : undefined,
       limit: limit ? +limit : undefined,
@@ -101,23 +102,23 @@ export class IncomesController {
   @RequirePermissions('incomes.read')
   @ApiOperation({ summary: 'Get income by ID' })
   @ApiParam({ name: 'id', type: Number, description: 'Income ID' })
-  findOne(@Param('id') id: string) {
-    return this.incomesService.findOne(parseInt(id, 10));
+  findOne(@Param('id') id: string, @Req() req: any) {
+    return this.incomesService.findOne(parseInt(id, 10), getEffectiveTenantId(req));
   }
 
   @Patch(':id')
   @RequirePermissions('incomes.update')
   @ApiOperation({ summary: 'Update income entry' })
   @ApiParam({ name: 'id', type: Number, description: 'Income ID' })
-  update(@Param('id') id: string, @Body() body: UpdateIncomeDto) {
-    return this.incomesService.update(parseInt(id, 10), body);
+  update(@Param('id') id: string, @Body() body: UpdateIncomeDto, @Req() req: any) {
+    return this.incomesService.update(parseInt(id, 10), body, getEffectiveTenantId(req));
   }
 
   @Delete(':id')
   @RequirePermissions('incomes.delete')
   @ApiOperation({ summary: 'Delete income entry' })
   @ApiParam({ name: 'id', type: Number, description: 'Income ID' })
-  remove(@Param('id') id: string) {
-    return this.incomesService.remove(parseInt(id, 10));
+  remove(@Param('id') id: string, @Req() req: any) {
+    return this.incomesService.remove(parseInt(id, 10), getEffectiveTenantId(req));
   }
 }

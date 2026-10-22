@@ -736,7 +736,9 @@ export default function DriverScanPage() {
                     <div>
                       <span style={{ color: "#64748b", fontSize: "11.5px" }}>ប្រាក់ COD៖ </span>
                       <span style={{ fontWeight: "900", color: "#0f172a" }}>
-                        ${Number(parcel.cod || 0).toFixed(2)}
+                        {parcel.codCurrency === "KHR"
+                          ? `${Math.round(Number(parcel.cod || 0)).toLocaleString()} ៛`
+                          : `$${Number(parcel.cod || 0).toFixed(2)}`}
                       </span>
                     </div>
                     <div>
@@ -1210,7 +1212,9 @@ export default function DriverScanPage() {
                           <span>{item.parcel.receiverName || "ភ្ញៀវ"} </span>
                           <span>({item.parcel.receiverPhone || "—"}) </span>
                           <span style={{ fontWeight: "700", color: "#0f172a" }}>
-                            • COD: ${Number(item.parcel.cod || 0).toFixed(2)}
+                            • COD: {item.parcel.codCurrency === "KHR"
+                              ? `${Math.round(Number(item.parcel.cod || 0)).toLocaleString()} ៛`
+                              : `$${Number(item.parcel.cod || 0).toFixed(2)}`}
                           </span>
                         </div>
                       )}

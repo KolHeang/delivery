@@ -81,11 +81,19 @@ export class PaymentsService {
     return this.createDriverPayment(driverId, amount, date, reference, note, parcelIds, userId);
   }
 
-  async findAllDriverPayments() {
-    return this.driverPaymentRepo.find({
-      relations: { driver: true, creator: true, updater: true },
-      order: { date: 'DESC', createdAt: 'DESC' },
-    });
+  async findAllDriverPayments(tenantId?: number) {
+    const qb = this.driverPaymentRepo
+      .createQueryBuilder('payment')
+      .leftJoinAndSelect('payment.driver', 'driver')
+      .leftJoinAndSelect('payment.creator', 'creator')
+      .leftJoinAndSelect('payment.updater', 'updater')
+      .orderBy('payment.date', 'DESC')
+      .addOrderBy('payment.createdAt', 'DESC');
+
+    if (tenantId) {
+      qb.andWhere('(payment.tenantId = :tenantId OR payment.tenantId IS NULL)', { tenantId });
+    }
+    return qb.getMany();
   }
 
   async findAllStaffPayments() {
@@ -256,21 +264,33 @@ export class PaymentsService {
     );
   }
 
-  async findAllMerchantPayments() {
-    return this.merchantPaymentRepo.find({
-      relations: { merchant: true, creator: true, updater: true },
-      order: { date: 'DESC', createdAt: 'DESC' },
-    });
+  async findAllMerchantPayments(tenantId?: number) {
+    const qb = this.merchantPaymentRepo
+      .createQueryBuilder('payment')
+      .leftJoinAndSelect('payment.merchant', 'merchant')
+      .leftJoinAndSelect('payment.creator', 'creator')
+      .leftJoinAndSelect('payment.updater', 'updater')
+      .orderBy('payment.date', 'DESC')
+      .addOrderBy('payment.createdAt', 'DESC');
+
+    if (tenantId) {
+      qb.andWhere('(payment.tenantId = :tenantId OR payment.tenantId IS NULL)', { tenantId });
+    }
+    return qb.getMany();
   }
 
   async findAllShopPayments() {
     return this.findAllMerchantPayments();
   }
 
-  async getDriverPaymentStats(driverId: number) {
-    const driver = await this.userRepo.findOne({
-      where: { id: driverId },
-    });
+  async getDriverPaymentStats(driverId: number, tenantId?: number) {
+    const driverQb = this.userRepo
+      .createQueryBuilder('user')
+      .where('user.id = :driverId', { driverId });
+    if (tenantId) {
+      driverQb.andWhere('(user.tenantId = :tenantId OR user.tenantId IS NULL)', { tenantId });
+    }
+    const driver = await driverQb.getOne();
     if (!driver) throw new NotFoundException('Driver not found');
 
     // Total COD USD collected from delivered orders
@@ -316,10 +336,14 @@ export class PaymentsService {
     };
   }
 
-  async getMerchantPaymentStats(merchantId: number) {
-    const merchant = await this.merchantRepo.findOne({
-      where: { id: merchantId },
-    });
+  async getMerchantPaymentStats(merchantId: number, tenantId?: number) {
+    const merchantQb = this.merchantRepo
+      .createQueryBuilder('merchant')
+      .where('merchant.id = :merchantId', { merchantId });
+    if (tenantId) {
+      merchantQb.andWhere('(merchant.tenantId = :tenantId OR merchant.tenantId IS NULL)', { tenantId });
+    }
+    const merchant = await merchantQb.getOne();
     if (!merchant) throw new NotFoundException('Merchant not found');
 
     // Total COD USD collected for them from delivered orders
@@ -371,8 +395,12 @@ export class PaymentsService {
     });
   }
 
-  async deleteDriverPayment(id: number) {
-    const payment = await this.driverPaymentRepo.findOne({ where: { id } });
+  async deleteDriverPayment(id: number, tenantId?: number) {
+    const qb = this.driverPaymentRepo.createQueryBuilder('payment').where('payment.id = :id', { id });
+    if (tenantId) {
+      qb.andWhere('(payment.tenantId = :tenantId OR payment.tenantId IS NULL)', { tenantId });
+    }
+    const payment = await qb.getOne();
     if (!payment) throw new NotFoundException('Payment record not found');
 
     const ids = payment.parcelIds;
@@ -398,8 +426,13 @@ export class PaymentsService {
     id: number,
     body: { amount?: number; currency?: string; note?: string; date?: Date; reference?: string },
     userId?: number,
+    tenantId?: number,
   ) {
-    const payment = await this.driverPaymentRepo.findOne({ where: { id } });
+    const qb = this.driverPaymentRepo.createQueryBuilder('payment').where('payment.id = :id', { id });
+    if (tenantId) {
+      qb.andWhere('(payment.tenantId = :tenantId OR payment.tenantId IS NULL)', { tenantId });
+    }
+    const payment = await qb.getOne();
     if (!payment) throw new NotFoundException('Payment record not found');
 
     if (body.amount !== undefined) payment.amount = parseFloat(body.amount as any);
@@ -420,8 +453,12 @@ export class PaymentsService {
     return this.updateDriverPayment(id, body, userId);
   }
 
-  async deleteMerchantPayment(id: number) {
-    const payment = await this.merchantPaymentRepo.findOne({ where: { id } });
+  async deleteMerchantPayment(id: number, tenantId?: number) {
+    const qb = this.merchantPaymentRepo.createQueryBuilder('payment').where('payment.id = :id', { id });
+    if (tenantId) {
+      qb.andWhere('(payment.tenantId = :tenantId OR payment.tenantId IS NULL)', { tenantId });
+    }
+    const payment = await qb.getOne();
     if (!payment) throw new NotFoundException('Payment record not found');
 
     const merchant = await this.merchantRepo.findOne({ where: { id: payment.merchantId } });
@@ -453,8 +490,13 @@ export class PaymentsService {
     id: number,
     body: { amount?: number; note?: string; date?: Date; reference?: string },
     userId?: number,
+    tenantId?: number,
   ) {
-    const payment = await this.merchantPaymentRepo.findOne({ where: { id } });
+    const qb = this.merchantPaymentRepo.createQueryBuilder('payment').where('payment.id = :id', { id });
+    if (tenantId) {
+      qb.andWhere('(payment.tenantId = :tenantId OR payment.tenantId IS NULL)', { tenantId });
+    }
+    const payment = await qb.getOne();
     if (!payment) throw new NotFoundException('Payment record not found');
 
     if (body.amount !== undefined) {
@@ -556,4 +598,87 @@ export class PaymentsService {
       } : null,
     };
   }
+
+  /** Dedicated endpoint for Merchant settlement parcels (ទូទាត់ប្រាក់ជាមួយហាង) */
+  async findMerchantSettlementParcels(query?: {
+    merchantId?: number;
+    statusFilter?: string;
+    startDate?: string;
+    endDate?: string;
+    tenantId?: number;
+  }) {
+    const qb = this.parcelRepo
+      .createQueryBuilder('parcel')
+      .leftJoinAndSelect('parcel.merchant', 'merchant')
+      .leftJoinAndSelect('parcel.driver', 'driver')
+      .leftJoinAndSelect('parcel.customer', 'customer')
+      .where('parcel.status IN (:...statuses)', {
+        statuses: ['delivered', 'failed', 'returned'],
+      })
+      .orderBy('parcel.id', 'DESC');
+
+    if (query?.tenantId) {
+      qb.andWhere('(parcel.tenantId = :tenantId OR parcel.tenantId IS NULL)', { tenantId: query.tenantId });
+    }
+    if (query?.merchantId) {
+      qb.andWhere('parcel.merchantId = :merchantId', { merchantId: query.merchantId });
+    }
+    if (query?.statusFilter && query.statusFilter !== 'all') {
+      qb.andWhere('parcel.merchantPaymentStatus = :pStatus', { pStatus: query.statusFilter });
+    }
+    if (query?.startDate) {
+      const start = new Date(query.startDate);
+      start.setHours(0, 0, 0, 0);
+      qb.andWhere('COALESCE(parcel.deliveredAt, parcel.updatedAt, parcel.createdAt) >= :start', { start });
+    }
+    if (query?.endDate) {
+      const end = new Date(query.endDate);
+      end.setHours(23, 59, 59, 999);
+      qb.andWhere('COALESCE(parcel.deliveredAt, parcel.updatedAt, parcel.createdAt) <= :end', { end });
+    }
+
+    return qb.getMany();
+  }
+
+  /** Dedicated endpoint for Driver settlement parcels (ទូទាត់ប្រាក់ជាមួយអ្នកដឹក) */
+  async findDriverSettlementParcels(query?: {
+    driverId?: number;
+    statusFilter?: string;
+    startDate?: string;
+    endDate?: string;
+    tenantId?: number;
+  }) {
+    const qb = this.parcelRepo
+      .createQueryBuilder('parcel')
+      .leftJoinAndSelect('parcel.merchant', 'merchant')
+      .leftJoinAndSelect('parcel.driver', 'driver')
+      .leftJoinAndSelect('parcel.customer', 'customer')
+      .where('parcel.status IN (:...statuses)', {
+        statuses: ['delivered', 'failed', 'returned'],
+      })
+      .orderBy('parcel.id', 'DESC');
+
+    if (query?.tenantId) {
+      qb.andWhere('(parcel.tenantId = :tenantId OR parcel.tenantId IS NULL)', { tenantId: query.tenantId });
+    }
+    if (query?.driverId) {
+      qb.andWhere('parcel.driverId = :driverId', { driverId: query.driverId });
+    }
+    if (query?.statusFilter && query.statusFilter !== 'all') {
+      qb.andWhere('parcel.driverPaymentStatus = :pStatus', { pStatus: query.statusFilter });
+    }
+    if (query?.startDate) {
+      const start = new Date(query.startDate);
+      start.setHours(0, 0, 0, 0);
+      qb.andWhere('COALESCE(parcel.deliveredAt, parcel.updatedAt, parcel.createdAt) >= :start', { start });
+    }
+    if (query?.endDate) {
+      const end = new Date(query.endDate);
+      end.setHours(23, 59, 59, 999);
+      qb.andWhere('COALESCE(parcel.deliveredAt, parcel.updatedAt, parcel.createdAt) <= :end', { end });
+    }
+
+    return qb.getMany();
+  }
+
 }

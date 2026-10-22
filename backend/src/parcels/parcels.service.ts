@@ -154,24 +154,29 @@ export class ParcelsService {
     }
 
     const page = query?.page ? Math.max(1, Number(query.page)) : 1;
+    const isUnlimited =
+      query?.limit !== undefined &&
+      (Number(query.limit) === -1 || Number(query.limit) === 0);
     const limit = query?.limit ? Math.max(1, Number(query.limit)) : 10;
     const skip = (page - 1) * limit;
 
-    qb.skip(skip).take(limit);
+    if (!isUnlimited) {
+      qb.skip(skip).take(limit);
+    }
 
     const [results, total] = await qb.getManyAndCount();
 
     return {
       total,
-      page,
-      limit,
-      totalPages: Math.ceil(total / limit),
+      page: isUnlimited ? 1 : page,
+      limit: isUnlimited ? total : limit,
+      totalPages: isUnlimited ? 1 : Math.ceil(total / limit),
       results,
     };
   }
 
-  async findOne(id: number): Promise<Parcel> {
-    const item = await this.repo
+  async findOne(id: number, tenantId?: number): Promise<Parcel> {
+    const qb = this.repo
       .createQueryBuilder('parcel')
       .leftJoinAndSelect('parcel.merchant', 'merchant')
       .leftJoinAndSelect('parcel.branch', 'branch')
@@ -180,16 +185,21 @@ export class ParcelsService {
       .leftJoinAndSelect('parcel.customer', 'customer')
       .leftJoinAndSelect('parcel.zone', 'zone')
       .leftJoinAndSelect('parcel.events', 'events')
-      .where('parcel.id = :id', { id })
-      .getOne();
+      .where('parcel.id = :id', { id });
+
+    if (tenantId) {
+      qb.andWhere('parcel.tenantId = :tenantId', { tenantId });
+    }
+
+    const item = await qb.getOne();
 
     if (!item) throw new NotFoundException(`Parcel #${id} not found`);
     return item;
   }
 
-  async findByTracking(codeOrPhone: string): Promise<Parcel> {
+  async findByTracking(codeOrPhone: string, tenantId?: number): Promise<Parcel> {
     const term = codeOrPhone.trim();
-    const item = await this.repo
+    const qb = this.repo
       .createQueryBuilder('parcel')
       .leftJoinAndSelect('parcel.merchant', 'merchant')
       .leftJoinAndSelect('parcel.branch', 'branch')
@@ -201,9 +211,13 @@ export class ParcelsService {
       .where(
         '(parcel.trackingCode = :term OR parcel.receiverPhone ILIKE :phoneTerm OR merchant.phone ILIKE :phoneTerm)',
         { term, phoneTerm: `%${term}%` },
-      )
-      .orderBy('parcel.createdAt', 'DESC')
-      .getOne();
+      );
+
+    if (tenantId) {
+      qb.andWhere('parcel.tenantId = :tenantId', { tenantId });
+    }
+
+    const item = await qb.orderBy('parcel.createdAt', 'DESC').getOne();
 
     if (!item)
       throw new NotFoundException(
@@ -212,17 +226,21 @@ export class ParcelsService {
     return item;
   }
 
-  async findByPhone(phone: string): Promise<Parcel[]> {
-    return this.repo
+  async findByPhone(phone: string, tenantId?: number): Promise<Parcel[]> {
+    const qb = this.repo
       .createQueryBuilder('parcel')
       .leftJoinAndSelect('parcel.merchant', 'merchant')
       .leftJoinAndSelect('parcel.driver', 'driver')
       .leftJoinAndSelect('parcel.pickupDriver', 'pickupDriver')
       .leftJoinAndSelect('parcel.customer', 'customer')
       .leftJoinAndSelect('parcel.zone', 'zone')
-      .where('parcel.receiverPhone = :phone', { phone })
-      .orderBy('parcel.createdAt', 'DESC')
-      .getMany();
+      .where('parcel.receiverPhone = :phone', { phone });
+
+    if (tenantId) {
+      qb.andWhere('parcel.tenantId = :tenantId', { tenantId });
+    }
+
+    return qb.orderBy('parcel.createdAt', 'DESC').getMany();
   }
 
   /** Pending parcels with no driver assigned (used by Assign Delivery page for direct flow) */
@@ -241,6 +259,116 @@ export class ParcelsService {
     }
     return qb.getMany();
   }
+
+  /** Parcels waiting to be finalized / completed in box (បញ្ចប់ប្រអប់) */
+  async findCompleteBox(params?: {
+    tenantId?: number;
+    search?: string;
+    driverId?: number;
+    status?: string;
+    date?: string;
+  }): Promise<Parcel[]> {
+    const qb = this.repo
+      .createQueryBuilder('parcel')
+      .leftJoinAndSelect('parcel.merchant', 'merchant')
+      .leftJoinAndSelect('parcel.driver', 'driver')
+      .leftJoinAndSelect('parcel.pickupDriver', 'pickupDriver')
+      .leftJoinAndSelect('parcel.customer', 'customer')
+      .leftJoinAndSelect('parcel.zone', 'zone')
+      .where('parcel.status IN (:...statuses)', {
+        statuses: ['pending', 'in-warehouse', 'assigned', 'picked-up', 'in-transit', 'failed'],
+      })
+      .orderBy('parcel.id', 'DESC');
+
+    if (params?.tenantId) {
+      qb.andWhere('parcel.tenantId = :tenantId', { tenantId: params.tenantId });
+    }
+    if (params?.driverId) {
+      qb.andWhere('parcel.driverId = :driverId', { driverId: params.driverId });
+    }
+    if (params?.status) {
+      qb.andWhere('parcel.status = :status', { status: params.status });
+    }
+    if (params?.date) {
+      const start = new Date(params.date);
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(params.date);
+      end.setHours(23, 59, 59, 999);
+      qb.andWhere('parcel.createdAt BETWEEN :start AND :end', { start, end });
+    }
+    if (params?.search) {
+      const term = `%${params.search.trim()}%`;
+      qb.andWhere(
+        '(parcel.trackingCode ILIKE :term OR parcel.receiverPhone ILIKE :term OR parcel.receiverName ILIKE :term OR merchant.name ILIKE :term)',
+        { term },
+      );
+    }
+    return qb.getMany();
+  }
+
+  /** Dedicated endpoint for invoice printing list */
+  async findPrintInvoices(query: {
+    page?: number;
+    limit?: number;
+    status?: string;
+    driverId?: number;
+    merchantId?: number;
+    startDate?: string;
+    endDate?: string;
+    search?: string;
+    ids?: string;
+    tenantId?: number;
+  }) {
+    return this.findAll({
+      ...query,
+      limit: query.limit !== undefined ? query.limit : (query.ids ? 1000 : 50),
+    });
+  }
+
+  /** Batch create parcels for entry_data_item */
+  async batchCreate(dtos: CreateParcelDto[], tenantId?: number, createdById?: number): Promise<Parcel[]> {
+    const created: Parcel[] = [];
+    for (const dto of dtos) {
+      if (tenantId) dto.tenantId = tenantId;
+      if (createdById) dto.createdById = createdById;
+      const parcel = await this.create(dto);
+      created.push(parcel);
+    }
+    return created;
+  }
+
+  /** Batch assign delivery driver */
+  async assignDeliveryBatch(dto: { parcelIds: number[]; driverId: number }, tenantId?: number): Promise<Parcel[]> {
+    const results: Parcel[] = [];
+    for (const id of dto.parcelIds) {
+      const updated = await this.assignDelivery(id, { driverId: dto.driverId }, tenantId);
+      results.push(updated);
+    }
+    return results;
+  }
+
+  /** Batch update complete box */
+  async completeBoxBatchUpdate(
+    items: Array<{ id: number; status: string; paymentMethod?: string; paymentStatus?: string; note?: string; reason?: string; deliveredAt?: string }>,
+    tenantId?: number,
+    updatedById?: number,
+  ): Promise<Parcel[]> {
+    const results: Parcel[] = [];
+    for (const item of items) {
+      const updated = await this.update(item.id, {
+        status: item.status,
+        paymentMethod: item.paymentMethod,
+        paymentStatus: item.paymentStatus,
+        note: item.note,
+        reason: item.reason,
+        deliveredAt: item.deliveredAt as any,
+        updatedById,
+      }, tenantId);
+      results.push(updated);
+    }
+    return results;
+  }
+
 
   /** Pending parcels waiting for a pickup driver (via-warehouse flow) */
   async findPendingForPickup(tenantId?: number): Promise<Parcel[]> {
@@ -335,8 +463,8 @@ export class ParcelsService {
     return this.findOne(savedParcel.id);
   }
 
-  async update(id: number, dto: UpdateParcelDto): Promise<Parcel> {
-    const parcel = await this.findOne(id);
+  async update(id: number, dto: UpdateParcelDto, tenantId?: number): Promise<Parcel> {
+    const parcel = await this.findOne(id, tenantId);
     const updates: any = { ...dto };
 
     if (dto.driverId !== undefined) {
@@ -447,8 +575,8 @@ export class ParcelsService {
     return updatedParcel;
   }
 
-  async updateStatus(id: number, dto: UpdateParcelStatusDto): Promise<Parcel> {
-    const parcel = await this.findOne(id);
+  async updateStatus(id: number, dto: UpdateParcelStatusDto, tenantId?: number): Promise<Parcel> {
+    const parcel = await this.findOne(id, tenantId);
     const finalNote = dto.remark !== undefined ? dto.remark : dto.note;
     const updates: Partial<Parcel> = { status: dto.status as any };
     if (dto.status === 'picked-up') updates.pickedUpAt = new Date();
@@ -518,8 +646,8 @@ export class ParcelsService {
    * Flow 1 — Direct Delivery:
    * pending → assign driver → picked-up
    */
-  async assignDriver(id: number, dto: AssignDriverDto): Promise<Parcel> {
-    const parcel = await this.findOne(id);
+  async assignDriver(id: number, dto: AssignDriverDto, tenantId?: number): Promise<Parcel> {
+    const parcel = await this.findOne(id, tenantId);
     if (parcel.status !== 'pending') {
       throw new BadRequestException(
         'Direct delivery can only be assigned to pending parcels',
@@ -574,8 +702,8 @@ export class ParcelsService {
    * Flow 2 — Step 1 (Via Warehouse):
    * pending → assign pickup driver → in-warehouse
    */
-  async assignPickup(id: number, dto: AssignPickupDto): Promise<Parcel> {
-    const parcel = await this.findOne(id);
+  async assignPickup(id: number, dto: AssignPickupDto, tenantId?: number): Promise<Parcel> {
+    const parcel = await this.findOne(id, tenantId);
     if (parcel.status !== 'pending') {
       throw new BadRequestException(
         'Pickup can only be assigned to pending parcels',
@@ -610,8 +738,8 @@ export class ParcelsService {
    * Flow 2 — Step 2 (Via Warehouse) OR direct from office:
    * in-warehouse | pending → assign delivery driver → assigned
    */
-  async assignDelivery(id: number, dto: AssignDeliveryDto): Promise<Parcel> {
-    const parcel = await this.findOne(id);
+  async assignDelivery(id: number, dto: AssignDeliveryDto, tenantId?: number): Promise<Parcel> {
+    const parcel = await this.findOne(id, tenantId);
     if (
       parcel.status !== 'in-warehouse' &&
       parcel.status !== 'pending' &&
@@ -668,8 +796,8 @@ export class ParcelsService {
     return result;
   }
 
-  async remove(id: number): Promise<{ message: string }> {
-    await this.findOne(id);
+  async remove(id: number, tenantId?: number): Promise<{ message: string }> {
+    await this.findOne(id, tenantId);
     await this.repo.delete(id);
     return { message: 'Parcel deleted successfully' };
   }

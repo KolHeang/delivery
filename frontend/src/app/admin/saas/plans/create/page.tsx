@@ -5,41 +5,33 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { saasApi } from '@/lib/saas-api';
-import { getUser, clearAuth } from '@/lib/auth';
+import { getUser } from '@/lib/auth';
 import { useLanguage } from '@/lib/LanguageContext';
-import { FlagKm, FlagEn } from '@/components/ui/Flags';
-import { SaasCloudIcon } from '@/components/ui/SaasCloudIcon';
 import {
-  MdDashboard,
-  MdBusiness,
   MdArrowBack,
-  MdGroup,
-  MdWorkspacePremium,
-  MdLocalOffer,
-  MdAttachMoney,
-  MdLogout,
-  MdKeyboardArrowDown,
-  MdBarChart,
+  MdStar,
+  MdCheckCircle,
+  MdPeople,
   MdLocalShipping,
   MdStorefront,
-  MdPeople,
-  MdAccountBalanceWallet,
+  MdDirectionsCar,
+  MdInventory2,
+  MdDashboard,
+  MdBarChart,
   MdReceipt,
+  MdAccountBalanceWallet,
   MdSettings,
-  MdLanguage,
   MdNotifications,
   MdVpnKey,
-  MdReceiptLong,
-  MdPayment,
+  MdLanguage,
 } from 'react-icons/md';
 
 export default function CreatePlanPage() {
   const router = useRouter();
-  const { lang, setLang } = useLanguage();
+  const { lang } = useLanguage();
   const tr = (km: string, en: string) => (lang === 'km' ? km : en);
   const [saving, setSaving] = useState(false);
-  const [user, setUser] = useState<any>(null);
-  const [showProfileDropdown, setShowProfileDropdown] = useState(false);
+  const [, setUser] = useState<any>(null);
 
   const [planForm, setPlanForm] = useState({
     name: '',
@@ -47,7 +39,7 @@ export default function CreatePlanPage() {
     description: '',
     priceMonthly: 29,
     priceYearly: 290,
-    maxUsers: 10,
+    maxUsers: 5,
     maxDrivers: 15,
     maxMerchants: 50,
     maxOrdersPerMonth: 2000,
@@ -64,9 +56,9 @@ export default function CreatePlanPage() {
       accounting: true,
       reports: true,
       settings: true,
-      customDomain: false,
       telegramBot: true,
       apiAccess: false,
+      customDomain: false,
     },
   });
 
@@ -102,446 +94,725 @@ export default function CreatePlanPage() {
     }
   }, [router]);
 
-  const handleLogout = () => {
-    if (confirm('តើអ្នកពិតជាចង់ចាកចេញពីប្រព័ន្ធ (Logout) មែនទេ?')) {
-      clearAuth();
-      localStorage.removeItem('saas_admin');
-      router.push('/admin/saas/login');
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const newErrors: { [key: string]: string } = {};
-    if (!planForm.name.trim()) newErrors.name = 'សូមបញ្ចូលឈ្មោះកញ្ចប់សេវា';
-    if (!planForm.slug.trim()) newErrors.slug = 'សូមបញ្ចូល Slug សម្គាល់';
+    if (!planForm.name.trim()) newErrors.name = tr('សូមបញ្ចូលឈ្មោះកញ្ចប់សេវា', 'Plan name is required');
+    if (!planForm.slug.trim()) newErrors.slug = tr('សូមបញ្ចូល Slug សម្គាល់', 'Slug is required');
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
-      alert('សូមបំពេញឈ្មោះ និង Slug របស់ Plan');
+      alert(tr('សូមបំពេញឈ្មោះ និង Slug របស់ Plan', 'Please enter Plan Name and Slug'));
       return;
     }
 
     try {
       setSaving(true);
-      await saasApi.createPlan(planForm);
-      alert('បានបង្កើត Plan ថ្មីជោគជ័យ!');
+      await saasApi.createPlan({
+        ...planForm,
+        features: {
+          ...planForm.features,
+          customReports: Boolean(planForm.features.reports),
+          telegramNotifications: Boolean(planForm.features.telegramBot),
+          customBranding: Boolean(planForm.features.customDomain),
+        },
+      });
+      alert(tr('បានបង្កើត Plan ថ្មីជោគជ័យ!', 'Successfully created new SaaS Plan!'));
       router.push('/admin/saas/plans');
     } catch (err: any) {
-      alert(err.response?.data?.message || 'បរាជ័យក្នុងការបង្កើត Plan');
+      alert(err.response?.data?.message || tr('បរាជ័យក្នុងការបង្កើត Plan', 'Failed to create Plan'));
     } finally {
       setSaving(false);
     }
   };
 
+  const moduleList = [
+    {
+      key: 'dashboard',
+      icon: MdDashboard,
+      label: tr('ផ្ទាំងគ្រប់គ្រង', 'Dashboard'),
+      desc: tr('ទិដ្ឋភាពទូទៅនៃប្រព័ន្ធ ស្ថិតិកញ្ចប់ និងក្រាហ្វ', 'System overview, metrics and chart statistics'),
+    },
+    {
+      key: 'summary',
+      icon: MdBarChart,
+      label: tr('តារាងសង្ខេប', 'Summary Overview'),
+      desc: tr('សង្ខេបហាង សង្ខេបការដឹក និងសង្ខេបការទៅយក', 'Shop overview, delivery and pickup summaries'),
+    },
+    {
+      key: 'delivery',
+      icon: MdLocalShipping,
+      label: tr('គ្រប់គ្រងការដឹក', 'Delivery Operations'),
+      desc: tr('កត់ត្រាទំនិញ បញ្ជីដឹក វិក្កយបត្រ បាកូដ និងចែកអ្នកដឹក', 'Parcels, delivery list, barcode labels and driver dispatch'),
+    },
+    {
+      key: 'shops',
+      icon: MdStorefront,
+      label: tr('គ្រប់គ្រងហាងដៃគូ', 'Merchant Management'),
+      desc: tr('បញ្ជីហាងទំនិញ ព័ត៌មានហាង សាខា និងកម្រៃសេវា', 'Partner merchant shops, branches, and pricing tiers'),
+    },
+    {
+      key: 'staff',
+      icon: MdPeople,
+      label: tr('គ្រប់គ្រងបុគ្គលិក & យានយន្ត', 'Staff & Fleet Management'),
+      desc: tr('បញ្ជីបុគ្គលិក អ្នកដឹកជញ្ជូន និងបញ្ជីយានយន្ត', 'Staff accounts, drivers directory, and vehicle fleet'),
+    },
+    {
+      key: 'payment',
+      icon: MdAccountBalanceWallet,
+      label: tr('ការទូទាត់ប្រាក់ (COD)', 'Payment Settlement'),
+      desc: tr('ទូទាត់ប្រាក់ជាមួយអ្នកដឹក និងទូទាត់ប្រាក់ជូនហាង', 'Cash settlements with delivery drivers and merchant shops'),
+    },
+    {
+      key: 'accounting',
+      icon: MdReceipt,
+      label: tr('គណនេយ្យ ចំណូល-ចំណាយ', 'Accounting Ledger'),
+      desc: tr('កត់ត្រាចំណាយទូទៅ ចំណូលផ្សេងៗ និងតារាងតុល្យការ', 'Income tracking, operational expense records, and ledgers'),
+    },
+    {
+      key: 'reports',
+      icon: MdBarChart,
+      label: tr('របាយការណ៍ & Export', 'Reports & Analytics'),
+      desc: tr('របាយការណ៍ប្រតិបត្តិការ ហិរញ្ញវត្ថុ និងទាញយក Excel', 'Operational analytics, financial reports, and Excel export'),
+    },
+    {
+      key: 'settings',
+      icon: MdSettings,
+      label: tr('ការកំណត់ផ្សេងៗ', 'System Settings'),
+      desc: tr('តំបន់ដឹក សិទ្ធិអ្នកប្រើប្រាស់ ការកំណត់អង្គភាព និងទូទៅ', 'Delivery zones, user roles, organisation and system setup'),
+    },
+    {
+      key: 'telegramBot',
+      icon: MdNotifications,
+      label: tr('ការជូនដំណឹង Telegram', 'Telegram Bot Alerts'),
+      desc: tr('ផ្ញើសារជូនដំណឹងស្វ័យប្រវត្តិតាម Telegram Bot', 'Instant notifications when orders arrive or completed'),
+    },
+    {
+      key: 'apiAccess',
+      icon: MdVpnKey,
+      label: tr('ប្រព័ន្ធភ្ជាប់ REST API', 'REST API & Webhooks'),
+      desc: tr('សិទ្ធិភ្ជាប់ជាមួយ eCommerce, WooCommerce, Shopify', 'External developer API for eCommerce integration'),
+    },
+    {
+      key: 'customDomain',
+      icon: MdLanguage,
+      label: tr('ភ្ជាប់ Domain ផ្ទាល់ខ្លួន', 'Custom Domain Mapping'),
+      desc: tr('អនុញ្ញាតឱ្យប្រើប្រាស់ Domain ផ្ទាល់ខ្លួនរបស់ក្រុមហ៊ុន', 'Allow tenant to map company custom domain / URL'),
+    },
+  ];
+
   return (
     <SaasMasterLayout activeTab="plans">
-          {/* Back Button & Title */}
-          <div style={{ marginBottom: 20 }}>
-            <Link
-              href="/admin/saas/plans"
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 6,
-                color: 'var(--text-muted)',
-                textDecoration: 'none',
-                fontSize: 13,
-                fontWeight: 600,
-                marginBottom: 10,
-              }}
-            >
-              <MdArrowBack size={16} />
-              <span>ត្រឡប់ទៅបញ្ជីកញ្ចប់សេវា</span>
-            </Link>
+      <div style={{ width: '100%', paddingBottom: 48 }}>
+        {/* Navigation & Header */}
+        <div style={{ marginBottom: 20 }}>
+          <Link
+            href="/admin/saas/plans"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              color: '#64748b',
+              textDecoration: 'none',
+              fontSize: 13,
+              fontWeight: 600,
+              marginBottom: 10,
+            }}
+          >
+            <MdArrowBack size={16} />
+            <span>{tr('ត្រឡប់ទៅបញ្ជីកញ្ចប់សេវា', 'Back to Plans')}</span>
+          </Link>
 
-            <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 4px' }}>
-              បង្កើតកញ្ចប់សេវា (Subscription Plan) ថ្មី
-            </h1>
-            <p style={{ fontSize: 12.5, color: 'var(--text-muted)', margin: 0 }}>
-              កំណត់តម្លៃ កម្រិត Quota និង Features សម្រាប់ក្រុមហ៊ុនជាវសេវា
-            </p>
-          </div>
+          <h1 style={{ fontSize: 22, fontWeight: 800, color: '#0f172a', margin: '0 0 4px', letterSpacing: '-0.3px' }}>
+            {tr('បង្កើតកញ្ចប់សេវាថ្មី (Subscription Plan)', 'Create Subscription Plan')}
+          </h1>
+          <p style={{ fontSize: 13, color: '#64748b', margin: 0 }}>
+            {tr('កំណត់ព័ត៌មាន តម្លៃ កូតាធនធាន និងសិទ្ធិបើកមើលម៉ូឌុលនៅលើ Sidebar សម្រាប់ក្រុមហ៊ុនជាវសេវា', 'Set plan info, pricing, quotas, and sidebar module permissions for subscribers')}
+          </p>
+        </div>
 
-          {/* Form Card */}
-          <div className="card">
-            <div className="card-header">
-              <span className="card-title">ព័ត៌មាន Plan</span>
+        <form onSubmit={handleSubmit} autoComplete="off">
+          {/* Card 1: ព័ត៌មានទូទៅ & តម្លៃ */}
+          <div
+            style={{
+              background: '#ffffff',
+              borderRadius: 16,
+              border: '1px solid #e2e8f0',
+              padding: '24px 28px',
+              marginBottom: 20,
+              boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+            }}
+          >
+            <div style={{ fontSize: 15, fontWeight: 700, color: '#0f172a', marginBottom: 18, borderBottom: '1px solid #f1f5f9', paddingBottom: 12 }}>
+              {tr('ព័ត៌មានទូទៅ និងតម្លៃ', 'General Info & Pricing')}
             </div>
 
-            <div className="card-body">
-              <form onSubmit={handleSubmit} autoComplete="off">
-                <div className="form-row">
-                  <div className="form-group">
-                    <label className="form-label">
-                      ឈ្មោះកញ្ចប់សេវា <span style={{ color: '#ef4444' }}>*</span>
-                    </label>
-                    <input
-                      type="text"
-                      className={`form-control ${errors.name ? 'is-invalid' : ''}`}
-                      placeholder="ឧ. Starter Express, Pro Plan"
-                      value={planForm.name}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setPlanForm({
-                          ...planForm,
-                          name: val,
-                          slug: planForm.slug || val.toLowerCase().replace(/[^a-z0-9]/g, '-'),
-                        });
-                        if (errors.name) setErrors(prev => { const n = { ...prev }; delete n.name; return n; });
-                        if (errors.slug) setErrors(prev => { const n = { ...prev }; delete n.slug; return n; });
-                      }}
-                    />
-                    {errors.name && <div className="form-error-text" style={{ color: '#ef4444', fontSize: 11.5, marginTop: 4, fontWeight: 600 }}>{errors.name}</div>}
-                  </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 18, marginBottom: 16 }}>
+              <div>
+                <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#334155', marginBottom: 6 }}>
+                  {tr('ឈ្មោះកញ្ចប់សេវា', 'Plan Name')} <span style={{ color: '#ef4444' }}>*</span>
+                </label>
+                <input
+                  type="text"
+                  className={`form-control ${errors.name ? 'is-invalid' : ''}`}
+                  placeholder={tr('ឧ. Starter, Professional, Enterprise', 'e.g. Starter, Professional')}
+                  value={planForm.name}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setPlanForm({
+                      ...planForm,
+                      name: val,
+                      slug: planForm.slug || val.toLowerCase().replace(/[^a-z0-9]/g, '-'),
+                    });
+                    if (errors.name) setErrors((prev) => { const n = { ...prev }; delete n.name; return n; });
+                    if (errors.slug) setErrors((prev) => { const n = { ...prev }; delete n.slug; return n; });
+                  }}
+                  style={{ height: 40, borderRadius: 8, fontSize: 13.5 }}
+                />
+                {errors.name && <div style={{ color: '#ef4444', fontSize: 11.5, marginTop: 4 }}>{errors.name}</div>}
+              </div>
 
-                  <div className="form-group">
-                    <label className="form-label">
-                      Slug សម្គាល់ <span style={{ color: '#ef4444' }}>*</span>
-                    </label>
-                    <input
-                      type="text"
-                      className={`form-control ${errors.slug ? 'is-invalid' : ''}`}
-                      placeholder="starter-express"
-                      value={planForm.slug}
-                      onChange={(e) => {
-                        setPlanForm({ ...planForm, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') });
-                        if (errors.slug) setErrors(prev => { const n = { ...prev }; delete n.slug; return n; });
-                      }}
-                    />
-                    {errors.slug && <div className="form-error-text" style={{ color: '#ef4444', fontSize: 11.5, marginTop: 4, fontWeight: 600 }}>{errors.slug}</div>}
-                  </div>
-                </div>
+              <div>
+                <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#334155', marginBottom: 6 }}>
+                  {tr('Slug សម្គាល់', 'Plan Slug')} <span style={{ color: '#ef4444' }}>*</span>
+                </label>
+                <input
+                  type="text"
+                  className={`form-control ${errors.slug ? 'is-invalid' : ''}`}
+                  placeholder="starter, pro, enterprise"
+                  value={planForm.slug}
+                  onChange={(e) => {
+                    setPlanForm({ ...planForm, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') });
+                    if (errors.slug) setErrors((prev) => { const n = { ...prev }; delete n.slug; return n; });
+                  }}
+                  style={{ height: 40, borderRadius: 8, fontSize: 13.5 }}
+                />
+                {errors.slug && <div style={{ color: '#ef4444', fontSize: 11.5, marginTop: 4 }}>{errors.slug}</div>}
+              </div>
+            </div>
 
-                <div className="form-group">
-                  <label className="form-label">
-                    ការពិពណ៌នាសង្ខេប
-                  </label>
+            <div style={{ marginBottom: 18 }}>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#334155', marginBottom: 6 }}>
+                {tr('ការពិពណ៌នា', 'Description')}
+              </label>
+              <input
+                type="text"
+                className="form-control"
+                placeholder={tr('ឧ. ស័ក្តិសមសម្រាប់ក្រុមហ៊ុនដឹកជញ្ជូនខ្នាតតូច ឬទើបចាប់ផ្តើម', 'e.g. Suitable for small or growing delivery services')}
+                value={planForm.description}
+                onChange={(e) => setPlanForm({ ...planForm, description: e.target.value })}
+                style={{ height: 40, borderRadius: 8, fontSize: 13.5 }}
+              />
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 18, marginBottom: 20 }}>
+              <div>
+                <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#334155', marginBottom: 6 }}>
+                  {tr('តម្លៃប្រចាំខែ ($)', 'Monthly Price ($)')} <span style={{ color: '#ef4444' }}>*</span>
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <span style={{ position: 'absolute', left: 12, top: 10, fontWeight: 700, color: '#94a3b8' }}>$</span>
                   <input
-                    type="text"
+                    type="number"
+                    step="0.01"
+                    min={0}
                     className="form-control"
-                    placeholder="ឧ. សមស្របសម្រាប់ក្រុមហ៊ុនដឹកជញ្ជូនខ្នាតតូច"
-                    value={planForm.description}
-                    onChange={(e) => setPlanForm({ ...planForm, description: e.target.value })}
+                    style={{ paddingLeft: 28, height: 40, borderRadius: 8, fontWeight: 700, fontSize: 14 }}
+                    value={planForm.priceMonthly}
+                    onChange={(e) => {
+                      const val = Number(e.target.value);
+                      setPlanForm({
+                        ...planForm,
+                        priceMonthly: val,
+                        priceYearly: planForm.priceYearly === planForm.priceMonthly * 10 ? Math.round(val * 10) : planForm.priceYearly,
+                      });
+                    }}
                   />
                 </div>
+              </div>
 
-                <div className="form-row">
-                  <div className="form-group">
-                    <label className="form-label">
-                      តម្លៃប្រចាំខែ ($) <span style={{ color: '#ef4444' }}>*</span>
-                    </label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      className="form-control"
-                      value={planForm.priceMonthly}
-                      onChange={(e) => setPlanForm({ ...planForm, priceMonthly: Number(e.target.value) })}
-                    />
-                  </div>
-
-                  <div className="form-group">
-                    <label className="form-label">
-                      តម្លៃប្រចាំឆ្នាំ ($) <span style={{ color: '#ef4444' }}>*</span>
-                    </label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      className="form-control"
-                      value={planForm.priceYearly}
-                      onChange={(e) => setPlanForm({ ...planForm, priceYearly: Number(e.target.value) })}
-                    />
-                  </div>
+              <div>
+                <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#334155', marginBottom: 6 }}>
+                  {tr('តម្លៃប្រចាំឆ្នាំ ($)', 'Yearly Price ($)')} <span style={{ color: '#ef4444' }}>*</span>
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <span style={{ position: 'absolute', left: 12, top: 10, fontWeight: 700, color: '#94a3b8' }}>$</span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min={0}
+                    className="form-control"
+                    style={{ paddingLeft: 28, height: 40, borderRadius: 8, fontWeight: 700, fontSize: 14 }}
+                    value={planForm.priceYearly}
+                    onChange={(e) => setPlanForm({ ...planForm, priceYearly: Number(e.target.value) })}
+                  />
                 </div>
-
-                <div className="form-row">
-                  <div className="form-group">
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                      <label className="form-label" style={{ margin: 0 }}>
-                        ចំនួនអ្នកដឹកជញ្ជូន <span style={{ color: '#ef4444' }}>*</span>
-                      </label>
-                      <span style={{ fontSize: 11.5, fontWeight: 700, color: Number(planForm.maxDrivers) === 0 ? '#10b981' : '#64748b' }}>
-                        {Number(planForm.maxDrivers) === 0 ? '✨ 0 = មិនកំណត់ (Unlimited)' : '0 = មិនកំណត់'}
-                      </span>
-                    </div>
-                    <input
-                      type="number"
-                      min={0}
-                      className="form-control"
-                      placeholder="0 = មិនកំណត់ (Unlimited)"
-                      value={planForm.maxDrivers}
-                      onChange={(e) => setPlanForm({ ...planForm, maxDrivers: e.target.value === '' ? 0 : Number(e.target.value) })}
-                      style={Number(planForm.maxDrivers) === 0 ? { borderColor: '#10b981', background: '#f0fdf4' } : undefined}
-                    />
-                    {Number(planForm.maxDrivers) === 0 && (
-                      <div style={{ fontSize: 11.5, color: '#059669', fontWeight: 600, marginTop: 4 }}>
-                        ✓ មិនកំណត់ចំនួនអ្នកដឹកជញ្ជូន (Unlimited Drivers)
-                      </div>
-                    )}
+                {planForm.priceMonthly > 0 && planForm.priceYearly < planForm.priceMonthly * 12 && (
+                  <div style={{ fontSize: 11.5, color: '#059669', fontWeight: 600, marginTop: 4 }}>
+                    ✨ {tr(`ចំណេញ $${(planForm.priceMonthly * 12 - planForm.priceYearly).toFixed(2)}/ឆ្នាំ`, `Save $${(planForm.priceMonthly * 12 - planForm.priceYearly).toFixed(2)}/yr`)}
                   </div>
+                )}
+              </div>
+            </div>
 
-                  <div className="form-group">
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                      <label className="form-label" style={{ margin: 0 }}>
-                        ចំនួនហាងទំនិញ <span style={{ color: '#ef4444' }}>*</span>
-                      </label>
-                      <span style={{ fontSize: 11.5, fontWeight: 700, color: Number(planForm.maxMerchants) === 0 ? '#10b981' : '#64748b' }}>
-                        {Number(planForm.maxMerchants) === 0 ? '✨ 0 = មិនកំណត់ (Unlimited)' : '0 = មិនកំណត់'}
-                      </span>
-                    </div>
-                    <input
-                      type="number"
-                      min={0}
-                      className="form-control"
-                      placeholder="0 = មិនកំណត់ (Unlimited)"
-                      value={planForm.maxMerchants}
-                      onChange={(e) => setPlanForm({ ...planForm, maxMerchants: e.target.value === '' ? 0 : Number(e.target.value) })}
-                      style={Number(planForm.maxMerchants) === 0 ? { borderColor: '#10b981', background: '#f0fdf4' } : undefined}
-                    />
-                    {Number(planForm.maxMerchants) === 0 && (
-                      <div style={{ fontSize: 11.5, color: '#059669', fontWeight: 600, marginTop: 4 }}>
-                        ✓ មិនកំណត់ចំនួនហាងទំនិញ (Unlimited Merchants)
-                      </div>
-                    )}
-                  </div>
-                </div>
+            {/* Badges / Options */}
+            <div style={{ display: 'flex', gap: 16, paddingTop: 16, borderTop: '1px solid #f8fafc', flexWrap: 'wrap' }}>
+              <label
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  cursor: 'pointer',
+                  padding: '6px 14px',
+                  borderRadius: 8,
+                  background: planForm.isPopular ? '#fffbeb' : '#f8fafc',
+                  border: `1px solid ${planForm.isPopular ? '#fde68a' : '#e2e8f0'}`,
+                  color: planForm.isPopular ? '#b45309' : '#475569',
+                  fontSize: 12.5,
+                  fontWeight: 600,
+                  userSelect: 'none',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={planForm.isPopular}
+                  onChange={(e) => setPlanForm({ ...planForm, isPopular: e.target.checked })}
+                  style={{ accentColor: '#d97706', cursor: 'pointer' }}
+                />
+                <MdStar size={16} color={planForm.isPopular ? '#d97706' : '#94a3b8'} />
+                <span>{tr('កញ្ចប់ពេញនិយម (Popular)', 'Mark as Popular')}</span>
+              </label>
 
-                <div className="form-row">
-                  <div className="form-group">
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                      <label className="form-label" style={{ margin: 0 }}>
-                        ចំនួនកញ្ចប់ឥវ៉ាន់ប្រចាំខែ <span style={{ color: '#ef4444' }}>*</span>
-                      </label>
-                      <span style={{ fontSize: 11.5, fontWeight: 700, color: Number(planForm.maxOrdersPerMonth) === 0 ? '#10b981' : '#64748b' }}>
-                        {Number(planForm.maxOrdersPerMonth) === 0 ? '✨ 0 = មិនកំណត់ (Unlimited)' : '0 = មិនកំណត់'}
-                      </span>
-                    </div>
-                    <input
-                      type="number"
-                      min={0}
-                      className="form-control"
-                      placeholder="0 = មិនកំណត់ (Unlimited)"
-                      value={planForm.maxOrdersPerMonth}
-                      onChange={(e) => setPlanForm({ ...planForm, maxOrdersPerMonth: e.target.value === '' ? 0 : Number(e.target.value) })}
-                      style={Number(planForm.maxOrdersPerMonth) === 0 ? { borderColor: '#10b981', background: '#f0fdf4' } : undefined}
-                    />
-                    {Number(planForm.maxOrdersPerMonth) === 0 && (
-                      <div style={{ fontSize: 11.5, color: '#059669', fontWeight: 600, marginTop: 4 }}>
-                        ✓ មិនកំណត់ចំនួនកញ្ចប់ឥវ៉ាន់ (Unlimited Monthly Orders)
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="form-group">
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                      <label className="form-label" style={{ margin: 0 }}>
-                        ចំនួនយានយន្ត <span style={{ color: '#ef4444' }}>*</span>
-                      </label>
-                      <span style={{ fontSize: 11.5, fontWeight: 700, color: Number(planForm.maxVehicles) === 0 ? '#10b981' : '#64748b' }}>
-                        {Number(planForm.maxVehicles) === 0 ? '✨ 0 = មិនកំណត់ (Unlimited)' : '0 = មិនកំណត់'}
-                      </span>
-                    </div>
-                    <input
-                      type="number"
-                      min={0}
-                      className="form-control"
-                      placeholder="0 = មិនកំណត់ (Unlimited)"
-                      value={planForm.maxVehicles}
-                      onChange={(e) => setPlanForm({ ...planForm, maxVehicles: e.target.value === '' ? 0 : Number(e.target.value) })}
-                      style={Number(planForm.maxVehicles) === 0 ? { borderColor: '#10b981', background: '#f0fdf4' } : undefined}
-                    />
-                    {Number(planForm.maxVehicles) === 0 && (
-                      <div style={{ fontSize: 11.5, color: '#059669', fontWeight: 600, marginTop: 4 }}>
-                        ✓ មិនកំណត់ចំនួនយានយន្ត (Unlimited Vehicles)
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Feature Permissions / Module Access Controls */}
-                <div style={{ marginTop: 28, marginBottom: 20, background: '#f8fafc', padding: '20px 22px', borderRadius: 16, border: '1px solid #e2e8f0' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6, flexWrap: 'wrap', gap: 10 }}>
-                    <div>
-                      <div style={{ fontSize: 15, fontWeight: 800, color: '#0f172a' }}>
-                        សិទ្ធិ និងមុខងារម៉ូឌុល
-                      </div>
-                      <div style={{ fontSize: 12.5, color: '#64748b', marginTop: 2 }}>
-                        កំណត់សិទ្ធិបើក ឬបិទម៉ូឌុលនីមួយៗនៅលើ Sidebar សម្រាប់ក្រុមហ៊ុនជាវកញ្ចប់នេះ
-                      </div>
-                    </div>
-
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setPlanForm({
-                            ...planForm,
-                            features: {
-                              dashboard: true, summary: true, delivery: true, shops: true,
-                              staff: true, payment: true, accounting: true, reports: true,
-                              settings: true, customDomain: true, telegramBot: true, apiAccess: true,
-                            },
-                          });
-                        }}
-                        style={{
-                          fontSize: 12.5,
-                          padding: '6px 14px',
-                          background: '#eff6ff',
-                          color: '#2563eb',
-                          border: '1px solid #bfdbfe',
-                          borderRadius: 8,
-                          cursor: 'pointer',
-                          fontWeight: 700,
-                          transition: 'all 0.15s ease',
-                        }}
-                      >
-                        ✓ ជ្រើសទាំងអស់
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setPlanForm({
-                            ...planForm,
-                            features: {
-                              dashboard: true, summary: false, delivery: true, shops: true,
-                              staff: false, payment: false, accounting: false, reports: false,
-                              settings: false, customDomain: false, telegramBot: false, apiAccess: false,
-                            },
-                          });
-                        }}
-                        style={{
-                          fontSize: 12.5,
-                          padding: '6px 14px',
-                          background: '#ffffff',
-                          color: '#64748b',
-                          border: '1px solid #cbd5e1',
-                          borderRadius: 8,
-                          cursor: 'pointer',
-                          fontWeight: 600,
-                          transition: 'all 0.15s ease',
-                        }}
-                      >
-                        ✕ មូលដ្ឋាន
-                      </button>
-                    </div>
-                  </div>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 12, marginTop: 16 }}>
-                    {[
-                      { key: 'dashboard', icon: MdDashboard, label: 'ផ្ទាំងគ្រប់គ្រង', desc: 'ទិដ្ឋភាពទូទៅនៃប្រព័ន្ធ ស្ថិតិកញ្ចប់ និងក្រាហ្វ', color: '#2563eb', bg: '#eff6ff' },
-                      { key: 'summary', icon: MdBarChart, label: 'តារាងសង្ខេប', desc: 'សង្ខេបហាង សង្ខេបការដឹក និងសង្ខេបការទៅយក', color: '#7c3aed', bg: '#f5f3ff' },
-                      { key: 'delivery', icon: MdLocalShipping, label: 'គ្រប់គ្រងការដឹក', desc: 'កត់ត្រាទិន្នន័យ បញ្ជីដឹក វិក្កយបត្រ ទទួលកញ្ចប់ ចែកអ្នកដឹក', color: '#059669', bg: '#ecfdf5' },
-                      { key: 'shops', icon: MdStorefront, label: 'គ្រប់គ្រងហាង', desc: 'បញ្ជីហាងទំនិញ ព័ត៌មានហាង និងកម្រៃសេវាដឹក', color: '#d97706', bg: '#fffbeb' },
-                      { key: 'staff', icon: MdPeople, label: 'គ្រប់គ្រងអ្នកប្រើប្រាស់', desc: 'បញ្ជីអ្នកប្រើប្រាស់ អ្នកគ្រប់គ្រង បុគ្គលិក និងអ្នកដឹក', color: '#4f46e5', bg: '#eef2ff' },
-                      { key: 'payment', icon: MdAccountBalanceWallet, label: 'ការទូទាត់ប្រាក់', desc: 'ទូទាត់ប្រាក់ជាមួយអ្នកដឹក និងទូទាត់ប្រាក់ជាមួយហាង', color: '#0d9488', bg: '#f0fdfa' },
-                      { key: 'accounting', icon: MdReceipt, label: 'គណនេយ្យ', desc: 'បញ្ជីចំណាយ បញ្ជីចំណូល ប្រភេទចំណូល និងក្រុមចំណាយ', color: '#0284c7', bg: '#f0f9ff' },
-                      { key: 'reports', icon: MdBarChart, label: 'របាយការណ៍', desc: 'របាយការណ៍ហិរញ្ញវត្ថុ និងប្រតិបត្តិការដឹកជញ្ជូន', color: '#b45309', bg: '#fffbeb' },
-                      { key: 'settings', icon: MdSettings, label: 'ការកំណត់ផ្សេងៗ', desc: 'តំបន់ដឹក សិទ្ធិអ្នកប្រើប្រាស់ ការកំណត់អង្គភាព និងទូទៅ', color: '#475569', bg: '#f1f5f9' },
-                      { key: 'customDomain', icon: MdLanguage, label: 'ភ្ជាប់ Domain ផ្ទាល់ខ្លួន', desc: 'អនុញ្ញាតឱ្យប្រើប្រាស់ Domain ផ្ទាល់ខ្លួនរបស់ក្រុមហ៊ុន', color: '#2563eb', bg: '#eff6ff' },
-                      { key: 'telegramBot', icon: MdNotifications, label: 'ការជូនដំណឹង Telegram', desc: 'ការជូនដំណឹងស្វ័យប្រវត្តិតាម Telegram Bot', color: '#0284c7', bg: '#f0f9ff' },
-                      { key: 'apiAccess', icon: MdVpnKey, label: 'ប្រព័ន្ធភ្ជាប់ API', desc: 'សិទ្ធិភ្ជាប់ជាមួយ Website ឬប្រព័ន្ធខាងក្រៅ', color: '#e11d48', bg: '#fff1f2' },
-                    ].map((f) => {
-                      const Icon = f.icon;
-                      const isChecked = Boolean((planForm.features as any)?.[f.key] !== false);
-                      return (
-                        <div
-                          key={f.key}
-                          onClick={() => {
-                            setPlanForm({
-                              ...planForm,
-                              features: {
-                                ...planForm.features,
-                                [f.key]: !isChecked,
-                              },
-                            });
-                          }}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 12,
-                            padding: '14px 16px',
-                            background: isChecked ? '#ffffff' : '#f8fafc',
-                            border: `1.5px solid ${isChecked ? '#2563eb' : '#e2e8f0'}`,
-                            borderRadius: 14,
-                            cursor: 'pointer',
-                            transition: 'all 0.15s ease',
-                            boxShadow: isChecked ? '0 4px 12px rgba(37, 99, 235, 0.08)' : 'none',
-                            userSelect: 'none',
-                          }}
-                        >
-                          <div
-                            style={{
-                              width: 38,
-                              height: 38,
-                              borderRadius: 10,
-                              background: isChecked ? f.bg : '#f1f5f9',
-                              color: isChecked ? f.color : '#94a3b8',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              flexShrink: 0,
-                              transition: 'all 0.15s ease',
-                            }}
-                          >
-                            <Icon size={20} />
-                          </div>
-
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontSize: 13.5, fontWeight: 700, color: isChecked ? '#0f172a' : '#64748b' }}>
-                              {f.label}
-                            </div>
-                            <div style={{ fontSize: 11.5, color: '#94a3b8', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                              {f.desc}
-                            </div>
-                          </div>
-
-                          {/* Custom Toggle / Checkbox */}
-                          <div
-                            style={{
-                              width: 22,
-                              height: 22,
-                              borderRadius: 6,
-                              border: `2px solid ${isChecked ? '#2563eb' : '#cbd5e1'}`,
-                              background: isChecked ? '#2563eb' : '#ffffff',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              color: '#ffffff',
-                              fontSize: 13,
-                              fontWeight: 900,
-                              flexShrink: 0,
-                              transition: 'all 0.15s ease',
-                            }}
-                          >
-                            {isChecked && '✓'}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Submit Buttons */}
-                <div style={{ marginTop: 24, display: 'flex', gap: 12, justifyContent: 'flex-end', borderTop: '1px solid var(--border)', paddingTop: 16 }}>
-                  <Link
-                    href="/admin/saas/plans"
-                    className="btn btn-cancel"
-                    style={{ background: '#dc2626', color: '#ffffff', border: '1px solid #dc2626', fontWeight: 700 }}
-                  >
-                    បោះបង់
-                  </Link>
-                  <button
-                    type="submit"
-                    disabled={saving}
-                    className="btn btn-primary"
-                    style={{ background: '#2563eb', color: '#ffffff', border: '1px solid #2563eb', fontWeight: 700 }}
-                  >
-                    {saving ? 'កំពុងរក្សាទុក...' : 'រក្សាទុក'}
-                  </button>
-                </div>
-              </form>
+              <label
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  cursor: 'pointer',
+                  padding: '6px 14px',
+                  borderRadius: 8,
+                  background: planForm.isActive ? '#f0fdf4' : '#f8fafc',
+                  border: `1px solid ${planForm.isActive ? '#bbf7d0' : '#e2e8f0'}`,
+                  color: planForm.isActive ? '#15803d' : '#475569',
+                  fontSize: 12.5,
+                  fontWeight: 600,
+                  userSelect: 'none',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={planForm.isActive}
+                  onChange={(e) => setPlanForm({ ...planForm, isActive: e.target.checked })}
+                  style={{ accentColor: '#16a34a', cursor: 'pointer' }}
+                />
+                <MdCheckCircle size={16} color={planForm.isActive ? '#16a34a' : '#94a3b8'} />
+                <span>{tr('បើកដំណើរការ (Active)', 'Active Plan')}</span>
+              </label>
             </div>
           </div>
-            </SaasMasterLayout>
+
+          {/* Card 2: កម្រិតធនធាន & Quota */}
+          <div
+            style={{
+              background: '#ffffff',
+              borderRadius: 16,
+              border: '1px solid #e2e8f0',
+              padding: '24px 28px',
+              marginBottom: 20,
+              boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18, borderBottom: '1px solid #f1f5f9', paddingBottom: 12 }}>
+              <div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: '#0f172a' }}>
+                  {tr('កម្រិតធនធាន និង Quota', 'Resource Quotas & Limits')}
+                </div>
+                <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>
+                  {tr('កំណត់កម្រិតប្រើប្រាស់ (ដាក់លេខ 0 ដើម្បីមិនកំណត់ / Unlimited)', 'Set resource limits per tenant (Set 0 for Unlimited)')}
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 16 }}>
+              {/* Users */}
+              <div style={{ padding: '14px 16px', background: '#f8fafc', borderRadius: 10, border: '1px solid #e2e8f0' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: '#334155' }}>
+                    <MdPeople size={17} color="#2563eb" />
+                    <span>{tr('ចំនួនគណនីបុគ្គលិក', 'Staff Accounts')}</span>
+                  </div>
+                  {Number(planForm.maxUsers) === 0 && (
+                    <span style={{ fontSize: 11, fontWeight: 700, color: '#10b981' }}>∞ Unlimited</span>
+                  )}
+                </div>
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type="number"
+                    min={0}
+                    className="form-control"
+                    value={planForm.maxUsers}
+                    onChange={(e) => setPlanForm({ ...planForm, maxUsers: e.target.value === '' ? 0 : Number(e.target.value) })}
+                    style={{ height: 38, borderRadius: 8, paddingRight: 55, fontWeight: 700 }}
+                  />
+                  <span style={{ position: 'absolute', right: 12, top: 10, fontSize: 11.5, color: '#94a3b8', fontWeight: 600 }}>
+                    {tr('គណនី', 'staff')}
+                  </span>
+                </div>
+              </div>
+
+              {/* Drivers */}
+              <div style={{ padding: '14px 16px', background: '#f8fafc', borderRadius: 10, border: '1px solid #e2e8f0' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: '#334155' }}>
+                    <MdLocalShipping size={17} color="#059669" />
+                    <span>{tr('ចំនួនអ្នកដឹកជញ្ជូន', 'Delivery Drivers')}</span>
+                  </div>
+                  {Number(planForm.maxDrivers) === 0 && (
+                    <span style={{ fontSize: 11, fontWeight: 700, color: '#10b981' }}>∞ Unlimited</span>
+                  )}
+                </div>
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type="number"
+                    min={0}
+                    className="form-control"
+                    value={planForm.maxDrivers}
+                    onChange={(e) => setPlanForm({ ...planForm, maxDrivers: e.target.value === '' ? 0 : Number(e.target.value) })}
+                    style={{ height: 38, borderRadius: 8, paddingRight: 55, fontWeight: 700 }}
+                  />
+                  <span style={{ position: 'absolute', right: 12, top: 10, fontSize: 11.5, color: '#94a3b8', fontWeight: 600 }}>
+                    {tr('នាក់', 'drivers')}
+                  </span>
+                </div>
+              </div>
+
+              {/* Merchants */}
+              <div style={{ padding: '14px 16px', background: '#f8fafc', borderRadius: 10, border: '1px solid #e2e8f0' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: '#334155' }}>
+                    <MdStorefront size={17} color="#d97706" />
+                    <span>{tr('ចំនួនហាងទំនិញដៃគូ', 'Partner Shops')}</span>
+                  </div>
+                  {Number(planForm.maxMerchants) === 0 && (
+                    <span style={{ fontSize: 11, fontWeight: 700, color: '#10b981' }}>∞ Unlimited</span>
+                  )}
+                </div>
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type="number"
+                    min={0}
+                    className="form-control"
+                    value={planForm.maxMerchants}
+                    onChange={(e) => setPlanForm({ ...planForm, maxMerchants: e.target.value === '' ? 0 : Number(e.target.value) })}
+                    style={{ height: 38, borderRadius: 8, paddingRight: 55, fontWeight: 700 }}
+                  />
+                  <span style={{ position: 'absolute', right: 12, top: 10, fontSize: 11.5, color: '#94a3b8', fontWeight: 600 }}>
+                    {tr('ហាង', 'shops')}
+                  </span>
+                </div>
+              </div>
+
+              {/* Monthly Orders */}
+              <div style={{ padding: '14px 16px', background: '#f8fafc', borderRadius: 10, border: '1px solid #e2e8f0' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: '#334155' }}>
+                    <MdInventory2 size={17} color="#7c3aed" />
+                    <span>{tr('កញ្ចប់ឥវ៉ាន់ប្រចាំខែ', 'Monthly Orders')}</span>
+                  </div>
+                  {Number(planForm.maxOrdersPerMonth) === 0 && (
+                    <span style={{ fontSize: 11, fontWeight: 700, color: '#10b981' }}>∞ Unlimited</span>
+                  )}
+                </div>
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type="number"
+                    min={0}
+                    className="form-control"
+                    value={planForm.maxOrdersPerMonth}
+                    onChange={(e) => setPlanForm({ ...planForm, maxOrdersPerMonth: e.target.value === '' ? 0 : Number(e.target.value) })}
+                    style={{ height: 38, borderRadius: 8, paddingRight: 65, fontWeight: 700 }}
+                  />
+                  <span style={{ position: 'absolute', right: 12, top: 10, fontSize: 11.5, color: '#94a3b8', fontWeight: 600 }}>
+                    {tr('កញ្ចប់', 'orders')}
+                  </span>
+                </div>
+              </div>
+
+              {/* Vehicles */}
+              <div style={{ padding: '14px 16px', background: '#f8fafc', borderRadius: 10, border: '1px solid #e2e8f0' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: '#334155' }}>
+                    <MdDirectionsCar size={17} color="#475569" />
+                    <span>{tr('ចំនួនយានយន្ត', 'Vehicles')}</span>
+                  </div>
+                  {Number(planForm.maxVehicles) === 0 && (
+                    <span style={{ fontSize: 11, fontWeight: 700, color: '#10b981' }}>∞ Unlimited</span>
+                  )}
+                </div>
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type="number"
+                    min={0}
+                    className="form-control"
+                    value={planForm.maxVehicles}
+                    onChange={(e) => setPlanForm({ ...planForm, maxVehicles: e.target.value === '' ? 0 : Number(e.target.value) })}
+                    style={{ height: 38, borderRadius: 8, paddingRight: 55, fontWeight: 700 }}
+                  />
+                  <span style={{ position: 'absolute', right: 12, top: 10, fontSize: 11.5, color: '#94a3b8', fontWeight: 600 }}>
+                    {tr('គ្រឿង', 'units')}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Card 3: សិទ្ធិប្រើប្រាស់ម៉ូឌុល (Module Permissions & Features) */}
+          <div
+            style={{
+              background: '#ffffff',
+              borderRadius: 16,
+              border: '1px solid #e2e8f0',
+              padding: '24px 28px',
+              marginBottom: 24,
+              boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18, borderBottom: '1px solid #f1f5f9', paddingBottom: 12, flexWrap: 'wrap', gap: 10 }}>
+              <div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: '#0f172a' }}>
+                  {tr('សិទ្ធិប្រើប្រាស់ម៉ូឌុលនៅលើ Sidebar', 'Sidebar Module Permissions')}
+                </div>
+                <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>
+                  {tr('កំណត់បើក ឬបិទម៉ូឌុលនីមួយៗនៅលើ Sidebar សម្រាប់ក្រុមហ៊ុនជាវកញ្ចប់សេវានេះ', 'Select which sidebar modules are accessible to tenant companies subscribed to this plan')}
+                </div>
+              </div>
+
+              {/* Presets */}
+              <div style={{ display: 'flex', gap: 6, background: '#f1f5f9', padding: 3, borderRadius: 8 }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPlanForm({
+                      ...planForm,
+                      features: {
+                        dashboard: true,
+                        summary: false,
+                        delivery: true,
+                        shops: true,
+                        staff: true,
+                        payment: true,
+                        accounting: false,
+                        reports: false,
+                        settings: false,
+                        telegramBot: false,
+                        apiAccess: false,
+                        customDomain: false,
+                      },
+                    });
+                  }}
+                  style={{
+                    fontSize: 11.5,
+                    fontWeight: 600,
+                    padding: '4px 10px',
+                    borderRadius: 6,
+                    border: 'none',
+                    background: 'transparent',
+                    color: '#475569',
+                    cursor: 'pointer',
+                  }}
+                >
+                  {tr('មូលដ្ឋាន', 'Starter')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPlanForm({
+                      ...planForm,
+                      features: {
+                        dashboard: true,
+                        summary: true,
+                        delivery: true,
+                        shops: true,
+                        staff: true,
+                        payment: true,
+                        accounting: true,
+                        reports: true,
+                        settings: true,
+                        telegramBot: true,
+                        apiAccess: true,
+                        customDomain: false,
+                      },
+                    });
+                  }}
+                  style={{
+                    fontSize: 11.5,
+                    fontWeight: 700,
+                    padding: '4px 10px',
+                    borderRadius: 6,
+                    border: 'none',
+                    background: '#ffffff',
+                    color: '#2563eb',
+                    boxShadow: '0 1px 2px rgba(0,0,0,0.06)',
+                    cursor: 'pointer',
+                  }}
+                >
+                  {tr('ស្តង់ដារ', 'Pro')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPlanForm({
+                      ...planForm,
+                      features: {
+                        dashboard: true,
+                        summary: true,
+                        delivery: true,
+                        shops: true,
+                        staff: true,
+                        payment: true,
+                        accounting: true,
+                        reports: true,
+                        settings: true,
+                        telegramBot: true,
+                        apiAccess: true,
+                        customDomain: true,
+                      },
+                    });
+                  }}
+                  style={{
+                    fontSize: 11.5,
+                    fontWeight: 600,
+                    padding: '4px 10px',
+                    borderRadius: 6,
+                    border: 'none',
+                    background: 'transparent',
+                    color: '#475569',
+                    cursor: 'pointer',
+                  }}
+                >
+                  {tr('ទាំងអស់', 'Enterprise')}
+                </button>
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(310px, 1fr))', gap: 12 }}>
+              {moduleList.map((f) => {
+                const Icon = f.icon;
+                const isChecked = Boolean((planForm.features as any)?.[f.key] !== false);
+
+                return (
+                  <div
+                    key={f.key}
+                    onClick={() => {
+                      setPlanForm({
+                        ...planForm,
+                        features: {
+                          ...planForm.features,
+                          [f.key]: !isChecked,
+                        },
+                      });
+                    }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 12,
+                      padding: '12px 14px',
+                      borderRadius: 10,
+                      border: `1px solid ${isChecked ? '#93c5fd' : '#e2e8f0'}`,
+                      background: isChecked ? '#f8faff' : '#ffffff',
+                      cursor: 'pointer',
+                      transition: 'all 0.12s ease',
+                      userSelect: 'none',
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: 36,
+                        height: 36,
+                        borderRadius: 8,
+                        background: isChecked ? '#eff6ff' : '#f1f5f9',
+                        color: isChecked ? '#2563eb' : '#64748b',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0,
+                      }}
+                    >
+                      <Icon size={18} />
+                    </div>
+
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: isChecked ? '#0f172a' : '#475569' }}>
+                        {f.label}
+                      </div>
+                      <div style={{ fontSize: 11.5, color: '#64748b', marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {f.desc}
+                      </div>
+                    </div>
+
+                    <div
+                      style={{
+                        width: 20,
+                        height: 20,
+                        borderRadius: 6,
+                        border: `1.5px solid ${isChecked ? '#2563eb' : '#cbd5e1'}`,
+                        background: isChecked ? '#2563eb' : '#ffffff',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: '#ffffff',
+                        fontSize: 11,
+                        fontWeight: 900,
+                        flexShrink: 0,
+                      }}
+                    >
+                      {isChecked && '✓'}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
+            <Link
+              href="/admin/saas/plans"
+              className="btn btn-cancel"
+              style={{
+                background: '#ffffff',
+                color: '#64748b',
+                border: '1px solid #cbd5e1',
+                fontWeight: 600,
+                fontSize: 13,
+                padding: '9px 20px',
+                borderRadius: 8,
+              }}
+            >
+              {tr('បោះបង់', 'Cancel')}
+            </Link>
+            <button
+              type="submit"
+              disabled={saving}
+              className="btn btn-primary"
+              style={{
+                background: '#2563eb',
+                color: '#ffffff',
+                border: 'none',
+                fontWeight: 700,
+                fontSize: 13,
+                padding: '9px 24px',
+                borderRadius: 8,
+                boxShadow: '0 2px 6px rgba(37,99,235,0.2)',
+              }}
+            >
+              {saving ? tr('កំពុងរក្សាទុក...', 'Saving...') : tr('បង្កើតកញ្ចប់សេវា', 'Save Plan')}
+            </button>
+          </div>
+        </form>
+      </div>
+    </SaasMasterLayout>
   );
 }

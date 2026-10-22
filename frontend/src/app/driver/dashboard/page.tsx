@@ -29,12 +29,14 @@ export default function DriverDashboardPage() {
   const [tasks, setTasks] = useState<any[]>([]);
   const [selectedDate, setSelectedDate] = useState<string>(() => new Date().toISOString().split("T")[0]);
 
-  const loadDashboard = async () => {
+  const loadDashboard = async (targetDate?: string) => {
     try {
+      const activeDate = targetDate !== undefined ? targetDate : selectedDate;
+      const dateParam = activeDate ? `&date=${activeDate}` : '';
       const [dashRes, profRes, taskRes] = await Promise.all([
-        api.get("/mobile/driver/dashboard?period=all").catch(() => null),
+        api.get(`/mobile/driver/dashboard?period=${activeDate ? 'custom' : 'all'}${dateParam}`).catch(() => null),
         api.get("/mobile/driver/profile").catch(() => null),
-        api.get("/mobile/driver/tasks").catch(() => null),
+        api.get(`/mobile/driver/tasks${activeDate ? `?date=${activeDate}` : ""}`).catch(() => null),
       ]);
       if (dashRes?.data) setData(dashRes.data);
       if (profRes?.data) setDriver(profRes.data);
@@ -72,14 +74,17 @@ export default function DriverDashboardPage() {
   const taskProblems = tasks.filter((t: any) => t.status === "failed" || t.status === "cancelled").length;
   const taskReturned = tasks.filter((t: any) => t.status === "returned").length;
 
-  const totalCount = taskTotal > 0 ? taskTotal : (stats.totalPackage ?? 0);
-  const assignedCount = taskTotal > 0 ? taskAssigned : (stats.assignedParcels ?? 0);
-  const deliveredCount = taskTotal > 0 ? taskDelivered : (stats.totalSuccessful ?? 0);
-  const problemCount = taskTotal > 0 ? taskProblems : (stats.totalProblem ?? 0);
-  const returnCount = taskTotal > 0 ? taskReturned : (stats.totalReturn ?? 0);
+  const totalCount = stats.totalPackage !== undefined ? stats.totalPackage : (taskTotal > 0 ? taskTotal : 0);
+  const assignedCount = stats.assignedParcels !== undefined ? stats.assignedParcels : (taskTotal > 0 ? taskAssigned : 0);
+  const deliveredCount = stats.totalSuccessful !== undefined ? stats.totalSuccessful : (taskTotal > 0 ? taskDelivered : 0);
+  const problemCount = stats.totalProblem !== undefined ? stats.totalProblem : (taskTotal > 0 ? taskProblems : 0);
+  const returnCount = stats.totalReturn !== undefined ? stats.totalReturn : (taskTotal > 0 ? taskReturned : 0);
 
-  const amountToCollect = Number(data?.amountToCollect) || 0.0;
-  const amountCollected = Number(data?.wallets?.find((w: any) => w.currency === "USD")?.balance) || 0.0;
+  const amountToCollectUSD = Number(data?.amountToCollect?.usd ?? data?.amountToCollectUSD ?? (typeof data?.amountToCollect === 'number' ? data?.amountToCollect : 0)) || 0.0;
+  const amountToCollectKHR = Number(data?.amountToCollect?.khr ?? data?.amountToCollectKHR) || 0;
+
+  const amountCollectedUSD = Number(data?.amountCollected?.usd ?? data?.amountCollectedUSD ?? data?.wallets?.find((w: any) => w.currency === "USD")?.balance) || 0.0;
+  const amountCollectedKHR = Number(data?.amountCollected?.khr ?? data?.amountCollectedKHR ?? data?.wallets?.find((w: any) => w.currency === "KHR")?.balance) || 0;
 
   const displayName = driver?.name || driver?.nameKh || "Rider";
 
@@ -93,7 +98,7 @@ export default function DriverDashboardPage() {
     }
   };
 
-  const displayTasks = tasks.slice(0, 5);
+  const displayTasks = tasks.length > 0 ? tasks.slice(0, 5) : (data?.recentTasks || []).slice(0, 5);
 
   if (loading) {
     return (
@@ -206,7 +211,11 @@ export default function DriverDashboardPage() {
           <input
             type="date"
             value={selectedDate}
-            onChange={(e) => setSelectedDate(e.target.value)}
+            onChange={(e) => {
+              const newDate = e.target.value;
+              setSelectedDate(newDate);
+              loadDashboard(newDate);
+            }}
             style={{ border: "none", outline: "none", background: "transparent", fontSize: "12px", cursor: "pointer", fontWeight: "600", color: "#64748b" }}
           />
         </div>
@@ -297,7 +306,10 @@ export default function DriverDashboardPage() {
                 <MdAttachMoney size={22} />
               </div>
               <div>
-                <div style={{ fontSize: "16px", fontWeight: "900", color: "#ea580c" }}>${Number(amountToCollect).toFixed(2)}</div>
+                <div style={{ fontSize: "15px", fontWeight: "900", color: "#ea580c", display: "flex", flexWrap: "wrap", alignItems: "baseline", gap: "4px" }}>
+                  <span>${amountToCollectUSD.toFixed(2)}</span>
+                  {amountToCollectKHR > 0 && <span style={{ fontSize: "11px", color: "#c2410c", fontWeight: "700" }}>/ {amountToCollectKHR.toLocaleString()} ៛</span>}
+                </div>
                 <div style={{ fontSize: "10.5px", fontWeight: "700", color: "#64748b" }}>{lang === "km" ? "ត្រូវប្រមូល" : "Amount to Collect"}</div>
               </div>
             </div>
@@ -317,7 +329,10 @@ export default function DriverDashboardPage() {
                 <MdAccountBalanceWallet size={20} />
               </div>
               <div>
-                <div style={{ fontSize: "16px", fontWeight: "900", color: "#15803d" }}>${Number(amountCollected).toFixed(2)}</div>
+                <div style={{ fontSize: "15px", fontWeight: "900", color: "#15803d", display: "flex", flexWrap: "wrap", alignItems: "baseline", gap: "4px" }}>
+                  <span>${amountCollectedUSD.toFixed(2)}</span>
+                  {amountCollectedKHR > 0 && <span style={{ fontSize: "11px", color: "#166534", fontWeight: "700" }}>/ {amountCollectedKHR.toLocaleString()} ៛</span>}
+                </div>
                 <div style={{ fontSize: "10.5px", fontWeight: "700", color: "#64748b" }}>{lang === "km" ? "ប្រមូលបាន" : "Amount Collected"}</div>
               </div>
             </div>

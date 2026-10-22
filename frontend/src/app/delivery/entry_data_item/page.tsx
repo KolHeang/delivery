@@ -8,6 +8,7 @@ import Topbar from '@/components/layout/Topbar';
 import api from '@/lib/api';
 import { MdDelete, MdAdd, MdSave } from 'react-icons/md';
 import { useLanguage } from '@/lib/LanguageContext';
+import SearchableSelect from '@/components/ui/SearchableSelect';
 import DateInput, { getLocalDateString } from '@/components/ui/DateInput';
 
 export default function BatchEntryPage() {
@@ -160,6 +161,7 @@ export default function BatchEntryPage() {
     try {
       const merchant = merchants.find(m => m.id.toString() === selectedMerchantId);
 
+      const itemsToCreate: any[] = [];
       for (const r of rows) {
         const codUSDNum = parseFloat(r.codUSD) || 0;
         const codKHRNum = parseFloat(r.codKHR) || 0;
@@ -189,29 +191,27 @@ export default function BatchEntryPage() {
         };
 
         if (codUSDNum > 0 && codKHRNum > 0) {
-          // Add USD order (with delivery fee)
-          await api.post('/parcels', {
+          itemsToCreate.push({
             ...basePayload,
             cod: codUSDNum,
             codCurrency: 'USD',
             deliveryFee: parseFloat(r.deliveryFee) || 0,
           });
-          // Add KHR order (with 0 delivery fee to avoid double charging)
-          await api.post('/parcels', {
+          itemsToCreate.push({
             ...basePayload,
             cod: codKHRNum,
             codCurrency: 'KHR',
             deliveryFee: 0,
           });
         } else if (codKHRNum > 0) {
-          await api.post('/parcels', {
+          itemsToCreate.push({
             ...basePayload,
             cod: codKHRNum,
             codCurrency: 'KHR',
             deliveryFee: parseFloat(r.deliveryFee) || 0,
           });
         } else {
-          await api.post('/parcels', {
+          itemsToCreate.push({
             ...basePayload,
             cod: codUSDNum || 0,
             codCurrency: 'USD',
@@ -220,6 +220,7 @@ export default function BatchEntryPage() {
         }
       }
 
+      await api.post('/parcels/batch', { items: itemsToCreate });
       router.push('/delivery');
     } catch (err: any) {
       console.error('Batch save failed', err);
@@ -247,29 +248,30 @@ export default function BatchEntryPage() {
         <Topbar title={t('batchEntryTitle')} subtitle={t('batchEntrySubtitle')} />
         <div className="page-content" style={{ maxWidth: '100%' }}>
           {/* Top Panel Controls */}
-          <div className="card" style={{ marginBottom: 20, padding: 20 }}>
+          <div className="card" style={{ marginBottom: 20, padding: 20, overflow: 'hidden' }}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 16, alignItems: 'start' }}>
               <div className={`form-group ${merchantError ? 'has-error' : ''}`} style={{ marginBottom: 0 }}>
                 <label className="form-label" style={{ fontWeight: 600 }}>
                   {t('shopCustomerLabel')} <span style={{ color: 'var(--danger)' }}>*</span>
                 </label>
                 <div className="input-error-wrapper">
-                  <select
-                    className={`form-control ${merchantError ? 'is-invalid' : ''}`}
+                  <SearchableSelect
                     value={selectedMerchantId}
-                    onChange={e => {
-                      setSelectedMerchantId(e.target.value);
+                    onChange={(val: string) => {
+                      setSelectedMerchantId(val);
                       if (merchantError) setMerchantError('');
                     }}
                     style={{ height: 42, fontSize: 13.5 }}
-                  >
-                    <option value="">{lang === 'km' ? '-- ជ្រើសរើសហាង --' : '-- Select Shop --'}</option>
-                    {merchants.map(m => (
-                      <option key={m.id} value={m.id}>
-                        {m.id}-{m.nameKh ? `${m.nameKh} (${m.name})` : m.name}
-                      </option>
-                    ))}
-                  </select>
+                    placeholder={lang === 'km' ? '-- ជ្រើសរើសហាង --' : '-- Select Shop --'}
+                    error={!!merchantError}
+                    options={[
+                      { value: '', label: lang === 'km' ? '-- ជ្រើសរើសហាង --' : '-- Select Shop --' },
+                      ...merchants.map(m => ({
+                        value: String(m.id),
+                        label: `#${m.id} - ${m.nameKh ? `${m.nameKh} (${m.name})` : m.name}` + (m.phone ? ` (${m.phone})` : ''),
+                      })),
+                    ]}
+                  />
                 </div>
                 {merchantError && <div className="form-error-text">{merchantError}</div>}
               </div>
@@ -279,19 +281,19 @@ export default function BatchEntryPage() {
                   <label className="form-label" style={{ fontWeight: 600 }}>
                     🏢 {lang === 'km' ? 'សាខាយកអីវ៉ាន់' : 'Pickup Branch'}
                   </label>
-                  <select
-                    className="form-control"
+                  <SearchableSelect
                     value={selectedBranchId}
-                    onChange={e => setSelectedBranchId(e.target.value)}
+                    onChange={setSelectedBranchId}
                     style={{ height: 42, fontSize: 13.5, background: '#f0fdf4', borderColor: '#86efac' }}
-                  >
-                    <option value="">{lang === 'km' ? '-- ទីស្នាក់ការកណ្តាល (HQ) --' : '-- Main Store (HQ) --'}</option>
-                    {merchantBranches.map(b => (
-                      <option key={b.id} value={b.id}>
-                        {b.name} {b.code ? `[${b.code}]` : ''} {b.isDefault ? `⭐ (${lang === 'km' ? 'ដើម' : 'Default'})` : ''}
-                      </option>
-                    ))}
-                  </select>
+                    placeholder={lang === 'km' ? '-- ទីស្នាក់ការកណ្តាល (HQ) --' : '-- Main Store (HQ) --'}
+                    options={[
+                      { value: '', label: lang === 'km' ? '-- ទីស្នាក់ការកណ្តាល (HQ) --' : '-- Main Store (HQ) --' },
+                      ...merchantBranches.map((b: any) => ({
+                        value: String(b.id),
+                        label: `${b.name} ${b.code ? `[${b.code}]` : ''} ${b.isDefault ? `⭐ (${lang === 'km' ? 'ដើម' : 'Default'})` : ''}`,
+                      })),
+                    ]}
+                  />
                 </div>
               )}
 

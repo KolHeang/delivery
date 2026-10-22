@@ -5,6 +5,8 @@ import {
   IsEnum,
   IsNumber,
   Min,
+  IsArray,
+  ValidateNested,
 } from 'class-validator';
 import { ApiProperty, PartialType } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
@@ -343,3 +345,73 @@ export class AssignPickupDto {
 export class AssignDeliveryDto {
   @ApiProperty() @IsNumber() @Type(() => Number) driverId: number;
 }
+
+/** Batch create parcels for entry_data_item */
+export class BatchCreateParcelsDto {
+  @ApiProperty({ type: [CreateParcelDto] })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreateParcelDto)
+  items: CreateParcelDto[];
+}
+
+/** Batch assign delivery driver */
+export class BatchAssignDeliveryDto {
+  @ApiProperty({ type: [Number], example: [1, 2, 3] })
+  @IsArray()
+  @IsNumber({}, { each: true })
+  @Type(() => Number)
+  parcelIds: number[];
+
+  @ApiProperty({ example: 5 })
+  @IsNumber()
+  @Type(() => Number)
+  driverId: number;
+}
+
+/** Single item in complete box update */
+export class CompleteBoxItemDto {
+  @ApiProperty({ example: 1 })
+  @IsNumber()
+  @Type(() => Number)
+  id: number;
+
+  @ApiProperty({ example: 'delivered' })
+  @IsString()
+  status: string;
+
+  @ApiProperty({ required: false, example: 'cash' })
+  @IsOptional()
+  @IsString()
+  paymentMethod?: string;
+
+  @ApiProperty({ required: false, example: 'paid' })
+  @IsOptional()
+  @IsString()
+  paymentStatus?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  note?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  reason?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  deliveredAt?: string;
+}
+
+/** Batch complete box DTO */
+export class BatchCompleteBoxDto {
+  @ApiProperty({ type: [CompleteBoxItemDto] })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CompleteBoxItemDto)
+  items: CompleteBoxItemDto[];
+}
+

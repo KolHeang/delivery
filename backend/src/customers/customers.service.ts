@@ -42,8 +42,12 @@ export class CustomersService {
     };
   }
 
-  async findOne(id: number): Promise<Customer> {
-    const item = await this.repo.findOne({ where: { id } });
+  async findOne(id: number, tenantId?: number): Promise<Customer> {
+    const qb = this.repo.createQueryBuilder('customer').where('customer.id = :id', { id });
+    if (tenantId) {
+      qb.andWhere('(customer.tenantId = :tenantId OR customer.tenantId IS NULL)', { tenantId });
+    }
+    const item = await qb.getOne();
     if (!item) throw new NotFoundException(`Customer #${id} not found`);
     return item;
   }
@@ -52,14 +56,14 @@ export class CustomersService {
     return this.repo.save(this.repo.create(dto));
   }
 
-  async update(id: number, dto: UpdateCustomerDto): Promise<Customer> {
-    await this.findOne(id);
+  async update(id: number, dto: UpdateCustomerDto, tenantId?: number): Promise<Customer> {
+    await this.findOne(id, tenantId);
     await this.repo.update(id, dto);
-    return this.findOne(id);
+    return this.findOne(id, tenantId);
   }
 
-  async remove(id: number): Promise<{ message: string }> {
-    await this.findOne(id);
+  async remove(id: number, tenantId?: number): Promise<{ message: string }> {
+    await this.findOne(id, tenantId);
     await this.repo.delete(id);
     return { message: 'Customer deleted successfully' };
   }

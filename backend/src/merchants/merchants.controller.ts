@@ -1,3 +1,4 @@
+import { getEffectiveTenantId } from '../common/tenant.util';
 import {
   Controller,
   Get,
@@ -48,7 +49,7 @@ export class MerchantsController {
     @Query('search') search?: string,
     @Req() req?: any,
   ) {
-    const tenantId = req?.user?.tenantId;
+    const tenantId = getEffectiveTenantId(req);
     return this.merchantsService.findAll({
       page: page ? +page : undefined,
       limit: limit ? +limit : undefined,
@@ -78,7 +79,7 @@ export class MerchantsController {
       search,
       merchantId: merchantId ? +merchantId : undefined,
       zoneId: zoneId ? +zoneId : undefined,
-    }, req?.user?.tenantId);
+    }, getEffectiveTenantId(req));
   }
 
   @Post('branches/new')
@@ -92,15 +93,15 @@ export class MerchantsController {
     if (!dto.merchantId) {
       throw new Error('merchantId is required');
     }
-    return this.merchantsService.createBranch(dto.merchantId, dto, req?.user?.tenantId);
+    return this.merchantsService.createBranch(dto.merchantId, dto, getEffectiveTenantId(req));
   }
 
   @Get('branches/detail/:id')
   @RequirePermissions('branches.read', 'merchants.read')
   @ApiOperation({ summary: 'Get single branch by ID' })
   @ApiParam({ name: 'id', type: Number, description: 'Branch ID' })
-  getBranchById(@Param('id', ParseIntPipe) id: number) {
-    return this.merchantsService.findBranchById(id);
+  getBranchById(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
+    return this.merchantsService.findBranchById(id, getEffectiveTenantId(req));
   }
 
   @Put('branches/detail/:id')
@@ -111,17 +112,19 @@ export class MerchantsController {
   async updateBranchById(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateMerchantBranchDto,
+    @Req() req: any,
   ) {
-    const branch = await this.merchantsService.findBranchById(id);
-    return this.merchantsService.updateBranch(branch.merchantId, id, dto);
+    const tenantId = getEffectiveTenantId(req);
+    const branch = await this.merchantsService.findBranchById(id, tenantId);
+    return this.merchantsService.updateBranch(branch.merchantId, id, dto, tenantId);
   }
 
   @Get(':id')
   @RequirePermissions('merchants.read')
   @ApiOperation({ summary: 'Get merchant by ID' })
   @ApiParam({ name: 'id', type: Number, description: 'Merchant ID' })
-  findOne(@Param('id', ParseIntPipe) id: number) {
-    return this.merchantsService.findOne(id);
+  findOne(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
+    return this.merchantsService.findOne(id, getEffectiveTenantId(req));
   }
 
   @Post()
@@ -144,8 +147,9 @@ export class MerchantsController {
     @UploadedFiles() files: { photo?: any[], qrImageKhr?: any[], qrImageUsd?: any[] },
     @Req() req?: any,
   ) {
-    if (req?.user?.tenantId) {
-      (dto as any).tenantId = req.user.tenantId;
+    const tenantId = getEffectiveTenantId(req);
+    if (tenantId) {
+      (dto as any).tenantId = tenantId;
     }
     if (files?.photo?.[0]) {
       dto.photo = await this.minioService.uploadFile(files.photo[0], 'merchants');
@@ -178,7 +182,8 @@ export class MerchantsController {
   async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateMerchantDto,
-    @UploadedFiles() files: { photo?: any[], qrImageKhr?: any[], qrImageUsd?: any[] }
+    @UploadedFiles() files: { photo?: any[], qrImageKhr?: any[], qrImageUsd?: any[] },
+    @Req() req: any,
   ) {
     if (files?.photo?.[0]) {
       dto.photo = await this.minioService.uploadFile(files.photo[0], 'merchants');
@@ -189,7 +194,7 @@ export class MerchantsController {
     if (files?.qrImageUsd?.[0]) {
       dto.qrImageUsd = await this.minioService.uploadFile(files.qrImageUsd[0], 'merchants');
     }
-    return this.merchantsService.update(id, dto);
+    return this.merchantsService.update(id, dto, getEffectiveTenantId(req));
   }
 
   @Delete(':id')
@@ -197,8 +202,8 @@ export class MerchantsController {
   @ApiOperation({ summary: 'Delete merchant' })
   @ApiParam({ name: 'id', type: Number, description: 'Merchant ID' })
   @LogActivity({ action: 'DELETE_MERCHANT', entityName: 'Merchant', description: 'Deleted merchant/shop' })
-  remove(@Param('id', ParseIntPipe) id: number) {
-    return this.merchantsService.remove(id);
+  remove(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
+    return this.merchantsService.remove(id, getEffectiveTenantId(req));
   }
 
   // --- Branch Endpoints ---
@@ -207,16 +212,16 @@ export class MerchantsController {
   @RequirePermissions('branches.read', 'merchants.read')
   @ApiOperation({ summary: 'Get next auto-generated branch code for a merchant' })
   @ApiParam({ name: 'id', type: Number, description: 'Merchant ID' })
-  getNextBranchCode(@Param('id', ParseIntPipe) id: number) {
-    return this.merchantsService.getNextBranchCode(id);
+  getNextBranchCode(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
+    return this.merchantsService.getNextBranchCode(id, getEffectiveTenantId(req));
   }
 
   @Get(':id/branches')
   @RequirePermissions('branches.read', 'merchants.read')
   @ApiOperation({ summary: 'Get all branches of a merchant' })
   @ApiParam({ name: 'id', type: Number, description: 'Merchant ID' })
-  getBranches(@Param('id', ParseIntPipe) id: number) {
-    return this.merchantsService.findBranches(id);
+  getBranches(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
+    return this.merchantsService.findBranches(id, getEffectiveTenantId(req));
   }
 
   @Post(':id/branches')
@@ -229,7 +234,7 @@ export class MerchantsController {
     @Body() dto: CreateMerchantBranchDto,
     @Req() req: any,
   ) {
-    return this.merchantsService.createBranch(id, dto, req?.user?.tenantId);
+    return this.merchantsService.createBranch(id, dto, getEffectiveTenantId(req));
   }
 
   @Put(':id/branches/:branchId')
@@ -242,8 +247,9 @@ export class MerchantsController {
     @Param('id', ParseIntPipe) id: number,
     @Param('branchId', ParseIntPipe) branchId: number,
     @Body() dto: UpdateMerchantBranchDto,
+    @Req() req: any,
   ) {
-    return this.merchantsService.updateBranch(id, branchId, dto);
+    return this.merchantsService.updateBranch(id, branchId, dto, getEffectiveTenantId(req));
   }
 
   @Delete(':id/branches/:branchId')
@@ -255,8 +261,9 @@ export class MerchantsController {
   deleteBranch(
     @Param('id', ParseIntPipe) id: number,
     @Param('branchId', ParseIntPipe) branchId: number,
+    @Req() req: any,
   ) {
-    return this.merchantsService.deleteBranch(id, branchId);
+    return this.merchantsService.deleteBranch(id, branchId, getEffectiveTenantId(req));
   }
 
   @Patch(':id/branches/:branchId/default')
@@ -267,7 +274,8 @@ export class MerchantsController {
   setDefaultBranch(
     @Param('id', ParseIntPipe) id: number,
     @Param('branchId', ParseIntPipe) branchId: number,
+    @Req() req: any,
   ) {
-    return this.merchantsService.setDefaultBranch(id, branchId);
+    return this.merchantsService.setDefaultBranch(id, branchId, getEffectiveTenantId(req));
   }
 }

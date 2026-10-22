@@ -9,6 +9,7 @@ import Badge from '@/components/ui/Badge';
 import api from '@/lib/api';
 import { MdAssignmentTurnedIn, MdRefresh, MdSearch, MdClose } from 'react-icons/md';
 import { useLanguage } from '@/lib/LanguageContext';
+import SearchableSelect from '@/components/ui/SearchableSelect';
 
 const formatCOD = (cod: any, currency: string) => {
   if (currency === 'KHR') return `${parseInt(cod).toLocaleString()} ៛`;
@@ -146,7 +147,7 @@ export default function AssignDeliveryPage() {
     if (!selectedDriver || selected.length === 0) return;
     setAssigning(true);
     try {
-      await Promise.all(selected.map(id => api.post(`/parcels/${id}/assign-delivery`, { driverId: selectedDriver })));
+      await api.post('/parcels/assign-delivery/batch', { parcelIds: selected, driverId: selectedDriver });
       const count = selected.length;
       setSelected([]);
       setSelectedDriver(null);
@@ -351,27 +352,24 @@ export default function AssignDeliveryPage() {
                   {/* Filter by current driver */}
                   {assignTab === 'assigned' && (
                     <div style={{ flexShrink: 0, minWidth: 160 }}>
-                      <select
+                      <SearchableSelect
                         value={filterDriverId}
-                        onChange={e => setFilterDriverId(e.target.value)}
+                        onChange={setFilterDriverId}
                         style={{
-                          padding: '7px 10px',
-                          border: `1.5px solid ${filterDriverId ? 'var(--accent)' : 'var(--border)'}`,
                           borderRadius: 10,
                           fontSize: 13,
                           background: filterDriverId ? 'var(--accent-light)' : 'var(--bg-primary)',
-                          color: filterDriverId ? 'var(--accent)' : 'var(--text-primary)',
-                          outline: 'none',
-                          cursor: 'pointer',
-                          fontWeight: filterDriverId ? 600 : 400,
                           width: '100%',
                         }}
-                      >
-                        <option value="">🧑 {lang === 'km' ? 'អ្នកដឹក ទាំងអស់' : 'All Drivers'}</option>
-                        {drivers.map((d: any) => (
-                          <option key={d.id} value={String(d.id)}>{lang === 'km' ? (d.nameKh || d.name) : (d.name || d.nameKh)}</option>
-                        ))}
-                      </select>
+                        placeholder={lang === 'km' ? '🧑 អ្នកដឹក ទាំងអស់' : '🧑 All Drivers'}
+                        options={[
+                          { value: '', label: lang === 'km' ? '🧑 អ្នកដឹក ទាំងអស់' : '🧑 All Drivers' },
+                          ...drivers.map((d: any) => ({
+                            value: String(d.id),
+                            label: (lang === 'km' ? (d.nameKh || d.name) : (d.name || d.nameKh)) + (d.phone ? ` (${d.phone})` : ''),
+                          })),
+                        ]}
+                      />
                     </div>
                   )}
 

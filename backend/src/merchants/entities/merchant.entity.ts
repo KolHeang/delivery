@@ -11,6 +11,7 @@ import {
 import { Zone } from '../../zones/entities/zone.entity';
 import { Tenant } from '../../saas/entities/tenant.entity';
 import { MerchantBranch } from './merchant-branch.entity';
+import { numericTransformer } from '../../common/numeric.transformer';
 
 export type PricingTier = 'basic' | 'standard' | 'premium';
 
@@ -56,7 +57,7 @@ export class Merchant {
   @Column({ name: 'pricing_tier', default: 'standard' })
   pricingTier: PricingTier;
 
-  @Column('decimal', { precision: 10, scale: 4, default: 0 })
+  @Column('decimal', { precision: 10, scale: 4, default: 0, transformer: numericTransformer })
   balance: number;
 
   @Column({ default: true })
@@ -69,10 +70,10 @@ export class Merchant {
   @Column({ name: 'zone_id', nullable: true })
   zoneId: number;
 
-  @Column('decimal', { name: 'delivery_fee', precision: 10, scale: 4, default: 0, nullable: true })
+  @Column('decimal', { name: 'delivery_fee', precision: 10, scale: 4, default: 0, nullable: true, transformer: numericTransformer })
   deliveryFee: number;
 
-  @Column('decimal', { name: 'exchange_rate', precision: 10, scale: 4, default: 4100, nullable: true })
+  @Column('decimal', { name: 'exchange_rate', precision: 10, scale: 4, default: 4100, nullable: true, transformer: numericTransformer })
   exchangeRate: number;
 
   @Column({ type: 'text', nullable: true })

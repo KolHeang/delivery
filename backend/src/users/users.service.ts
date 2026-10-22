@@ -89,15 +89,19 @@ export class UsersService implements OnModuleInit {
     };
   }
 
-  async findOne(id: number): Promise<User> {
-    const user = await this.repo
+  async findOne(id: number, tenantId?: number): Promise<User> {
+    const qb = this.repo
       .createQueryBuilder('user')
       .leftJoinAndSelect('user.zone', 'zone')
       .leftJoinAndSelect('user.vehicle', 'vehicle')
       .leftJoinAndSelect('user.roleRelation', 'roleRelation')
-      .where('user.id = :id', { id })
-      .getOne();
+      .where('user.id = :id', { id });
 
+    if (tenantId) {
+      qb.andWhere('(user.tenantId = :tenantId OR user.tenantId IS NULL)', { tenantId });
+    }
+
+    const user = await qb.getOne();
     if (!user) throw new NotFoundException('User not found');
     return user;
   }
@@ -219,8 +223,8 @@ export class UsersService implements OnModuleInit {
     return this.findOne(saved.id);
   }
 
-  async update(id: number, dto: UpdateUserDto): Promise<User> {
-    const existingUser = await this.findOne(id);
+  async update(id: number, dto: UpdateUserDto, tenantId?: number): Promise<User> {
+    const existingUser = await this.findOne(id, tenantId);
     const payload = { ...dto } as any;
 
     if (dto.password && dto.password.trim() !== '') {
@@ -314,11 +318,11 @@ export class UsersService implements OnModuleInit {
     delete payload.role;
 
     await this.repo.update(id, payload);
-    return this.findOne(id);
+    return this.findOne(id, tenantId);
   }
 
-  async remove(id: number): Promise<{ message: string }> {
-    await this.findOne(id);
+  async remove(id: number, tenantId?: number): Promise<{ message: string }> {
+    await this.findOne(id, tenantId);
     await this.repo.delete(id);
     return { message: 'User deleted successfully' };
   }

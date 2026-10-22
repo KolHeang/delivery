@@ -42,16 +42,20 @@ export class DriversService {
       .getOne();
   }
 
-  async findOne(id: number): Promise<User> {
-    const item = await this.repo
+  async findOne(id: number, tenantId?: number): Promise<User> {
+    const qb = this.repo
       .createQueryBuilder('driver')
       .leftJoinAndSelect('driver.zone', 'zone')
       .leftJoinAndSelect('driver.vehicle', 'vehicle')
       .leftJoinAndSelect('driver.roleRelation', 'roleRelation')
       .where('driver.id = :id', { id })
-      .andWhere('driver.isDriver = true')
-      .getOne();
+      .andWhere('driver.isDriver = true');
 
+    if (tenantId) {
+      qb.andWhere('(driver.tenantId = :tenantId OR driver.tenantId IS NULL)', { tenantId });
+    }
+
+    const item = await qb.getOne();
     if (!item) throw new NotFoundException(`Driver #${id} not found`);
     return item;
   }
@@ -119,8 +123,8 @@ export class DriversService {
     return this.repo.save(driver);
   }
 
-  async update(id: number, dto: UpdateDriverDto): Promise<User> {
-    await this.findOne(id);
+  async update(id: number, dto: UpdateDriverDto, tenantId?: number): Promise<User> {
+    await this.findOne(id, tenantId);
     const payload = { ...dto } as any;
     if (dto.password) {
       payload.password = await bcrypt.hash(dto.password, 10);
@@ -138,11 +142,11 @@ export class DriversService {
     payload.isDriver = true;
     payload.isStaff = false;
     await this.repo.update(id, payload);
-    return this.findOne(id);
+    return this.findOne(id, tenantId);
   }
 
-  async remove(id: number): Promise<{ message: string }> {
-    const driver = await this.findOne(id);
+  async remove(id: number, tenantId?: number): Promise<{ message: string }> {
+    const driver = await this.findOne(id, tenantId);
     await this.repo.remove(driver);
     return { message: `Driver #${id} deleted successfully` };
   }

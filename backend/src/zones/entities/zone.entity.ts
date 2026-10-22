@@ -10,6 +10,7 @@ import {
 } from 'typeorm';
 
 import { Tenant } from '../../saas/entities/tenant.entity';
+import { numericTransformer } from '../../common/numeric.transformer';
 
 @Entity('zones')
 export class Zone {
@@ -29,7 +30,7 @@ export class Zone {
   @Column({ unique: true })
   code: string;
 
-  @Column('decimal', { precision: 10, scale: 4, default: 0 })
+  @Column('decimal', { precision: 10, scale: 4, default: 0, transformer: numericTransformer })
   price: number;
 
   @Column({ nullable: true })

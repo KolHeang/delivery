@@ -37,8 +37,12 @@ export class VehiclesService {
     };
   }
 
-  async findOne(id: number): Promise<Vehicle> {
-    const item = await this.repo.findOne({ where: { id } });
+  async findOne(id: number, tenantId?: number): Promise<Vehicle> {
+    const qb = this.repo.createQueryBuilder('vehicle').where('vehicle.id = :id', { id });
+    if (tenantId) {
+      qb.andWhere('(vehicle.tenantId = :tenantId OR vehicle.tenantId IS NULL)', { tenantId });
+    }
+    const item = await qb.getOne();
     if (!item) throw new NotFoundException(`Vehicle #${id} not found`);
     return item;
   }
@@ -47,14 +51,14 @@ export class VehiclesService {
     return this.repo.save(this.repo.create(dto as any)) as any;
   }
 
-  async update(id: number, dto: UpdateVehicleDto): Promise<Vehicle> {
-    await this.findOne(id);
+  async update(id: number, dto: UpdateVehicleDto, tenantId?: number): Promise<Vehicle> {
+    await this.findOne(id, tenantId);
     await this.repo.update(id, dto as any);
-    return this.findOne(id);
+    return this.findOne(id, tenantId);
   }
 
-  async remove(id: number): Promise<{ message: string }> {
-    await this.findOne(id);
+  async remove(id: number, tenantId?: number): Promise<{ message: string }> {
+    await this.findOne(id, tenantId);
     await this.repo.delete(id);
     return { message: 'Vehicle deleted successfully' };
   }

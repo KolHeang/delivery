@@ -49,13 +49,13 @@ export class DashboardService {
     const end = this.parseFlexibleDate(endDate);
     if (start) {
       start.setHours(0, 0, 0, 0);
-      queryBuilder.andWhere(`${alias}.createdAt >= :startDate`, {
+      queryBuilder.andWhere(`${alias}.created_at >= :startDate`, {
         startDate: start,
       });
     }
     if (end) {
       end.setHours(23, 59, 59, 999);
-      queryBuilder.andWhere(`${alias}.createdAt <= :endDate`, {
+      queryBuilder.andWhere(`${alias}.created_at <= :endDate`, {
         endDate: end,
       });
     }
@@ -68,7 +68,7 @@ export class DashboardService {
     tenantId?: number,
   ) {
     if (tenantId) {
-      queryBuilder.andWhere(`${alias}.tenantId = :tenantId`, { tenantId });
+      queryBuilder.andWhere(`${alias}.tenant_id = :tenantId`, { tenantId });
     }
     return queryBuilder;
   }
@@ -123,7 +123,7 @@ export class DashboardService {
 
     const revenueQuery = this.parcelRepo
       .createQueryBuilder('parcel')
-      .select('SUM(parcel.deliveryFee)', 'total')
+      .select('SUM(parcel.delivery_fee)', 'total')
       .where("parcel.status = 'delivered'");
     this.applyTenantFilter(revenueQuery, 'parcel', tenantId);
     this.applyDateFilter(revenueQuery, 'parcel', startDate, endDate);
@@ -132,16 +132,16 @@ export class DashboardService {
     const codQuery = this.parcelRepo
       .createQueryBuilder('parcel')
       .select('SUM(parcel.cod)', 'total')
-      .addSelect('parcel.codCurrency', 'currency')
+      .addSelect('parcel.cod_currency', 'currency')
       .where("parcel.status = 'delivered'")
-      .groupBy('parcel.codCurrency');
+      .groupBy('parcel.cod_currency');
     this.applyTenantFilter(codQuery, 'parcel', tenantId);
     this.applyDateFilter(codQuery, 'parcel', startDate, endDate);
     const codResults = await codQuery.getRawMany();
 
     const feeQuery = this.parcelRepo
       .createQueryBuilder('parcel')
-      .select('SUM(parcel.deliveryFee)', 'total')
+      .select('SUM(parcel.delivery_fee)', 'total')
       .where("parcel.status = 'delivered'");
     this.applyTenantFilter(feeQuery, 'parcel', tenantId);
     this.applyDateFilter(feeQuery, 'parcel', startDate, endDate);
@@ -273,7 +273,7 @@ export class DashboardService {
     const monthlyRevenueQuery = this.parcelRepo
       .createQueryBuilder('parcel')
       .select("TO_CHAR(parcel.created_at, 'Mon')", 'month')
-      .addSelect('SUM(parcel.deliveryFee)', 'revenue')
+      .addSelect('SUM(parcel.delivery_fee)', 'revenue')
       .where("parcel.status = 'delivered'")
       .groupBy(
         "TO_CHAR(parcel.created_at, 'Mon'), DATE_TRUNC('month', parcel.created_at)",
@@ -311,7 +311,7 @@ export class DashboardService {
       .leftJoinAndSelect('parcel.driver', 'driver')
       .leftJoinAndSelect('parcel.zone', 'zone')
       .where('1=1')
-      .orderBy('parcel.createdAt', 'DESC')
+      .orderBy('parcel.created_at', 'DESC')
       .take(10);
 
     this.applyTenantFilter(qb, 'parcel', tenantId);
@@ -337,11 +337,11 @@ export class DashboardService {
     if (startDate || endDate) {
       const qb = this.parcelRepo
         .createQueryBuilder('parcel')
-        .select('parcel.driverId', 'driverId')
+        .select('parcel.driver_id', 'driverId')
         .addSelect('COUNT(*)', 'totalDeliveries')
         .where("parcel.status = 'delivered'")
-        .andWhere('parcel.driverId IS NOT NULL')
-        .groupBy('parcel.driverId')
+        .andWhere('parcel.driver_id IS NOT NULL')
+        .groupBy('parcel.driver_id')
         .orderBy('COUNT(*)', 'DESC')
         .limit(5);
 

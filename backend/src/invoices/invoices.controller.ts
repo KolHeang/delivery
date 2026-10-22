@@ -1,4 +1,5 @@
-import { Controller, Get, Post, Body, UseGuards } from '@nestjs/common';
+import { getEffectiveTenantId } from '../common/tenant.util';
+import { Controller, Req, Get, Post, Body, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { InvoicesService } from './invoices.service';
 import { CreateInvoiceDto } from './dto/create-invoice.dto';
@@ -18,14 +19,14 @@ export class InvoicesController {
   @RequirePermissions('parcels.create', 'parcels.update')
   @ApiOperation({ summary: 'Save printed invoices' })
   @LogActivity({ action: 'CREATE_INVOICE', entityName: 'Invoice', description: 'Generated and printed invoice' })
-  create(@Body() dto: CreateInvoiceDto) {
-    return this.invoicesService.createInvoices(dto.parcelIds);
+  create(@Body() dto: CreateInvoiceDto, @Req() req: any) {
+    return this.invoicesService.createInvoices(dto.parcelIds, getEffectiveTenantId(req));
   }
 
   @Get()
   @RequirePermissions('parcels.read')
   @ApiOperation({ summary: 'Get all printed invoices' })
-  findAll() {
-    return this.invoicesService.findAll();
+  findAll(@Req() req: any) {
+    return this.invoicesService.findAll(getEffectiveTenantId(req));
   }
 }

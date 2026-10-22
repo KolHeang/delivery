@@ -1,3 +1,4 @@
+import { getEffectiveTenantId } from '../common/tenant.util';
 import {
   Controller,
   Get,
@@ -34,7 +35,7 @@ export class CustomersController {
     @Query('search') search?: string,
     @Req() req?: any,
   ) {
-    const tenantId = req?.user?.tenantId;
+    const tenantId = getEffectiveTenantId(req);
     return this.customersService.findAll({
       page: page ? +page : undefined,
       limit: limit ? +limit : undefined,
@@ -45,15 +46,16 @@ export class CustomersController {
   @Get(':id')
   @ApiOperation({ summary: 'Get customer by ID' })
   @ApiParam({ name: 'id', type: Number, description: 'Customer ID' })
-  findOne(@Param('id', ParseIntPipe) id: number) {
-    return this.customersService.findOne(id);
+  findOne(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
+    return this.customersService.findOne(id, getEffectiveTenantId(req));
   }
 
   @Post()
   @ApiOperation({ summary: 'Create customer' })
   create(@Body() dto: CreateCustomerDto, @Req() req?: any) {
-    if (req?.user?.tenantId) {
-      dto.tenantId = req.user.tenantId;
+    const tenantId = getEffectiveTenantId(req);
+    if (tenantId) {
+      dto.tenantId = tenantId;
     }
     return this.customersService.create(dto);
   }
@@ -64,14 +66,15 @@ export class CustomersController {
   update(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateCustomerDto,
+    @Req() req: any,
   ) {
-    return this.customersService.update(id, dto);
+    return this.customersService.update(id, dto, getEffectiveTenantId(req));
   }
 
   @Delete(':id')
   @ApiOperation({ summary: 'Delete customer' })
   @ApiParam({ name: 'id', type: Number, description: 'Customer ID' })
-  remove(@Param('id', ParseIntPipe) id: number) {
-    return this.customersService.remove(id);
+  remove(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
+    return this.customersService.remove(id, getEffectiveTenantId(req));
   }
 }

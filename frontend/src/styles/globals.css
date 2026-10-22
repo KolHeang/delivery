@@ -1805,8 +1805,12 @@ select.form-control + .input-error-icon {
     width: 300px !important;
   }
 
+  thead {
+    display: table-row-group !important;
+  }
+
   body.receipt-print-active .receipt-print-container thead {
-    display: table-header-group !important;
+    display: table-row-group !important;
   }
 
   body.receipt-print-active .receipt-print-container tbody {
@@ -1815,6 +1819,8 @@ select.form-control + .input-error-icon {
 
   body.receipt-print-active .receipt-print-container tr {
     display: table-row !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
   }
 
   body.receipt-print-active .receipt-print-container th,

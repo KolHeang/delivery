@@ -8,6 +8,7 @@ import {
   JoinColumn,
   BeforeInsert,
   OneToMany,
+  Index,
 } from 'typeorm';
 import { Merchant } from '../../merchants/entities/merchant.entity';
 import { MerchantBranch } from '../../merchants/entities/merchant-branch.entity';
@@ -33,6 +34,7 @@ export type ParcelSize = 'small' | 'medium' | 'large';
 export type PaymentStatus = 'pending' | 'paid';
 
 @Entity('parcels')
+@Index(['driverId', 'status'])
 export class Parcel {
   @PrimaryGeneratedColumn()
   id: number;
@@ -41,12 +43,14 @@ export class Parcel {
   @JoinColumn({ name: 'tenant_id' })
   tenant: Tenant;
 
+  @Index()
   @Column({ name: 'tenant_id', nullable: true })
   tenantId: number;
 
   @Column({ name: 'tracking_code', unique: true })
   trackingCode: string;
 
+  @Index()
   @Column({ default: 'pending' })
   status: ParcelStatus;
 
@@ -138,6 +142,7 @@ export class Parcel {
   @JoinColumn({ name: 'merchant_id' })
   merchant: Merchant;
 
+  @Index()
   @Column({ name: 'merchant_id', nullable: true })
   merchantId: number;
 
@@ -159,6 +164,7 @@ export class Parcel {
   @JoinColumn({ name: 'driver_id' })
   driver: User;
 
+  @Index()
   @Column({ name: 'driver_id', nullable: true })
   driverId: number;
 
@@ -166,6 +172,7 @@ export class Parcel {
   @JoinColumn({ name: 'pickup_driver_id' })
   pickupDriver: User;
 
+  @Index()
   @Column({ name: 'pickup_driver_id', nullable: true })
   pickupDriverId: number;
 

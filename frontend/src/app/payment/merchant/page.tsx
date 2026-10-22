@@ -13,6 +13,7 @@ import { useTenant } from '@/lib/TenantContext';
 import DateInput, { formatDateToDDMMYYYY, getLocalDateString } from '@/components/ui/DateInput';
 import Modal from '@/components/ui/Modal';
 import { TableSkeleton, Skeleton } from '@/components/ui/Skeleton';
+import SearchableSelect from '@/components/ui/SearchableSelect';
 
 
 
@@ -171,11 +172,17 @@ export default function PaymentWithShopPage() {
     try {
       const [merchantRes, orderRes, orgRes] = await Promise.all([
         api.get('/select/merchants'),
-        api.get('/parcels'),
+        api.get('/payments/merchant/settlement-parcels'),
         api.get('/settings/organisation').catch(() => null),
       ]);
       setMerchants(Array.isArray(merchantRes.data) ? merchantRes.data : (merchantRes.data?.results || merchantRes.data?.result || []));
-      setOrders(Array.isArray(orderRes.data) ? orderRes.data : (orderRes.data?.results || orderRes.data?.result || []));
+      const rawOrders = Array.isArray(orderRes.data) ? orderRes.data : (orderRes.data?.results || orderRes.data?.result || []);
+      const sanitizedOrders = rawOrders.map((item: any) => ({
+        ...item,
+        deliveryFee: item.deliveryFee != null ? parseFloat(item.deliveryFee).toFixed(2) : '0.00',
+        cod: item.cod != null ? (item.codCurrency === 'KHR' ? parseInt(item.cod).toString() : parseFloat(item.cod).toFixed(2)) : '0.00',
+      }));
+      setOrders(sanitizedOrders);
       if (orgRes && orgRes.data) {
         setOrgInfo({
           name: orgRes.data.name || 'E-Express',
@@ -692,19 +699,19 @@ export default function PaymentWithShopPage() {
                   <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#4b5563' }}>
                     {lang === 'km' ? 'ឈ្មោះហាង' : 'Shop Name'}
                   </span>
-                  <select
-                    className="form-control"
+                  <SearchableSelect
                     value={merchantFilter}
-                    onChange={e => setMerchantFilter(e.target.value)}
-                    style={{ width: '240px', height: '38px', padding: '6px 12px', borderRadius: '4px', border: '1px solid #d1d5db', backgroundColor: '#fff' }}
-                  >
-                    <option value="">{lang === 'km' ? '— ទាំងអស់ —' : '— All Shops —'}</option>
-                    {merchants.map(m => (
-                      <option key={m.id} value={m.id}>
-                        {lang === 'km' && m.nameKh ? m.nameKh : m.name} ({m.phone})
-                      </option>
-                    ))}
-                  </select>
+                    onChange={setMerchantFilter}
+                    style={{ width: '240px', height: '38px', padding: '6px 12px', borderRadius: '4px', borderColor: '#d1d5db', backgroundColor: '#fff', fontSize: '13px' }}
+                    placeholder={lang === 'km' ? '— ទាំងអស់ —' : '— All Shops —'}
+                    options={[
+                      { value: '', label: lang === 'km' ? '— ទាំងអស់ —' : '— All Shops —' },
+                      ...merchants.map(m => ({
+                        value: String(m.id),
+                        label: (lang === 'km' && m.nameKh ? m.nameKh : m.name) + (m.phone ? ` (${m.phone})` : ''),
+                      })),
+                    ]}
+                  />
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
@@ -881,7 +888,7 @@ export default function PaymentWithShopPage() {
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 4, justifyContent: 'flex-end' }}>
                                   <input
                                     type="number"
-                                    defaultValue={o.cod}
+                                    defaultValue={o.codCurrency === 'KHR' ? parseInt(o.cod || 0) : parseFloat(o.cod || 0).toFixed(2)}
                                     onBlur={async (e) => {
                                       const newVal = parseFloat(e.target.value) || 0;
                                       if (newVal !== parseFloat(o.cod)) {
@@ -912,7 +919,7 @@ export default function PaymentWithShopPage() {
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 4, justifyContent: 'flex-end' }}>
                                   <input
                                     type="number"
-                                    defaultValue={o.deliveryFee}
+                                    defaultValue={parseFloat(o.deliveryFee || 0).toFixed(2)}
                                     onBlur={async (e) => {
                                       const newVal = parseFloat(e.target.value) || 0;
                                       if (newVal !== parseFloat(o.deliveryFee)) {
@@ -1119,19 +1126,19 @@ export default function PaymentWithShopPage() {
                   <span style={{ fontSize: 13, fontWeight: 700, color: '#64748b', paddingLeft: 2 }}>
                     {lang === 'km' ? 'ហាង / Merchant' : 'Merchant'}
                   </span>
-                  <select
-                    className="form-control"
+                  <SearchableSelect
                     value={historyMerchantId}
-                    onChange={e => setHistoryMerchantId(e.target.value)}
-                    style={{ width: '200px', height: '38px', padding: '6px 12px', borderRadius: '4px', border: '1px solid #d1d5db', backgroundColor: '#fff', cursor: 'pointer' }}
-                  >
-                    <option value="">{lang === 'km' ? '-- ទាំងអស់ --' : '-- All --'}</option>
-                    {merchants.map(m => (
-                      <option key={m.id} value={m.id}>
-                        {lang === 'km' && m.nameKh ? m.nameKh : m.name}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={setHistoryMerchantId}
+                    style={{ width: '200px', height: '38px', padding: '6px 12px', borderRadius: '4px', borderColor: '#d1d5db', backgroundColor: '#fff', fontSize: '13px' }}
+                    placeholder={lang === 'km' ? '-- ទាំងអស់ --' : '-- All --'}
+                    options={[
+                      { value: '', label: lang === 'km' ? '-- ទាំងអស់ --' : '-- All --' },
+                      ...merchants.map(m => ({
+                        value: String(m.id),
+                        label: (lang === 'km' && m.nameKh ? m.nameKh : m.name) + (m.phone ? ` (${m.phone})` : ''),
+                      })),
+                    ]}
+                  />
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>

@@ -1,3 +1,4 @@
+import { getEffectiveTenantId } from '../common/tenant.util';
 import {
   Controller,
   Get,
@@ -35,7 +36,7 @@ export class VehiclesController {
     @Query('limit') limit?: string,
     @Req() req?: any,
   ) {
-    const tenantId = req?.user?.tenantId;
+    const tenantId = getEffectiveTenantId(req);
     return this.vehiclesService.findAll({
       page: page ? +page : undefined,
       limit: limit ? +limit : undefined,
@@ -46,16 +47,17 @@ export class VehiclesController {
   @RequirePermissions('vehicles.read')
   @ApiOperation({ summary: 'Get vehicle by ID' })
   @ApiParam({ name: 'id', type: Number, description: 'Vehicle ID' })
-  findOne(@Param('id', ParseIntPipe) id: number) {
-    return this.vehiclesService.findOne(id);
+  findOne(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
+    return this.vehiclesService.findOne(id, getEffectiveTenantId(req));
   }
 
   @Post()
   @RequirePermissions('vehicles.create')
   @ApiOperation({ summary: 'Create vehicle' })
   create(@Body() dto: CreateVehicleDto, @Req() req?: any) {
-    if (req?.user?.tenantId) {
-      (dto as any).tenantId = req.user.tenantId;
+    const tenantId = getEffectiveTenantId(req);
+    if (tenantId) {
+      (dto as any).tenantId = tenantId;
     }
     return this.vehiclesService.create(dto);
   }
@@ -67,15 +69,16 @@ export class VehiclesController {
   update(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateVehicleDto,
+    @Req() req: any,
   ) {
-    return this.vehiclesService.update(id, dto);
+    return this.vehiclesService.update(id, dto, getEffectiveTenantId(req));
   }
 
   @Delete(':id')
   @RequirePermissions('vehicles.delete')
   @ApiOperation({ summary: 'Delete vehicle' })
   @ApiParam({ name: 'id', type: Number, description: 'Vehicle ID' })
-  remove(@Param('id', ParseIntPipe) id: number) {
-    return this.vehiclesService.remove(id);
+  remove(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
+    return this.vehiclesService.remove(id, getEffectiveTenantId(req));
   }
 }

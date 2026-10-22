@@ -129,7 +129,8 @@ export default function PickupRequestDetailPage() {
         fee = (tier && zone[tier] != null) ? zone[tier] : zone.deliveryFee ?? zone.price ?? '';
       }
       if (fee !== '' && fee != null) {
-        const feeStr = String(fee);
+        const num = parseFloat(String(fee));
+        const feeStr = !isNaN(num) ? num.toFixed(2) : String(fee);
         setForm(f => ({ ...f, deliveryFee: feeStr }));
         setBatchRows(rows => rows.map((r, i) => i === 0 && !r.deliveryFee ? { ...r, deliveryFee: feeStr } : r));
       }
@@ -721,6 +722,10 @@ export default function PickupRequestDetailPage() {
                                     <input
                                       type="number" min="0" step="0.01" value={row.deliveryFee}
                                       onChange={e => updateBatchRow(idx, 'deliveryFee', e.target.value)}
+                                      onBlur={e => {
+                                        const val = parseFloat(e.target.value);
+                                        if (!isNaN(val)) updateBatchRow(idx, 'deliveryFee', val.toFixed(2));
+                                      }}
                                       placeholder="1.25"
                                       style={{ ...batchCellStyle, width: '100%' }}
                                     />
@@ -730,6 +735,10 @@ export default function PickupRequestDetailPage() {
                                     <input
                                       type="number" min="0" step="0.01" value={row.amountUSD}
                                       onChange={e => updateBatchRow(idx, 'amountUSD', e.target.value)}
+                                      onBlur={e => {
+                                        const val = parseFloat(e.target.value);
+                                        if (!isNaN(val)) updateBatchRow(idx, 'amountUSD', val.toFixed(2));
+                                      }}
                                       placeholder="0"
                                       style={{ ...batchCellStyle, width: '100%' }}
                                     />

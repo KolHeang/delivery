@@ -342,7 +342,11 @@ export default function DriverTaskDetailPage() {
             <div style={{ display: "flex", flexDirection: "column", gap: "10px", fontSize: "13px" }}>
               <div style={{ display: "flex", justifyContent: "space-between" }}>
                 <span style={{ color: "#64748b", fontWeight: "600" }}>COD Amount</span>
-                <span style={{ fontWeight: "900", color: "#2563eb", fontSize: "15px" }}>${Number(cod).toFixed(2)}</span>
+                <span style={{ fontWeight: "900", color: "#2563eb", fontSize: "15px" }}>
+                  {task?.codCurrency === "KHR"
+                    ? `${Math.round(Number(cod)).toLocaleString()} ៛`
+                    : `$${Number(cod).toFixed(2)}`}
+                </span>
               </div>
               <div style={{ display: "flex", justifyContent: "space-between" }}>
                 <span style={{ color: "#64748b", fontWeight: "600" }}>Weight</span>
@@ -524,6 +528,27 @@ export default function DriverTaskDetailPage() {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px" }}>
               <h3 style={{ fontSize: "17px", fontWeight: "900", color: "#0f172a", margin: 0 }}>Confirm Delivery</h3>
               <button onClick={() => setConfirmDeliveryOpen(false)} style={{ border: "none", background: "none", cursor: "pointer" }}><MdClose size={22} color="#64748b" /></button>
+            </div>
+
+            {/* COD Amount to Collect Banner */}
+            <div style={{
+              backgroundColor: "#eff6ff",
+              border: "1.5px solid #bfdbfe",
+              borderRadius: "14px",
+              padding: "10px 14px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              marginBottom: "16px",
+            }}>
+              <span style={{ fontSize: "12.5px", fontWeight: "700", color: "#1e40af" }}>
+                {lang === "km" ? "ប្រាក់ត្រូវប្រមូល (COD)៖" : "COD to Collect:"}
+              </span>
+              <span style={{ fontSize: "17px", fontWeight: "900", color: "#1d4ed8" }}>
+                {task?.codCurrency === "KHR"
+                  ? `${Math.round(Number(cod)).toLocaleString()} ៛`
+                  : `$${Number(cod).toFixed(2)}`}
+              </span>
             </div>
 
             {/* Delivery Proof (Required) */}

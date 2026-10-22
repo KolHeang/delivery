@@ -20,6 +20,9 @@ import {
   AssignDriverDto,
   AssignPickupDto,
   AssignDeliveryDto,
+  BatchCreateParcelsDto,
+  BatchAssignDeliveryDto,
+  BatchCompleteBoxDto,
 } from './dto/parcel.dto';
 import { AssignRiderDto } from './dto/pickup-request.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -109,6 +112,87 @@ export class ParcelsController {
   findInWarehouse(@Request() req: any) {
     return this.parcelsService.findInWarehouse(this.getEffectiveTenantId(req));
   }
+
+  /** Active parcels waiting for completion (បញ្ចប់ប្រអប់) */
+  @Get('complete-box')
+  @RequirePermissions('parcels.read')
+  @ApiOperation({ summary: 'Get active parcels for complete-box module' })
+  findCompleteBox(
+    @Request() req: any,
+    @Query('search') search?: string,
+    @Query('driverId') driverId?: string,
+    @Query('status') status?: string,
+    @Query('date') date?: string,
+  ) {
+    return this.parcelsService.findCompleteBox({
+      tenantId: this.getEffectiveTenantId(req),
+      search,
+      driverId: driverId ? +driverId : undefined,
+      status,
+      date,
+    });
+  }
+
+  /** Batch update complete box (បញ្ចប់ប្រអប់) */
+  @Post('complete-box/batch-update')
+  @RequirePermissions('parcels.update')
+  @ApiOperation({ summary: 'Batch update complete box parcels' })
+  @LogActivity({ action: 'COMPLETE_BOX_BATCH_UPDATE', entityName: 'Parcel', description: 'Batch updated complete box parcels' })
+  completeBoxBatchUpdate(@Body() dto: BatchCompleteBoxDto, @Request() req: any) {
+    const updatedById = req?.user?.id ? +req.user.id : undefined;
+    return this.parcelsService.completeBoxBatchUpdate(dto.items, this.getEffectiveTenantId(req), updatedById);
+  }
+
+  /** Dedicated endpoint for invoice printing list (បោះពុម្ពវិក្កយបត្រ) */
+  @Get('print-invoices')
+  @RequirePermissions('parcels.read')
+  @ApiOperation({ summary: 'Get parcels specifically for print invoices screen' })
+  findPrintInvoices(
+    @Request() req: any,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('search') search?: string,
+    @Query('status') status?: string,
+    @Query('driverId') driverId?: string,
+    @Query('merchantId') merchantId?: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+    @Query('ids') ids?: string,
+  ) {
+    return this.parcelsService.findPrintInvoices({
+      page: page ? +page : undefined,
+      limit: limit ? +limit : undefined,
+      search,
+      status,
+      driverId: driverId ? +driverId : undefined,
+      merchantId: merchantId ? +merchantId : undefined,
+      startDate,
+      endDate,
+      ids,
+      tenantId: this.getEffectiveTenantId(req),
+    });
+  }
+
+  /** Batch create parcels (បញ្ចូលទិន្នន័យជាបណ្តុំ) */
+  @Post('batch')
+  @RequirePermissions('parcels.create')
+  @ApiOperation({ summary: 'Batch create parcels' })
+  @LogActivity({ action: 'BATCH_CREATE_PARCELS', entityName: 'Parcel', description: 'Batch created parcels' })
+  batchCreate(@Body() dto: BatchCreateParcelsDto, @Request() req: any) {
+    const createdById = req?.user?.id ? +req.user.id : undefined;
+    const tenantId = this.getEffectiveTenantId(req);
+    return this.parcelsService.batchCreate(dto.items, tenantId, createdById);
+  }
+
+  /** Batch assign delivery driver (ចាត់តាំងអ្នកដឹកជូនអតិថិជន) */
+  @Post('assign-delivery/batch')
+  @RequirePermissions('parcels.update')
+  @ApiOperation({ summary: 'Batch assign delivery driver to parcels' })
+  @LogActivity({ action: 'BATCH_ASSIGN_DELIVERY', entityName: 'Parcel', description: 'Batch assigned delivery driver to parcels' })
+  assignDeliveryBatch(@Body() dto: BatchAssignDeliveryDto, @Request() req: any) {
+    return this.parcelsService.assignDeliveryBatch(dto, this.getEffectiveTenantId(req));
+  }
+
 
   @Get('stats')
   @RequirePermissions('parcels.read')

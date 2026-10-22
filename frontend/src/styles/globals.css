@@ -1901,4 +1901,24 @@ body.dark .skeleton-shimmer {
   to {
     opacity: 1;
   }
-}
+}
+
+@keyframes searchableSelectFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.searchable-select-trigger:hover {
+  border-color: var(--accent, #3b82f6) !important;
+}
+
+.searchable-select-option:hover {
+  background-color: var(--bg-hover, #f3f4f6);
+}
+

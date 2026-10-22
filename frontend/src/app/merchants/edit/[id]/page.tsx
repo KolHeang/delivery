@@ -86,12 +86,8 @@ export default function EditShopPage() {
             longitude: shop.longitude ? String(shop.longitude) : "",
             pricingTier: shop.pricingTier || "standard",
             zoneId: shop.zoneId ? shop.zoneId.toString() : "",
-            deliveryFee: shop.deliveryFee ? shop.deliveryFee.toString() : "0",
-            exchangeRate: shop.exchangeRate
-              ? shop.exchangeRate.toString()
-              : khrRate
-                ? khrRate.toString()
-                : "4100",
+            deliveryFee: shop.deliveryFee != null ? parseFloat(shop.deliveryFee).toFixed(2) : "0.00",
+            exchangeRate: shop.exchangeRate != null ? Math.round(Number(shop.exchangeRate)).toString() : (khrRate ? Math.round(Number(khrRate)).toString() : "4100"),
             note: shop.note || "",
             telegram: shop.telegram || "",
             qrLinkKhr: shop.qrLinkKhr || "",

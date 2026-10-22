@@ -194,10 +194,14 @@ export class DriverService {
     }
 
     // 3. Apply Date Filter Logic
-    if (startDate && endDate) {
+    if (startDate || endDate) {
+      const s = startDate ? new Date(startDate) : new Date(endDate!);
+      s.setHours(0, 0, 0, 0);
+      const e = endDate ? new Date(endDate) : new Date(startDate!);
+      e.setHours(23, 59, 59, 999);
       query.andWhere(
         'COALESCE(parcel.delivered_at, parcel.assigned_at, parcel.created_at) >= :startDate AND COALESCE(parcel.delivered_at, parcel.assigned_at, parcel.created_at) <= :endDate',
-        { startDate: new Date(startDate), endDate: new Date(endDate) },
+        { startDate: s, endDate: e },
       );
     }
 
@@ -374,7 +378,7 @@ export class DriverService {
 
     if (startDate && endDate) {
       query.andWhere(
-        'COALESCE(parcel.deliveredAt, parcel.assignedAt, parcel.createdAt) >= :startDate AND COALESCE(parcel.deliveredAt, parcel.assignedAt, parcel.createdAt) <= :endDate',
+        'COALESCE(parcel.delivered_at, parcel.assigned_at, parcel.created_at) >= :startDate AND COALESCE(parcel.delivered_at, parcel.assigned_at, parcel.created_at) <= :endDate',
         { startDate: new Date(startDate), endDate: new Date(endDate) },
       );
     }
@@ -858,10 +862,11 @@ export class DriverService {
         ?.total || 0,
     );
 
-    // Delivery Fee earned (SUM of deliveryFee for delivered orders in period)
+    // Fee calculations: driverFee for driver earnings, deliveryFee for shipping charge
     const feeQuery = this.parcelRepo
       .createQueryBuilder('parcel')
-      .select('SUM(parcel.delivery_fee)', 'total')
+      .select('SUM(COALESCE(parcel.driver_fee, 1000))', 'driver_fee_total')
+      .addSelect('SUM(parcel.delivery_fee)', 'delivery_fee_total')
       .where('parcel.driver_id = :driverId', { driverId })
       .andWhere('parcel.status = :status', { status: 'delivered' });
 
@@ -872,17 +877,19 @@ export class DriverService {
       );
     }
     const feeResult = await feeQuery.getRawOne();
-    const deliveryFeeTotal = parseFloat(feeResult?.total || 0);
+    const driverFeeTotal = parseFloat(feeResult?.driver_fee_total || 0);
+    const deliveryFeeTotal = parseFloat(feeResult?.delivery_fee_total || 0);
 
     const totalSuccessful = stats['delivered'] || 0;
     const assignedParcels =
-      (stats['assigned'] || 0) + (stats['in-transit'] || 0);
+      (stats['assigned'] || 0) +
+      (stats['in-transit'] || 0) +
+      (stats['picked-up'] || 0);
     const totalProblem = stats['failed'] || stats['problem'] || 0;
     const totalReturn = (stats['returned'] || 0) + (stats['rejected'] || 0);
     const sumTotalPackage =
       totalSuccessful +
       assignedParcels +
-      pickupRequestCount +
       totalProblem +
       totalReturn;
 
@@ -890,20 +897,20 @@ export class DriverService {
     const toCollectQuery = this.parcelRepo
       .createQueryBuilder('parcel')
       .select('SUM(parcel.cod)', 'total')
-      .addSelect("UPPER(COALESCE(parcel.codCurrency, 'USD'))", 'currency')
-      .where('parcel.driverId = :driverId', { driverId })
+      .addSelect("UPPER(COALESCE(parcel.cod_currency, 'USD'))", 'currency')
+      .where('parcel.driver_id = :driverId', { driverId })
       .andWhere('parcel.status IN (:...toCollectStatuses)', {
         toCollectStatuses: ['assigned', 'in-transit', 'pending'],
       });
 
     if (start && end) {
       toCollectQuery.andWhere(
-        'COALESCE(parcel.assignedAt, parcel.updatedAt, parcel.createdAt) >= :start AND COALESCE(parcel.assignedAt, parcel.updatedAt, parcel.createdAt) <= :end',
+        'COALESCE(parcel.assigned_at, parcel.updated_at, parcel.created_at) >= :start AND COALESCE(parcel.assigned_at, parcel.updated_at, parcel.created_at) <= :end',
         { start, end },
       );
     }
     const codToCollect = await toCollectQuery
-      .groupBy("UPPER(COALESCE(parcel.codCurrency, 'USD'))")
+      .groupBy("UPPER(COALESCE(parcel.cod_currency, 'USD'))")
       .getRawMany();
 
     const amountToCollectUSD = parseFloat(
@@ -920,10 +927,10 @@ export class DriverService {
       .createQueryBuilder('parcel')
       .leftJoinAndSelect('parcel.merchant', 'merchant')
       .where(
-        '(parcel.driverId = :driverId OR parcel.pickupDriverId = :driverId)',
+        '(parcel.driver_id = :driverId OR parcel.pickup_driver_id = :driverId)',
         { driverId },
       )
-      .orderBy('parcel.createdAt', 'DESC')
+      .orderBy('parcel.created_at', 'DESC')
       .take(5)
       .getMany();
 
@@ -944,6 +951,7 @@ export class DriverService {
     return {
       period,
       deliveryFeeTotal,
+      driverFeeTotal,
       wallets: [
         { currency: 'KHR', balance: codPendingKHR },
         { currency: 'USD', balance: codPendingUSD },
@@ -952,10 +960,14 @@ export class DriverService {
         usd: amountToCollectUSD,
         khr: amountToCollectKHR,
       },
+      amountToCollectUSD,
+      amountToCollectKHR,
       amountCollected: {
         usd: codPendingUSD,
         khr: codPendingKHR,
       },
+      amountCollectedUSD: codPendingUSD,
+      amountCollectedKHR: codPendingKHR,
       workStatistics: {
         totalParcels: sumTotalPackage > 0 ? sumTotalPackage : totalPackage,
         assigned: assignedParcels,
@@ -1050,7 +1062,7 @@ export class DriverService {
 
     if (start && end) {
       baseParcelQuery.andWhere(
-        'COALESCE(parcel.deliveredAt, parcel.assignedAt, parcel.updatedAt, parcel.createdAt) >= :start AND COALESCE(parcel.deliveredAt, parcel.assignedAt, parcel.updatedAt, parcel.createdAt) <= :end',
+        'COALESCE(parcel.delivered_at, parcel.assigned_at, parcel.updated_at, parcel.created_at) >= :start AND COALESCE(parcel.delivered_at, parcel.assigned_at, parcel.updated_at, parcel.created_at) <= :end',
         { start, end },
       );
     }
@@ -1060,7 +1072,7 @@ export class DriverService {
     }
 
     const parcels = await baseParcelQuery
-      .orderBy('parcel.createdAt', 'DESC')
+      .orderBy('parcel.created_at', 'DESC')
       .getMany();
 
     // Calculate Summary Metrics
@@ -1072,6 +1084,7 @@ export class DriverService {
     let totalPickedUp = 0;
     let totalPending = 0;
     let totalDeliveryFee = 0;
+    let totalDriverFee = 0;
 
     let codDeliveredUSD = 0;
     let codDeliveredKHR = 0;
@@ -1115,6 +1128,8 @@ export class DriverService {
 
       if (isDelivered) {
         totalDeliveryFee += feeVal;
+        const dFeeVal = ord.driverFee !== undefined && ord.driverFee !== null ? parseFloat(ord.driverFee as any) : 1000;
+        totalDriverFee += dFeeVal;
         if (ord.codCurrency === 'KHR') {
           codDeliveredKHR += codVal;
           if (ord.driverPaymentStatus === 'paid') {
@@ -1206,6 +1221,7 @@ export class DriverService {
         totalPending,
         successRate,
         deliveryFeeTotal: Math.round(totalDeliveryFee * 100) / 100,
+        driverFeeTotal: Math.round(totalDriverFee),
         cod: {
           usd: {
             totalDelivered: codDeliveredUSD,
@@ -1969,11 +1985,11 @@ export class DriverService {
     const query = this.parcelRepo
       .createQueryBuilder('parcel')
       .where(
-        '(parcel.driverId = :driverId OR parcel.pickupDriverId = :driverId)',
+        '(parcel.driver_id = :driverId OR parcel.pickup_driver_id = :driverId)',
         { driverId },
       )
       .andWhere(
-        'DATE(COALESCE(parcel.deliveredAt, parcel.assignedAt, parcel.updatedAt, parcel.createdAt)) = :formattedDate',
+        'DATE(COALESCE(parcel.delivered_at, parcel.assigned_at, parcel.updated_at, parcel.created_at)) = :formattedDate',
         { formattedDate },
       );
 

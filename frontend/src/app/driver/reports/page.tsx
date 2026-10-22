@@ -519,11 +519,17 @@ export default function DriverReportsPage() {
             </span>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', flexWrap: 'wrap' }}>
             <span style={{ fontSize: '30px', fontWeight: '900', letterSpacing: '-0.5px' }}>
-              ${summary?.deliveryFeeTotal?.toFixed(2) || '0.00'}
+              {summary?.driverFeeTotal !== undefined
+                ? `${Number(summary.driverFeeTotal).toLocaleString()} ៛`
+                : `$${Number(summary?.deliveryFeeTotal || 0).toFixed(2)}`}
             </span>
-            <span style={{ fontSize: '12px', opacity: 0.8 }}>USD</span>
+            {summary?.deliveryFeeTotal > 0 && (
+              <span style={{ fontSize: '11px', opacity: 0.85, backgroundColor: 'rgba(255,255,255,0.18)', padding: '2px 8px', borderRadius: '8px' }}>
+                {lang === 'km' ? 'ថ្លៃដឹកជញ្ជូនសរុប' : 'Shipping Fee'}: ${Number(summary.deliveryFeeTotal).toFixed(2)}
+              </span>
+            )}
           </div>
 
           {/* Mini Stats Bar */}
@@ -1093,7 +1099,11 @@ export default function DriverReportsPage() {
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f1f5f9', paddingBottom: '6px' }}>
                 <span style={{ color: '#64748b' }}>{t.deliveryFeeEarned}:</span>
-                <span style={{ fontWeight: '800', color: '#2563eb' }}>${summary?.deliveryFeeTotal?.toFixed(2)}</span>
+                <span style={{ fontWeight: '800', color: '#2563eb' }}>
+                  {summary?.driverFeeTotal !== undefined
+                    ? `${Number(summary.driverFeeTotal).toLocaleString()} ៛`
+                    : `$${Number(summary?.deliveryFeeTotal || 0).toFixed(2)}`}
+                </span>
               </div>
             </div>
 

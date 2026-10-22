@@ -16,6 +16,7 @@ import DateInput, { formatDateToDDMMYYYY, getLocalDateString } from '@/component
 import Pagination from '@/components/ui/Pagination';
 import { TableSkeleton } from '@/components/ui/Skeleton';
 import Thumbnail from '@/components/ui/Thumbnail';
+import SearchableSelect from '@/components/ui/SearchableSelect';
 
 const getLocalFirstDayOfMonthString = () => {
   const d = new Date();
@@ -314,27 +315,41 @@ export default function DeliveriesPage() {
                   labelEn="Start Date"
                   labelKh="កាលបរិច្ឆេទបញ្ជូល"
                   value={startDate}
-                  onChange={val => { setStartDate(val); setCurrentPage(1); }}
+                  onChange={(val: string) => { setStartDate(val); setCurrentPage(1); }}
                 />
                 <DateInput
                   labelEn="End Date"
                   labelKh="កាលបរិច្ឆេទបញ្ចប់"
                   value={endDate}
-                  onChange={val => { setEndDate(val); setCurrentPage(1); }}
+                  onChange={(val: string) => { setEndDate(val); setCurrentPage(1); }}
                 />
                 <div className="form-group" style={{ marginBottom: 0 }}>
                   <label className="form-label" style={{ fontSize: 11, marginBottom: 4 }}>{lang === 'km' ? 'អ្នកដឹក' : 'Driver'}</label>
-                  <select className="form-control" value={driverFilter} onChange={e => { setDriverFilter(e.target.value); setCurrentPage(1); }}>
-                    <option value="">-- {lang === 'km' ? 'ទាំងអស់' : 'All'} --</option>
-                    {drivers.map(d => <option key={d.id} value={d.id}>{d.name} {d.nameKh ? `(${d.nameKh})` : ''}</option>)}
-                  </select>
+                  <SearchableSelect
+                    value={driverFilter}
+                    onChange={(val: string) => { setDriverFilter(val); setCurrentPage(1); }}
+                    options={[
+                      { value: '', label: `-- ${lang === 'km' ? 'ទាំងអស់' : 'All'} --` },
+                      ...drivers.map(d => ({
+                        value: String(d.id),
+                        label: `${d.name}${d.nameKh ? ` (${d.nameKh})` : ''}` + (d.phone ? ` (${d.phone})` : ''),
+                      })),
+                    ]}
+                  />
                 </div>
                 <div className="form-group" style={{ marginBottom: 0 }}>
                   <label className="form-label" style={{ fontSize: 11, marginBottom: 4 }}>{lang === 'km' ? 'ហាង' : 'Merchant'}</label>
-                  <select className="form-control" value={merchantFilter} onChange={e => { setMerchantFilter(e.target.value); setCurrentPage(1); }}>
-                    <option value="">-- {lang === 'km' ? 'ទាំងអស់' : 'All'} --</option>
-                    {merchants.map(m => <option key={m.id} value={m.id}>{m.name} {m.nameKh ? `(${m.nameKh})` : ''}</option>)}
-                  </select>
+                  <SearchableSelect
+                    value={merchantFilter}
+                    onChange={(val: string) => { setMerchantFilter(val); setCurrentPage(1); }}
+                    options={[
+                      { value: '', label: `-- ${lang === 'km' ? 'ទាំងអស់' : 'All'} --` },
+                      ...merchants.map(m => ({
+                        value: String(m.id),
+                        label: `${m.name}${m.nameKh ? ` (${m.nameKh})` : ''}` + (m.phone ? ` (${m.phone})` : ''),
+                      })),
+                    ]}
+                  />
                 </div>
               </div>
 

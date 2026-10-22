@@ -3647,6 +3647,7 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
                       <th>Slug</th>
                       <th>{tr('តម្លៃប្រចាំខែ', 'Monthly Price')}</th>
                       <th>{tr('តម្លៃប្រចាំឆ្នាំ', 'Yearly Price')}</th>
+                      <th>Users</th>
                       <th>Drivers</th>
                       <th>Merchants</th>
                       <th>Parcels/ខែ</th>
@@ -3688,6 +3689,15 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
                         </td>
                         <td style={{ fontWeight: 600, color: '#059669' }}>
                           ${Number(p.priceYearly).toFixed(2)}
+                        </td>
+                        <td style={{ color: 'var(--text-secondary)' }}>
+                          {Number(p.maxUsers) === 0 ? (
+                            <span className="badge badge-delivered" style={{ fontSize: 11, background: '#dcfce7', color: '#15803d' }}>
+                              ∞ {tr('មិនកំណត់', 'Unlimited')}
+                            </span>
+                          ) : (
+                            p.maxUsers ?? 5
+                          )}
                         </td>
                         <td style={{ color: 'var(--text-secondary)' }}>
                           {Number(p.maxDrivers) === 0 ? (

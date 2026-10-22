@@ -9,6 +9,7 @@ import api from '@/lib/api';
 import { MdSearch } from 'react-icons/md';
 import { useLanguage } from '@/lib/LanguageContext';
 import DateInput, { formatDateToDDMMYYYY } from '@/components/ui/DateInput';
+import SearchableSelect from '@/components/ui/SearchableSelect';
 
 const getLocalDateString = (d: Date = new Date()) => {
   const year = d.getFullYear();
@@ -63,7 +64,7 @@ export default function CompletePackagePage() {
 
   const loadActiveOrders = async () => {
     try {
-      const res = await api.get('/parcels', { params: { limit: 1000 } });
+      const res = await api.get('/parcels/complete-box');
       const rawList = Array.isArray(res.data)
         ? res.data
         : (res.data?.results || res.data?.result || []);
@@ -299,30 +300,31 @@ export default function CompletePackagePage() {
     }
     setSaving(true);
     try {
-      await Promise.all(
-        selectedIds.map(async id => {
-          const status = rowStatus[id] || 'delivered';
-          const isDelivered = status === 'delivered';
-          const isIssue = ['failed', 'returned', 'cancelled'].includes(status);
-          const method = isDelivered 
-            ? (rowPaymentMethod[id] || 'cash') 
-            : (isIssue ? status : undefined);
-          const paymentStatus = isDelivered 
-            ? (method === 'unpaid' ? 'pending' : 'paid') 
-            : 'pending';
-          const completedDate = rowCompletedDate[id] || appliedFilters.date || getLocalDateString();
-          const note = rowNotes[id] ?? '';
+      const items = selectedIds.map(id => {
+        const status = rowStatus[id] || 'delivered';
+        const isDelivered = status === 'delivered';
+        const isIssue = ['failed', 'returned', 'cancelled'].includes(status);
+        const method = isDelivered 
+          ? (rowPaymentMethod[id] || 'cash') 
+          : (isIssue ? status : undefined);
+        const paymentStatus = isDelivered 
+          ? (method === 'unpaid' ? 'pending' : 'paid') 
+          : 'pending';
+        const completedDate = rowCompletedDate[id] || appliedFilters.date || getLocalDateString();
+        const note = rowNotes[id] ?? '';
 
-          await api.patch(`/parcels/${id}`, {
-            status,
-            paymentMethod: method,
-            paymentStatus,
-            note: note || undefined,
-            reason: (!isDelivered && note) ? note : undefined,
-            deliveredAt: isDelivered ? (completedDate ? new Date(completedDate).toISOString() : new Date().toISOString()) : undefined,
-          });
-        })
-      );
+        return {
+          id,
+          status,
+          paymentMethod: method,
+          paymentStatus,
+          note: note || undefined,
+          reason: (!isDelivered && note) ? note : undefined,
+          deliveredAt: isDelivered ? (completedDate ? new Date(completedDate).toISOString() : new Date().toISOString()) : undefined,
+        };
+      });
+
+      await api.post('/parcels/complete-box/batch-update', { items });
 
       alert(lang === 'km' ? 'រក្សាទុកទិន្នន័យបានជោគជ័យ!' : 'Operations updated successfully!');
       setSelectedIds([]);
@@ -396,19 +398,19 @@ export default function CompletePackagePage() {
                 <label style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--text-main, #374151)' }}>
                   {lang === 'km' ? 'អ្នកដឹក៖' : 'Driver:'}
                 </label>
-                <select
-                  className="form-control"
+                <SearchableSelect
                   value={filterDriver}
-                  onChange={e => setFilterDriver(e.target.value)}
-                  style={{ height: '38px', padding: '8px 12px', borderRadius: '6px', border: '1px solid #d1d5db', backgroundColor: '#fff' }}
-                >
-                  <option value="">{lang === 'km' ? '— ជ្រើសរើសអ្នកដឹក —' : '— Select Driver —'}</option>
-                  {drivers.map(d => (
-                    <option key={d.id} value={d.id}>
-                      {lang === 'km' && d.nameKh ? d.nameKh : d.name} ({d.phone})
-                    </option>
-                  ))}
-                </select>
+                  onChange={setFilterDriver}
+                  style={{ height: '38px', borderRadius: '6px' }}
+                  placeholder={lang === 'km' ? '— ជ្រើសរើសអ្នកដឹក —' : '— Select Driver —'}
+                  options={[
+                    { value: '', label: lang === 'km' ? '— ជ្រើសរើសអ្នកដឹក —' : '— Select Driver —' },
+                    ...drivers.map(d => ({
+                      value: String(d.id),
+                      label: (lang === 'km' && d.nameKh ? d.nameKh : d.name) + (d.phone ? ` (${d.phone})` : ''),
+                    })),
+                  ]}
+                />
               </div>
               <button
                 className="btn btn-success"

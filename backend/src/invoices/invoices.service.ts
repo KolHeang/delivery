@@ -12,10 +12,14 @@ export class InvoicesService {
     @InjectRepository(Parcel) private readonly parcelRepo: Repository<Parcel>,
   ) {}
 
-  async createInvoices(parcelIds: number[]): Promise<Invoice[]> {
+  async createInvoices(parcelIds: number[], tenantId?: number): Promise<Invoice[]> {
     const invoices: Invoice[] = [];
     for (const parcelId of parcelIds) {
-      const parcel = await this.parcelRepo.findOne({ where: { id: parcelId } });
+      const qb = this.parcelRepo.createQueryBuilder('parcel').where('parcel.id = :parcelId', { parcelId });
+      if (tenantId) {
+        qb.andWhere('(parcel.tenantId = :tenantId OR parcel.tenantId IS NULL)', { tenantId });
+      }
+      const parcel = await qb.getOne();
       if (!parcel) {
         throw new NotFoundException(`Parcel with ID ${parcelId} not found`);
       }
@@ -28,17 +32,24 @@ export class InvoicesService {
       const invoice = this.invoiceRepo.create({
         invoiceNumber,
         parcelId,
-      });
+        tenantId: (tenantId || parcel.tenantId) ?? undefined,
+      } as any);
       const saved = await this.invoiceRepo.save(invoice);
-      invoices.push(saved);
+      invoices.push(saved as any);
     }
     return invoices;
   }
 
-  async findAll(): Promise<Invoice[]> {
-    return this.invoiceRepo.find({
-      relations: { parcel: true },
-      order: { printedAt: 'DESC' },
-    });
+  async findAll(tenantId?: number): Promise<Invoice[]> {
+    const qb = this.invoiceRepo
+      .createQueryBuilder('invoice')
+      .leftJoinAndSelect('invoice.parcel', 'parcel')
+      .orderBy('invoice.printedAt', 'DESC');
+
+    if (tenantId) {
+      qb.andWhere('(invoice.tenantId = :tenantId OR invoice.tenantId IS NULL)', { tenantId });
+    }
+
+    return qb.getMany();
   }
 }

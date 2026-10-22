@@ -13,6 +13,7 @@ import { useTenant } from '@/lib/TenantContext';
 import DateInput, { getLocalDateString, formatDateToDDMMYYYY } from '@/components/ui/DateInput';
 import { TableSkeleton } from '@/components/ui/Skeleton';
 import Thumbnail from '@/components/ui/Thumbnail';
+import SearchableSelect from '@/components/ui/SearchableSelect';
 
 const formatCOD = (cod: any, currency: string) => {
   if (currency === 'KHR') return `${parseInt(cod || 0).toLocaleString()} ៛`;
@@ -153,7 +154,7 @@ export default function PrintInvoicePage() {
         params.limit = Math.max(pageSize, 500);
       }
 
-      const res = await api.get('/parcels', { params });
+      const res = await api.get('/parcels/print-invoices', { params });
       const orderData = Array.isArray(res.data) 
         ? res.data 
         : (res.data?.results || res.data?.result || []);
@@ -228,7 +229,7 @@ export default function PrintInvoicePage() {
   const handleSelectAllMatching = async () => {
     setFetchingOrders(true);
     try {
-      const res = await api.get('/parcels', {
+      const res = await api.get('/parcels/print-invoices', {
         params: {
           page: 1,
           limit: 1000,
@@ -270,7 +271,7 @@ export default function PrintInvoicePage() {
       // Check if any selected IDs are missing from selectedParcelsMap
       const missingIds = selectedIds.filter(id => !selectedParcelsMap[id]);
       if (missingIds.length > 0) {
-        const res = await api.get('/parcels', {
+        const res = await api.get('/parcels/print-invoices', {
           params: {
             ids: missingIds.join(','),
             limit: missingIds.length + 50,
@@ -526,35 +527,33 @@ export default function PrintInvoicePage() {
                 {/* Driver Filter */}
                 <div className="form-group" style={{ marginBottom: 0 }}>
                   <label className="form-label">{lang === 'km' ? 'អ្នកដឹក' : 'Driver'}</label>
-                  <select 
-                    className="form-control" 
-                    value={driverFilter} 
-                    onChange={e => { setDriverFilter(e.target.value); setCurrentPage(1); }}
-                  >
-                    <option value="">{lang === 'km' ? '-- ទាំងអស់ --' : '-- All --'}</option>
-                    {drivers.map(d => (
-                      <option key={d.id} value={d.id}>
-                        {d.nameKh || d.name}
-                      </option>
-                    ))}
-                  </select>
+                  <SearchableSelect
+                    value={driverFilter}
+                    onChange={(val: string) => { setDriverFilter(val); setCurrentPage(1); }}
+                    options={[
+                      { value: '', label: lang === 'km' ? '-- ទាំងអស់ --' : '-- All --' },
+                      ...drivers.map(d => ({
+                        value: String(d.id),
+                        label: (d.nameKh || d.name) + (d.phone ? ` (${d.phone})` : ''),
+                      })),
+                    ]}
+                  />
                 </div>
 
                 {/* Shop Filter */}
                 <div className="form-group" style={{ marginBottom: 0 }}>
                   <label className="form-label">{lang === 'km' ? 'ហាង' : 'Shop'}</label>
-                  <select 
-                    className="form-control" 
-                    value={merchantFilter} 
-                    onChange={e => { setMerchantFilter(e.target.value); setCurrentPage(1); }}
-                  >
-                    <option value="">{lang === 'km' ? '-- ទាំងអស់ --' : '-- All --'}</option>
-                    {merchants.map(m => (
-                      <option key={m.id} value={m.id}>
-                        {m.nameKh ? `${m.nameKh} (${m.name})` : m.name}
-                      </option>
-                    ))}
-                  </select>
+                  <SearchableSelect
+                    value={merchantFilter}
+                    onChange={(val: string) => { setMerchantFilter(val); setCurrentPage(1); }}
+                    options={[
+                      { value: '', label: lang === 'km' ? '-- ទាំងអស់ --' : '-- All --' },
+                      ...merchants.map(m => ({
+                        value: String(m.id),
+                        label: (m.nameKh ? `${m.nameKh} (${m.name})` : m.name) + (m.phone ? ` (${m.phone})` : ''),
+                      })),
+                    ]}
+                  />
                 </div>
 
                 {/* Status Filter */}
@@ -582,7 +581,7 @@ export default function PrintInvoicePage() {
                   labelEn="Start Date"
                   labelKh="ចាប់ផ្តើម"
                   value={startDate}
-                  onChange={val => { setStartDate(val); setCurrentPage(1); }}
+                  onChange={(val: string) => { setStartDate(val); setCurrentPage(1); }}
                 />
 
                 {/* End Date */}
@@ -590,7 +589,7 @@ export default function PrintInvoicePage() {
                   labelEn="End Date"
                   labelKh="បញ្ចប់"
                   value={endDate}
-                  onChange={val => { setEndDate(val); setCurrentPage(1); }}
+                  onChange={(val: string) => { setEndDate(val); setCurrentPage(1); }}
                 />
               </div>
             </div>

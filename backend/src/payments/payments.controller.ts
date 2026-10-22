@@ -1,3 +1,4 @@
+import { getEffectiveTenantId } from '../common/tenant.util';
 import {
   Controller,
   Get,
@@ -48,7 +49,7 @@ export class PaymentsController {
       body.note,
       body.parcelIds,
       req.user?.id,
-      req.user?.tenantId,
+      getEffectiveTenantId(req),
       body.currency,
     );
   }
@@ -56,9 +57,50 @@ export class PaymentsController {
   @UseGuards(JwtAuthGuard, PermissionsGuard)
   @RequirePermissions('payments.read')
   @ApiOperation({ summary: 'Get all driver payouts' })
+  
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @RequirePermissions('payments.read')
+  @ApiOperation({ summary: 'Get parcels for merchant settlement' })
+  @Get('merchant/settlement-parcels')
+  findMerchantSettlementParcels(
+    @Request() req: any,
+    @Query('merchantId') merchantId?: string,
+    @Query('statusFilter') statusFilter?: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
+    return this.paymentsService.findMerchantSettlementParcels({
+      merchantId: merchantId ? +merchantId : undefined,
+      statusFilter,
+      startDate,
+      endDate,
+      tenantId: getEffectiveTenantId(req),
+    });
+  }
+
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @RequirePermissions('payments.read')
+  @ApiOperation({ summary: 'Get parcels for driver settlement' })
+  @Get('driver/settlement-parcels')
+  findDriverSettlementParcels(
+    @Request() req: any,
+    @Query('driverId') driverId?: string,
+    @Query('statusFilter') statusFilter?: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
+    return this.paymentsService.findDriverSettlementParcels({
+      driverId: driverId ? +driverId : undefined,
+      statusFilter,
+      startDate,
+      endDate,
+      tenantId: getEffectiveTenantId(req),
+    });
+  }
+
   @Get(['driver', 'staff'])
-  findAllDriver() {
-    return this.paymentsService.findAllDriverPayments();
+  findAllDriver(@Request() req: any) {
+    return this.paymentsService.findAllDriverPayments(getEffectiveTenantId(req));
   }
 
   @UseGuards(JwtAuthGuard, PermissionsGuard)
@@ -66,8 +108,8 @@ export class PaymentsController {
   @ApiOperation({ summary: 'Get payment statistics for a driver' })
   @ApiParam({ name: 'driverId', type: Number, description: 'Driver ID' })
   @Get(['driver/driver-stats/:driverId', 'staff/driver-stats/:driverId'])
-  getDriverStats(@Param('driverId', ParseIntPipe) driverId: number) {
-    return this.paymentsService.getDriverPaymentStats(driverId);
+  getDriverStats(@Param('driverId', ParseIntPipe) driverId: number, @Request() req: any) {
+    return this.paymentsService.getDriverPaymentStats(driverId, getEffectiveTenantId(req));
   }
 
   @UseGuards(JwtAuthGuard, PermissionsGuard)
@@ -76,8 +118,8 @@ export class PaymentsController {
   @ApiParam({ name: 'id', type: Number, description: 'Payment ID' })
   @Delete(['driver/:id', 'staff/:id'])
   @LogActivity({ action: 'DELETE_DRIVER_PAYMENT', entityName: 'DriverPayment', description: 'Deleted driver payment' })
-  deleteDriver(@Param('id', ParseIntPipe) id: number) {
-    return this.paymentsService.deleteDriverPayment(id);
+  deleteDriver(@Param('id', ParseIntPipe) id: number, @Request() req: any) {
+    return this.paymentsService.deleteDriverPayment(id, getEffectiveTenantId(req));
   }
 
   @UseGuards(JwtAuthGuard, PermissionsGuard)
@@ -91,7 +133,7 @@ export class PaymentsController {
     @Body() body: UpdateDriverPaymentDto,
     @Request() req: any,
   ) {
-    return this.paymentsService.updateDriverPayment(id, body, req.user?.id);
+    return this.paymentsService.updateDriverPayment(id, body, req.user?.id, getEffectiveTenantId(req));
   }
 
   // Merchant Payments
@@ -114,7 +156,7 @@ export class PaymentsController {
       body.parcelIds,
       body.telegramReport,
       req.user?.id,
-      req.user?.tenantId,
+      getEffectiveTenantId(req),
       body.token,
     );
   }
@@ -123,8 +165,8 @@ export class PaymentsController {
   @RequirePermissions('payments.read')
   @ApiOperation({ summary: 'Get all merchant payments' })
   @Get(['merchant', 'shop'])
-  findAllMerchant() {
-    return this.paymentsService.findAllMerchantPayments();
+  findAllMerchant(@Request() req: any) {
+    return this.paymentsService.findAllMerchantPayments(getEffectiveTenantId(req));
   }
 
   @UseGuards(JwtAuthGuard, PermissionsGuard)
@@ -132,8 +174,8 @@ export class PaymentsController {
   @ApiOperation({ summary: 'Get payment statistics for a merchant' })
   @ApiParam({ name: 'merchantId', type: Number, description: 'Merchant ID' })
   @Get(['merchant/merchant-stats/:merchantId', 'shop/merchant-stats/:merchantId'])
-  getMerchantStats(@Param('merchantId', ParseIntPipe) merchantId: number) {
-    return this.paymentsService.getMerchantPaymentStats(merchantId);
+  getMerchantStats(@Param('merchantId', ParseIntPipe) merchantId: number, @Request() req: any) {
+    return this.paymentsService.getMerchantPaymentStats(merchantId, getEffectiveTenantId(req));
   }
 
   @UseGuards(JwtAuthGuard, PermissionsGuard)
@@ -142,8 +184,8 @@ export class PaymentsController {
   @ApiParam({ name: 'id', type: Number, description: 'Payment ID' })
   @Delete(['merchant/:id', 'shop/:id'])
   @LogActivity({ action: 'DELETE_MERCHANT_PAYMENT', entityName: 'MerchantPayment', description: 'Deleted merchant payment' })
-  deleteMerchant(@Param('id', ParseIntPipe) id: number) {
-    return this.paymentsService.deleteMerchantPayment(id);
+  deleteMerchant(@Param('id', ParseIntPipe) id: number, @Request() req: any) {
+    return this.paymentsService.deleteMerchantPayment(id, getEffectiveTenantId(req));
   }
 
   @UseGuards(JwtAuthGuard, PermissionsGuard)
@@ -157,7 +199,7 @@ export class PaymentsController {
     @Body() body: UpdateMerchantPaymentDto,
     @Request() req: any,
   ) {
-    return this.paymentsService.updateMerchantPayment(id, body, req.user?.id);
+    return this.paymentsService.updateMerchantPayment(id, body, req.user?.id, getEffectiveTenantId(req));
   }
 
   // Public Invoice Report (Unauthenticated)

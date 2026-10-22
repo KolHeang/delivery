@@ -1,3 +1,4 @@
+import { getEffectiveTenantId } from '../common/tenant.util';
 import {
   Controller,
   Get,
@@ -37,22 +38,22 @@ export class DriversController {
   @RequirePermissions('drivers.read')
   @ApiOperation({ summary: 'Get all drivers' })
   findAll(@Request() req: any) {
-    return this.driversService.findAll(this.getEffectiveTenantId(req));
+    return this.driversService.findAll(getEffectiveTenantId(req));
   }
 
   @Get('available')
   @RequirePermissions('drivers.read')
   @ApiOperation({ summary: 'Get available drivers' })
   findAvailable(@Request() req: any) {
-    return this.driversService.findAvailable(this.getEffectiveTenantId(req));
+    return this.driversService.findAvailable(getEffectiveTenantId(req));
   }
 
   @Get(':id')
   @RequirePermissions('drivers.read')
   @ApiOperation({ summary: 'Get driver by ID' })
   @ApiParam({ name: 'id', type: Number, description: 'Driver ID' })
-  findOne(@Param('id', ParseIntPipe) id: number) {
-    return this.driversService.findOne(id);
+  findOne(@Param('id', ParseIntPipe) id: number, @Request() req: any) {
+    return this.driversService.findOne(id, getEffectiveTenantId(req));
   }
 
   @Post()
@@ -60,7 +61,7 @@ export class DriversController {
   @ApiOperation({ summary: 'Create driver' })
   @LogActivity({ action: 'CREATE_DRIVER', entityName: 'User', description: 'Created new driver' })
   create(@Request() req: any, @Body() dto: CreateDriverDto) {
-    return this.driversService.create(dto, this.getEffectiveTenantId(req));
+    return this.driversService.create(dto, getEffectiveTenantId(req));
   }
 
   @Patch(':id')
@@ -71,8 +72,9 @@ export class DriversController {
   update(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateDriverDto,
+    @Request() req: any,
   ) {
-    return this.driversService.update(id, dto);
+    return this.driversService.update(id, dto, getEffectiveTenantId(req));
   }
 
   @Delete(':id')
@@ -80,7 +82,7 @@ export class DriversController {
   @ApiOperation({ summary: 'Delete driver' })
   @ApiParam({ name: 'id', type: Number, description: 'Driver ID' })
   @LogActivity({ action: 'DELETE_DRIVER', entityName: 'User', description: 'Deleted driver' })
-  remove(@Param('id', ParseIntPipe) id: number) {
-    return this.driversService.remove(id);
+  remove(@Param('id', ParseIntPipe) id: number, @Request() req: any) {
+    return this.driversService.remove(id, getEffectiveTenantId(req));
   }
 }

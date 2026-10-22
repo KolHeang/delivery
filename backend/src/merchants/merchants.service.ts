@@ -57,15 +57,19 @@ export class MerchantsService {
       .getOne();
   }
 
-  async findOne(id: number): Promise<Merchant> {
-    const item = await this.repo
+  async findOne(id: number, tenantId?: number): Promise<Merchant> {
+    const qb = this.repo
       .createQueryBuilder('merchant')
       .leftJoinAndSelect('merchant.zone', 'zone')
       .leftJoinAndSelect('merchant.branches', 'branches')
       .leftJoinAndSelect('branches.zone', 'branchZone')
-      .where('merchant.id = :id', { id })
-      .getOne();
+      .where('merchant.id = :id', { id });
 
+    if (tenantId) {
+      qb.andWhere('(merchant.tenantId = :tenantId OR merchant.tenantId IS NULL)', { tenantId });
+    }
+
+    const item = await qb.getOne();
     if (!item) throw new NotFoundException(`Merchant #${id} not found`);
     return item;
   }
@@ -90,8 +94,8 @@ export class MerchantsService {
     return this.repo.save(this.repo.create(data)) as any;
   }
 
-  async update(id: number, dto: UpdateMerchantDto): Promise<Merchant> {
-    await this.findOne(id);
+  async update(id: number, dto: UpdateMerchantDto, tenantId?: number): Promise<Merchant> {
+    await this.findOne(id, tenantId);
     const data: any = { ...dto };
     if (data.email !== undefined) {
       if (!data.email || (typeof data.email === 'string' && data.email.trim() === '')) {
@@ -108,11 +112,11 @@ export class MerchantsService {
       }
     }
     await this.repo.update(id, data);
-    return this.findOne(id);
+    return this.findOne(id, tenantId);
   }
 
-  async remove(id: number): Promise<{ message: string }> {
-    await this.findOne(id);
+  async remove(id: number, tenantId?: number): Promise<{ message: string }> {
+    await this.findOne(id, tenantId);
     await this.repo.delete(id);
     return { message: 'Merchant deleted successfully' };
   }
@@ -166,34 +170,55 @@ export class MerchantsService {
     };
   }
 
-  async findBranches(merchantId: number): Promise<MerchantBranch[]> {
-    await this.findOne(merchantId);
-    return this.branchRepo.find({
-      where: { merchantId },
-      relations: { zone: true },
-      order: { isDefault: 'DESC', name: 'ASC' },
-    });
+  async findBranches(merchantId: number, tenantId?: number): Promise<MerchantBranch[]> {
+    await this.findOne(merchantId, tenantId);
+    const qb = this.branchRepo
+      .createQueryBuilder('branch')
+      .leftJoinAndSelect('branch.zone', 'zone')
+      .where('branch.merchantId = :merchantId', { merchantId });
+
+    if (tenantId) {
+      qb.andWhere('(branch.tenantId = :tenantId OR branch.tenantId IS NULL)', { tenantId });
+    }
+
+    return qb.orderBy('branch.isDefault', 'DESC').addOrderBy('branch.name', 'ASC').getMany();
   }
 
-  async findBranch(merchantId: number, branchId: number): Promise<MerchantBranch> {
-    const branch = await this.branchRepo.findOne({
-      where: { id: branchId, merchantId },
-      relations: { zone: true, merchant: true },
-    });
+  async findBranch(merchantId: number, branchId: number, tenantId?: number): Promise<MerchantBranch> {
+    await this.findOne(merchantId, tenantId);
+    const qb = this.branchRepo
+      .createQueryBuilder('branch')
+      .leftJoinAndSelect('branch.zone', 'zone')
+      .leftJoinAndSelect('branch.merchant', 'merchant')
+      .where('branch.id = :branchId AND branch.merchantId = :merchantId', { branchId, merchantId });
+
+    if (tenantId) {
+      qb.andWhere('(branch.tenantId = :tenantId OR branch.tenantId IS NULL)', { tenantId });
+    }
+
+    const branch = await qb.getOne();
     if (!branch) throw new NotFoundException(`Branch #${branchId} not found for Merchant #${merchantId}`);
     return branch;
   }
 
-  async findBranchById(id: number): Promise<MerchantBranch> {
-    const branch = await this.branchRepo.findOne({
-      where: { id },
-      relations: { zone: true, merchant: true },
-    });
+  async findBranchById(id: number, tenantId?: number): Promise<MerchantBranch> {
+    const qb = this.branchRepo
+      .createQueryBuilder('branch')
+      .leftJoinAndSelect('branch.zone', 'zone')
+      .leftJoinAndSelect('branch.merchant', 'merchant')
+      .where('branch.id = :id', { id });
+
+    if (tenantId) {
+      qb.andWhere('(branch.tenantId = :tenantId OR branch.tenantId IS NULL)', { tenantId });
+    }
+
+    const branch = await qb.getOne();
     if (!branch) throw new NotFoundException(`Branch #${id} not found`);
     return branch;
   }
 
-  async getNextBranchCode(merchantId: number): Promise<{ code: string }> {
+  async getNextBranchCode(merchantId: number, tenantId?: number): Promise<{ code: string }> {
+    await this.findOne(merchantId, tenantId);
     const count = await this.branchRepo.count({ where: { merchantId } });
     return { code: `BR-${String(count + 1).padStart(2, '0')}` };
   }
@@ -222,25 +247,25 @@ export class MerchantsService {
     return this.branchRepo.save(branch);
   }
 
-  async updateBranch(merchantId: number, branchId: number, dto: UpdateMerchantBranchDto): Promise<MerchantBranch> {
-    await this.findBranch(merchantId, branchId);
+  async updateBranch(merchantId: number, branchId: number, dto: UpdateMerchantBranchDto, tenantId?: number): Promise<MerchantBranch> {
+    await this.findBranch(merchantId, branchId, tenantId);
 
     if (dto.isDefault) {
       await this.branchRepo.update({ merchantId }, { isDefault: false });
     }
 
     await this.branchRepo.update({ id: branchId, merchantId }, dto as any);
-    return this.findBranch(merchantId, branchId);
+    return this.findBranch(merchantId, branchId, tenantId);
   }
 
-  async deleteBranch(merchantId: number, branchId: number): Promise<{ message: string }> {
-    await this.findBranch(merchantId, branchId);
+  async deleteBranch(merchantId: number, branchId: number, tenantId?: number): Promise<{ message: string }> {
+    await this.findBranch(merchantId, branchId, tenantId);
     await this.branchRepo.delete({ id: branchId, merchantId });
     return { message: 'Branch removed successfully' };
   }
 
-  async setDefaultBranch(merchantId: number, branchId: number): Promise<MerchantBranch> {
-    await this.findBranch(merchantId, branchId);
+  async setDefaultBranch(merchantId: number, branchId: number, tenantId?: number): Promise<MerchantBranch> {
+    await this.findBranch(merchantId, branchId, tenantId);
     await this.branchRepo.update({ merchantId }, { isDefault: false });
     await this.branchRepo.update({ id: branchId, merchantId }, { isDefault: true });
     return this.findBranch(merchantId, branchId);

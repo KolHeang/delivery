@@ -81,24 +81,29 @@ export class IncomesService {
     };
   }
 
-  async findOne(id: number) {
-    const income = await this.incomeRepo
+  async findOne(id: number, tenantId?: number) {
+    const qb = this.incomeRepo
       .createQueryBuilder('income')
       .leftJoinAndSelect('income.type', 'type')
-      .where('income.id = :id', { id })
-      .getOne();
+      .where('income.id = :id', { id });
+
+    if (tenantId) {
+      qb.andWhere('(income.tenantId = :tenantId OR income.tenantId IS NULL)', { tenantId });
+    }
+
+    const income = await qb.getOne();
     if (!income) throw new NotFoundException('Income not found');
     return income;
   }
 
-  async update(id: number, attrs: Partial<Income>) {
-    const income = await this.findOne(id);
+  async update(id: number, attrs: Partial<Income>, tenantId?: number) {
+    const income = await this.findOne(id, tenantId);
     Object.assign(income, attrs);
     return this.incomeRepo.save(income);
   }
 
-  async remove(id: number) {
-    const income = await this.findOne(id);
+  async remove(id: number, tenantId?: number) {
+    const income = await this.findOne(id, tenantId);
     return this.incomeRepo.remove(income);
   }
 }

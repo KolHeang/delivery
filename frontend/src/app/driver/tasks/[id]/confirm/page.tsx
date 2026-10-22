@@ -287,15 +287,15 @@ export default function ConfirmDeliveryPage({ params }: { params: Promise<{ id: 
             </div>
           </div>
 
-          <div style={{
-            backgroundColor: '#eff6ff',
-            color: '#2563eb',
-            fontSize: '11px',
-            fontWeight: '700',
-            padding: '4px 10px',
-            borderRadius: '12px',
-          }}>
-            Delivery
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ fontSize: '10.5px', fontWeight: '700', color: '#64748b' }}>
+              {lang === 'km' ? 'ប្រាក់ត្រូវប្រមូល' : 'To Collect'}
+            </div>
+            <div style={{ fontSize: '15px', fontWeight: '900', color: '#16a34a' }}>
+              {parcel?.codCurrency === 'KHR'
+                ? `${Math.round(Number(parcel?.cod || 0)).toLocaleString()} ៛`
+                : `$${Number(parcel?.cod || 0).toFixed(2)}`}
+            </div>
           </div>
         </div>
       </div>

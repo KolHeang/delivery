@@ -17,6 +17,7 @@ import { Zone } from '../../zones/entities/zone.entity';
 import { ParcelEvent } from './parcel-event.entity';
 import { PickupRequest } from './pickup-request.entity';
 import { Tenant } from '../../saas/entities/tenant.entity';
+import { numericTransformer } from '../../common/numeric.transformer';
 
 export type ParcelStatus =
   | 'pending'
@@ -58,7 +59,7 @@ export class Parcel {
   @Column({ name: 'receiver_address', type: 'text' })
   receiverAddress: string;
 
-  @Column('decimal', { precision: 8, scale: 4, default: 0 })
+  @Column('decimal', { precision: 8, scale: 4, default: 0, transformer: numericTransformer })
   weight: number;
 
   @Column({ default: 'small' })
@@ -67,7 +68,7 @@ export class Parcel {
   @Column({ nullable: true, type: 'text' })
   note: string;
 
-  @Column('decimal', { precision: 10, scale: 4, default: 0 })
+  @Column('decimal', { precision: 10, scale: 4, default: 0, transformer: numericTransformer })
   cod: number;
 
   @Column({ name: 'cod_currency', default: 'USD' })
@@ -78,6 +79,7 @@ export class Parcel {
     precision: 10,
     scale: 4,
     default: 0,
+    transformer: numericTransformer,
   })
   deliveryFee: number;
 
@@ -86,6 +88,7 @@ export class Parcel {
     precision: 10,
     scale: 4,
     default: 1000,
+    transformer: numericTransformer,
   })
   driverFee: number;
 

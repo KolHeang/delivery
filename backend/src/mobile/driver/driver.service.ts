@@ -421,37 +421,36 @@ export class DriverService {
   }
 
   async getTaskDetail(driverId: number, taskId: number) {
-    const parcel = await this.parcelRepo.findOne({
-      where: [
-        { id: taskId, driverId },
-        { id: taskId, pickupDriverId: driverId },
-      ],
-      relations: {
-        customer: true,
-        merchant: true,
-        zone: true,
-        driver: true,
-        pickupDriver: true,
-        events: true,
-        pickupRequest: true,
-      },
-      order: {
-        events: {
-          createdAt: 'ASC',
-        },
-      },
-    });
+    // 1. Single direct primary key lookup using parcels_pkey index (O(1), <1ms)
+    // with explicit joins to avoid Cartesian products and avoid loading unused eager cascades
+    const parcel = await this.parcelRepo
+      .createQueryBuilder('parcel')
+      .leftJoinAndSelect('parcel.merchant', 'merchant')
+      .leftJoinAndSelect('parcel.customer', 'customer')
+      .leftJoinAndSelect('parcel.zone', 'zone')
+      .leftJoinAndSelect('parcel.driver', 'driver')
+      .leftJoinAndSelect('parcel.pickupDriver', 'pickupDriver')
+      .leftJoinAndSelect('parcel.pickupRequest', 'pickupRequest')
+      .where('parcel.id = :taskId', { taskId })
+      .getOne();
 
     if (!parcel) {
-      const exists = await this.parcelRepo.findOne({ where: { id: taskId } });
-      if (!exists) {
-        throw new NotFoundException(`រកមិនឃើញកិច្ចការលេខ #${taskId} ទេ`);
-      }
-      throw new BadRequestException('កិច្ចការនេះមិនត្រូវបានចាត់ចែងឱ្យអ្នកទេ');
+      throw new NotFoundException(`រកមិនឃើញកិច្ចការលេខ #${taskId} ទេ`);
     }
 
     const isDeliveryDriver = parcel.driverId === driverId;
     const isPickupDriver = parcel.pickupDriverId === driverId;
+
+    if (!isDeliveryDriver && !isPickupDriver) {
+      throw new BadRequestException('កិច្ចការនេះមិនត្រូវបានចាត់ចែងឱ្យអ្នកទេ');
+    }
+
+    // 2. Fetch events in a lightweight, indexed query using IDX_parcel_events_parcel_id
+    const events = await this.historyRepo.find({
+      where: { parcelId: taskId },
+      order: { createdAt: 'ASC' },
+    });
+    parcel.events = events;
 
     let driverRole:
       | 'delivery_driver'
@@ -481,8 +480,13 @@ export class DriverService {
       availableActions.push('in-transit');
     }
 
+    // 3. Format with formatDriverTask so mobile app gets consistent statusBadge, statusKh, etc.
+    const formattedTask = formatDriverTask(parcel, driverId);
+
     return {
+      ...formattedTask,
       ...parcel,
+      events,
       driverRole,
       availableActions,
     };

@@ -5,6 +5,7 @@ import {
   CreateDateColumn,
   ManyToOne,
   JoinColumn,
+  Index,
 } from 'typeorm';
 import { Parcel } from './parcel.entity';
 import { Tenant } from '../../saas/entities/tenant.entity';
@@ -18,9 +19,11 @@ export class ParcelEvent {
   @JoinColumn({ name: 'tenant_id' })
   tenant: Tenant;
 
+  @Index()
   @Column({ name: 'tenant_id', nullable: true })
   tenantId: number;
 
+  @Index()
   @Column({ name: 'parcel_id' })
   parcelId: number;
 
@@ -30,6 +33,7 @@ export class ParcelEvent {
   @Column({ type: 'text', nullable: true })
   note: string;
 
+  @Index()
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 

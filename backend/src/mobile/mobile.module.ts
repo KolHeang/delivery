@@ -5,6 +5,9 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 
 import { User } from '../users/entities/users.entity';
 import { Merchant } from '../merchants/entities/merchant.entity';
+import { MerchantBranch } from '../merchants/entities/merchant-branch.entity';
+import { Organisation } from '../settings/entities/organisation.entity';
+import { Customer } from '../customers/entities/customer.entity';
 import { Parcel } from '../parcels/entities/parcel.entity';
 import { ParcelEvent } from '../parcels/entities/parcel-event.entity';
 import { PickupRequest } from '../parcels/entities/pickup-request.entity';
@@ -32,6 +35,9 @@ import { TrackingModule } from '../tracking/tracking.module';
     TypeOrmModule.forFeature([
       User,
       Merchant,
+      MerchantBranch,
+      Organisation,
+      Customer,
       Parcel,
       ParcelEvent,
       PickupRequest,

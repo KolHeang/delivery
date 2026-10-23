@@ -32,11 +32,37 @@ export class TrackingGateway implements OnGatewayConnection, OnGatewayDisconnect
     task: any;
   }>();
 
+  // Real-time merchant delivery & parcel event stream for SSE and gateway listeners
+  private merchantDeliverySubject = new Subject<{
+    merchantId: number;
+    type: 'delivery_completed' | 'new_delivery' | 'parcel_updated';
+    delivery: any;
+  }>();
+
+  // Real-time merchant pickup requests stream for SSE and gateway listeners
+  private merchantPickupSubject = new Subject<{
+    merchantId: number;
+    type: 'pickup_request_created' | 'pickup_request_updated' | 'pickup_request_assigned' | 'pickup_request_picked_up';
+    pickupRequest: any;
+  }>();
+
   constructor(private readonly trackingService: TrackingService) {}
 
   getDriverTaskObservable(driverId: number): Observable<{ type: string; task: any }> {
     return this.driverTaskSubject.asObservable().pipe(
       filter((msg) => Number(msg.driverId) === Number(driverId)),
+    );
+  }
+
+  getMerchantDeliveryObservable(merchantId: number): Observable<{ type: string; delivery: any }> {
+    return this.merchantDeliverySubject.asObservable().pipe(
+      filter((msg) => Number(msg.merchantId) === Number(merchantId)),
+    );
+  }
+
+  getMerchantPickupObservable(merchantId: number): Observable<{ type: string; pickupRequest: any }> {
+    return this.merchantPickupSubject.asObservable().pipe(
+      filter((msg) => Number(msg.merchantId) === Number(merchantId)),
     );
   }
 
@@ -50,6 +76,17 @@ export class TrackingGateway implements OnGatewayConnection, OnGatewayDisconnect
         const roomName = `driver:${driverId}`;
         client.join(roomName);
         this.logger.log(`Driver client ${client.id} automatically joined room ${roomName}`);
+      }
+    }
+
+    const queryMerchantId =
+      client.handshake?.query?.merchantId || client.handshake?.auth?.merchantId;
+    if (queryMerchantId) {
+      const merchantId = Number(queryMerchantId);
+      if (!isNaN(merchantId) && merchantId > 0) {
+        const roomName = `merchant:${merchantId}`;
+        client.join(roomName);
+        this.logger.log(`Merchant client ${client.id} automatically joined room ${roomName}`);
       }
     }
   }
@@ -257,6 +294,100 @@ export class TrackingGateway implements OnGatewayConnection, OnGatewayDisconnect
       driverId,
       type: 'task_updated',
       task,
+    });
+  }
+
+  /**
+   * Merchant subscribes to their own delivery and parcel updates
+   */
+  @SubscribeMessage('subscribe:merchant')
+  async handleSubscribeMerchant(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { merchantId: number },
+  ) {
+    if (!data || !data.merchantId) {
+      return { success: false, error: 'merchantId is required' };
+    }
+    const merchantId = Number(data.merchantId);
+    const roomName = `merchant:${merchantId}`;
+    await client.join(roomName);
+    this.logger.log(`Merchant client ${client.id} joined room ${roomName}`);
+    return { success: true, room: roomName, merchantId };
+  }
+
+  @SubscribeMessage('merchant:join')
+  async handleMerchantJoin(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { merchantId: number },
+  ) {
+    return this.handleSubscribeMerchant(client, data);
+  }
+
+  /**
+   * Real-time notification when a parcel is successfully delivered for a merchant
+   */
+  notifyMerchantDelivery(
+    merchantId: number,
+    delivery: any,
+    type: 'delivery_completed' | 'new_delivery' | 'parcel_updated' = 'delivery_completed',
+  ) {
+    if (!merchantId) return;
+    const room = `merchant:${merchantId}`;
+    const payload = {
+      event: type,
+      type,
+      merchantId,
+      delivery,
+      timestamp: new Date().toISOString(),
+    };
+
+    if (this.server) {
+      this.server.to(room).emit('merchant:new_delivery', payload);
+      this.server.to(room).emit('merchant:delivery_completed', payload);
+      this.server.to(room).emit('merchant:parcel_delivered', payload);
+      this.server.to(room).emit('delivery:new', payload);
+    }
+
+    this.merchantDeliverySubject.next({
+      merchantId,
+      type,
+      delivery,
+    });
+  }
+
+  /**
+   * Real-time notification when a pickup request is created, assigned, or updated
+   */
+  notifyMerchantPickupRequest(
+    merchantId: number,
+    pickupRequest: any,
+    type: 'pickup_request_created' | 'pickup_request_updated' | 'pickup_request_assigned' | 'pickup_request_picked_up' = 'pickup_request_created',
+  ) {
+    if (!merchantId) return;
+    const room = `merchant:${merchantId}`;
+    const payload = {
+      event: type,
+      type,
+      merchantId,
+      pickupRequest,
+      booking: pickupRequest,
+      timestamp: new Date().toISOString(),
+    };
+
+    if (this.server) {
+      this.server.to(room).emit('merchant:new_pickup_request', payload);
+      this.server.to(room).emit('merchant:pickup_updated', payload);
+      this.server.to(room).emit('merchant:pickup_assigned', payload);
+      this.server.to(room).emit('pickup_request:new', payload);
+      this.server.to(room).emit('pickup_request:updated', payload);
+      this.server.to(room).emit('booking:new', payload);
+      this.server.to(room).emit('booking:update', payload);
+    }
+
+    this.merchantPickupSubject.next({
+      merchantId,
+      type,
+      pickupRequest,
     });
   }
 }

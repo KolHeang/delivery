@@ -23,6 +23,7 @@ import { PaginatedResult } from '../interface/pagination.interface';
 import { FirebaseService } from '../firebase/firebase.service';
 import { TrackingGateway } from '../tracking/tracking.gateway';
 import { formatDriverTask } from '../mobile/driver/utils/task-formatter.util';
+import { formatMerchantDelivery, formatMerchantPickupRequest } from '../mobile/merchant/utils/delivery-formatter.util';
 
 @Injectable()
 export class ParcelsService {
@@ -572,6 +573,11 @@ export class ParcelsService {
         this.trackingGateway?.notifyDriverTaskUpdated(updatedParcel.driverId, formatDriverTask(updatedParcel, updatedParcel.driverId));
       } catch (e) {}
     }
+    if (finalStatus === 'delivered' && updatedParcel.merchantId) {
+      try {
+        this.trackingGateway?.notifyMerchantDelivery(updatedParcel.merchantId, formatMerchantDelivery(updatedParcel));
+      } catch (e) {}
+    }
     return updatedParcel;
   }
 
@@ -636,6 +642,11 @@ export class ParcelsService {
     if (updatedParcel.pickupDriverId && updatedParcel.pickupDriverId !== updatedParcel.driverId) {
       try {
         this.trackingGateway?.notifyDriverTaskUpdated(updatedParcel.pickupDriverId, formatDriverTask(updatedParcel, updatedParcel.pickupDriverId));
+      } catch (e) {}
+    }
+    if (dto.status === 'delivered' && updatedParcel.merchantId) {
+      try {
+        this.trackingGateway?.notifyMerchantDelivery(updatedParcel.merchantId, formatMerchantDelivery(updatedParcel));
       } catch (e) {}
     }
 
@@ -861,7 +872,19 @@ export class ParcelsService {
   async assignPickupDriverToRequest(id: number, pickupDriverId: number) {
     const request = await this.findPickupRequestById(id);
     request.pickupDriverId = pickupDriverId;
-    return this.pickupRequestRepo.save(request);
+    request.status = 'assigned' as any;
+    await this.pickupRequestRepo.save(request);
+    const reloaded = await this.findPickupRequestById(id);
+    if (reloaded.merchantId) {
+      try {
+        this.trackingGateway?.notifyMerchantPickupRequest(
+          reloaded.merchantId,
+          formatMerchantPickupRequest(reloaded),
+          'pickup_request_assigned',
+        );
+      } catch (e) {}
+    }
+    return reloaded;
   }
 
   async createParcelForRequest(id: number, dto: CreateParcelDto) {

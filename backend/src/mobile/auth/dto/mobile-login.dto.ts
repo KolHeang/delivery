@@ -15,19 +15,9 @@ export class DriverLoginDto {
 
 export class MerchantLoginDto {
   @ApiProperty({ example: '012345678', description: 'Phone number or email', required: false })
-  @IsOptional()
+  @IsNotEmpty()
   @IsString()
-  phone?: string;
-
-  @ApiProperty({ example: 'merchant@store.com', required: false })
-  @IsOptional()
-  @IsString()
-  email?: string;
-
-  @ApiProperty({ example: '012345678', required: false })
-  @IsOptional()
-  @IsString()
-  identifier?: string;
+  identifier: string;
 
   @ApiProperty({ example: '123456' })
   @IsNotEmpty()

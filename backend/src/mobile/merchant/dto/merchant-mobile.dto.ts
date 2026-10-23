@@ -1,5 +1,5 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsString, IsOptional } from 'class-validator';
+import { ApiProperty, PartialType } from '@nestjs/swagger';
+import { IsNotEmpty, IsString, IsOptional, IsNumber, IsBoolean } from 'class-validator';
 
 export class UpdateMerchantProfileDto {
   @ApiProperty({ example: 'Phnom Penh Fashion Store', required: false, description: 'Store or merchant name in English' })
@@ -85,6 +85,94 @@ export class SendMerchantMessageDto {
   message: string;
 
   @ApiProperty({ example: 'https://api.example.com/uploads/chat/item_preview.jpg', required: false, description: 'Optional photo URL' })
+  @IsOptional()
+  @IsString()
+  attachmentUrl?: string;
+}
+
+export class CreateMerchantBranchDto {
+  @ApiProperty({ example: 'សាខាទួលគោក (Tuol Kork Branch)', description: 'Branch or location name' })
+  @IsNotEmpty()
+  @IsString()
+  name: string;
+
+  @ApiProperty({ example: 'TK-01', required: false, description: 'Optional branch code' })
+  @IsOptional()
+  @IsString()
+  code?: string;
+
+  @ApiProperty({ example: 'Chan Vanna', required: false, description: 'Branch contact person name' })
+  @IsOptional()
+  @IsString()
+  contactName?: string;
+
+  @ApiProperty({ example: '012345678', required: false, description: 'Contact phone number' })
+  @IsOptional()
+  @IsString()
+  phone?: string;
+
+  @ApiProperty({ example: 'Street 271, Sangkat Boeng Tumpun, Khan Mean Chey, Phnom Penh', required: false, description: 'Full address' })
+  @IsOptional()
+  @IsString()
+  address?: string;
+
+  @ApiProperty({ example: 1, required: false, description: 'Delivery Zone ID' })
+  @IsOptional()
+  @IsNumber()
+  zoneId?: number;
+
+  @ApiProperty({ example: 11.5448729, required: false, description: 'GPS Latitude' })
+  @IsOptional()
+  @IsNumber()
+  latitude?: number;
+
+  @ApiProperty({ example: 104.8921668, required: false, description: 'GPS Longitude' })
+  @IsOptional()
+  @IsNumber()
+  longitude?: number;
+
+  @ApiProperty({ example: false, required: false, description: 'Set as default pickup location' })
+  @IsOptional()
+  @IsBoolean()
+  isDefault?: boolean;
+
+  @ApiProperty({ example: 'Next to ABA Bank ATM', required: false, description: 'Landmark or note' })
+  @IsOptional()
+  @IsString()
+  note?: string;
+}
+
+export class UpdateMerchantBranchDto extends PartialType(CreateMerchantBranchDto) {}
+
+export class CreateMerchantContactDto {
+  @ApiProperty({ example: 'Sok San', description: 'Receiver / customer name' })
+  @IsNotEmpty()
+  @IsString()
+  name: string;
+
+  @ApiProperty({ example: '098765432', description: 'Contact phone number' })
+  @IsNotEmpty()
+  @IsString()
+  phone: string;
+
+  @ApiProperty({ example: 'House #15, Street 2004, Phnom Penh', required: false, description: 'Delivery address' })
+  @IsOptional()
+  @IsString()
+  address?: string;
+
+  @ApiProperty({ example: 'customer@gmail.com', required: false, description: 'Email address' })
+  @IsOptional()
+  @IsString()
+  email?: string;
+}
+
+export class SendSupportMessageDto {
+  @ApiProperty({ example: 'Hello Support, I need help with my pickup schedule', description: 'Support inquiry message' })
+  @IsNotEmpty()
+  @IsString()
+  message: string;
+
+  @ApiProperty({ example: 'https://api.example.com/uploads/chat/issue.jpg', required: false, description: 'Optional screenshot or photo' })
   @IsOptional()
   @IsString()
   attachmentUrl?: string;

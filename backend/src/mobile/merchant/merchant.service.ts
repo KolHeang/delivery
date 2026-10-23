@@ -1,8 +1,19 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  Optional,
+  MessageEvent,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
 import * as bcrypt from 'bcrypt';
+import { Observable, from, interval, merge, EMPTY } from 'rxjs';
+import { map } from 'rxjs/operators';
 import { Merchant } from '../../merchants/entities/merchant.entity';
+import { MerchantBranch } from '../../merchants/entities/merchant-branch.entity';
+import { Organisation } from '../../settings/entities/organisation.entity';
+import { Customer } from '../../customers/entities/customer.entity';
 import { Parcel } from '../../parcels/entities/parcel.entity';
 import { ParcelEvent } from '../../parcels/entities/parcel-event.entity';
 import { CreateParcelDto } from '../../parcels/dto/parcel.dto';
@@ -14,12 +25,30 @@ import { MerchantPayment } from '../../payments/entities/merchant-payment.entity
 import { ParcelMessage } from '../../parcels/entities/parcel-message.entity';
 import { MerchantNotification } from './entities/merchant-notification.entity';
 import { FirebaseService } from '../../firebase/firebase.service';
+import { TrackingGateway } from '../../tracking/tracking.gateway';
+import {
+  formatMerchantDelivery,
+  formatMerchantPickupRequest,
+  formatMerchantSettlement,
+} from './utils/delivery-formatter.util';
+import {
+  CreateMerchantBranchDto,
+  UpdateMerchantBranchDto,
+  CreateMerchantContactDto,
+  SendSupportMessageDto,
+} from './dto/merchant-mobile.dto';
 
 @Injectable()
 export class MerchantService {
   constructor(
     @InjectRepository(Merchant)
     private readonly merchantRepo: Repository<Merchant>,
+    @InjectRepository(MerchantBranch)
+    private readonly branchRepo: Repository<MerchantBranch>,
+    @InjectRepository(Organisation)
+    private readonly orgRepo: Repository<Organisation>,
+    @InjectRepository(Customer)
+    private readonly customerRepo: Repository<Customer>,
     @InjectRepository(Parcel)
     private readonly parcelRepo: Repository<Parcel>,
     @InjectRepository(ParcelEvent)
@@ -35,6 +64,7 @@ export class MerchantService {
     @InjectRepository(MerchantNotification)
     private readonly notificationRepo: Repository<MerchantNotification>,
     private readonly firebaseService: FirebaseService,
+    @Optional() private readonly trackingGateway?: TrackingGateway,
   ) {}
 
   async getProfile(merchantId: number) {
@@ -569,6 +599,48 @@ export class MerchantService {
     const amountToReceiveUsd = pendingAmountUsd;
     const amountToReceiveKhr = pendingAmountKhr;
 
+    const recentDeliveredParcels = await this.parcelRepo.find({
+      where: { merchantId, status: 'delivered' },
+      order: { updatedAt: 'DESC', createdAt: 'DESC', id: 'DESC' },
+      take: 5,
+    });
+
+    const recentDeliveries = recentDeliveredParcels.map((p) => formatMerchantDelivery(p));
+
+    const activePickupRequests = await this.pickupRequestRepo.find({
+      where: { merchantId },
+      order: { createdAt: 'DESC', id: 'DESC' },
+      take: 10,
+      relations: { pickupDriver: true, branch: true },
+    });
+    const bookings = activePickupRequests.map((pr) => formatMerchantPickupRequest(pr));
+
+    const recentPayments = await this.merchantPaymentRepo.find({
+      where: { merchantId },
+      order: { createdAt: 'DESC', id: 'DESC' },
+      take: 10,
+      relations: { creator: true },
+    });
+
+    const allParcelIds = Array.from(
+      new Set(recentPayments.flatMap((p) => p.parcelIds || [])),
+    );
+    let parcelsMap = new Map<number, Parcel>();
+    if (allParcelIds.length > 0) {
+      const parcels = await this.parcelRepo.find({
+        where: { id: In(allParcelIds) },
+        relations: { customer: true },
+      });
+      parcelsMap = new Map(parcels.map((p) => [p.id, p]));
+    }
+
+    const settlements = recentPayments.map((payment) => {
+      const pList = (payment.parcelIds || [])
+        .map((pid) => parcelsMap.get(pid))
+        .filter((p): p is Parcel => Boolean(p));
+      return formatMerchantSettlement(payment, pList);
+    });
+
     return {
       balance: {
         amount: Number(merchant.balance) || 0,
@@ -580,6 +652,23 @@ export class MerchantService {
       amountCollectedKhr,
       pendingAmountUsd,
       pendingAmountKhr,
+      financials: {
+        amountToReceive: {
+          usd: amountToReceiveUsd,
+          usdCents: Math.round(amountToReceiveUsd * 100),
+          khr: Math.round(amountToReceiveKhr),
+        },
+        collected: {
+          usd: amountCollectedUsd,
+          usdCents: Math.round(amountCollectedUsd * 100),
+          khr: Math.round(amountCollectedKhr),
+        },
+        pending: {
+          usd: pendingAmountUsd,
+          usdCents: Math.round(pendingAmountUsd * 100),
+          khr: Math.round(pendingAmountKhr),
+        },
+      },
       statistics: {
         totalParcel: totalParcel,
         pendingPickup: stats['pending'] || 0,
@@ -593,7 +682,132 @@ export class MerchantService {
         pickupRequestsPending: pickupPendingCount,
         pickupRequestsPickedUp: pickupPickedUpCount,
       },
+      recentDeliveries,
+      bookings,
+      pendingBookings: bookings,
+      settlements,
     };
+  }
+
+  /**
+   * Real-time Server-Sent Events (SSE) stream for merchant dashboard & recent deliveries
+   */
+  getRealtimeDeliveriesStream(merchantId: number): Observable<MessageEvent> {
+    const initial$ = from(
+      this.parcelRepo.find({
+        where: { merchantId, status: 'delivered' },
+        order: { updatedAt: 'DESC', createdAt: 'DESC', id: 'DESC' },
+        take: 5,
+      }),
+    ).pipe(
+      map((parcels) => {
+        const recentDeliveries = parcels.map((p) => formatMerchantDelivery(p));
+        return {
+          data: {
+            type: 'initial',
+            recentDeliveries,
+            total: recentDeliveries.length,
+            timestamp: new Date().toISOString(),
+          },
+        } as MessageEvent;
+      }),
+    );
+
+    const live$ = this.trackingGateway
+      ? this.trackingGateway.getMerchantDeliveryObservable(merchantId).pipe(
+          map(
+            (event) =>
+              ({
+                data: {
+                  type: event.type,
+                  delivery: formatMerchantDelivery(event.delivery),
+                  timestamp: new Date().toISOString(),
+                },
+              }) as MessageEvent,
+          ),
+        )
+      : EMPTY;
+
+    const pickupLive$ = this.trackingGateway
+      ? this.trackingGateway.getMerchantPickupObservable(merchantId).pipe(
+          map(
+            (event) =>
+              ({
+                data: {
+                  type: event.type,
+                  pickupRequest: formatMerchantPickupRequest(event.pickupRequest),
+                  booking: formatMerchantPickupRequest(event.pickupRequest),
+                  timestamp: new Date().toISOString(),
+                },
+              }) as MessageEvent,
+          ),
+        )
+      : EMPTY;
+
+    const ping$ = interval(25000).pipe(
+      map(
+        () =>
+          ({
+            data: { type: 'ping', timestamp: new Date().toISOString() },
+          }) as MessageEvent,
+      ),
+    );
+
+    return merge(initial$, live$, pickupLive$, ping$);
+  }
+
+  /**
+   * Real-time Server-Sent Events (SSE) stream for pickup requests (bookings)
+   */
+  getRealtimePickupRequestsStream(merchantId: number): Observable<MessageEvent> {
+    const initial$ = from(
+      this.pickupRequestRepo.find({
+        where: { merchantId },
+        order: { createdAt: 'DESC', id: 'DESC' },
+        take: 10,
+        relations: { pickupDriver: true, branch: true },
+      }),
+    ).pipe(
+      map((requests) => {
+        const bookings = requests.map((pr) => formatMerchantPickupRequest(pr));
+        return {
+          data: {
+            type: 'initial',
+            bookings,
+            pickupRequests: bookings,
+            total: bookings.length,
+            timestamp: new Date().toISOString(),
+          },
+        } as MessageEvent;
+      }),
+    );
+
+    const live$ = this.trackingGateway
+      ? this.trackingGateway.getMerchantPickupObservable(merchantId).pipe(
+          map(
+            (event) =>
+              ({
+                data: {
+                  type: event.type,
+                  pickupRequest: formatMerchantPickupRequest(event.pickupRequest),
+                  booking: formatMerchantPickupRequest(event.pickupRequest),
+                  timestamp: new Date().toISOString(),
+                },
+              }) as MessageEvent,
+          ),
+        )
+      : EMPTY;
+
+    const ping$ = interval(25000).pipe(
+      map(
+        () =>
+          ({
+            data: { type: 'ping', timestamp: new Date().toISOString() },
+          }) as MessageEvent,
+      ),
+    );
+
+    return merge(initial$, live$, ping$);
   }
 
   async createPickupRequest(merchantId: number, dto: CreatePickupRequestDto) {
@@ -615,7 +829,18 @@ export class MerchantService {
       status: 'pending',
     });
 
-    return this.pickupRequestRepo.save(pickupRequest);
+    const saved = await this.pickupRequestRepo.save(pickupRequest);
+    const reloaded = await this.pickupRequestRepo.findOne({
+      where: { id: saved.id },
+      relations: { pickupDriver: true, branch: true },
+    });
+    const formatted = formatMerchantPickupRequest(reloaded || saved);
+    this.trackingGateway?.notifyMerchantPickupRequest(
+      merchantId,
+      formatted,
+      'pickup_request_created',
+    );
+    return formatted;
   }
 
   async cancelPickupRequest(merchantId: number, id: number) {
@@ -634,17 +859,24 @@ export class MerchantService {
     }
 
     request.status = 'cancelled';
-    await this.pickupRequestRepo.save(request);
+    const saved = await this.pickupRequestRepo.save(request);
+    const formatted = formatMerchantPickupRequest(saved);
+    this.trackingGateway?.notifyMerchantPickupRequest(
+      merchantId,
+      formatted,
+      'pickup_request_updated',
+    );
 
-    return { success: true, message: 'សំណើទៅយកត្រូវបានលុបចោលដោយជោគជ័យ', request };
+    return { success: true, message: 'សំណើទៅយកត្រូវបានលុបចោលដោយជោគជ័យ', request: formatted };
   }
 
   async getPickupRequests(merchantId: number) {
-    return this.pickupRequestRepo.find({
+    const list = await this.pickupRequestRepo.find({
       where: { merchantId },
       relations: { pickupDriver: true, branch: true },
-      order: { createdAt: 'DESC' },
+      order: { createdAt: 'DESC', id: 'DESC' },
     });
+    return list.map((pr) => formatMerchantPickupRequest(pr));
   }
 
   async getPickupRequest(merchantId: number, id: number) {
@@ -653,7 +885,7 @@ export class MerchantService {
       relations: { pickupDriver: true, parcels: true, branch: true },
     });
     if (!request) throw new NotFoundException(`Pickup request #${id} not found`);
-    return request;
+    return formatMerchantPickupRequest(request);
   }
 
   async getSettlements(
@@ -666,45 +898,29 @@ export class MerchantService {
     const [payments, total] = await this.merchantPaymentRepo.findAndCount({
       where: { merchantId },
       relations: { creator: true },
-      order: { createdAt: 'DESC' },
+      order: { createdAt: 'DESC', id: 'DESC' },
       skip: (page - 1) * limit,
       take: limit,
     });
 
-    const formattedPayments = await Promise.all(
-      payments.map(async (payment) => {
-        let parcels: Parcel[] = [];
-        if (payment.parcelIds && payment.parcelIds.length > 0) {
-          parcels = await this.parcelRepo.find({
-            where: { id: In(payment.parcelIds) },
-            relations: { customer: true },
-          });
-        }
-
-        const orders = parcels.map((p) => ({
-          id: p.trackingCode || `ORD-${p.id}`,
-          customerName: p.receiverName || p.customer?.name || 'Customer',
-          amount: parseFloat(p.cod as any) || 0,
-          currency: p.codCurrency || 'USD',
-          status: 'Delivered',
-        }));
-
-        return {
-          id: payment.reference || `REC${String(payment.id).padStart(6, '0')}`,
-          date: payment.date || payment.createdAt,
-          period: 'Settlement Payout',
-          totalOrders: payment.parcelIds?.length || orders.length,
-          totalAmount: parseFloat(payment.amount as any) || 0,
-          totalAmountKhr: parseFloat(payment.amountKHR as any) || 0,
-          paymentMethod: 'Bank Transfer / Cash',
-          transferRef: payment.reference || `REF-${payment.id}`,
-          status: 'Paid',
-          note: payment.note,
-          creator: payment.creator?.name || 'Admin',
-          orders,
-        };
-      }),
+    const allParcelIds = Array.from(
+      new Set(payments.flatMap((p) => p.parcelIds || [])),
     );
+    let parcelsMap = new Map<number, Parcel>();
+    if (allParcelIds.length > 0) {
+      const parcels = await this.parcelRepo.find({
+        where: { id: In(allParcelIds) },
+        relations: { customer: true, zone: true },
+      });
+      parcelsMap = new Map(parcels.map((p) => [p.id, p]));
+    }
+
+    const formattedPayments = payments.map((payment) => {
+      const pList = (payment.parcelIds || [])
+        .map((pid) => parcelsMap.get(pid))
+        .filter((p): p is Parcel => Boolean(p));
+      return formatMerchantSettlement(payment, pList);
+    });
 
     return {
       data: formattedPayments,
@@ -739,31 +955,7 @@ export class MerchantService {
       });
     }
 
-    const orders = parcels.map((p) => ({
-      id: p.trackingCode || `ORD-${p.id}`,
-      customerName: p.receiverName || p.customer?.name || 'Customer',
-      phone: p.receiverPhone || '',
-      address: p.receiverAddress || '',
-      amount: parseFloat(p.cod as any) || 0,
-      currency: p.codCurrency || 'USD',
-      status: 'Delivered',
-    }));
-
-    return {
-      id: payment.reference || `REC${String(payment.id).padStart(6, '0')}`,
-      rawId: payment.id,
-      date: payment.date || payment.createdAt,
-      period: 'Settlement Payout',
-      totalOrders: payment.parcelIds?.length || orders.length,
-      totalAmount: parseFloat(payment.amount as any) || 0,
-      totalAmountKhr: parseFloat(payment.amountKHR as any) || 0,
-      paymentMethod: 'Bank Transfer / Cash',
-      transferRef: payment.reference || `REF-${payment.id}`,
-      status: 'Paid',
-      note: payment.note,
-      creator: payment.creator?.name || 'Admin',
-      orders,
-    };
+    return formatMerchantSettlement(payment, parcels);
   }
 
   // ===================== PARCEL CHAT FOR MERCHANT =====================
@@ -923,5 +1115,179 @@ export class MerchantService {
   async deleteNotification(merchantId: number, notificationId: number) {
     await this.notificationRepo.delete({ id: notificationId, merchantId });
     return { success: true };
+  }
+
+  // ===================== MERCHANT BRANCHES & LOCATIONS =====================
+  async getBranches(merchantId: number) {
+    const branches = await this.branchRepo.find({
+      where: { merchantId },
+      relations: { zone: true },
+      order: { isDefault: 'DESC', createdAt: 'DESC' },
+    });
+    return branches;
+  }
+
+  async getBranchById(merchantId: number, branchId: number) {
+    const branch = await this.branchRepo.findOne({
+      where: { id: branchId, merchantId },
+      relations: { zone: true },
+    });
+    if (!branch) throw new NotFoundException('Branch not found');
+    return branch;
+  }
+
+  async createBranch(merchantId: number, dto: CreateMerchantBranchDto) {
+    const merchant = await this.merchantRepo.findOne({ where: { id: merchantId } });
+    if (!merchant) throw new NotFoundException('Merchant not found');
+
+    if (dto.isDefault) {
+      await this.branchRepo.update({ merchantId }, { isDefault: false });
+    }
+
+    const branch = this.branchRepo.create({
+      ...dto,
+      merchantId,
+      tenantId: merchant.tenantId,
+    });
+    return this.branchRepo.save(branch);
+  }
+
+  async updateBranch(merchantId: number, branchId: number, dto: UpdateMerchantBranchDto) {
+    const branch = await this.branchRepo.findOne({ where: { id: branchId, merchantId } });
+    if (!branch) throw new NotFoundException('Branch not found');
+
+    if (dto.isDefault) {
+      await this.branchRepo.update({ merchantId }, { isDefault: false });
+    }
+
+    Object.assign(branch, dto);
+    return this.branchRepo.save(branch);
+  }
+
+  async deleteBranch(merchantId: number, branchId: number) {
+    const branch = await this.branchRepo.findOne({ where: { id: branchId, merchantId } });
+    if (!branch) throw new NotFoundException('Branch not found');
+    await this.branchRepo.delete(branchId);
+    return { success: true, message: 'Branch deleted successfully' };
+  }
+
+  async setDefaultBranch(merchantId: number, branchId: number) {
+    const branch = await this.branchRepo.findOne({ where: { id: branchId, merchantId } });
+    if (!branch) throw new NotFoundException('Branch not found');
+
+    await this.branchRepo.update({ merchantId }, { isDefault: false });
+    await this.branchRepo.update(branchId, { isDefault: true });
+    return { success: true, message: 'Branch set as default successfully' };
+  }
+
+  // ===================== BRANDING & ORGANISATION =====================
+  async getBranding(merchantId: number) {
+    const merchant = await this.merchantRepo.findOne({ where: { id: merchantId } });
+    let org: Organisation | null = null;
+    if (merchant?.tenantId) {
+      org = await this.orgRepo.findOne({ where: { tenantId: merchant.tenantId } });
+    }
+    if (!org) {
+      org = await this.orgRepo.findOne({ order: { id: 'ASC' } });
+    }
+
+    return {
+      appName: 'Express Delivery',
+      companyName: org?.name || 'Express Delivery',
+      logo: org?.logo || 'https://new-delivery.rithyboth.work/logo.png',
+      phone: org?.phone || '+855 78 000 000',
+      hotline: org?.phone || '+855 78 000 000',
+      email: org?.email || 'support@delivery.com',
+      website: org?.website || 'https://new-delivery.rithyboth.work',
+      address: org?.address || 'Phnom Penh, Cambodia',
+      currency: 'USD',
+      supportTelegram: '@express_support',
+    };
+  }
+
+  // ===================== SAVED CONTACTS / CUSTOMERS =====================
+  async getContacts(merchantId: number, search?: string) {
+    const merchant = await this.merchantRepo.findOne({ where: { id: merchantId } });
+    const qb = this.customerRepo.createQueryBuilder('c');
+    if (merchant?.tenantId) {
+      qb.where('c.tenantId = :tid', { tid: merchant.tenantId });
+    }
+    if (search) {
+      qb.andWhere('(c.name ILIKE :s OR c.phone ILIKE :s)', { s: `%${search}%` });
+    }
+    qb.orderBy('c.createdAt', 'DESC').limit(50);
+    return qb.getMany();
+  }
+
+  async createContact(merchantId: number, dto: CreateMerchantContactDto) {
+    const merchant = await this.merchantRepo.findOne({ where: { id: merchantId } });
+    let customer = await this.customerRepo.findOne({
+      where: { phone: dto.phone, tenantId: merchant?.tenantId || undefined },
+    });
+    if (customer) {
+      Object.assign(customer, dto);
+      return this.customerRepo.save(customer);
+    }
+    customer = this.customerRepo.create({
+      ...dto,
+      tenantId: merchant?.tenantId,
+    });
+    return this.customerRepo.save(customer);
+  }
+
+  async deleteContact(merchantId: number, contactId: number) {
+    await this.customerRepo.delete(contactId);
+    return { success: true };
+  }
+
+  // ===================== SUPPORT CHAT =====================
+  private static supportMessagesStore = new Map<number, any[]>();
+
+  async getSupportMessages(merchantId: number) {
+    const merchant = await this.merchantRepo.findOne({ where: { id: merchantId } });
+    let list = MerchantService.supportMessagesStore.get(merchantId);
+    if (!list || list.length === 0) {
+      list = [
+        {
+          id: 1,
+          senderType: 'admin',
+          senderName: 'Customer Support',
+          message: `សួស្តី ${merchant?.name || 'ម្ចាស់ហាង'}! តើមានអ្វីដែលពួកយើងអាចជួយបានទេថ្ងៃនេះ? (Hello! How can we help you today?)`,
+          attachmentUrl: null,
+          createdAt: new Date().toISOString(),
+        },
+      ];
+      MerchantService.supportMessagesStore.set(merchantId, list);
+    }
+    return {
+      supportContact: {
+        name: 'Delivery Operations & Dispatch',
+        phone: '+855 78 000 000',
+        telegram: '@express_support',
+      },
+      messages: list,
+    };
+  }
+
+  async sendSupportMessage(merchantId: number, dto: SendSupportMessageDto) {
+    const merchant = await this.merchantRepo.findOne({ where: { id: merchantId } });
+    let list = MerchantService.supportMessagesStore.get(merchantId);
+    if (!list) list = [];
+
+    const newMsg = {
+      id: list.length + 1,
+      senderType: 'merchant',
+      senderName: merchant?.name || 'Merchant',
+      message: dto.message,
+      attachmentUrl: dto.attachmentUrl || null,
+      createdAt: new Date().toISOString(),
+    };
+    list.push(newMsg);
+    MerchantService.supportMessagesStore.set(merchantId, list);
+
+    return {
+      success: true,
+      data: newMsg,
+    };
   }
 }

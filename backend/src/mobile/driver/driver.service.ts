@@ -23,6 +23,7 @@ import { DriverNotification } from './entities/driver-notification.entity';
 import { FirebaseService } from '../../firebase/firebase.service';
 import { TrackingGateway } from '../../tracking/tracking.gateway';
 import { formatDriverTask, FormattedDriverTask } from './utils/task-formatter.util';
+import { formatMerchantDelivery, formatMerchantPickupRequest } from '../merchant/utils/delivery-formatter.util';
 
 @Injectable()
 export class DriverService {
@@ -622,6 +623,11 @@ export class DriverService {
       try {
         this.trackingGateway?.notifyDriverTaskUpdated(driverId, formatDriverTask(updated, driverId));
       } catch (e) {}
+      if (dto.status === 'delivered' && updated.merchantId) {
+        try {
+          this.trackingGateway?.notifyMerchantDelivery(updated.merchantId, formatMerchantDelivery(updated));
+        } catch (e) {}
+      }
     }
 
     return updated || this.parcelRepo.findOne({ where: { id: parcelId } });
@@ -1286,7 +1292,21 @@ export class DriverService {
     if (proofPhotos) request.pickupProofPhotos = proofPhotos;
     if (dto.driverNote) request.driverNote = dto.driverNote.trim();
 
-    return this.pickupRequestRepo.save(request);
+    const saved = await this.pickupRequestRepo.save(request);
+    const reloaded = await this.pickupRequestRepo.findOne({
+      where: { id: saved.id },
+      relations: { pickupDriver: true, branch: true, merchant: true },
+    });
+    if (reloaded?.merchantId) {
+      try {
+        this.trackingGateway?.notifyMerchantPickupRequest(
+          reloaded.merchantId,
+          formatMerchantPickupRequest(reloaded),
+          'pickup_request_picked_up',
+        );
+      } catch (e) {}
+    }
+    return saved;
   }
 
   async scanParcel(driverId: number, rawCode: string) {

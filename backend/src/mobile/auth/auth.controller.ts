@@ -10,7 +10,7 @@ import { DriverLoginDto, MerchantLoginDto } from './dto/mobile-login.dto';
 @ApiTags('Mobile Auth')
 @Controller('mobile/auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(private readonly authService: AuthService) { }
 
   @Post('refresh')
   @ApiOperation({ summary: 'Refresh tokens using a valid refresh token' })
@@ -127,8 +127,7 @@ export class AuthController {
     },
   })
   merchantLogin(@Body() dto: MerchantLoginDto) {
-    const identifier = dto.phone || dto.email || dto.identifier || '';
-    return this.authService.merchantLogin(identifier, dto.password);
+    return this.authService.merchantLogin(dto.identifier, dto.password);
   }
 
   @Post('logout')

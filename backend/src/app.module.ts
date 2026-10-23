@@ -29,6 +29,7 @@ import { SeedModule } from './seed/seed.module';
 import { TelegramModule } from './telegram/telegram.module';
 import { TrackingModule } from './tracking/tracking.module';
 import { FirebaseModule } from './firebase/firebase.module';
+import { NotificationsModule } from './notifications/notifications.module';
 
 @Module({
   imports: [
@@ -52,6 +53,7 @@ import { FirebaseModule } from './firebase/firebase.module';
     IncomesModule,
     PaymentsModule,
     SettingsModule,
+    NotificationsModule,
     MobileModule,
     InvoicesModule,
     RolesModule,

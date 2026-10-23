@@ -160,13 +160,13 @@ async function bootstrap() {
   const isMerchantPath = (path: string) => {
     return (
       path.startsWith('/api/mobile/merchant') ||
+      path.startsWith('/api/notifications') ||
       path === '/api/mobile/auth/merchant/login' ||
       path === '/api/mobile/auth/refresh' ||
       path === '/api/mobile/auth/logout' ||
       path === '/api/mobile/auth/device-token' ||
-      path === '/api/mobile/auth/forgot-password' ||
-      path === '/api/mobile/auth/reset-password' ||
-      path.startsWith('/api/mobile/upload')
+      path === '/api/mobile/upload/single' ||
+      path === '/api/mobile/upload'
     );
   };
 
@@ -175,9 +175,15 @@ async function bootstrap() {
     if (isMerchantPath(path)) {
       merchantPaths[path] = {};
       for (const [method, op] of Object.entries(methods as Record<string, any>)) {
+        let tag = 'Mobile Merchant';
+        if (path.startsWith('/api/notifications')) {
+          tag = 'Web Notifications';
+        } else if (path.includes('realtime')) {
+          tag = 'Mobile Merchant - Realtime';
+        }
         merchantPaths[path][method] = {
           ...op,
-          tags: ['Mobile Merchant'], // Consolidate all operations strictly under "Mobile Merchant"
+          tags: [tag],
         };
       }
     }
@@ -186,12 +192,22 @@ async function bootstrap() {
   const merchantDocument = {
     ...fullDocument,
     info: {
-      title: 'Mobile Merchant API',
+      title: 'Delivery & Merchant API',
       description:
-        'REST API documentation for Merchant Mobile Application. All responses follow the standard format: { status: true, message: "Successfully", data: ... }',
+        'REST API documentation for Web & Mobile Application. All responses follow the standard envelope format: { status: true, message: "Successfully", data: ... }',
       version: '1.0',
     },
     tags: [
+      {
+        name: 'Web Notifications',
+        description:
+          'Web Topbar & Dashboard notifications: list, unread-count, mark-as-read, read-all, delete, and real-time SSE stream',
+      },
+      {
+        name: 'Mobile Merchant - Realtime',
+        description:
+          'Real-time Server-Sent Events (SSE) streams for live delivered parcels and pickup requests',
+      },
       {
         name: 'Mobile Merchant',
         description:

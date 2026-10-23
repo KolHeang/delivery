@@ -10,7 +10,10 @@ import {
   Request,
   Param,
   ParseIntPipe,
+  Sse,
+  MessageEvent,
 } from '@nestjs/common';
+import { Observable } from 'rxjs';
 import {
   ApiTags,
   ApiBearerAuth,
@@ -32,6 +35,10 @@ import {
   UpdateParcelNoteDto,
   SpeedUpParcelDto,
   SendMerchantMessageDto,
+  CreateMerchantBranchDto,
+  UpdateMerchantBranchDto,
+  CreateMerchantContactDto,
+  SendSupportMessageDto,
 } from './dto/merchant-mobile.dto';
 
 @ApiTags('Mobile Merchant')
@@ -65,33 +72,6 @@ export class MerchantController {
     },
   })
   getProfile(@Request() req: any) {
-    return this.merchantService.getProfile(req.user.id);
-  }
-
-  @Get('me')
-  @ApiOperation({ summary: 'Alias: Show My Merchant profile' })
-  @ApiResponse({
-    status: 200,
-    description: 'Current merchant profile details',
-    schema: {
-      example: {
-        status: true,
-        message: 'Successfully',
-        data: {
-          id: 10,
-          name: 'Phnom Penh Fashion Store',
-          nameKh: 'ហាងកម្ពុជា',
-          phone: '012345678',
-          email: 'merchant@store.com',
-          address: 'Building #45, Street 271, Phnom Penh',
-          active: true,
-          balance: '150.00',
-          zone: { id: 1, name: 'Phnom Penh' },
-        },
-      },
-    },
-  })
-  getMe(@Request() req: any) {
     return this.merchantService.getProfile(req.user.id);
   }
 
@@ -457,70 +437,6 @@ export class MerchantController {
     return this.merchantService.createParcel(req.user.id, dto);
   }
 
-  @Post('parcels/batch')
-  @ApiOperation({ summary: 'Create multiple parcels in batch' })
-  @ApiBody({ type: [CreateParcelDto] })
-  @ApiResponse({
-    status: 201,
-    description: 'Batch parcels created successfully',
-    schema: {
-      example: {
-        status: true,
-        message: 'Successfully',
-        data: {
-          success: true,
-          count: 2,
-          parcels: [
-            {
-              id: 102,
-              trackingCode: 'CO151020260002',
-              receiverName: 'Khem Veasna',
-              status: 'pending',
-            },
-            {
-              id: 103,
-              trackingCode: 'CO151020260003',
-              receiverName: 'Tep Bopha',
-              status: 'pending',
-            },
-          ],
-        },
-      },
-    },
-  })
-  createBatchParcels(@Request() req: any, @Body() dtos: CreateParcelDto[]) {
-    return this.merchantService.createBatchParcels(req.user.id, dtos);
-  }
-
-  @Get('summary')
-  @ApiOperation({ summary: 'Get merchant summary and finances' })
-  @ApiResponse({
-    status: 200,
-    description: 'Summary counts and pending COD / fee balances',
-    schema: {
-      example: {
-        status: true,
-        message: 'Successfully',
-        data: {
-          totalParcels: 50,
-          totalOrders: 50,
-          statusCounts: {
-            pending: 5,
-            delivered: 40,
-            failed: 2,
-            'in-transit': 3,
-          },
-          codPendingUSD: 230.5,
-          codPendingKHR: 120000,
-          feesPending: 45.0,
-        },
-      },
-    },
-  })
-  getSummary(@Request() req: any) {
-    return this.merchantService.getSummary(req.user.id);
-  }
-
   @Get('dashboard')
   @ApiOperation({ summary: 'Get merchant dashboard data' })
   @ApiResponse({
@@ -561,6 +477,50 @@ export class MerchantController {
     return this.merchantService.getDashboard(req.user.id);
   }
 
+  @Sse('realtime')
+  @ApiOperation({
+    summary: 'Server-Sent Events (SSE) real-time stream for recent deliveries & orders',
+    description: 'Establishes a persistent SSE stream delivering real-time delivery events for merchant: 1) "initial" with current recent successful deliveries, 2) "new_delivery" / "delivery_completed" when a driver completes delivery, 3) "ping" heartbeat every 25s.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Continuous Server-Sent Events stream for merchant.',
+  })
+  realtime(@Request() req: any): Observable<MessageEvent> {
+    return this.merchantService.getRealtimeDeliveriesStream(req.user.id);
+  }
+
+  @Sse('deliveries/realtime')
+  @ApiOperation({
+    summary: 'Alias for SSE real-time stream for recent deliveries',
+    description: 'Alias of /api/mobile/merchant/realtime',
+  })
+  deliveriesRealtime(@Request() req: any): Observable<MessageEvent> {
+    return this.merchantService.getRealtimeDeliveriesStream(req.user.id);
+  }
+
+  @Sse('pickup-requests/realtime')
+  @ApiOperation({
+    summary: 'Server-Sent Events (SSE) real-time stream for pickup requests (bookings)',
+    description: 'Establishes a persistent SSE stream delivering real-time pickup request events for merchant: 1) "initial" with current active pickup requests, 2) "pickup_request_created" / "pickup_request_assigned" / "pickup_request_picked_up" live updates, 3) "ping" heartbeat every 25s.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Continuous Server-Sent Events stream for merchant pickup requests.',
+  })
+  pickupRequestsRealtime(@Request() req: any): Observable<MessageEvent> {
+    return this.merchantService.getRealtimePickupRequestsStream(req.user.id);
+  }
+
+  @Sse('bookings/realtime')
+  @ApiOperation({
+    summary: 'Alias for SSE real-time stream for pickup requests (bookings)',
+    description: 'Alias of /api/mobile/merchant/pickup-requests/realtime',
+  })
+  bookingsRealtime(@Request() req: any): Observable<MessageEvent> {
+    return this.merchantService.getRealtimePickupRequestsStream(req.user.id);
+  }
+
   @Get('settlements')
   @ApiOperation({ summary: 'Get COD settlements and payout report history' })
   @ApiQuery({
@@ -594,29 +554,46 @@ export class MerchantController {
         data: {
           data: [
             {
-              id: 'REC000123',
-              date: '2026-10-15',
-              period: 'Settlement Payout',
-              totalOrders: 10,
-              totalAmount: 250.0,
-              totalAmountKhr: 100000,
+              id: 'SETTLE-SHOP-879002',
+              rawId: 12,
+              reference: 'SETTLE-SHOP-879002',
+              branchId: '1',
+              status: 'paid',
+              statusKh: 'បានទូទាត់',
+              orderIds: ['EX90001', 'EX90002'],
+              totalOrders: 2,
+              total: {
+                usd: 24.5,
+                usdCents: 2450,
+                khr: 98000,
+              },
+              totalAmount: 24.5,
+              totalAmountKhr: 98000,
+              date: '2026-10-22T00:00:00.000Z',
+              paidAt: '2026-10-22T07:25:46.687Z',
+              paymentDate: '2026-10-22T00:00:00.000Z',
+              checkedBy: 'Finance Team',
+              note: 'ទូទាត់ប្រាក់ COD កញ្ចប់ EX90001 & EX90002',
               paymentMethod: 'Bank Transfer / Cash',
-              transferRef: 'REF-123',
-              status: 'Paid',
-              note: 'Weekly COD settlement',
-              creator: 'Finance Admin',
+              transferRef: 'SETTLE-SHOP-879002',
+              creator: 'Finance Team',
               orders: [
                 {
-                  id: 'CO151020260001',
-                  customerName: 'Chan Vanna',
-                  amount: 25.5,
+                  id: 'EX90001',
+                  trackingCode: 'EX90001',
+                  customerName: 'Srey Neang',
+                  phone: '010670101',
+                  address: 'Street 310, Boeung Keng Kang, Phnom Penh',
+                  amount: 24.5,
                   currency: 'USD',
-                  status: 'Delivered',
+                  status: 'delivered',
+                  statusKh: 'បានដឹកជញ្ជូន',
+                  deliveredAt: '2026-10-23T04:19:25.122Z',
                 },
               ],
             },
           ],
-          total: 5,
+          total: 2,
           page: 1,
           limit: 10,
           totalPages: 1,
@@ -639,7 +616,7 @@ export class MerchantController {
 
   @Get('settlements/:id')
   @ApiOperation({ summary: 'Get COD settlement receipt detail by ID or reference' })
-  @ApiParam({ name: 'id', type: String, description: 'Settlement ID or reference', example: 'REC000123' })
+  @ApiParam({ name: 'id', type: String, description: 'Settlement ID or reference', example: 'SETTLE-SHOP-879002' })
   @ApiResponse({
     status: 200,
     description: 'Settlement receipt details with breakdown of orders included',
@@ -648,27 +625,41 @@ export class MerchantController {
         status: true,
         message: 'Successfully',
         data: {
-          id: 'REC000123',
-          rawId: 123,
-          date: '2026-10-15',
-          period: 'Settlement Payout',
-          totalOrders: 10,
-          totalAmount: 250.0,
-          totalAmountKhr: 100000,
+          id: 'SETTLE-SHOP-879002',
+          rawId: 12,
+          reference: 'SETTLE-SHOP-879002',
+          branchId: '1',
+          status: 'paid',
+          statusKh: 'បានទូទាត់',
+          orderIds: ['EX90001', 'EX90002'],
+          totalOrders: 2,
+          total: {
+            usd: 24.5,
+            usdCents: 2450,
+            khr: 98000,
+          },
+          totalAmount: 24.5,
+          totalAmountKhr: 98000,
+          date: '2026-10-22T00:00:00.000Z',
+          paidAt: '2026-10-22T07:25:46.687Z',
+          paymentDate: '2026-10-22T00:00:00.000Z',
+          checkedBy: 'Finance Team',
+          note: 'ទូទាត់ប្រាក់ COD កញ្ចប់ EX90001 & EX90002',
           paymentMethod: 'Bank Transfer / Cash',
-          transferRef: 'REF-123',
-          status: 'Paid',
-          note: 'Weekly COD payout',
-          creator: 'Finance Admin',
+          transferRef: 'SETTLE-SHOP-879002',
+          creator: 'Finance Team',
           orders: [
             {
-              id: 'CO151020260001',
-              customerName: 'Chan Vanna',
-              phone: '098765432',
-              address: 'St 271, Phnom Penh',
-              amount: 25.5,
+              id: 'EX90001',
+              trackingCode: 'EX90001',
+              customerName: 'Srey Neang',
+              phone: '010670101',
+              address: 'Street 310, Boeung Keng Kang, Phnom Penh',
+              amount: 24.5,
               currency: 'USD',
-              status: 'Delivered',
+              status: 'delivered',
+              statusKh: 'បានដឹកជញ្ជូន',
+              deliveredAt: '2026-10-23T04:19:25.122Z',
             },
           ],
         },
@@ -832,17 +823,6 @@ export class MerchantController {
     return this.merchantService.getParcelMessages(req.user.id, id);
   }
 
-  @Get('orders/:id/messages')
-  @ApiOperation({ summary: 'Alias for parcel chat messages' })
-  @ApiParam({ name: 'id', type: Number, description: 'Order / Parcel ID', example: 101 })
-  @ApiResponse({
-    status: 200,
-    description: 'Alias for parcel chat messages',
-  })
-  getParcelMessages(@Request() req: any, @Param('id', ParseIntPipe) id: number) {
-    return this.merchantService.getParcelMessages(req.user.id, id);
-  }
-
   @Post('orders/:id/chat')
   @ApiOperation({ summary: 'Send a chat message or photo to the rider for an order' })
   @ApiParam({ name: 'id', type: Number, description: 'Order / Parcel ID', example: 101 })
@@ -868,21 +848,6 @@ export class MerchantController {
     },
   })
   sendParcelChat(
-    @Request() req: any,
-    @Param('id', ParseIntPipe) id: number,
-    @Body() dto: SendMerchantMessageDto,
-  ) {
-    return this.merchantService.sendParcelMessage(req.user.id, id, dto);
-  }
-
-  @Post('orders/:id/messages')
-  @ApiOperation({ summary: 'Alias for sending parcel chat message' })
-  @ApiParam({ name: 'id', type: Number, description: 'Order / Parcel ID', example: 101 })
-  @ApiResponse({
-    status: 201,
-    description: 'Alias for sending parcel chat message',
-  })
-  sendParcelMessage(
     @Request() req: any,
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: SendMerchantMessageDto,
@@ -1030,5 +995,157 @@ export class MerchantController {
     @Param('id', ParseIntPipe) id: number,
   ) {
     return this.merchantService.deleteNotification(req.user.id, id);
+  }
+
+  // ===================== BRANDING & ORGANISATION =====================
+  @Get('branding')
+  @ApiOperation({ summary: 'Get delivery company branding and hotline info for mobile app' })
+  @ApiResponse({
+    status: 200,
+    description: 'Company branding, logos, hotline and contact information',
+    schema: {
+      example: {
+        status: true,
+        message: 'Successfully',
+        data: {
+          appName: 'Express Delivery',
+          companyName: 'Express Delivery Co., Ltd.',
+          logo: 'https://new-delivery.rithyboth.work/logo.png',
+          phone: '+855 78 000 000',
+          hotline: '+855 78 000 000',
+          email: 'support@delivery.com',
+          website: 'https://new-delivery.rithyboth.work',
+          address: 'Phnom Penh, Cambodia',
+          currency: 'USD',
+          supportTelegram: '@express_support',
+        },
+      },
+    },
+  })
+  getBranding(@Request() req: any) {
+    return this.merchantService.getBranding(req.user.id);
+  }
+
+  // ===================== MERCHANT BRANCHES & LOCATIONS =====================
+  @Get('branches')
+  @ApiOperation({ summary: 'Get merchant branches and saved pickup locations' })
+  @ApiResponse({
+    status: 200,
+    description: 'List of branches / saved pickup locations for this merchant',
+    schema: {
+      example: {
+        status: true,
+        message: 'Successfully',
+        data: [
+          {
+            id: 1,
+            name: 'សាខាទួលគោក (Tuol Kork Branch)',
+            code: 'TK-01',
+            contactName: 'Chan Vanna',
+            phone: '012345678',
+            address: 'Street 271, Phnom Penh',
+            isDefault: true,
+            latitude: 11.5448729,
+            longitude: 104.8921668,
+            note: 'Next to ABA Bank ATM',
+          },
+        ],
+      },
+    },
+  })
+  getBranches(@Request() req: any) {
+    return this.merchantService.getBranches(req.user.id);
+  }
+
+  @Get('branches/:id')
+  @ApiOperation({ summary: 'Get details of a specific branch' })
+  @ApiParam({ name: 'id', type: Number, description: 'Branch ID' })
+  getBranchById(@Request() req: any, @Param('id', ParseIntPipe) id: number) {
+    return this.merchantService.getBranchById(req.user.id, id);
+  }
+
+  @Post('branches')
+  @ApiOperation({ summary: 'Add a new merchant branch or pickup location' })
+  @ApiResponse({
+    status: 201,
+    description: 'Branch created successfully',
+  })
+  createBranch(@Request() req: any, @Body() dto: CreateMerchantBranchDto) {
+    return this.merchantService.createBranch(req.user.id, dto);
+  }
+
+  @Patch('branches/:id')
+  @ApiOperation({ summary: 'Update branch details' })
+  @ApiParam({ name: 'id', type: Number, description: 'Branch ID' })
+  updateBranch(
+    @Request() req: any,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateMerchantBranchDto,
+  ) {
+    return this.merchantService.updateBranch(req.user.id, id, dto);
+  }
+
+  @Delete('branches/:id')
+  @ApiOperation({ summary: 'Delete a branch' })
+  @ApiParam({ name: 'id', type: Number, description: 'Branch ID' })
+  deleteBranch(@Request() req: any, @Param('id', ParseIntPipe) id: number) {
+    return this.merchantService.deleteBranch(req.user.id, id);
+  }
+
+  @Patch('branches/:id/default')
+  @ApiOperation({ summary: 'Set branch as default pickup location' })
+  @ApiParam({ name: 'id', type: Number, description: 'Branch ID' })
+  setDefaultBranch(@Request() req: any, @Param('id', ParseIntPipe) id: number) {
+    return this.merchantService.setDefaultBranch(req.user.id, id);
+  }
+
+  // ===================== SAVED CONTACTS / CUSTOMERS =====================
+  @Get('contacts')
+  @ApiOperation({ summary: 'Get frequent customer and receiver contacts' })
+  @ApiQuery({ name: 'search', required: false, type: String, description: 'Search by name or phone' })
+  @ApiResponse({
+    status: 200,
+    description: 'List of frequent receiver contacts',
+  })
+  getContacts(@Request() req: any, @Query('search') search?: string) {
+    return this.merchantService.getContacts(req.user.id, search);
+  }
+
+  @Post('contacts')
+  @ApiOperation({ summary: 'Save customer / receiver contact' })
+  @ApiResponse({
+    status: 201,
+    description: 'Contact saved successfully',
+  })
+  createContact(@Request() req: any, @Body() dto: CreateMerchantContactDto) {
+    return this.merchantService.createContact(req.user.id, dto);
+  }
+
+  @Delete('contacts/:id')
+  @ApiOperation({ summary: 'Delete a saved customer contact' })
+  @ApiParam({ name: 'id', type: Number, description: 'Contact ID' })
+  deleteContact(@Request() req: any, @Param('id', ParseIntPipe) id: number) {
+    return this.merchantService.deleteContact(req.user.id, id);
+  }
+
+  // ===================== SUPPORT CHAT =====================
+  @Get('support/messages')
+  @ApiOperation({ summary: 'Get messages for general support inquiry' })
+  @ApiResponse({
+    status: 200,
+    description: 'Support inquiry conversation history and support contact',
+  })
+  getSupportMessages(@Request() req: any) {
+    return this.merchantService.getSupportMessages(req.user.id);
+  }
+
+  @Post('support/messages')
+  @ApiOperation({ summary: 'Send message to support/dispatch operator' })
+  @ApiResponse({
+    status: 201,
+    description: 'Message sent to support successfully',
+  })
+  sendSupportMessage(@Request() req: any, @Body() dto: SendSupportMessageDto) {
+    return this.merchantService.sendSupportMessage(req.user.id, dto);
   }
 }

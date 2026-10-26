@@ -72,7 +72,7 @@ export default function DriverPaymentsPage() {
       const [profRes, dailyRes, paymentsRes, taskRes] = await Promise.all([
         api.get("/mobile/driver/profile").catch(() => null),
         api.get(`/mobile/driver/invoices/daily?date=${dateQuery}`).catch(() => null),
-        api.get("/mobile/driver/payments").catch(() => null),
+        api.get("/mobile/driver/settlements").catch(() => api.get("/mobile/driver/payments").catch(() => null)),
         api.get(`/mobile/driver/tasks?date=${dateQuery}`).catch(() => null),
       ]);
 
@@ -148,24 +148,31 @@ export default function DriverPaymentsPage() {
       if (paymentsRes?.data) {
         const rawList = Array.isArray(paymentsRes.data)
           ? paymentsRes.data
-          : paymentsRes.data?.result || paymentsRes.data?.data || [];
+          : paymentsRes.data?.data || paymentsRes.data?.result || [];
         const formatted = rawList.map((item: any) => {
           const isKhr = item.currency === "KHR" || (!item.currency && (Number(item.amount) >= 100 || (item.note && (item.note.includes("KHR") || item.note.includes("៛")))));
+          const refCode = item.reference || item.settlementCode || `ST${8000 + (item.id || 1)}`;
+          const count = item.orderCount || item.parcelCount || (item.parcelIds ? item.parcelIds.length : 1);
           return {
-            id: item.reference || `INV-${item.id}`,
-            date: item.date
+            id: refCode,
+            realId: item.id,
+            date: item.formattedDate || (item.date
               ? new Date(item.date).toLocaleDateString("en-US", {
-                  weekday: "short",
-                  day: "numeric",
                   month: "short",
+                  day: "numeric",
                   year: "numeric",
                 })
-              : "N/A",
-            totalParcels: item.parcelCount || (item.parcelIds ? item.parcelIds.length : 0),
-            delivered: item.parcelCount || (item.parcelIds ? item.parcelIds.length : 0),
+              : "N/A"),
+            totalParcels: count,
+            delivered: count,
             netAmount: Number(item.amount) || 0,
+            usdAmount: Number(item.usdAmount || 0),
+            khrAmount: Number(item.khrAmount || 0),
+            usdText: item.usdText || `USD ${Number(item.usdAmount || 0).toFixed(2)}`,
+            khrText: item.khrText || `KHR ${Number(item.khrAmount || 0).toLocaleString()}`,
+            subtitle: item.subtitle || `${refCode} • ${count} Orders`,
             currency: isKhr ? "KHR" : (item.currency || "USD"),
-            status: "Completed",
+            status: item.status || "Paid",
           };
         });
         setInvoices(formatted);
@@ -539,15 +546,31 @@ export default function DriverPaymentsPage() {
             style={{
               display: "flex",
               alignItems: "center",
-              gap: "6px",
+              justifyContent: "space-between",
               fontSize: "14px",
               fontWeight: "800",
               color: "#334155",
               paddingLeft: "4px",
             }}
           >
-            <MdHistory size={18} color="#64748b" />
-            <span>{t.history}</span>
+            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+              <MdHistory size={18} color="#64748b" />
+              <span>{t.history}</span>
+            </div>
+            <button
+              onClick={() => router.push("/driver/settlements")}
+              style={{
+                background: "none",
+                border: "none",
+                color: "#2563eb",
+                fontSize: "12.5px",
+                fontWeight: "700",
+                cursor: "pointer",
+                padding: "2px 6px",
+              }}
+            >
+              {lang === "km" ? "មើលទាំងអស់ ➔" : "View All ➔"}
+            </button>
           </div>
 
           <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
@@ -573,43 +596,75 @@ export default function DriverPaymentsPage() {
               invoices.map((inv) => (
                 <div
                   key={inv.id}
+                  onClick={() => router.push(`/driver/payments/${inv.realId || inv.id}`)}
                   style={{
                     backgroundColor: "#ffffff",
                     borderRadius: "16px",
-                    padding: "14px 16px",
+                    padding: "16px",
                     border: "1px solid #f1f5f9",
                     boxShadow: "0 2px 8px rgba(0,0,0,0.02)",
                     display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
+                    flexDirection: "column",
+                    cursor: "pointer",
+                    transition: "transform 0.15s ease",
                   }}
                 >
-                  <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                      <span style={{ fontSize: "13.5px", fontWeight: "800", color: "#0f172a" }}>
-                        {inv.id}
-                      </span>
-                      <span
-                        style={{
-                          backgroundColor: "#dcfce7",
-                          color: "#15803d",
-                          padding: "2px 6px",
-                          borderRadius: "6px",
-                          fontSize: "10px",
-                          fontWeight: "700",
-                        }}
-                      >
-                        {inv.status}
-                      </span>
-                    </div>
-                    <span style={{ fontSize: "11.5px", color: "#64748b", fontWeight: "600" }}>
-                      {inv.date} • {inv.delivered}/{inv.totalParcels} {t.delivered}
+                  {/* Row 1: Date & Status Badge */}
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                    }}
+                  >
+                    <span style={{ fontSize: "15px", fontWeight: "800", color: "#0f172a" }}>
+                      {inv.date}
+                    </span>
+                    <span
+                      style={{
+                        backgroundColor:
+                          inv.status?.toLowerCase() === "problem"
+                            ? "#fee2e2"
+                            : inv.status?.toLowerCase() === "pending"
+                            ? "#ffffff"
+                            : "#ffffff",
+                        color:
+                          inv.status?.toLowerCase() === "problem"
+                            ? "#b91c1c"
+                            : inv.status?.toLowerCase() === "pending"
+                            ? "#475569"
+                            : "#1e293b",
+                        border: "1px solid #e2e8f0",
+                        padding: "2px 10px",
+                        borderRadius: "8px",
+                        fontSize: "11px",
+                        fontWeight: "700",
+                      }}
+                    >
+                      {inv.status || "Paid"}
                     </span>
                   </div>
 
-                  <div style={{ textAlign: "right" }}>
-                    <div style={{ fontSize: "15px", fontWeight: "900", color: "#16a34a" }}>
-                      +{inv.currency === "KHR" ? `${Number(inv.netAmount).toLocaleString()} ៛` : `$${Number(inv.netAmount).toFixed(2)}`}
+                  {/* Row 2: Reference & Orders count */}
+                  <div
+                    style={{
+                      fontSize: "13px",
+                      color: "#64748b",
+                      fontWeight: "500",
+                      marginTop: "4px",
+                      marginBottom: "8px",
+                    }}
+                  >
+                    {inv.subtitle || `${inv.id} • ${inv.totalParcels} Orders`}
+                  </div>
+
+                  {/* Row 3: Dual amounts */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: "1px" }}>
+                    <div style={{ fontSize: "15px", fontWeight: "800", color: "#0f172a" }}>
+                      {inv.usdText || `USD ${Number(inv.usdAmount || 0).toFixed(2)}`}
+                    </div>
+                    <div style={{ fontSize: "13.5px", fontWeight: "600", color: "#475569" }}>
+                      {inv.khrText || `KHR ${Number(inv.khrAmount || 0).toLocaleString()}`}
                     </div>
                   </div>
                 </div>

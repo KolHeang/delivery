@@ -305,6 +305,28 @@ export class MerchantController {
     return this.merchantService.getParcelById(req.user.id, id);
   }
 
+  @Get('tracking/:code')
+  @ApiOperation({ summary: 'Track a parcel by tracking code or ID with live GPS, ETA and timeline' })
+  @ApiParam({ name: 'code', type: String, description: 'Tracking code or parcel ID', example: 'CO151020260001' })
+  @ApiResponse({
+    status: 200,
+    description: 'Live tracking data, driver location, ETA, and progress timeline',
+  })
+  getTrackingByCode(@Request() req: any, @Param('code') code: string) {
+    return this.merchantService.getParcelTracking(req.user.id, code);
+  }
+
+  @Get('parcels/:id/tracking')
+  @ApiOperation({ summary: 'Track a parcel by ID with live GPS coordinates, ETA, driver status & timeline' })
+  @ApiParam({ name: 'id', type: Number, description: 'Parcel ID', example: 101 })
+  @ApiResponse({
+    status: 200,
+    description: 'Live tracking data, driver location, ETA, and progress timeline',
+  })
+  getParcelTracking(@Request() req: any, @Param('id', ParseIntPipe) id: number) {
+    return this.merchantService.getParcelTracking(req.user.id, id);
+  }
+
   @Patch('parcels/:id/cancel')
   @ApiOperation({ summary: 'Cancel a pending parcel' })
   @ApiParam({ name: 'id', type: Number, description: 'Parcel ID', example: 101 })

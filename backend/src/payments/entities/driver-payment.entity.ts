@@ -41,6 +41,9 @@ export class DriverPayment {
   @Column({ nullable: true })
   reference: string;
 
+  @Column({ default: 'Paid', nullable: true })
+  status: string;
+
   @Column({ nullable: true, type: 'text' })
   note: string;
 

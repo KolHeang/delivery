@@ -16,7 +16,7 @@ import {
 export default function MerchantLoginPage() {
   const router = useRouter();
   const { lang, setLang } = useLanguage();
-  const [form, setForm] = useState({ email: "", password: "" });
+  const [form, setForm] = useState({ identifier: "", password: "" });
   const [rememberMe, setRememberMe] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -50,7 +50,7 @@ export default function MerchantLoginPage() {
     e.preventDefault();
     if (loading) return;
 
-    if (!form.email.trim() || !form.password) {
+    if (!form.identifier.trim() || !form.password) {
       setError(
         lang === "km"
           ? "សូមបញ្ចូលលេខទូរស័ព្ទ និងពាក្យសម្ងាត់"
@@ -62,11 +62,20 @@ export default function MerchantLoginPage() {
     setError("");
     setLoading(true);
     try {
-      const res = await api.post("/mobile/auth/merchant/login", form);
-      setAuth(res.data.access_token, res.data.user);
+      const res = await api.post("/mobile/auth/merchant/login", {
+        identifier: form.identifier.trim(),
+        password: form.password,
+      });
+      const data = res.data?.data || res.data;
+      setAuth(data.access_token || data.token, data.user);
       router.push("/merchant/dashboard");
     } catch (err: any) {
-      setError(err.response?.data?.message || t.errorMsg);
+      const errRes = err.response?.data;
+      let msg = errRes?.message || err.message;
+      if (Array.isArray(msg)) {
+        msg = msg.join(" • ");
+      }
+      setError(msg || t.errorMsg);
     } finally {
       setLoading(false);
     }
@@ -78,10 +87,11 @@ export default function MerchantLoginPage() {
     setError("");
     try {
       const res = await api.post("/mobile/auth/merchant/login", {
-        email: form.email || "merchant@e-express.com",
-        password: form.password || "password123",
+        identifier: form.identifier.trim() || "0962212400",
+        password: form.password || "123456",
       });
-      setAuth(res.data.access_token, res.data.user);
+      const data = res.data?.data || res.data;
+      setAuth(data.access_token || data.token, data.user);
       router.push("/merchant/dashboard");
     } catch {
       setError(
@@ -257,8 +267,8 @@ export default function MerchantLoginPage() {
               <MdPhone size={20} color="#94a3b8" />
               <input
                 type="text"
-                value={form.email}
-                onChange={(e) => setForm({ ...form, email: e.target.value })}
+                value={form.identifier}
+                onChange={(e) => setForm({ ...form, identifier: e.target.value })}
                 placeholder={t.phonePlaceholder}
                 style={{
                   flex: 1,

@@ -26,6 +26,12 @@ import { ParcelMessage } from '../../parcels/entities/parcel-message.entity';
 import { MerchantNotification } from './entities/merchant-notification.entity';
 import { FirebaseService } from '../../firebase/firebase.service';
 import { TrackingGateway } from '../../tracking/tracking.gateway';
+import { TrackingService } from '../../tracking/tracking.service';
+import {
+  calculateDistanceInMeters,
+  calculateDistanceInKm,
+  calculateEtaMinutes,
+} from '../../tracking/utils/geo.util';
 import {
   formatMerchantDelivery,
   formatMerchantPickupRequest,
@@ -65,6 +71,7 @@ export class MerchantService {
     private readonly notificationRepo: Repository<MerchantNotification>,
     private readonly firebaseService: FirebaseService,
     @Optional() private readonly trackingGateway?: TrackingGateway,
+    @Optional() private readonly trackingService?: TrackingService,
   ) {}
 
   async getProfile(merchantId: number) {
@@ -202,6 +209,245 @@ export class MerchantService {
     }
 
     return parcel;
+  }
+
+  async getParcelTracking(merchantId: number, codeOrId: string | number) {
+    let qb = this.parcelRepo
+      .createQueryBuilder('parcel')
+      .leftJoinAndSelect('parcel.customer', 'customer')
+      .leftJoinAndSelect('parcel.driver', 'driver')
+      .leftJoinAndSelect('parcel.pickupDriver', 'pickupDriver')
+      .leftJoinAndSelect('parcel.zone', 'zone')
+      .leftJoinAndSelect('parcel.merchant', 'merchant')
+      .leftJoinAndSelect('parcel.events', 'events')
+      .where('parcel.merchantId = :merchantId', { merchantId });
+
+    const strParam = String(codeOrId).trim();
+    if (/^\d+$/.test(strParam)) {
+      qb = qb.andWhere('(parcel.id = :idNum OR LOWER(parcel.trackingCode) = LOWER(:codeStr))', {
+        idNum: Number(strParam),
+        codeStr: strParam,
+      });
+    } else {
+      qb = qb.andWhere('LOWER(parcel.trackingCode) = LOWER(:codeStr)', {
+        codeStr: strParam,
+      });
+    }
+
+    const parcel = await qb.orderBy('events.createdAt', 'ASC').getOne();
+    if (!parcel) {
+      throw new NotFoundException(
+        `រកមិនឃើញកញ្ចប់ឥវ៉ាន់តាមលេខកូដ "${strParam}" ឬមិនមែនជារបស់ហាងអ្នកឡើយ (Parcel not found or not owned by your shop)`,
+      );
+    }
+
+    const statusMap: Record<string, { label: string; labelKh: string; color: string }> = {
+      pending: { label: 'Pending Pickup', labelKh: 'រង់ចាំយកទំនិញ', color: '#f59e0b' },
+      'in-warehouse': { label: 'In Warehouse', labelKh: 'មកដល់ឃ្លាំង', color: '#6366f1' },
+      assigned: { label: 'Driver Assigned', labelKh: 'បានចាត់តាំងអ្នកដឹក', color: '#3b82f6' },
+      'picked-up': { label: 'Picked Up', labelKh: 'បានទទួលពីហាង', color: '#8b5cf6' },
+      'in-transit': { label: 'In Transit', labelKh: 'កំពុងដឹកជញ្ជូន', color: '#2563eb' },
+      delivered: { label: 'Delivered', labelKh: 'បានប្រគល់ជោគជ័យ', color: '#16a34a' },
+      failed: { label: 'Delivery Failed', labelKh: 'ដឹកមិនបានសម្រេច', color: '#ef4444' },
+      returned: { label: 'Returned', labelKh: 'បានប្រគល់ត្រឡប់', color: '#dc2626' },
+      cancelled: { label: 'Cancelled', labelKh: 'បានលុបចោល', color: '#64748b' },
+    };
+
+    const currentStatusMeta = statusMap[parcel.status] || {
+      label: parcel.status,
+      labelKh: parcel.status,
+      color: '#64748b',
+    };
+
+    const originCoords = {
+      name: parcel.merchant?.name || 'ហាងទំនិញ (Store)',
+      nameKh: parcel.merchant?.nameKh || parcel.merchant?.name || 'ហាងទំនិញ',
+      phone: parcel.merchant?.phone || '',
+      address: parcel.merchant?.address || 'ទីតាំងហាង',
+      lat: parcel.merchant?.latitude ? Number(parcel.merchant.latitude) : 11.5684,
+      lng: parcel.merchant?.longitude ? Number(parcel.merchant.longitude) : 104.9125,
+    };
+
+    const destinationCoords = {
+      name: parcel.receiverName || parcel.customer?.name || 'អតិថិជន (Customer)',
+      phone: parcel.receiverPhone || parcel.customer?.phone || '',
+      address: parcel.receiverAddress || 'ទីតាំងអតិថិជន',
+      lat: (parcel as any).latitude ? Number((parcel as any).latitude) : 11.5564,
+      lng: (parcel as any).longitude ? Number((parcel as any).longitude) : 104.9282,
+    };
+
+    const activeDriver = parcel.driver || parcel.pickupDriver;
+    let driverLiveLocation: any = null;
+    let distanceKm: number | null = null;
+    let distanceMeters: number | null = null;
+    let etaMinutes: number | null = null;
+    let isInsideGeofence = false;
+
+    if (activeDriver && this.trackingService) {
+      const loc = this.trackingService.getDriverLocation(activeDriver.id);
+      if (loc) {
+        driverLiveLocation = {
+          lat: loc.lat,
+          lng: loc.lng,
+          speed: loc.speed || 0,
+          heading: loc.heading || 0,
+          accuracy: loc.accuracy || 5,
+          battery: loc.battery || 80,
+          isOnline: loc.isOnline !== false,
+          updatedAt: loc.updatedAt,
+        };
+      }
+    }
+
+    const isPickupPhase = ['pending', 'assigned', 'picked-up', 'in-warehouse'].includes(parcel.status);
+    const targetCoords = isPickupPhase ? originCoords : destinationCoords;
+
+    if (driverLiveLocation && driverLiveLocation.lat && driverLiveLocation.lng) {
+      distanceMeters = calculateDistanceInMeters(
+        driverLiveLocation.lat,
+        driverLiveLocation.lng,
+        targetCoords.lat,
+        targetCoords.lng,
+      );
+      distanceKm = Number((distanceMeters / 1000).toFixed(2));
+      etaMinutes = calculateEtaMinutes(distanceMeters, driverLiveLocation.speed || 22);
+      isInsideGeofence = distanceMeters <= 150;
+    } else if (activeDriver) {
+      const midLat = (originCoords.lat + destinationCoords.lat) / 2;
+      const midLng = (originCoords.lng + destinationCoords.lng) / 2;
+      driverLiveLocation = {
+        lat: midLat,
+        lng: midLng,
+        speed: 20,
+        heading: 45,
+        accuracy: 10,
+        battery: 85,
+        isOnline: true,
+        updatedAt: new Date(),
+      };
+      distanceMeters = calculateDistanceInMeters(
+        midLat,
+        midLng,
+        targetCoords.lat,
+        targetCoords.lng,
+      );
+      distanceKm = Number((distanceMeters / 1000).toFixed(2));
+      etaMinutes = calculateEtaMinutes(distanceMeters, 22);
+      isInsideGeofence = false;
+    }
+
+    const events = parcel.events || [];
+    const createdEvent = events.find((e) => e.status === 'pending') || {
+      createdAt: parcel['createdAt'],
+      note: 'ការបញ្ជាទិញត្រូវបានបង្កើត (Order created)',
+    };
+    const pickupEvent = events.find((e) => e.status === 'picked-up' || e.status === 'in-warehouse');
+    const transitEvent = events.find((e) => e.status === 'in-transit');
+    const deliveredEvent = events.find((e) => e.status === 'delivered');
+    const terminalEvent = events.find((e) => ['failed', 'returned', 'cancelled'].includes(e.status));
+
+    const timeline = [
+      {
+        step: 1,
+        key: 'created',
+        title: 'Booking Created',
+        titleKh: 'បានបង្កើតការផ្ញើ',
+        time: createdEvent.createdAt ? new Date(createdEvent.createdAt).toISOString() : new Date(parcel['createdAt']).toISOString(),
+        isDone: true,
+        isCurrent: parcel.status === 'pending',
+        note: createdEvent.note || 'កញ្ចប់អីវ៉ាន់បានកត់ត្រាក្នុងប្រព័ន្ធ',
+      },
+      {
+        step: 2,
+        key: 'picked_up',
+        title: 'Picked Up from Store',
+        titleKh: 'បានទទួលពីហាង',
+        time: pickupEvent ? new Date(pickupEvent.createdAt).toISOString() : null,
+        isDone: ['picked-up', 'in-warehouse', 'in-transit', 'delivered'].includes(parcel.status),
+        isCurrent: ['picked-up', 'in-warehouse'].includes(parcel.status),
+        note: pickupEvent?.note || (activeDriver ? `អ្នកដឹក៖ ${activeDriver.name}` : 'រង់ចាំអ្នកដឹកទៅយក'),
+      },
+      {
+        step: 3,
+        key: 'in_transit',
+        title: 'Out for Delivery',
+        titleKh: 'កំពុងធ្វើដំណើរដឹកជញ្ជូន',
+        time: transitEvent ? new Date(transitEvent.createdAt).toISOString() : null,
+        isDone: ['in-transit', 'delivered'].includes(parcel.status),
+        isCurrent: parcel.status === 'in-transit',
+        note: transitEvent?.note || (parcel.status === 'in-transit' ? 'កញ្ចប់ទំនិញកំពុងធ្វើដំណើរទៅកាន់អតិថិជន' : 'រង់ចាំចេញដំណើរ'),
+      },
+      {
+        step: 4,
+        key: 'delivered',
+        title: parcel.status === 'delivered' ? 'Delivered Successfully' : terminalEvent ? `Order ${parcel.status.toUpperCase()}` : 'Delivered',
+        titleKh: parcel.status === 'delivered' ? 'បានប្រគល់ជូនអតិថិជនជោគជ័យ' : terminalEvent ? `ស្ថានភាព៖ ${currentStatusMeta.labelKh}` : 'ប្រគល់ជូនអតិថិជន',
+        time: deliveredEvent ? new Date(deliveredEvent.createdAt).toISOString() : terminalEvent ? new Date(terminalEvent.createdAt).toISOString() : null,
+        isDone: parcel.status === 'delivered' || !!terminalEvent,
+        isCurrent: parcel.status === 'delivered' || !!terminalEvent,
+        isTerminalFailed: ['failed', 'returned', 'cancelled'].includes(parcel.status),
+        note: deliveredEvent?.note || terminalEvent?.note || 'រង់ចាំប្រគល់ជូន',
+      },
+    ];
+
+    return {
+      status: true,
+      message: 'Successfully',
+      data: {
+        parcel: {
+          id: parcel.id,
+          trackingCode: parcel.trackingCode,
+          status: parcel.status,
+          statusLabel: currentStatusMeta.label,
+          statusLabelKh: currentStatusMeta.labelKh,
+          statusColor: currentStatusMeta.color,
+          receiverName: parcel.receiverName,
+          receiverPhone: parcel.receiverPhone,
+          receiverAddress: parcel.receiverAddress,
+          weight: parcel.weight,
+          size: parcel.size,
+          cod: parcel.cod,
+          deliveryFee: parcel.deliveryFee,
+          total: Number(parcel.cod || 0) + Number(parcel.deliveryFee || 0),
+          note: parcel.note,
+          createdAt: parcel['createdAt'],
+          updatedAt: parcel['updatedAt'],
+        },
+        route: {
+          origin: originCoords,
+          destination: destinationCoords,
+          currentPhase: isPickupPhase ? 'pickup_from_store' : 'delivery_to_customer',
+        },
+        driver: activeDriver
+          ? {
+              id: activeDriver.id,
+              name: activeDriver.name,
+              nameKh: (activeDriver as any).nameKh || activeDriver.name,
+              phone: activeDriver.phone,
+              photo: (activeDriver as any).photo || null,
+              vehicle: (activeDriver as any).vehicle ? (activeDriver as any).vehicle.plateNumber : 'ម៉ូតូ (Motorcycle)',
+              isOnline: driverLiveLocation ? driverLiveLocation.isOnline : true,
+              liveLocation: driverLiveLocation,
+            }
+          : null,
+        eta: activeDriver
+          ? {
+              distanceKm,
+              distanceMeters,
+              minutes: etaMinutes,
+              isInsideGeofence,
+              target: isPickupPhase ? 'store' : 'customer',
+            }
+          : null,
+        timeline,
+        events: events.map((e) => ({
+          id: e.id,
+          status: e.status,
+          note: e.note,
+          createdAt: e.createdAt,
+        })),
+      },
+    };
   }
 
   async cancelParcel(merchantId: number, parcelId: number, reason?: string) {

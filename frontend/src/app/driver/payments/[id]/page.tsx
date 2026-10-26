@@ -41,10 +41,15 @@ export default function DriverPaymentDetailPage() {
     if (!paymentId) return;
     setLoading(true);
     try {
-      const res = await api.get(`/mobile/driver/payments/${paymentId}`);
-      if (res.data && res.data.payment) {
-        setPaymentDetail(res.data);
-        return;
+      const res = await api
+        .get(`/mobile/driver/settlements/${paymentId}`)
+        .catch(() => api.get(`/mobile/driver/payments/${paymentId}`));
+      if (res?.data) {
+        const payload = res.data.data?.payment ? res.data.data : (res.data.payment ? res.data : null);
+        if (payload) {
+          setPaymentDetail(payload);
+          return;
+        }
       }
       throw new Error("No payment record");
     } catch (err) {

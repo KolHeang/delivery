@@ -24,6 +24,11 @@ import { FirebaseService } from '../../firebase/firebase.service';
 import { TrackingGateway } from '../../tracking/tracking.gateway';
 import { formatDriverTask, FormattedDriverTask } from './utils/task-formatter.util';
 import { formatMerchantDelivery, formatMerchantPickupRequest } from '../merchant/utils/delivery-formatter.util';
+import {
+  DriverSettlementFilterDto,
+  CreateDriverSettlementRequestDto,
+  ReportSettlementProblemDto,
+} from './dto/driver-mobile.dto';
 
 @Injectable()
 export class DriverService {
@@ -1715,33 +1720,90 @@ export class DriverService {
     };
   }
 
-  async getPayments(
+  formatSettlementDate(dateVal: any): string {
+    if (!dateVal) return '';
+    const d = new Date(dateVal);
+    if (isNaN(d.getTime())) return String(dateVal);
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return `${months[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
+  }
+
+  async getSettlements(
     driverId: number,
-    page?: number,
-    limit?: number,
-    month?: string,
+    queryDto?: DriverSettlementFilterDto,
   ) {
     const driver = await this.userRepo.findOne({ where: { id: driverId } });
-    const pageNum = page ? Math.max(1, parseInt(page as any, 10)) : 1;
-    const limitNum = limit ? Math.max(1, parseInt(limit as any, 10)) : 20;
+    const pageNum = queryDto?.page ? Math.max(1, parseInt(queryDto.page as any, 10)) : 1;
+    const limitNum = queryDto?.limit ? Math.max(1, parseInt(queryDto.limit as any, 10)) : 20;
     const skip = (pageNum - 1) * limitNum;
+    const statusFilter = (queryDto?.status || 'all').trim().toLowerCase();
+    const search = queryDto?.search?.trim();
+
+    // Parse date ranges
+    let startDate = queryDto?.startDate;
+    let endDate = queryDto?.endDate;
+    if (queryDto?.dateRange) {
+      const parts = queryDto.dateRange.includes('_')
+        ? queryDto.dateRange.split('_')
+        : (queryDto.dateRange.includes(',') ? queryDto.dateRange.split(',') : queryDto.dateRange.split(' to '));
+      if (parts[0]) startDate = parts[0].trim();
+      if (parts[1]) endDate = parts[1].trim();
+    }
 
     const query = this.driverPaymentRepo
       .createQueryBuilder('payment')
       .leftJoinAndSelect('payment.creator', 'creator')
-      .where('payment.driverId = :driverId', { driverId })
-      .orderBy('payment.date', 'DESC')
-      .addOrderBy('payment.createdAt', 'DESC');
+      .where('payment.driverId = :driverId', { driverId });
 
-    if (month) {
-      // Month formatted as YYYY-MM
-      query.andWhere("TO_CHAR(payment.date, 'YYYY-MM') = :month", { month });
+    if (queryDto?.month) {
+      query.andWhere("TO_CHAR(payment.date, 'YYYY-MM') = :month", { month: queryDto.month });
     }
+
+    if (startDate) {
+      query.andWhere('payment.date >= :startDate', { startDate });
+    }
+
+    if (endDate) {
+      query.andWhere('payment.date <= :endDate', { endDate });
+    }
+
+    if (search) {
+      query.andWhere('(payment.reference ILIKE :search OR payment.note ILIKE :search)', { search: `%${search}%` });
+    }
+
+    if (statusFilter !== 'all' && statusFilter !== '') {
+      if (statusFilter === 'paid') {
+        query.andWhere("(LOWER(payment.status) = 'paid' OR payment.status IS NULL)");
+      } else if (statusFilter === 'pending') {
+        query.andWhere("LOWER(payment.status) = 'pending'");
+      } else if (statusFilter === 'problem') {
+        query.andWhere("LOWER(payment.status) = 'problem'");
+      }
+    }
+
+    query.orderBy('payment.date', 'DESC').addOrderBy('payment.createdAt', 'DESC');
 
     const [data, total] = await query
       .skip(skip)
       .take(limitNum)
       .getManyAndCount();
+
+    // Summary counts for tabs [ All ] [ Paid ] [ Pending ] [ Problem ]
+    const summaryCountQb = this.driverPaymentRepo
+      .createQueryBuilder('payment')
+      .select([
+        'COUNT(*) as all_count',
+        "COUNT(CASE WHEN LOWER(payment.status) = 'paid' OR payment.status IS NULL THEN 1 END) as paid_count",
+        "COUNT(CASE WHEN LOWER(payment.status) = 'pending' THEN 1 END) as pending_count",
+        "COUNT(CASE WHEN LOWER(payment.status) = 'problem' THEN 1 END) as problem_count",
+      ])
+      .where('payment.driverId = :driverId', { driverId });
+
+    if (queryDto?.month) summaryCountQb.andWhere("TO_CHAR(payment.date, 'YYYY-MM') = :month", { month: queryDto.month });
+    if (startDate) summaryCountQb.andWhere('payment.date >= :startDate', { startDate });
+    if (endDate) summaryCountQb.andWhere('payment.date <= :endDate', { endDate });
+
+    const summaryCounts = await summaryCountQb.getRawOne();
 
     // Fetch all parcels for these payments to compute accurate USD/KHR breakdown
     const allParcelIds: number[] = [];
@@ -1785,32 +1847,308 @@ export class DriverService {
       const amountVal = parseFloat(p.amount as any) || 0;
       const isKhr = p.currency === 'KHR' || (!p.currency && (amountVal >= 100 || (p.note && (p.note.includes('KHR') || p.note.includes('៛')))));
 
+      if (parcelCount === 0 && amountVal > 0) {
+        if (isKhr) {
+          khr = amountVal;
+        } else {
+          usd = amountVal;
+        }
+      }
+
+      // Format date e.g. "Oct 13, 2026"
+      const formattedDate = this.formatSettlementDate(p.date || p.createdAt);
+
+      // Reference code matching screenshot e.g. "ST8002"
+      let stReference = p.reference;
+      if (!stReference || !stReference.trim()) {
+        stReference = `ST${8000 + p.id}`;
+      } else if (!stReference.startsWith('ST')) {
+        const numericMatch = stReference.match(/\d+/g);
+        if (numericMatch) {
+          const digits = numericMatch.join('');
+          stReference = `ST${digits.slice(-4).padStart(4, '0')}`;
+        } else {
+          stReference = `ST${8000 + p.id}`;
+        }
+      }
+
+      const rawStatus = (p.status || 'Paid').trim();
+      const statusTitle = rawStatus.charAt(0).toUpperCase() + rawStatus.slice(1).toLowerCase();
+      const finalOrderCount = parcelCount || 1;
+
       return {
         id: p.id,
-        driverName: driver?.nameKh || driver?.name || 'Driver',
-        amount: amountVal,
-        currency: isKhr ? 'KHR' : (p.currency || 'USD'),
+        reference: stReference,
+        originalReference: p.reference || null,
+        settlementCode: stReference,
+        settlementNo: stReference,
+        date: p.date,
+        formattedDate, // "Oct 13, 2026"
+        status: statusTitle, // "Paid" | "Pending" | "Problem"
+        statusBadge: statusTitle,
+        orderCount: finalOrderCount,
+        ordersCount: finalOrderCount,
+        ordersText: `${finalOrderCount} Orders`, // "1 Orders"
+        subtitle: `${stReference} • ${finalOrderCount} Orders`, // "ST8002 • 1 Orders"
         usdAmount: Math.round(usd * 100) / 100,
         khrAmount: Math.round(khr),
+        usdText: `USD ${(Math.round(usd * 100) / 100).toFixed(2)}`, // "USD 0.00"
+        khrText: `KHR ${Math.round(khr).toLocaleString('en-US')}`, // "KHR 77,000"
+        amount: amountVal,
+        currency: isKhr ? 'KHR' : (p.currency || 'USD'),
         totalUSD: isKhr ? Math.round((amountVal / exchangeRate) * 100) / 100 : amountVal,
         totalKHR: isKhr ? amountVal : Math.round(amountVal * exchangeRate),
-        date: p.date,
-        reference: p.reference || `REF-${p.id}`,
+        totalCodUSD: Math.round(usd * 100) / 100,
+        totalCodKHR: Math.round(khr),
         note: p.note,
-        checkBy: p.creator?.phone || p.creator?.name || '014388403',
+        driverName: driver?.nameKh || driver?.name || 'Driver',
+        checkBy: p.creator?.phone || p.creator?.name || 'Admin',
         parcelIds: p.parcelIds || [],
-        parcelCount,
         createdAt: p.createdAt,
+        updatedAt: p.updatedAt,
       };
     });
 
     return {
+      status: true,
+      message: 'Successfully',
+      data: formattedData,
       result: formattedData,
       total,
       page: pageNum,
       limit: limitNum,
       totalPages: Math.ceil(total / limitNum),
+      summary: {
+        allCount: parseInt(summaryCounts?.all_count || '0', 10),
+        paidCount: parseInt(summaryCounts?.paid_count || '0', 10),
+        pendingCount: parseInt(summaryCounts?.pending_count || '0', 10),
+        problemCount: parseInt(summaryCounts?.problem_count || '0', 10),
+      },
     };
+  }
+
+  async getSettlementById(driverId: number, idOrRef: string | number) {
+    const driver = await this.userRepo.findOne({ where: { id: driverId } });
+    if (!driver) throw new NotFoundException('Driver not found');
+
+    const numId = parseInt(String(idOrRef), 10);
+    const isNum = !isNaN(numId) && String(numId) === String(idOrRef).trim();
+
+    const qb = this.driverPaymentRepo
+      .createQueryBuilder('payment')
+      .leftJoinAndSelect('payment.creator', 'creator')
+      .where('payment.driverId = :driverId', { driverId });
+
+    if (isNum) {
+      qb.andWhere('(payment.id = :numId OR payment.reference = :strRef)', { numId, strRef: String(idOrRef).trim() });
+    } else {
+      qb.andWhere('payment.reference = :strRef', { strRef: String(idOrRef).trim() });
+    }
+
+    let payment = await qb.getOne();
+
+    if (!payment && typeof idOrRef === 'string' && idOrRef.startsWith('ST')) {
+      const derivedId = parseInt(idOrRef.slice(2), 10) - 8000;
+      if (!isNaN(derivedId) && derivedId > 0) {
+        payment = await this.driverPaymentRepo.findOne({
+          where: { id: derivedId, driverId },
+          relations: { creator: true },
+        });
+      }
+    }
+
+    if (!payment) {
+      throw new NotFoundException('Settlement record not found');
+    }
+
+    let parcels: Parcel[] = [];
+    if (Array.isArray(payment.parcelIds) && payment.parcelIds.length > 0) {
+      parcels = await this.parcelRepo.find({
+        where: { id: In(payment.parcelIds) },
+        relations: { merchant: true, customer: true, zone: true },
+        order: { id: 'ASC' },
+      });
+    }
+
+    let usd = 0;
+    let khr = 0;
+    let totalDeliveryFee = 0;
+    let totalDriverFee = 0;
+
+    const formattedParcels = parcels.map((p) => {
+      const codVal = parseFloat(p.cod as any) || 0;
+      const feeVal = parseFloat(p.deliveryFee as any) || 0;
+      const dFee = parseFloat((p as any).driverFee) || 1000;
+      totalDeliveryFee += feeVal;
+      totalDriverFee += dFee;
+
+      if (p.codCurrency === 'KHR') {
+        khr += codVal;
+      } else {
+        usd += codVal;
+      }
+
+      return {
+        id: p.id,
+        trackingCode: p.trackingCode,
+        status: p.status,
+        statusLabel: p.status === 'delivered' ? 'បានដឹកជោគជ័យ' : p.status,
+        merchantName: p.merchant?.nameKh || p.merchant?.name || (p as any).shopName || '-',
+        merchantPhone: p.merchant?.phone || '-',
+        receiverName: p.receiverName || p.customer?.name || '-',
+        receiverPhone: p.receiverPhone || p.customer?.phone || '-',
+        receiverAddress: p.receiverAddress || (p as any).deliveryAddress || '-',
+        cod: codVal,
+        codCurrency: p.codCurrency || 'KHR',
+        deliveryFee: feeVal,
+        driverFee: dFee,
+        deliveredAt: p.deliveredAt || p.updatedAt,
+        note: p.note,
+      };
+    });
+
+    const amountVal = parseFloat(payment.amount as any) || 0;
+    const isKhr = payment.currency === 'KHR' || (!payment.currency && (amountVal >= 100 || (payment.note && (payment.note.includes('KHR') || payment.note.includes('៛')))));
+
+    let stReference = payment.reference;
+    if (!stReference || !stReference.trim()) {
+      stReference = `ST${8000 + payment.id}`;
+    } else if (!stReference.startsWith('ST')) {
+      const numericMatch = stReference.match(/\d+/g);
+      if (numericMatch) {
+        const digits = numericMatch.join('');
+        stReference = `ST${digits.slice(-4).padStart(4, '0')}`;
+      } else {
+        stReference = `ST${8000 + payment.id}`;
+      }
+    }
+
+    const rawStatus = (payment.status || 'Paid').trim();
+    const statusTitle = rawStatus.charAt(0).toUpperCase() + rawStatus.slice(1).toLowerCase();
+    const orderCount = formattedParcels.length || payment.parcelIds?.length || 1;
+
+    return {
+      status: true,
+      message: 'Successfully',
+      data: {
+        payment: {
+          id: payment.id,
+          reference: stReference,
+          originalReference: payment.reference,
+          settlementCode: stReference,
+          date: payment.date,
+          formattedDate: this.formatSettlementDate(payment.date || payment.createdAt),
+          status: statusTitle,
+          ordersText: `${orderCount} Orders`,
+          subtitle: `${stReference} • ${orderCount} Orders`,
+          orderCount,
+          amount: amountVal,
+          currency: isKhr ? 'KHR' : (payment.currency || 'USD'),
+          usdAmount: Math.round(usd * 100) / 100,
+          khrAmount: Math.round(khr),
+          usdText: `USD ${(Math.round(usd * 100) / 100).toFixed(2)}`,
+          khrText: `KHR ${Math.round(khr).toLocaleString('en-US')}`,
+          totalCodUSD: Math.round(usd * 100) / 100,
+          totalCodKHR: Math.round(khr),
+          totalDeliveryFee,
+          totalDriverFee,
+          note: payment.note,
+          checkBy: payment.creator?.phone || payment.creator?.name || 'Cashier',
+          driver: {
+            id: driver.id,
+            name: driver.nameKh || driver.name,
+            phone: driver.phone,
+          },
+          createdAt: payment.createdAt,
+          updatedAt: payment.updatedAt,
+        },
+        parcels: formattedParcels,
+        summary: {
+          totalOrders: orderCount,
+          totalCodUSD: Math.round(usd * 100) / 100,
+          totalCodKHR: Math.round(khr),
+          totalDeliveryFee,
+          totalDriverFee,
+          status: statusTitle,
+        },
+      },
+    };
+  }
+
+  async reportSettlementProblem(driverId: number, idOrRef: string | number, reason: string, note?: string) {
+    const numId = parseInt(String(idOrRef), 10);
+    const isNum = !isNaN(numId) && String(numId) === String(idOrRef).trim();
+
+    const qb = this.driverPaymentRepo.createQueryBuilder('payment').where('payment.driverId = :driverId', { driverId });
+    if (isNum) {
+      qb.andWhere('(payment.id = :numId OR payment.reference = :strRef)', { numId, strRef: String(idOrRef).trim() });
+    } else {
+      qb.andWhere('payment.reference = :strRef', { strRef: String(idOrRef).trim() });
+    }
+
+    let payment = await qb.getOne();
+    if (!payment && typeof idOrRef === 'string' && idOrRef.startsWith('ST')) {
+      const derivedId = parseInt(idOrRef.slice(2), 10) - 8000;
+      if (!isNaN(derivedId) && derivedId > 0) {
+        payment = await this.driverPaymentRepo.findOne({ where: { id: derivedId, driverId } });
+      }
+    }
+
+    if (!payment) {
+      throw new NotFoundException('Settlement record not found');
+    }
+
+    payment.status = 'Problem';
+    const problemNote = `[Problem Reported]: ${reason}${note ? ' - ' + note : ''}`;
+    payment.note = payment.note ? `${payment.note}\n${problemNote}` : problemNote;
+    const saved = await this.driverPaymentRepo.save(payment);
+
+    return {
+      status: true,
+      message: 'Settlement marked as problem successfully',
+      data: saved,
+    };
+  }
+
+  async createSettlementRequest(
+    driverId: number,
+    dto: CreateDriverSettlementRequestDto,
+  ) {
+    const driver = await this.userRepo.findOne({ where: { id: driverId } });
+    if (!driver) throw new NotFoundException('Driver not found');
+
+    const nextIdResult = await this.driverPaymentRepo.createQueryBuilder('p').select('MAX(p.id)', 'maxId').getRawOne();
+    const nextNum = (parseInt(nextIdResult?.maxId || '0', 10) + 1);
+    const reference = `ST${8000 + nextNum}`;
+
+    const payment = this.driverPaymentRepo.create({
+      driverId,
+      amount: dto.amount || 0,
+      currency: dto.currency || 'KHR',
+      status: 'Pending',
+      date: new Date(),
+      reference,
+      note: dto.note || 'Driver mobile settlement request',
+      parcelIds: dto.parcelIds || [],
+    });
+
+    const saved = await this.driverPaymentRepo.save(payment);
+
+    return {
+      status: true,
+      message: 'Settlement request submitted successfully',
+      data: saved,
+    };
+  }
+
+  async getPayments(
+    driverId: number,
+    page?: number,
+    limit?: number,
+    month?: string,
+    query?: any,
+  ) {
+    return this.getSettlements(driverId, { page, limit, month, ...query });
   }
 
   async getPaymentSummary(driverId: number) {

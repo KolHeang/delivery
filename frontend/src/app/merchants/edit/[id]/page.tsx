@@ -9,7 +9,7 @@ import api from "@/lib/api";
 import { useLanguage } from "@/lib/LanguageContext";
 import { useSettings } from "@/lib/SettingsContext";
 import LocationMapModal from "@/components/ui/LocationMapModal";
-import { MdArrowBack, MdSave, MdMap } from "react-icons/md";
+import { MdArrowBack, MdSave, MdMap, MdVisibility, MdVisibilityOff } from "react-icons/md";
 
 export default function EditShopPage() {
   const router = useRouter();
@@ -21,6 +21,7 @@ export default function EditShopPage() {
   const [saving, setSaving] = useState(false);
   const [isMapOpen, setIsMapOpen] = useState(false);
   const [zones, setZones] = useState<any[]>([]);
+  const [showPassword, setShowPassword] = useState(false);
 
   const photoInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -30,6 +31,7 @@ export default function EditShopPage() {
     contact: "",
     phone: "",
     email: "",
+    password: "",
     address: "",
     latitude: "",
     longitude: "",
@@ -81,6 +83,7 @@ export default function EditShopPage() {
             contact: shop.contact || "",
             phone: shop.phone || "",
             email: shop.email || "",
+            password: "",
             address: shop.address || "",
             latitude: shop.latitude ? String(shop.latitude) : "",
             longitude: shop.longitude ? String(shop.longitude) : "",
@@ -124,6 +127,9 @@ export default function EditShopPage() {
     if (form.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
       errs.email = lang === "km" ? "សូមបំពេញអ៊ីម៉ែលត្រឹមត្រូវ" : "Invalid email";
     }
+    if (form.password && form.password.length < 6) {
+      errs.password = lang === "km" ? "ពាក្យសម្ងាត់ត្រូវមានយ៉ាងហោចណាស់ ៦ តួអក្សរ" : "Password must be at least 6 characters";
+    }
     if (!form.address.trim()) errs.address = lang === "km" ? "សូមបញ្ចូលអាសយដ្ឋាន" : "Please enter address";
     if (!form.deliveryFee) errs.deliveryFee = lang === "km" ? "សូមបញ្ចូលថ្លៃដឹក" : "Please enter fee";
     if (!form.exchangeRate) errs.exchangeRate = lang === "km" ? "សូមបញ្ចូលអត្រាប្តូរប្រាក់" : "Please enter rate";
@@ -142,6 +148,9 @@ export default function EditShopPage() {
       if (form.contact.trim()) formData.append("contact", form.contact.trim());
       formData.append("phone", form.phone.trim());
       formData.append("email", form.email.trim());
+      if (form.password && form.password.trim()) {
+        formData.append("password", form.password.trim());
+      }
       formData.append("address", form.address.trim());
       if (form.latitude) formData.append("latitude", form.latitude);
       if (form.longitude) formData.append("longitude", form.longitude);
@@ -327,8 +336,8 @@ export default function EditShopPage() {
                   </div>
                 </div>
 
-                {/* Row 3: Email, Telegram */}
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 16, marginBottom: 18 }}>
+                {/* Row 3: Email, Password */}
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 16, marginBottom: 14 }}>
                   <div>
                     <label className="form-label" style={{ fontWeight: 600, fontSize: 13 }}>
                       {lang === "km" ? "អ៊ីមែល (មិនទាមទារ)" : "Email (Optional)"}
@@ -344,6 +353,46 @@ export default function EditShopPage() {
                   </div>
                   <div>
                     <label className="form-label" style={{ fontWeight: 600, fontSize: 13 }}>
+                      {lang === "km" ? "ពាក្យសម្ងាត់ថ្មី (ទុកទំនេរបើមិនចង់ប្តូរ)" : "New Password (leave blank to keep unchanged)"}
+                    </label>
+                    <div style={{ position: "relative" }}>
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        className={`form-control ${errors.password ? "is-invalid" : ""}`}
+                        placeholder={lang === "km" ? "យ៉ាងហោចណាស់ ៦ តួអក្សរ" : "Min 6 characters"}
+                        value={form.password}
+                        onChange={(e) => handleFieldChange("password", e.target.value)}
+                        style={{ paddingRight: 38 }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        style={{
+                          position: "absolute",
+                          right: 8,
+                          top: "50%",
+                          transform: "translateY(-50%)",
+                          background: "none",
+                          border: "none",
+                          color: "#64748b",
+                          cursor: "pointer",
+                          padding: 4,
+                          display: "flex",
+                          alignItems: "center",
+                        }}
+                        title={showPassword ? "Hide password" : "Show password"}
+                      >
+                        {showPassword ? <MdVisibilityOff size={18} /> : <MdVisibility size={18} />}
+                      </button>
+                    </div>
+                    {errors.password && <div className="form-error-text" style={{ color: "var(--danger)", fontSize: 12, marginTop: 3 }}>{errors.password}</div>}
+                  </div>
+                </div>
+
+                {/* Row 4: Telegram */}
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 16, marginBottom: 18 }}>
+                  <div>
+                    <label className="form-label" style={{ fontWeight: 600, fontSize: 13 }}>
                       {lang === "km" ? "Telegram" : "Telegram"}
                     </label>
                     <input
@@ -353,6 +402,7 @@ export default function EditShopPage() {
                       onChange={(e) => handleFieldChange("telegram", e.target.value)}
                     />
                   </div>
+                  <div />
                 </div>
 
                 {/* Section: ទីតាំង និងតម្លៃដឹក */}

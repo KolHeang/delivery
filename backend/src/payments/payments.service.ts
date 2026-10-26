@@ -37,6 +37,7 @@ export class PaymentsService {
     userId?: number,
     tenantId?: number,
     currency: string = 'KHR',
+    status: string = 'Paid',
   ) {
     const driver = await this.userRepo.findOne({
       where: { id: driverId },
@@ -47,6 +48,7 @@ export class PaymentsService {
       driverId,
       amount,
       currency: currency || 'KHR',
+      status: status || 'Paid',
       date,
       reference,
       note,
@@ -424,7 +426,7 @@ export class PaymentsService {
 
   async updateDriverPayment(
     id: number,
-    body: { amount?: number; currency?: string; note?: string; date?: Date; reference?: string },
+    body: { amount?: number; currency?: string; note?: string; date?: Date; reference?: string; status?: string },
     userId?: number,
     tenantId?: number,
   ) {
@@ -440,6 +442,7 @@ export class PaymentsService {
     if (body.note !== undefined) payment.note = body.note;
     if (body.date !== undefined) payment.date = body.date;
     if (body.reference !== undefined) payment.reference = body.reference;
+    if (body.status !== undefined) payment.status = body.status;
     if (userId) payment.updatedById = userId;
 
     return this.driverPaymentRepo.save(payment);

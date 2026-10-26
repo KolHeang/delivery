@@ -211,3 +211,81 @@ export class BatchUpdateParcelStatusDto {
   reason?: string;
 }
 
+export class DriverSettlementFilterDto {
+  @ApiProperty({
+    example: 'all',
+    required: false,
+    enum: ['all', 'paid', 'pending', 'problem'],
+    description: 'Filter settlements by status: all, paid, pending, problem',
+  })
+  @IsOptional()
+  @IsString()
+  status?: string;
+
+  @ApiProperty({ example: '2026-10-01', required: false, description: 'Start date filter (YYYY-MM-DD)' })
+  @IsOptional()
+  @IsString()
+  startDate?: string;
+
+  @ApiProperty({ example: '2026-10-31', required: false, description: 'End date filter (YYYY-MM-DD)' })
+  @IsOptional()
+  @IsString()
+  endDate?: string;
+
+  @ApiProperty({ example: '2026-10-01_2026-10-31', required: false, description: 'Date range string (YYYY-MM-DD to YYYY-MM-DD)' })
+  @IsOptional()
+  @IsString()
+  dateRange?: string;
+
+  @ApiProperty({ example: '2026-10', required: false, description: 'Month filter in YYYY-MM format' })
+  @IsOptional()
+  @IsString()
+  month?: string;
+
+  @ApiProperty({ example: 'ST8002', required: false, description: 'Search by reference or note' })
+  @IsOptional()
+  @IsString()
+  search?: string;
+
+  @ApiProperty({ example: 1, required: false, description: 'Page number (1-based)' })
+  @IsOptional()
+  page?: number;
+
+  @ApiProperty({ example: 20, required: false, description: 'Items per page' })
+  @IsOptional()
+  limit?: number;
+}
+
+export class CreateDriverSettlementRequestDto {
+  @ApiProperty({ example: [101, 102], required: false, type: [Number], description: 'Parcels to settle' })
+  @IsOptional()
+  @IsArray()
+  parcelIds?: number[];
+
+  @ApiProperty({ example: 77000, required: false, description: 'Total settlement amount' })
+  @IsOptional()
+  amount?: number;
+
+  @ApiProperty({ example: 'KHR', required: false, default: 'KHR' })
+  @IsOptional()
+  @IsString()
+  currency?: string;
+
+  @ApiProperty({ example: 'Daily cash handover settlement request', required: false })
+  @IsOptional()
+  @IsString()
+  note?: string;
+}
+
+export class ReportSettlementProblemDto {
+  @ApiProperty({ example: 'Cash mismatch: order COD received was 75,000 KHR instead of 77,000 KHR', description: 'Problem explanation' })
+  @IsNotEmpty()
+  @IsString()
+  reason: string;
+
+  @ApiProperty({ example: 'Additional remarks on the discrepancy', required: false })
+  @IsOptional()
+  @IsString()
+  note?: string;
+}
+

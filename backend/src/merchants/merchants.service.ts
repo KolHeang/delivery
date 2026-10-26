@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import * as bcrypt from 'bcrypt';
 import { Merchant } from './entities/merchant.entity';
 import { MerchantBranch } from './entities/merchant-branch.entity';
 import { CreateMerchantDto, UpdateMerchantDto } from './dto/merchant.dto';
@@ -74,7 +75,7 @@ export class MerchantsService {
     return item;
   }
 
-  create(dto: CreateMerchantDto): Promise<Merchant> {
+  async create(dto: CreateMerchantDto): Promise<Merchant> {
     const data: any = { ...dto };
     if (!data.email || (typeof data.email === 'string' && data.email.trim() === '')) {
       delete data.email;
@@ -91,7 +92,17 @@ export class MerchantsService {
     } else {
       data.tenantId = Number(data.tenantId);
     }
-    return this.repo.save(this.repo.create(data)) as any;
+
+    const rawPassword =
+      data.password && typeof data.password === 'string' && data.password.trim() !== ''
+        ? data.password.trim()
+        : '123456';
+    data.password = await bcrypt.hash(rawPassword, 10);
+
+    const created = this.repo.create(data);
+    const saved = await this.repo.save(created);
+    delete (saved as any).password;
+    return saved as any;
   }
 
   async update(id: number, dto: UpdateMerchantDto, tenantId?: number): Promise<Merchant> {
@@ -109,6 +120,13 @@ export class MerchantsService {
         data.zoneId = null;
       } else {
         data.zoneId = Number(data.zoneId);
+      }
+    }
+    if (data.password !== undefined) {
+      if (data.password && typeof data.password === 'string' && data.password.trim() !== '') {
+        data.password = await bcrypt.hash(data.password.trim(), 10);
+      } else {
+        delete data.password;
       }
     }
     await this.repo.update(id, data);

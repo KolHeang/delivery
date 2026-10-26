@@ -500,7 +500,7 @@ export default function SaasAdminLoginPage() {
             fontSize: 12.5,
             fontWeight: 700,
             cursor: 'pointer',
-            background: lang === 'km' ? '#2b529a' : 'transparent',
+            background: lang === 'km' ? '#1565D8' : 'transparent',
             color: lang === 'km' ? '#ffffff' : '#64748b',
             transition: 'all 0.15s ease',
           }}
@@ -521,7 +521,7 @@ export default function SaasAdminLoginPage() {
             fontSize: 12.5,
             fontWeight: 700,
             cursor: 'pointer',
-            background: lang === 'en' ? '#2b529a' : 'transparent',
+            background: lang === 'en' ? '#1565D8' : 'transparent',
             color: lang === 'en' ? '#ffffff' : '#64748b',
             transition: 'all 0.15s ease',
           }}

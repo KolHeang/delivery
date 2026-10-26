@@ -202,21 +202,21 @@ export default function AssignPickupPage() {
                 {/* Table */}
                 <div style={{ overflowY: 'auto', flex: 1 }}>
                   <table>
-                    <thead style={{ position: 'sticky', top: 0, zIndex: 10, background: '#2f55a5' }}>
-                      <tr style={{ background: '#2f55a5' }}>
-                        <th style={{ width: 40, paddingLeft: 20, background: '#2f55a5', border: 'none', verticalAlign: 'middle' }}>
+                    <thead style={{ position: 'sticky', top: 0, zIndex: 10, background: '#1565D8' }}>
+                      <tr style={{ background: '#1565D8' }}>
+                        <th style={{ width: 40, paddingLeft: 20, background: '#1565D8', border: 'none', verticalAlign: 'middle' }}>
                           <input type="checkbox"
                             style={{ width: 16, height: 16, cursor: 'pointer' }}
                             checked={allPageSelected}
                             onChange={e => togglePageAll(e.target.checked)}
                           />
                         </th>
-                        <th style={{ background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('trackingCode')}</th>
-                        <th style={{ background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('merchant')}</th>
-                        <th style={{ background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('receiver')}</th>
-                        <th style={{ background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('address')}</th>
-                        <th style={{ background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('cod')}</th>
-                        <th style={{ background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('deliveryFee')}</th>
+                        <th style={{ background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('trackingCode')}</th>
+                        <th style={{ background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('merchant')}</th>
+                        <th style={{ background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('receiver')}</th>
+                        <th style={{ background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('address')}</th>
+                        <th style={{ background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('cod')}</th>
+                        <th style={{ background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('deliveryFee')}</th>
                       </tr>
                     </thead>
                     <tbody>

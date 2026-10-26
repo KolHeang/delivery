@@ -152,7 +152,7 @@ export default function RolesListPage() {
                           </td>
                           <td>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                              <MdSecurity size={16} style={{ color: '#2b529a' }} />
+                              <MdSecurity size={16} style={{ color: '#1565D8' }} />
                               <span style={{ fontWeight: 700, textTransform: 'uppercase', fontSize: 13.5, color: '#0f172a' }}>
                                 {d.name}
                               </span>

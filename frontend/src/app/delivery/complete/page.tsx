@@ -552,32 +552,32 @@ export default function CompletePackagePage() {
             <div className="table-responsive" style={{ overflowX: 'auto', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-card)' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                 <thead>
-                  <tr style={{ background: '#2f55a5' }}>
-                    <th style={{ padding: '12px 10px', textAlign: 'center', width: 44, background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>
+                  <tr style={{ background: '#1565D8' }}>
+                    <th style={{ padding: '12px 10px', textAlign: 'center', width: 44, background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>
                       {lang === 'km' ? 'ល.រ' : 'No.'}
                     </th>
-                    <th style={{ padding: '12px 10px', textAlign: 'left', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>
+                    <th style={{ padding: '12px 10px', textAlign: 'left', background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>
                       {lang === 'km' ? 'លេខកូដ' : 'Tracking Code'}
                     </th>
-                    <th style={{ padding: '12px 10px', textAlign: 'left', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>
+                    <th style={{ padding: '12px 10px', textAlign: 'left', background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>
                       {lang === 'km' ? 'ឈ្មោះហាង' : 'Shop/Merchant'}
                     </th>
-                    <th style={{ padding: '12px 10px', textAlign: 'left', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>
+                    <th style={{ padding: '12px 10px', textAlign: 'left', background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>
                       {lang === 'km' ? 'លេខអ្នកទទួល' : 'Receiver Phone'}
                     </th>
-                    <th style={{ padding: '12px 10px', textAlign: 'left', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>
+                    <th style={{ padding: '12px 10px', textAlign: 'left', background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>
                       {lang === 'km' ? 'កាលបរិច្ឆេទ' : 'Date'}
                     </th>
-                    <th style={{ padding: '12px 10px', textAlign: 'left', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>
+                    <th style={{ padding: '12px 10px', textAlign: 'left', background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>
                       {lang === 'km' ? 'ទីតាំង' : 'Location'}
                     </th>
-                    <th style={{ padding: '12px 10px', textAlign: 'right', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>
+                    <th style={{ padding: '12px 10px', textAlign: 'right', background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>
                       {lang === 'km' ? 'សេវាដឹក' : 'Delivery Fee'}
                     </th>
-                    <th style={{ padding: '12px 10px', textAlign: 'right', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>
+                    <th style={{ padding: '12px 10px', textAlign: 'right', background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>
                       {lang === 'km' ? 'ប្រាក់ COD' : 'Amount/COD'}
                     </th>
-                    <th style={{ padding: '12px 10px', textAlign: 'center', width: 50, background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>
+                    <th style={{ padding: '12px 10px', textAlign: 'center', width: 50, background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>
                       <input
                         type="checkbox"
                         checked={currentPageItems.length > 0 && currentPageItems.every(item => selectedIds.includes(item.id))}
@@ -586,19 +586,19 @@ export default function CompletePackagePage() {
                         title={lang === 'km' ? 'ជ្រើសរើសទាំងអស់' : 'Select All'}
                       />
                     </th>
-                    <th style={{ padding: '12px 10px', textAlign: 'left', minWidth: 150, background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>
+                    <th style={{ padding: '12px 10px', textAlign: 'left', minWidth: 150, background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>
                       {lang === 'km' ? 'ស្ថានភាព' : 'Status'}
                     </th>
-                    <th style={{ padding: '12px 10px', textAlign: 'center', width: 105, background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>
+                    <th style={{ padding: '12px 10px', textAlign: 'center', width: 105, background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>
                       {lang === 'km' ? 'សាច់ប្រាក់ KHR' : 'Cash KHR'}
                     </th>
-                    <th style={{ padding: '12px 10px', textAlign: 'center', width: 105, background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>
+                    <th style={{ padding: '12px 10px', textAlign: 'center', width: 105, background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>
                       {lang === 'km' ? 'សាច់ប្រាក់ USD' : 'Cash USD'}
                     </th>
-                    <th style={{ padding: '12px 10px', textAlign: 'left', minWidth: 150, background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>
+                    <th style={{ padding: '12px 10px', textAlign: 'left', minWidth: 150, background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>
                       {lang === 'km' ? 'វិធីសាស្ត្រទូទាត់' : 'Payment Method'}
                     </th>
-                    <th style={{ padding: '12px 10px', textAlign: 'left', minWidth: 220, background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>
+                    <th style={{ padding: '12px 10px', textAlign: 'left', minWidth: 220, background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>
                       {lang === 'km' ? 'មូលហេតុ / ចំណាំ' : 'Reason / Notes'}
                     </th>
                   </tr>

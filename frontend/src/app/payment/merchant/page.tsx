@@ -835,27 +835,27 @@ export default function PaymentWithShopPage() {
                 <div style={{ maxHeight: '520px', overflowY: 'auto', overflowX: 'auto', position: 'relative' }}>
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 900 }}>
                     <thead style={{ position: 'sticky', top: 0, zIndex: 10 }}>
-                      <tr style={{ background: '#2f55a5' }}>
-                        <th style={{ position: 'sticky', top: 0, zIndex: 10, padding: '12px 10px', textAlign: 'center', width: 44, background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'ល.រ' : 'No.'}</th>
-                        <th style={{ position: 'sticky', top: 0, zIndex: 10, padding: '12px 10px', textAlign: 'center', width: 44, background: '#2f55a5', color: '#ffffff', border: 'none' }}>
+                      <tr style={{ background: '#1565D8' }}>
+                        <th style={{ position: 'sticky', top: 0, zIndex: 10, padding: '12px 10px', textAlign: 'center', width: 44, background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'ល.រ' : 'No.'}</th>
+                        <th style={{ position: 'sticky', top: 0, zIndex: 10, padding: '12px 10px', textAlign: 'center', width: 44, background: '#1565D8', color: '#ffffff', border: 'none' }}>
                           {statusFilter === 'unpaid' && (
                             <input
                               type="checkbox"
                               checked={eligibleOrders.length > 0 && selectedIds.length === eligibleOrders.length}
                               onChange={(e) => handleToggleSelectAll(e.target.checked)}
-                              style={{ cursor: 'pointer', accentColor: '#2f55a5' }}
+                              style={{ cursor: 'pointer', accentColor: '#1565D8' }}
                             />
                           )}
                         </th>
-                        <th style={{ position: 'sticky', top: 0, zIndex: 10, padding: '12px 10px', textAlign: 'left', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'លេខកូដ' : 'Tracking Code'}</th>
-                        <th style={{ position: 'sticky', top: 0, zIndex: 10, padding: '12px 10px', textAlign: 'left', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'កាលបរិច្ឆេទ' : 'Date'}</th>
-                        <th style={{ position: 'sticky', top: 0, zIndex: 10, padding: '12px 10px', textAlign: 'left', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'ឈ្មោះហាង' : 'Shop Name'}</th>
-                        <th style={{ position: 'sticky', top: 0, zIndex: 10, padding: '12px 10px', textAlign: 'left', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'លេខអ្នកទទួល' : 'Receiver Phone'}</th>
-                        <th style={{ position: 'sticky', top: 0, zIndex: 10, padding: '12px 10px', textAlign: 'left', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'អាសយដ្ឋាន' : 'Address'}</th>
-                        <th style={{ position: 'sticky', top: 0, zIndex: 10, padding: '12px 10px', textAlign: 'right', width: 150, background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'ប្រាក់បានបញ្ចូល' : 'Collected COD'}</th>
-                        <th style={{ position: 'sticky', top: 0, zIndex: 10, padding: '12px 10px', textAlign: 'right', width: 140, background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'ប្រាក់កម្រៃដឹក' : 'Delivery Fee'}</th>
-                        <th style={{ position: 'sticky', top: 0, zIndex: 10, padding: '12px 10px', textAlign: 'left', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none', minWidth: 140 }}>{lang === 'km' ? 'ចំណាំ / មូលហេតុ' : 'Notes / Reason'}</th>
-                        <th style={{ position: 'sticky', top: 0, zIndex: 10, padding: '12px 10px', textAlign: 'center', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'ស្ថានភាព' : 'Status'}</th>
+                        <th style={{ position: 'sticky', top: 0, zIndex: 10, padding: '12px 10px', textAlign: 'left', background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'លេខកូដ' : 'Tracking Code'}</th>
+                        <th style={{ position: 'sticky', top: 0, zIndex: 10, padding: '12px 10px', textAlign: 'left', background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'កាលបរិច្ឆេទ' : 'Date'}</th>
+                        <th style={{ position: 'sticky', top: 0, zIndex: 10, padding: '12px 10px', textAlign: 'left', background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'ឈ្មោះហាង' : 'Shop Name'}</th>
+                        <th style={{ position: 'sticky', top: 0, zIndex: 10, padding: '12px 10px', textAlign: 'left', background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'លេខអ្នកទទួល' : 'Receiver Phone'}</th>
+                        <th style={{ position: 'sticky', top: 0, zIndex: 10, padding: '12px 10px', textAlign: 'left', background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'អាសយដ្ឋាន' : 'Address'}</th>
+                        <th style={{ position: 'sticky', top: 0, zIndex: 10, padding: '12px 10px', textAlign: 'right', width: 150, background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'ប្រាក់បានបញ្ចូល' : 'Collected COD'}</th>
+                        <th style={{ position: 'sticky', top: 0, zIndex: 10, padding: '12px 10px', textAlign: 'right', width: 140, background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'ប្រាក់កម្រៃដឹក' : 'Delivery Fee'}</th>
+                        <th style={{ position: 'sticky', top: 0, zIndex: 10, padding: '12px 10px', textAlign: 'left', background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none', minWidth: 140 }}>{lang === 'km' ? 'ចំណាំ / មូលហេតុ' : 'Notes / Reason'}</th>
+                        <th style={{ position: 'sticky', top: 0, zIndex: 10, padding: '12px 10px', textAlign: 'center', background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'ស្ថានភាព' : 'Status'}</th>
                       </tr>
                     </thead>
                   <tbody>
@@ -873,7 +873,7 @@ export default function PaymentWithShopPage() {
                                   type="checkbox"
                                   checked={isSelected}
                                   onChange={() => handleToggleSelect(o.id)}
-                                  style={{ cursor: 'pointer', accentColor: '#2f55a5' }}
+                                  style={{ cursor: 'pointer', accentColor: '#1565D8' }}
                                 />
                               )}
                             </td>
@@ -1056,17 +1056,17 @@ export default function PaymentWithShopPage() {
                     <div style={{ maxHeight: '400px', overflowY: 'auto', overflowX: 'auto', position: 'relative' }}>
                       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 900 }}>
                         <thead style={{ position: 'sticky', top: 0, zIndex: 10 }}>
-                          <tr style={{ background: '#2f55a5' }}>
-                            <th style={{ position: 'sticky', top: 0, zIndex: 10, padding: '12px 10px', textAlign: 'center', width: 44, background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'ល.រ' : 'No.'}</th>
-                            <th style={{ position: 'sticky', top: 0, zIndex: 10, padding: '12px 10px', textAlign: 'left', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'លេខកូដ' : 'Tracking Code'}</th>
-                            <th style={{ position: 'sticky', top: 0, zIndex: 10, padding: '12px 10px', textAlign: 'left', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'កាលបរិច្ឆេទ' : 'Date'}</th>
-                            <th style={{ position: 'sticky', top: 0, zIndex: 10, padding: '12px 10px', textAlign: 'left', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'ឈ្មោះហាង' : 'Shop Name'}</th>
-                            <th style={{ position: 'sticky', top: 0, zIndex: 10, padding: '12px 10px', textAlign: 'left', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'លេខអ្នកទទួល' : 'Receiver Phone'}</th>
-                            <th style={{ position: 'sticky', top: 0, zIndex: 10, padding: '12px 10px', textAlign: 'left', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'អាសយដ្ឋាន' : 'Address'}</th>
-                            <th style={{ position: 'sticky', top: 0, zIndex: 10, padding: '12px 10px', textAlign: 'right', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'ប្រាក់បានបញ្ចូល' : 'Collected COD'}</th>
-                            <th style={{ position: 'sticky', top: 0, zIndex: 10, padding: '12px 10px', textAlign: 'right', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'ប្រាក់កម្រៃដឹក' : 'Delivery Fee'}</th>
-                            <th style={{ position: 'sticky', top: 0, zIndex: 10, padding: '12px 10px', textAlign: 'left', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none', minWidth: 160 }}>{lang === 'km' ? 'មូលហេតុ' : 'Reason'}</th>
-                            <th style={{ position: 'sticky', top: 0, zIndex: 10, padding: '12px 10px', textAlign: 'center', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'ស្ថានភាព' : 'Status'}</th>
+                          <tr style={{ background: '#1565D8' }}>
+                            <th style={{ position: 'sticky', top: 0, zIndex: 10, padding: '12px 10px', textAlign: 'center', width: 44, background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'ល.រ' : 'No.'}</th>
+                            <th style={{ position: 'sticky', top: 0, zIndex: 10, padding: '12px 10px', textAlign: 'left', background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'លេខកូដ' : 'Tracking Code'}</th>
+                            <th style={{ position: 'sticky', top: 0, zIndex: 10, padding: '12px 10px', textAlign: 'left', background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'កាលបរិច្ឆេទ' : 'Date'}</th>
+                            <th style={{ position: 'sticky', top: 0, zIndex: 10, padding: '12px 10px', textAlign: 'left', background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'ឈ្មោះហាង' : 'Shop Name'}</th>
+                            <th style={{ position: 'sticky', top: 0, zIndex: 10, padding: '12px 10px', textAlign: 'left', background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'លេខអ្នកទទួល' : 'Receiver Phone'}</th>
+                            <th style={{ position: 'sticky', top: 0, zIndex: 10, padding: '12px 10px', textAlign: 'left', background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'អាសយដ្ឋាន' : 'Address'}</th>
+                            <th style={{ position: 'sticky', top: 0, zIndex: 10, padding: '12px 10px', textAlign: 'right', background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'ប្រាក់បានបញ្ចូល' : 'Collected COD'}</th>
+                            <th style={{ position: 'sticky', top: 0, zIndex: 10, padding: '12px 10px', textAlign: 'right', background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'ប្រាក់កម្រៃដឹក' : 'Delivery Fee'}</th>
+                            <th style={{ position: 'sticky', top: 0, zIndex: 10, padding: '12px 10px', textAlign: 'left', background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none', minWidth: 160 }}>{lang === 'km' ? 'មូលហេតុ' : 'Reason'}</th>
+                            <th style={{ position: 'sticky', top: 0, zIndex: 10, padding: '12px 10px', textAlign: 'center', background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'ស្ថានភាព' : 'Status'}</th>
                           </tr>
                         </thead>
                       <tbody>
@@ -1200,15 +1200,15 @@ export default function PaymentWithShopPage() {
               <div style={{ overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                   <thead>
-                    <tr style={{ background: '#2f55a5' }}>
-                      <th style={{ padding: '12px 10px', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none', textAlign: 'center', width: 50 }}>{lang === 'km' ? 'ល.រ' : 'No.'}</th>
-                      <th style={{ padding: '12px 10px', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none', textAlign: 'left' }}>{lang === 'km' ? 'ហាង' : 'Merchant'}</th>
-                      <th style={{ padding: '12px 10px', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none', textAlign: 'left' }}>{lang === 'km' ? 'លេខយោង' : 'Reference'}</th>
-                      <th style={{ padding: '12px 10px', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none', textAlign: 'left' }}>{lang === 'km' ? 'កាលបរិច្ឆេទ' : 'Date'}</th>
-                      <th style={{ padding: '12px 10px', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none', textAlign: 'right' }}>{lang === 'km' ? 'ទឹកប្រាក់ USD' : 'Amount USD'}</th>
-                      <th style={{ padding: '12px 10px', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none', textAlign: 'right' }}>{lang === 'km' ? 'ទឹកប្រាក់ KHR' : 'Amount KHR'}</th>
-                      <th style={{ padding: '12px 10px', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none', textAlign: 'left' }}>{lang === 'km' ? 'សម្គាល់' : 'Note'}</th>
-                      <th style={{ padding: '12px 10px', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none', textAlign: 'center', width: 130 }}>{lang === 'km' ? 'សកម្មភាព' : 'Actions'}</th>
+                    <tr style={{ background: '#1565D8' }}>
+                      <th style={{ padding: '12px 10px', background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none', textAlign: 'center', width: 50 }}>{lang === 'km' ? 'ល.រ' : 'No.'}</th>
+                      <th style={{ padding: '12px 10px', background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none', textAlign: 'left' }}>{lang === 'km' ? 'ហាង' : 'Merchant'}</th>
+                      <th style={{ padding: '12px 10px', background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none', textAlign: 'left' }}>{lang === 'km' ? 'លេខយោង' : 'Reference'}</th>
+                      <th style={{ padding: '12px 10px', background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none', textAlign: 'left' }}>{lang === 'km' ? 'កាលបរិច្ឆេទ' : 'Date'}</th>
+                      <th style={{ padding: '12px 10px', background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none', textAlign: 'right' }}>{lang === 'km' ? 'ទឹកប្រាក់ USD' : 'Amount USD'}</th>
+                      <th style={{ padding: '12px 10px', background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none', textAlign: 'right' }}>{lang === 'km' ? 'ទឹកប្រាក់ KHR' : 'Amount KHR'}</th>
+                      <th style={{ padding: '12px 10px', background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none', textAlign: 'left' }}>{lang === 'km' ? 'សម្គាល់' : 'Note'}</th>
+                      <th style={{ padding: '12px 10px', background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none', textAlign: 'center', width: 130 }}>{lang === 'km' ? 'សកម្មភាព' : 'Actions'}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1221,7 +1221,7 @@ export default function PaymentWithShopPage() {
                         <tr key={h.id} style={{ borderBottom: '1px solid #f1f5f9', background: '#ffffff', transition: 'background-color 0.15s' }}>
                           <td style={{ padding: '12px 10px', textAlign: 'center', color: '#64748b', fontWeight: 'bold', border: 'none' }}>{idx + 1}</td>
                           <td style={{ padding: '12px 10px', fontWeight: 600, color: '#0f172a', border: 'none' }}>{h.merchant?.nameKh || h.merchant?.name || ''}</td>
-                          <td style={{ padding: '12px 10px', fontWeight: 600, color: '#2f55a5', border: 'none' }}>{h.reference || ''}</td>
+                          <td style={{ padding: '12px 10px', fontWeight: 600, color: '#1565D8', border: 'none' }}>{h.reference || ''}</td>
                           <td style={{ padding: '12px 10px', color: '#64748b', border: 'none' }}>{formatDateToDDMMYYYY(h.date)}</td>
                           <td style={{ padding: '12px 10px', textAlign: 'right', fontWeight: 700, color: 'var(--success)', border: 'none' }}>${parseFloat(h.amount).toFixed(2)}</td>
                           <td style={{ padding: '12px 10px', textAlign: 'right', fontWeight: 700, color: 'var(--success)', border: 'none' }}>{h.amountKHR ? `៛${parseFloat(h.amountKHR).toLocaleString()}` : '៛0'}</td>

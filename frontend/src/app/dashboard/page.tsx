@@ -243,7 +243,7 @@ export default function DashboardPage() {
 
           {/* Stats Grid */}
           <div className="stats-grid">
-            <StatsCard icon="/3d/3d_box.png" label={t('totalParcelDashboard')} value={stats?.totalOrders ?? 0} color="#2f55a5" bg="#eef2fa" />
+            <StatsCard icon="/3d/3d_box.png" label={t('totalParcelDashboard')} value={stats?.totalOrders ?? 0} color="#1565D8" bg="#e8f1fc" />
             <StatsCard icon="/3d/3d_box.png" label={lang === 'km' ? 'ចំនួនកញ្ចប់រង់ចាំ' : 'Pending Parcels'} value={stats?.pending ?? 0} color="#d97706" bg="#fef3c7" />
             <StatsCard icon="/3d/3d_truck.png" label={lang === 'km' ? 'ចំនួនកញ្ចប់បានចាត់តាំង' : 'Assigned Parcels'} value={stats?.assigned ?? 0} color="#4338ca" bg="#e0e7ff" />
             <StatsCard icon="/3d/3d_truck.png" label={t('totalProcessParcel')} value={stats?.inTransit ?? 0} color="#8b5cf6" bg="#f5f3ff" />
@@ -251,10 +251,10 @@ export default function DashboardPage() {
             <StatsCard icon="/3d/3d_cross.png" label={t('totalCanceledParcel')} value={stats?.failed ?? 0} color="#ef4444" bg="#fef2f2" />
             <StatsCard icon="/3d/3d_refresh.png" label={t('totalReturnParcel')} value={stats?.returned ?? 0} color="#6b7280" bg="#f3f4f6" />
             <StatsCard icon="/3d/3d_cash.png" label={t('totalDeliveryFeeDashboard')} value={`$${(stats?.totalDeliveryFee ?? 0).toFixed(2)}`} color="#10b981" bg="#ecfdf5" />
-            <StatsCard icon="/3d/3d_money_bag.png" label={t('amountCollectedUSD')} value={`$${(stats?.collectedCashUSD ?? 0).toFixed(2)}`} color="#2f55a5" bg="#eef2fa" />
+            <StatsCard icon="/3d/3d_money_bag.png" label={t('amountCollectedUSD')} value={`$${(stats?.collectedCashUSD ?? 0).toFixed(2)}`} color="#1565D8" bg="#e8f1fc" />
             <StatsCard icon="/3d/3d_khr_coin.png" label={t('amountCollectedKHR')} value={`${(stats?.collectedCashKHR ?? 0).toLocaleString()}៛`} color="#f16222" bg="#fef4ef" />
             <StatsCard icon="/3d/3d_scooter.png" label={t('totalDrivers')} value={stats?.totalDrivers ?? 0} color="#8b5cf6" bg="#f5f3ff" />
-            <StatsCard icon="/3d/3d_shop.png" label={t('totalMerchants')} value={stats?.totalMerchants ?? 0} color="#2f55a5" bg="#eef2fa" />
+            <StatsCard icon="/3d/3d_shop.png" label={t('totalMerchants')} value={stats?.totalMerchants ?? 0} color="#1565D8" bg="#e8f1fc" />
           </div>
 
           {/* Delivery Flow Status Summary */}

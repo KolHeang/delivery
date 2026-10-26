@@ -488,7 +488,7 @@ export default function LoginPage() {
             fontSize: 12.5,
             fontWeight: 700,
             cursor: 'pointer',
-            background: lang === 'km' ? '#2b529a' : 'transparent',
+            background: lang === 'km' ? '#1565D8' : 'transparent',
             color: lang === 'km' ? '#ffffff' : '#64748b',
             transition: 'all 0.15s ease',
           }}
@@ -509,7 +509,7 @@ export default function LoginPage() {
             fontSize: 12.5,
             fontWeight: 700,
             cursor: 'pointer',
-            background: lang === 'en' ? '#2b529a' : 'transparent',
+            background: lang === 'en' ? '#1565D8' : 'transparent',
             color: lang === 'en' ? '#ffffff' : '#64748b',
             transition: 'all 0.15s ease',
           }}
@@ -528,7 +528,7 @@ export default function LoginPage() {
               width: 90,
               height: 90,
               borderRadius: 22,
-              background: tenant?.logoUrl ? '#ffffff' : 'linear-gradient(135deg, #1e3a8a 0%, #2b529a 60%, #3b6cc4 100%)',
+              background: tenant?.logoUrl ? '#ffffff' : 'linear-gradient(135deg, #1e3a8a 0%, #1565D8 60%, #3b6cc4 100%)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -552,7 +552,7 @@ export default function LoginPage() {
                 <path d="M35 27H45C47 27 49.5 29 50.5 32L52 37C52.5 38.5 51.5 41 49.5 41H35V27Z" fill="white" fillOpacity="0.82" />
                 <path d="M37 29H43L46 35H37V29Z" fill="#93c5fd" />
                 <rect x="9" y="27" width="9" height="6" rx="1.5" fill="#93c5fd" />
-                <path d="M9 36H22M9 39H18" stroke="#2b529a" strokeWidth="1.5" strokeLinecap="round" />
+                <path d="M9 36H22M9 39H18" stroke="#1565D8" strokeWidth="1.5" strokeLinecap="round" />
                 <rect x="50" y="34" width="3" height="4" rx="1" fill="#fbbf24" />
                 <circle cx="15" cy="41" r="5" fill="#1e3a8a" stroke="white" strokeWidth="1.5" />
                 <circle cx="15" cy="41" r="2" fill="white" />
@@ -577,7 +577,7 @@ export default function LoginPage() {
             {activeCompanyName ? (
               <span>{activeCompanyName}</span>
             ) : (
-              <>EBS<span style={{ color: '#2b529a' }}>Express</span></>
+              <>EBS<span style={{ color: '#1565D8' }}>Express</span></>
             )}
           </h1>
 
@@ -655,9 +655,9 @@ export default function LoginPage() {
                   transition: 'all 0.2s ease',
                 }}
                 onFocus={(e) => {
-                  e.currentTarget.style.borderColor = errors.email ? '#ef4444' : '#2563eb';
+                  e.currentTarget.style.borderColor = errors.email ? '#ef4444' : '#1565D8';
                   e.currentTarget.style.background = '#ffffff';
-                  e.currentTarget.style.boxShadow = errors.email ? '0 0 0 4px rgba(239, 68, 68, 0.15)' : '0 0 0 4px rgba(37, 99, 235, 0.12)';
+                  e.currentTarget.style.boxShadow = errors.email ? '0 0 0 4px rgba(239, 68, 68, 0.15)' : '0 0 0 4px rgba(21, 101, 216, 0.14)';
                 }}
                 onBlur={(e) => {
                   e.currentTarget.style.borderColor = errors.email ? '#ef4444' : '#e2e8f0';
@@ -715,9 +715,9 @@ export default function LoginPage() {
                   transition: 'all 0.2s ease',
                 }}
                 onFocus={(e) => {
-                  e.currentTarget.style.borderColor = errors.password ? '#ef4444' : '#2563eb';
+                  e.currentTarget.style.borderColor = errors.password ? '#ef4444' : '#1565D8';
                   e.currentTarget.style.background = '#ffffff';
-                  e.currentTarget.style.boxShadow = errors.password ? '0 0 0 4px rgba(239, 68, 68, 0.15)' : '0 0 0 4px rgba(37, 99, 235, 0.12)';
+                  e.currentTarget.style.boxShadow = errors.password ? '0 0 0 4px rgba(239, 68, 68, 0.15)' : '0 0 0 4px rgba(21, 101, 216, 0.14)';
                 }}
                 onBlur={(e) => {
                   e.currentTarget.style.borderColor = errors.password ? '#ef4444' : '#e2e8f0';
@@ -755,7 +755,7 @@ export default function LoginPage() {
             <span
               onClick={() => setShowForgotModal(true)}
               style={{
-                color: '#2563eb',
+                color: '#1565D8',
                 fontSize: 12.5,
                 fontWeight: 600,
                 cursor: 'pointer',
@@ -777,7 +777,7 @@ export default function LoginPage() {
               padding: '13.5px 20px',
               borderRadius: 14,
               border: 'none',
-              background: 'linear-gradient(135deg, #1e40af 0%, #2563eb 100%)',
+              background: 'linear-gradient(135deg, #1565D8 0%, #0d47a1 100%)',
               color: '#ffffff',
               fontSize: 15,
               fontWeight: 700,
@@ -786,7 +786,7 @@ export default function LoginPage() {
               alignItems: 'center',
               justifyContent: 'center',
               gap: 8,
-              boxShadow: '0 4px 14px rgba(37, 99, 235, 0.28)',
+              boxShadow: '0 4px 14px rgba(21, 101, 216, 0.35)',
               transition: 'all 0.2s ease',
               opacity: loading ? 0.8 : 1,
             }}

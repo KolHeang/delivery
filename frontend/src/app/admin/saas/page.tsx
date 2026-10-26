@@ -1327,7 +1327,7 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
         style={{
           width: 260,
           minWidth: 260,
-          background: '#2b529a',
+          background: '#1565D8',
           color: '#ffffff',
           display: 'flex',
           flexDirection: 'column',
@@ -1590,7 +1590,7 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
         <header
           style={{
             height: 64,
-            background: '#2b529a',
+            background: '#1565D8',
             borderBottom: '1px solid rgba(255, 255, 255, 0.12)',
             padding: '0 28px',
             display: 'flex',
@@ -1782,7 +1782,7 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
               font-size: 13px !important;
             }
             .saas-custom-table thead th {
-              background: #2b529a !important;
+              background: #1565D8 !important;
               color: #ffffff !important;
               border-bottom: 1px solid rgba(255, 255, 255, 0.15) !important;
               font-size: 12.5px !important;
@@ -2085,7 +2085,7 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
               <div style={{ overflowX: 'auto', width: '100%', WebkitOverflowScrolling: 'touch' }}>
                 <table className="saas-custom-table" style={{ width: '100%', minWidth: 860, borderCollapse: 'collapse', textAlign: 'left' }}>
                   <thead>
-                    <tr style={{ background: '#2b529a', color: '#ffffff' }}>
+                    <tr style={{ background: '#1565D8', color: '#ffffff' }}>
                       <th style={{ width: 44, textAlign: 'center', whiteSpace: 'nowrap' }}>{tr('ល.រ', 'No.')}</th>
                       <th style={{ whiteSpace: 'nowrap', minWidth: 150 }}>{tr('ឈ្មោះក្រុមហ៊ុន', 'Company')}</th>
                       <th style={{ whiteSpace: 'nowrap' }}>{tr('Workspace Subdomain', 'Workspace Subdomain')}</th>
@@ -2705,7 +2705,7 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
                   <div style={{ overflowX: 'auto', width: '100%', WebkitOverflowScrolling: 'touch' }}>
                     <table className="saas-custom-table" style={{ width: '100%', minWidth: 860, borderCollapse: 'collapse', textAlign: 'left' }}>
                       <thead>
-                        <tr style={{ background: '#2b529a', color: '#ffffff' }}>
+                        <tr style={{ background: '#1565D8', color: '#ffffff' }}>
                           <th style={{ width: 44, textAlign: 'center', whiteSpace: 'nowrap' }}>{tr('ល.រ', 'No.')}</th>
                           <th style={{ whiteSpace: 'nowrap' }}>{tr('លេខវិក្កយបត្រ', 'Invoice No.')}</th>
                           <th style={{ whiteSpace: 'nowrap' }}>{tr('ឈ្មោះក្រុមហ៊ុន', 'Company Name')}</th>
@@ -3534,7 +3534,7 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
               <div style={{ overflowX: 'auto', width: '100%', WebkitOverflowScrolling: 'touch' }}>
                 <table className="saas-custom-table" style={{ width: '100%', minWidth: 800, borderCollapse: 'collapse', textAlign: 'left' }}>
                   <thead>
-                    <tr style={{ background: '#2b529a', color: '#ffffff' }}>
+                    <tr style={{ background: '#1565D8', color: '#ffffff' }}>
                       <th style={{ width: 44, textAlign: 'center', whiteSpace: 'nowrap' }}>{tr('ល.រ', 'No.')}</th>
                       <th>{tr('ឈ្មោះ', 'Name')}</th>
                       <th>{tr('Email សម្រាប់ Login', 'Login Email')}</th>
@@ -3641,7 +3641,7 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
               <div style={{ overflowX: 'auto', width: '100%', WebkitOverflowScrolling: 'touch' }}>
                 <table className="saas-custom-table" style={{ width: '100%', minWidth: 900, borderCollapse: 'collapse', textAlign: 'left' }}>
                   <thead>
-                    <tr style={{ background: '#2b529a', color: '#ffffff' }}>
+                    <tr style={{ background: '#1565D8', color: '#ffffff' }}>
                       <th style={{ width: 44, textAlign: 'center', whiteSpace: 'nowrap' }}>{tr('ល.រ', 'No.')}</th>
                       <th>{tr('ឈ្មោះកញ្ចប់សេវា', 'Plan Name')}</th>
                       <th>Slug</th>
@@ -3810,7 +3810,7 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
               <div style={{ overflowX: 'auto', width: '100%', WebkitOverflowScrolling: 'touch' }}>
                 <table className="saas-custom-table" style={{ width: '100%', minWidth: 750, borderCollapse: 'collapse', textAlign: 'left' }}>
                   <thead>
-                    <tr style={{ background: '#2b529a', color: '#ffffff' }}>
+                    <tr style={{ background: '#1565D8', color: '#ffffff' }}>
                       <th style={{ width: 44, textAlign: 'center', whiteSpace: 'nowrap' }}>{tr('ល.រ', 'No.')}</th>
                       <th>Coupon Code</th>
                       <th>{tr('ប្រភេទបញ្ចុះតម្លៃ', 'Discount Type')}</th>
@@ -3988,7 +3988,7 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
                 <div style={{ overflowX: 'auto', width: '100%', WebkitOverflowScrolling: 'touch' }}>
                   <table className="saas-custom-table" style={{ width: '100%', minWidth: 800, borderCollapse: 'collapse', textAlign: 'left' }}>
                     <thead>
-                      <tr style={{ background: '#2b529a', color: '#ffffff' }}>
+                      <tr style={{ background: '#1565D8', color: '#ffffff' }}>
                         <th style={{ width: 44, textAlign: 'center', whiteSpace: 'nowrap' }}>{tr('ល.រ', 'No.')}</th>
                         <th>{tr('ឈ្មោះដៃគូ', 'Partner Name')}</th>
                         <th>{tr('Email', 'Email')}</th>
@@ -4120,7 +4120,7 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
                 <div style={{ overflowX: 'auto', width: '100%', WebkitOverflowScrolling: 'touch' }}>
                   <table className="saas-custom-table" style={{ width: '100%', minWidth: 700, borderCollapse: 'collapse', textAlign: 'left' }}>
                     <thead>
-                      <tr style={{ background: '#2b529a', color: '#ffffff' }}>
+                      <tr style={{ background: '#1565D8', color: '#ffffff' }}>
                         <th style={{ width: 44, textAlign: 'center', whiteSpace: 'nowrap' }}>{tr('ល.រ', 'No.')}</th>
                         <th>Partner Name</th>
                         <th>{tr('ទឹកប្រាក់កម្រៃ', 'Commission Amount')}</th>
@@ -4523,7 +4523,7 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
                 <div style={{ overflowX: 'auto', width: '100%', WebkitOverflowScrolling: 'touch' }}>
                   <table className="saas-custom-table" style={{ width: '100%', minWidth: 800, borderCollapse: 'collapse', textAlign: 'left' }}>
                     <thead>
-                      <tr style={{ background: '#2b529a', color: '#ffffff' }}>
+                      <tr style={{ background: '#1565D8', color: '#ffffff' }}>
                         <th style={{ width: 44, textAlign: 'center', whiteSpace: 'nowrap', padding: '12px 14px', fontSize: 12.5, fontWeight: 700, color: '#ffffff' }}>{tr('ល.រ', 'No.')}</th>
                         <th style={{ whiteSpace: 'nowrap', padding: '12px 16px', fontSize: 12.5, fontWeight: 700, color: '#ffffff' }}>{tr('ជម្រើសទូទាត់ & ធនាគារ', 'Payment Option')}</th>
                         <th style={{ whiteSpace: 'nowrap', padding: '12px 16px', fontSize: 12.5, fontWeight: 700, color: '#ffffff' }}>{tr('ប្រភេទ', 'Type')}</th>

@@ -311,17 +311,17 @@ export default function BatchEntryPage() {
             <div style={{ overflowX: 'auto' }}>
               <table style={{ minWidth: 1050, width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
-                  <tr style={{ background: '#2f55a5' }}>
-                    <th style={{ width: 45, padding: '12px 8px', textAlign: 'center', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'ល.រ' : 'No.'}</th>
-                    <th style={{ width: 180, padding: '12px 8px', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('receiverAddressCol')}</th>
-                    <th style={{ width: 130, padding: '12px 8px', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('receiverPhoneColRequired')}</th>
-                    <th style={{ width: 85, padding: '12px 8px', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('deliveryFee')}</th>
-                    <th style={{ width: 95, padding: '12px 8px', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('amountUSD')}</th>
-                    <th style={{ width: 105, padding: '12px 8px', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('amountKHR')}</th>
-                    <th style={{ width: 145, padding: '12px 8px', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('pickupPerson')}</th>
-                    <th style={{ width: 145, padding: '12px 8px', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('deliveryPerson')}</th>
-                    <th style={{ width: 120, padding: '12px 8px', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('note')}</th>
-                    <th style={{ width: 60, padding: '12px 8px', textAlign: 'center', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('actions')}</th>
+                  <tr style={{ background: '#1565D8' }}>
+                    <th style={{ width: 45, padding: '12px 8px', textAlign: 'center', background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'ល.រ' : 'No.'}</th>
+                    <th style={{ width: 180, padding: '12px 8px', background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('receiverAddressCol')}</th>
+                    <th style={{ width: 130, padding: '12px 8px', background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('receiverPhoneColRequired')}</th>
+                    <th style={{ width: 85, padding: '12px 8px', background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('deliveryFee')}</th>
+                    <th style={{ width: 95, padding: '12px 8px', background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('amountUSD')}</th>
+                    <th style={{ width: 105, padding: '12px 8px', background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('amountKHR')}</th>
+                    <th style={{ width: 145, padding: '12px 8px', background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('pickupPerson')}</th>
+                    <th style={{ width: 145, padding: '12px 8px', background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('deliveryPerson')}</th>
+                    <th style={{ width: 120, padding: '12px 8px', background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('note')}</th>
+                    <th style={{ width: 60, padding: '12px 8px', textAlign: 'center', background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('actions')}</th>
                   </tr>
                 </thead>
                 <tbody>

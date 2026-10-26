@@ -28,8 +28,8 @@ export default function DriverRootPage() {
       <div className="spinner" style={{
         width: '32px',
         height: '32px',
-        border: '3px solid rgba(47, 85, 165, 0.1)',
-        borderTopColor: '#2f55a5',
+        border: '3px solid rgba(21, 101, 216, 0.1)',
+        borderTopColor: '#1565D8',
         borderRadius: '50%',
         animation: 'spin 1s linear infinite'
       }} />

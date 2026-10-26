@@ -69,7 +69,7 @@ export default function Frpt1Page() {
             {[
               { emoji: '💵', label: t('incomeLabel'), value: `$${summary.totalIncome.toFixed(2)}`, color: '#10b981', bg: '#ecfdf5' },
               { emoji: '💸', label: t('expenseLabel'), value: `$${summary.totalExpense.toFixed(2)}`, color: '#ef4444', bg: '#fef2f2' },
-              { emoji: summary.netProfit >= 0 ? '📈' : '📉', label: t('netProfitLabel'), value: `$${summary.netProfit.toFixed(2)}`, color: summary.netProfit >= 0 ? '#2f55a5' : '#ef4444', bg: summary.netProfit >= 0 ? '#eef2fa' : '#fef2f2' },
+              { emoji: summary.netProfit >= 0 ? '📈' : '📉', label: t('netProfitLabel'), value: `$${summary.netProfit.toFixed(2)}`, color: summary.netProfit >= 0 ? '#1565D8' : '#ef4444', bg: summary.netProfit >= 0 ? '#e8f1fc' : '#fef2f2' },
             ].map(({ emoji, label, value, color, bg }) => (
               <div key={label} style={{ padding: '14px 18px', borderRadius: 'var(--radius)', background: 'var(--bg-card)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 14 }}>
                 <div style={{ width: 42, height: 42, borderRadius: '50%', background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>{emoji}</div>

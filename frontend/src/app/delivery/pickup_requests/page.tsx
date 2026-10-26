@@ -175,18 +175,18 @@ export default function PickupRequestsPage() {
             {/* ── Table ── */}
             <div style={{ overflowX: 'auto', flex: 1 }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-                <thead style={{ position: 'sticky', top: 0, zIndex: 10, background: '#2f55a5' }}>
-                  <tr style={{ background: '#2f55a5' }}>
-                    <th style={{ padding: '12px 10px', paddingLeft: 24, background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'ល.រ' : 'No.'}</th>
-                    <th style={{ padding: '12px 10px', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('merchant')}</th>
-                    <th style={{ padding: '12px 10px', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('location')}</th>
-                    <th style={{ padding: '12px 10px', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('pickupDriver')}</th>
-                    <th style={{ padding: '12px 10px', textAlign: 'center', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('declaredQty')}</th>
-                    <th style={{ padding: '12px 10px', textAlign: 'center', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('actualQty')}</th>
-                    <th style={{ padding: '12px 10px', textAlign: 'center', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('completedQty')}</th>
-                    <th style={{ padding: '12px 10px', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('scheduledAt')}</th>
-                    <th style={{ padding: '12px 10px', textAlign: 'center', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('status')}</th>
-                    <th style={{ padding: '12px 10px', textAlign: 'center', background: '#2f55a5', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('actions')}</th>
+                <thead style={{ position: 'sticky', top: 0, zIndex: 10, background: '#1565D8' }}>
+                  <tr style={{ background: '#1565D8' }}>
+                    <th style={{ padding: '12px 10px', paddingLeft: 24, background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'ល.រ' : 'No.'}</th>
+                    <th style={{ padding: '12px 10px', background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('merchant')}</th>
+                    <th style={{ padding: '12px 10px', background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('location')}</th>
+                    <th style={{ padding: '12px 10px', background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('pickupDriver')}</th>
+                    <th style={{ padding: '12px 10px', textAlign: 'center', background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('declaredQty')}</th>
+                    <th style={{ padding: '12px 10px', textAlign: 'center', background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('actualQty')}</th>
+                    <th style={{ padding: '12px 10px', textAlign: 'center', background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('completedQty')}</th>
+                    <th style={{ padding: '12px 10px', background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('scheduledAt')}</th>
+                    <th style={{ padding: '12px 10px', textAlign: 'center', background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('status')}</th>
+                    <th style={{ padding: '12px 10px', textAlign: 'center', background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('actions')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -205,7 +205,7 @@ export default function PickupRequestsPage() {
                       return (
                         <tr key={r.id} style={{ borderBottom: '1px solid #f1f5f9', transition: 'background-color 0.15s' }}>
                           <td style={{ padding: '12px 10px', paddingLeft: 24, border: 'none' }}>
-                            <code style={{ fontSize: 12, background: 'rgba(47,85,165,0.08)', color: '#2f55a5', padding: '3px 8px', borderRadius: 6, fontWeight: 700 }}>
+                            <code style={{ fontSize: 12, background: 'rgba(47,85,165,0.08)', color: '#1565D8', padding: '3px 8px', borderRadius: 6, fontWeight: 700 }}>
                               #{r.id}
                             </code>
                           </td>
@@ -292,7 +292,7 @@ export default function PickupRequestsPage() {
                               </span>
                               {r.declaredQuantity > 0 && (
                                 <div style={{ width: 60, height: 5, borderRadius: 9999, background: 'var(--border)', overflow: 'hidden' }}>
-                                  <div style={{ width: `${progress}%`, height: '100%', borderRadius: 9999, background: progress >= 100 ? '#16a34a' : '#2f55a5', transition: 'width 0.4s' }} />
+                                  <div style={{ width: `${progress}%`, height: '100%', borderRadius: 9999, background: progress >= 100 ? '#16a34a' : '#1565D8', transition: 'width 0.4s' }} />
                                 </div>
                               )}
                             </div>
@@ -302,9 +302,9 @@ export default function PickupRequestsPage() {
                           <td style={{ padding: '12px 10px', textAlign: 'center', border: 'none' }}>
                             <button
                               onClick={() => router.push(`/delivery/pickup_requests/${r.id}`)}
-                              style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 14px', borderRadius: 8, border: '1.5px solid #2f55a5', background: '#eff6ff', color: '#2f55a5', fontSize: 12, fontWeight: 700, cursor: 'pointer', transition: 'all 0.15s', whiteSpace: 'nowrap' }}
-                              onMouseEnter={e => { (e.currentTarget as any).style.background = '#2f55a5'; (e.currentTarget as any).style.color = '#fff'; }}
-                              onMouseLeave={e => { (e.currentTarget as any).style.background = '#eff6ff'; (e.currentTarget as any).style.color = '#2f55a5'; }}
+                              style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 14px', borderRadius: 8, border: '1.5px solid #1565D8', background: '#eff6ff', color: '#1565D8', fontSize: 12, fontWeight: 700, cursor: 'pointer', transition: 'all 0.15s', whiteSpace: 'nowrap' }}
+                              onMouseEnter={e => { (e.currentTarget as any).style.background = '#1565D8'; (e.currentTarget as any).style.color = '#fff'; }}
+                              onMouseLeave={e => { (e.currentTarget as any).style.background = '#eff6ff'; (e.currentTarget as any).style.color = '#1565D8'; }}
                             >
                               <MdVisibility size={14} /> {t('viewInbound')}
                             </button>

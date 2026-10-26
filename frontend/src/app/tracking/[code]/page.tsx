@@ -276,7 +276,7 @@ export default function CustomerTrackingPage() {
       <header
         style={{
           height: 64,
-          background: '#2b529a',
+          background: '#1565D8',
           color: '#ffffff',
           display: 'flex',
           alignItems: 'center',
@@ -341,7 +341,7 @@ export default function CustomerTrackingPage() {
       <main style={{ maxWidth: 1080, margin: '0 auto', padding: '24px 16px' }}>
         {loading ? (
           <div style={{ textAlign: 'center', padding: '80px 20px' }}>
-            <div style={{ width: 48, height: 48, border: '4px solid #e2e8f0', borderTopColor: '#2b529a', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto 16px' }} />
+            <div style={{ width: 48, height: 48, border: '4px solid #e2e8f0', borderTopColor: '#1565D8', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto 16px' }} />
             <div style={{ fontSize: 16, fontWeight: 700, color: '#64748b' }}>កំពុងទាញយកទិន្នន័យ Live Tracking...</div>
           </div>
         ) : errorMsg ? (
@@ -360,7 +360,7 @@ export default function CustomerTrackingPage() {
               style={{
                 padding: '10px 24px',
                 borderRadius: 10,
-                background: '#2b529a',
+                background: '#1565D8',
                 color: '#ffffff',
                 textDecoration: 'none',
                 fontWeight: 700,

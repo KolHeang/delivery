@@ -36,6 +36,9 @@ import {
   BatchScanParcelsDto,
   BatchClaimParcelsDto,
   BatchUpdateParcelStatusDto,
+  DriverSettlementFilterDto,
+  CreateDriverSettlementRequestDto,
+  ReportSettlementProblemDto,
 } from './dto/driver-mobile.dto';
 
 @ApiTags('Mobile Driver')
@@ -1141,64 +1144,146 @@ export class DriverController {
     return this.driverService.confirmPickup(req.user.id, id, dto);
   }
 
-  @Get('payments')
-  @ApiOperation({ summary: 'Get driver payments and payouts history' })
-  @ApiQuery({
-    name: 'page',
-    required: false,
-    type: Number,
-    description: 'Page number (1-based)',
-    example: 1,
-  })
-  @ApiQuery({
-    name: 'limit',
-    required: false,
-    type: Number,
-    description: 'Number of payout records per page',
-    example: 10,
-  })
-  @ApiQuery({
-    name: 'month',
-    required: false,
-    type: String,
-    description: 'Filter payouts by month in YYYY-MM format',
-    example: '2026-10',
+  @Get(['settlements', 'settlements/history', 'settlement-history'])
+  @ApiOperation({
+    summary: 'Get driver settlement history with filters (All, Paid, Pending, Problem, Date range)',
   })
   @ApiResponse({
     status: 200,
-    description: 'Driver settlement payouts history',
+    description: 'Driver settlement history matching mobile UI',
     schema: {
       example: {
         status: true,
         message: 'Successfully',
-        data: {
-          result: [
-            {
-              id: 'REF-201',
-              totalAmount: 50.0,
-              totalKHR: 205000,
-              currency: 'USD',
-              date: '2026-10-14',
-              status: 'Paid',
-              parcelCount: 15,
-              note: 'Daily settlement payout',
-            },
-          ],
-          total: 5,
-          page: 1,
-          limit: 10,
-          totalPages: 1,
+        data: [
+          {
+            id: 2,
+            reference: 'ST8002',
+            date: '2026-10-13',
+            formattedDate: 'Oct 13, 2026',
+            status: 'Paid',
+            orderCount: 1,
+            ordersText: '1 Orders',
+            subtitle: 'ST8002 • 1 Orders',
+            usdAmount: 0.0,
+            khrAmount: 77000,
+            usdText: 'USD 0.00',
+            khrText: 'KHR 77,000',
+          },
+          {
+            id: 3,
+            reference: 'ST8003',
+            date: '2026-10-12',
+            formattedDate: 'Oct 12, 2026',
+            status: 'Paid',
+            orderCount: 1,
+            ordersText: '1 Orders',
+            subtitle: 'ST8003 • 1 Orders',
+            usdAmount: 31.0,
+            khrAmount: 0,
+            usdText: 'USD 31.00',
+            khrText: 'KHR 0',
+          },
+          {
+            id: 4,
+            reference: 'ST8004',
+            date: '2026-10-11',
+            formattedDate: 'Oct 11, 2026',
+            status: 'Paid',
+            orderCount: 1,
+            ordersText: '1 Orders',
+            subtitle: 'ST8004 • 1 Orders',
+            usdAmount: 0.0,
+            khrAmount: 91000,
+            usdText: 'USD 0.00',
+            khrText: 'KHR 91,000',
+          },
+          {
+            id: 6,
+            reference: 'ST8006',
+            date: '2026-10-09',
+            formattedDate: 'Oct 9, 2026',
+            status: 'Pending',
+            orderCount: 1,
+            ordersText: '1 Orders',
+            subtitle: 'ST8006 • 1 Orders',
+            usdAmount: 0.0,
+            khrAmount: 0,
+            usdText: 'USD 0.00',
+            khrText: 'KHR 0',
+          },
+        ],
+        summary: {
+          allCount: 4,
+          paidCount: 3,
+          pendingCount: 1,
+          problemCount: 0,
         },
       },
     },
   })
+  getSettlements(
+    @Request() req: any,
+    @Query() query: DriverSettlementFilterDto,
+  ) {
+    return this.driverService.getSettlements(req.user.id, query);
+  }
+
+  @Get('settlements/:id')
+  @ApiOperation({ summary: 'Get single settlement detail by ID or reference code' })
+  @ApiParam({ name: 'id', description: 'Settlement record ID (e.g. 2) or reference (e.g. ST8002)' })
+  getSettlementById(
+    @Request() req: any,
+    @Param('id') id: string,
+  ) {
+    return this.driverService.getSettlementById(req.user.id, id);
+  }
+
+  @Post('settlements')
+  @ApiOperation({ summary: 'Submit settlement request by driver' })
+  createSettlementRequest(
+    @Request() req: any,
+    @Body() dto: CreateDriverSettlementRequestDto,
+  ) {
+    return this.driverService.createSettlementRequest(req.user.id, dto);
+  }
+
+  @Post('settlements/:id/problem')
+  @ApiOperation({ summary: 'Report a problem or dispute on a settlement' })
+  reportSettlementProblem(
+    @Request() req: any,
+    @Param('id') id: string,
+    @Body() dto: ReportSettlementProblemDto,
+  ) {
+    return this.driverService.reportSettlementProblem(req.user.id, id, dto.reason, dto.note);
+  }
+
+  @Patch('settlements/:id/problem')
+  @ApiOperation({ summary: 'Report a problem or dispute on a settlement (PATCH)' })
+  patchSettlementProblem(
+    @Request() req: any,
+    @Param('id') id: string,
+    @Body() dto: ReportSettlementProblemDto,
+  ) {
+    return this.driverService.reportSettlementProblem(req.user.id, id, dto.reason, dto.note);
+  }
+
+  @Get('payments')
+  @ApiOperation({ summary: 'Get driver payments and payouts history (alias to settlements)' })
   getPayments(
     @Request() req: any,
-    @Query('page') page?: number,
-    @Query('limit') limit?: number,
-    @Query('month') month?: string,
+    @Query() query: DriverSettlementFilterDto,
   ) {
-    return this.driverService.getPayments(req.user.id, page, limit, month);
+    return this.driverService.getSettlements(req.user.id, query);
+  }
+
+  @Get('payments/:id')
+  @ApiOperation({ summary: 'Get single driver payment detail by ID or reference code' })
+  getPaymentById(
+    @Request() req: any,
+    @Param('id') id: string,
+  ) {
+    return this.driverService.getSettlementById(req.user.id, id);
   }
 
   @Get('payments/summary')

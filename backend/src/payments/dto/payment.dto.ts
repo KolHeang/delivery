@@ -29,6 +29,11 @@ export class CreateDriverPaymentDto {
   @IsString()
   reference?: string;
 
+  @ApiProperty({ example: 'Paid', required: false, enum: ['Paid', 'Pending', 'Problem'] })
+  @IsOptional()
+  @IsString()
+  status?: string;
+
   @ApiProperty({ example: 'Weekly payout', required: false })
   @IsOptional()
   @IsString()
@@ -51,6 +56,11 @@ export class UpdateDriverPaymentDto {
   @IsOptional()
   @IsString()
   currency?: string;
+
+  @ApiProperty({ example: 'Paid', required: false, enum: ['Paid', 'Pending', 'Problem'] })
+  @IsOptional()
+  @IsString()
+  status?: string;
 
   @ApiProperty({ example: 'Updated note', required: false })
   @IsOptional()

@@ -74,7 +74,9 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
   const isHomeActive = pathname === "/driver/dashboard";
   const isTasksActive = pathname.startsWith("/driver/tasks") || pathname.startsWith("/driver/scan");
   const isPaymentsActive =
-    pathname.startsWith("/driver/payments") || pathname.startsWith("/driver/reports");
+    pathname.startsWith("/driver/payments") ||
+    pathname.startsWith("/driver/settlements") ||
+    pathname.startsWith("/driver/reports");
   const isProfileActive = pathname.startsWith("/driver/profile");
 
   const ACTIVE_COLOR = "#2563eb";

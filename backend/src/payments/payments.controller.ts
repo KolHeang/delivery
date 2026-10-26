@@ -51,6 +51,7 @@ export class PaymentsController {
       req.user?.id,
       getEffectiveTenantId(req),
       body.currency,
+      body.status,
     );
   }
 

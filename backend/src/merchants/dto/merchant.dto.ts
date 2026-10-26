@@ -15,6 +15,10 @@ export class CreateMerchantDto {
   @ApiProperty({ required: false }) @IsOptional() @IsString() contact?: string;
   @ApiProperty() @IsNotEmpty() @IsString() phone: string;
   @ApiProperty({ required: false }) @IsOptional() @IsString() email?: string;
+  @ApiProperty({ required: false, description: 'Merchant login password' })
+  @IsOptional()
+  @IsString()
+  password?: string;
   @ApiProperty({ required: false }) @IsOptional() @IsString() address?: string;
   @ApiProperty({ required: false }) @IsOptional() @IsNumber() @Type(() => Number) latitude?: number;
   @ApiProperty({ required: false }) @IsOptional() @IsNumber() @Type(() => Number) longitude?: number;

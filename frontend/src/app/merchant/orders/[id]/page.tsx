@@ -33,6 +33,8 @@ export default function MerchantOrderDetailPage() {
   const [order, setOrder] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [showActionsSheet, setShowActionsSheet] = useState(false);
+  const [trackingData, setTrackingData] = useState<any>(null);
+  const [trackingLoading, setTrackingLoading] = useState(false);
 
   // Chat state
   const [messages, setMessages] = useState<any[]>([
@@ -117,6 +119,28 @@ export default function MerchantOrderDetailPage() {
     }
     loadOrderDetail();
   }, [orderId]);
+
+  const loadTracking = async () => {
+    try {
+      setTrackingLoading(true);
+      const res = await api.get(`/mobile/merchant/parcels/${orderId}/tracking`).catch(() => null);
+      if (res?.data?.data) {
+        setTrackingData(res.data.data);
+      }
+    } catch (err) {
+      console.error("Failed to load tracking data", err);
+    } finally {
+      setTrackingLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === "tracking") {
+      loadTracking();
+      const interval = setInterval(loadTracking, 10000);
+      return () => clearInterval(interval);
+    }
+  }, [activeTab, orderId]);
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
@@ -504,118 +528,261 @@ export default function MerchantOrderDetailPage() {
       {/* 4. TAB 2: SCREEN 06 MAP & TRACKING */}
       {activeTab === "tracking" && (
         <div style={{ padding: "16px", display: "flex", flexDirection: "column", gap: "14px" }}>
+          {/* Real-time Status & ETA Banner */}
+          <div
+            style={{
+              backgroundColor: "#ffffff",
+              borderRadius: "16px",
+              padding: "14px 18px",
+              border: "1px solid #e2e8f0",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              boxShadow: "0 2px 6px rgba(0,0,0,0.03)",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <div
+                style={{
+                  width: "12px",
+                  height: "12px",
+                  borderRadius: "50%",
+                  backgroundColor: trackingData?.parcel?.statusColor || "#2563eb",
+                  boxShadow: `0 0 0 3px ${(trackingData?.parcel?.statusColor || "#2563eb")}33`,
+                }}
+              />
+              <div>
+                <span style={{ fontSize: "14px", fontWeight: "900", color: "#0f172a" }}>
+                  {lang === "km"
+                    ? trackingData?.parcel?.statusLabelKh || trackingData?.parcel?.statusLabel || order?.status
+                    : trackingData?.parcel?.statusLabel || order?.status}
+                </span>
+                <div style={{ fontSize: "11px", color: "#64748b" }}>
+                  {displayCode}
+                </div>
+              </div>
+            </div>
+
+            {trackingData?.eta ? (
+              <div
+                style={{
+                  backgroundColor: "#eff6ff",
+                  padding: "6px 12px",
+                  borderRadius: "12px",
+                  textAlign: "right",
+                }}
+              >
+                <div style={{ fontSize: "12.5px", fontWeight: "900", color: "#1d4ed8" }}>
+                  ⏱️ ~{trackingData.eta.minutes} min
+                </div>
+                <div style={{ fontSize: "11px", color: "#60a5fa", fontWeight: "700" }}>
+                  📍 {trackingData.eta.distanceKm} km away
+                </div>
+              </div>
+            ) : (
+              <div
+                style={{
+                  fontSize: "11.5px",
+                  fontWeight: "700",
+                  color: trackingData?.driver?.isOnline ? "#16a34a" : "#64748b",
+                  backgroundColor: "#f8fafc",
+                  padding: "4px 10px",
+                  borderRadius: "8px",
+                }}
+              >
+                {trackingData?.driver ? (trackingData.driver.isOnline ? "🟢 Rider Online" : "⚪ Rider Offline") : "Waiting for pickup"}
+              </div>
+            )}
+          </div>
+
           {/* Interactive Map Preview Card */}
           <div
             style={{
               width: "100%",
-              height: "240px",
+              minHeight: "220px",
               borderRadius: "20px",
-              backgroundColor: "#e2e8f0",
+              backgroundColor: "#f1f5f9",
               overflow: "hidden",
               position: "relative",
               border: "1px solid #cbd5e1",
-              backgroundImage: "radial-gradient(#94a3b8 1px, transparent 1px)",
-              backgroundSize: "16px 16px",
+              backgroundImage: "radial-gradient(#cbd5e1 1.5px, transparent 1.5px)",
+              backgroundSize: "20px 20px",
               display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
+              flexDirection: "column",
+              justifyContent: "space-between",
+              padding: "16px",
             }}
           >
+            {/* Top Route indicator */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div
+                style={{
+                  backgroundColor: "rgba(255, 255, 255, 0.95)",
+                  backdropFilter: "blur(6px)",
+                  padding: "6px 12px",
+                  borderRadius: "12px",
+                  fontSize: "12px",
+                  fontWeight: "800",
+                  color: "#1e3a8a",
+                  boxShadow: "0 2px 6px rgba(0,0,0,0.06)",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                }}
+              >
+                <span>📍 Live Route</span>
+                {trackingLoading && <span style={{ fontSize: "10px", color: "#3b82f6" }}>• syncing...</span>}
+              </div>
+
+              {trackingData?.driver?.liveLocation && (
+                <div
+                  style={{
+                    backgroundColor: "rgba(255, 255, 255, 0.95)",
+                    padding: "4px 10px",
+                    borderRadius: "10px",
+                    fontSize: "11px",
+                    fontWeight: "800",
+                    color: "#059669",
+                  }}
+                >
+                  ⚡ {trackingData.driver.liveLocation.speed || 0} km/h
+                </div>
+              )}
+            </div>
+
+            {/* Pins Visualization */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-around", margin: "24px 0" }}>
+              {/* Store Pin */}
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", maxWidth: "100px", textAlign: "center" }}>
+                <div
+                  style={{
+                    width: "38px",
+                    height: "38px",
+                    borderRadius: "50%",
+                    backgroundColor: "#2563eb",
+                    color: "#ffffff",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: "18px",
+                    boxShadow: "0 4px 10px rgba(37,99,235,0.4)",
+                  }}
+                >
+                  🏪
+                </div>
+                <span
+                  style={{
+                    backgroundColor: "#ffffff",
+                    fontSize: "10.5px",
+                    fontWeight: "800",
+                    padding: "2px 8px",
+                    borderRadius: "6px",
+                    marginTop: "4px",
+                    boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                    maxWidth: "100%",
+                  }}
+                >
+                  {trackingData?.route?.origin?.name || "Store"}
+                </span>
+              </div>
+
+              {/* Driver / Moving Pin */}
+              {trackingData?.driver ? (
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", animation: "bounce 2s infinite" }}>
+                  <div
+                    style={{
+                      width: "42px",
+                      height: "42px",
+                      borderRadius: "50%",
+                      backgroundColor: "#f59e0b",
+                      color: "#ffffff",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: "20px",
+                      boxShadow: "0 4px 12px rgba(245,158,11,0.5)",
+                    }}
+                  >
+                    🛵
+                  </div>
+                  <span
+                    style={{
+                      backgroundColor: "#ffffff",
+                      color: "#d97706",
+                      fontSize: "10.5px",
+                      fontWeight: "900",
+                      padding: "2px 8px",
+                      borderRadius: "6px",
+                      marginTop: "4px",
+                      boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
+                    }}
+                  >
+                    {trackingData.driver.name}
+                  </span>
+                </div>
+              ) : (
+                <div style={{ color: "#94a3b8", fontSize: "20px" }}>┈┈ ✈️ ┈┈</div>
+              )}
+
+              {/* Customer Pin */}
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", maxWidth: "100px", textAlign: "center" }}>
+                <div
+                  style={{
+                    width: "38px",
+                    height: "38px",
+                    borderRadius: "50%",
+                    backgroundColor: "#16a34a",
+                    color: "#ffffff",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: "18px",
+                    boxShadow: "0 4px 10px rgba(22,163,74,0.4)",
+                  }}
+                >
+                  📍
+                </div>
+                <span
+                  style={{
+                    backgroundColor: "#ffffff",
+                    fontSize: "10.5px",
+                    fontWeight: "800",
+                    padding: "2px 8px",
+                    borderRadius: "6px",
+                    marginTop: "4px",
+                    boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                    maxWidth: "100%",
+                  }}
+                >
+                  {custName || "Customer"}
+                </span>
+              </div>
+            </div>
+
+            {/* Bottom Address preview */}
             <div
               style={{
-                position: "absolute",
-                top: "16px",
-                left: "16px",
                 backgroundColor: "rgba(255, 255, 255, 0.9)",
-                backdropFilter: "blur(6px)",
-                padding: "6px 12px",
-                borderRadius: "12px",
-                fontSize: "12px",
-                fontWeight: "800",
-                color: "#1e3a8a",
-                boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
-              }}
-            >
-              📍 Phnom Penh Live Route
-            </div>
-
-            {/* Store Pickup Pin */}
-            <div
-              style={{
-                position: "absolute",
-                left: "25%",
-                top: "40%",
+                backdropFilter: "blur(4px)",
+                padding: "8px 12px",
+                borderRadius: "10px",
+                fontSize: "11.5px",
+                color: "#334155",
+                fontWeight: "600",
                 display: "flex",
-                flexDirection: "column",
                 alignItems: "center",
+                gap: "6px",
               }}
             >
-              <div
-                style={{
-                  width: "32px",
-                  height: "32px",
-                  borderRadius: "50%",
-                  backgroundColor: "#2563eb",
-                  color: "#ffffff",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  boxShadow: "0 4px 10px rgba(37,99,235,0.4)",
-                }}
-              >
-                🏪
-              </div>
-              <span
-                style={{
-                  backgroundColor: "#ffffff",
-                  fontSize: "10px",
-                  fontWeight: "800",
-                  padding: "2px 6px",
-                  borderRadius: "6px",
-                  marginTop: "2px",
-                }}
-              >
-                Store
-              </span>
-            </div>
-
-            {/* Customer Delivery Pin */}
-            <div
-              style={{
-                position: "absolute",
-                right: "25%",
-                bottom: "35%",
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-              }}
-            >
-              <div
-                style={{
-                  width: "32px",
-                  height: "32px",
-                  borderRadius: "50%",
-                  backgroundColor: "#16a34a",
-                  color: "#ffffff",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  boxShadow: "0 4px 10px rgba(22,163,74,0.4)",
-                }}
-              >
-                📍
-              </div>
-              <span
-                style={{
-                  backgroundColor: "#ffffff",
-                  fontSize: "10px",
-                  fontWeight: "800",
-                  padding: "2px 6px",
-                  borderRadius: "6px",
-                  marginTop: "2px",
-                }}
-              >
-                Customer
+              <span>🎯</span>
+              <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {custAddress}
               </span>
             </div>
           </div>
@@ -632,129 +799,190 @@ export default function MerchantOrderDetailPage() {
               gap: "16px",
             }}
           >
-            <span style={{ fontSize: "15px", fontWeight: "800", color: "#0f172a" }}>
-              {t.deliveryProgress}
-            </span>
-
-            <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-              {[
-                { title: "Booking Created", time: "23 Dec 2024 • 08:30 AM", done: true },
-                { title: "Pickup from Store", time: "23 Dec 2024 • 09:00 AM", done: true },
-                { title: "In Delivery", time: "23 Dec 2024 • 09:15 AM", done: true, current: true },
-                { title: "Delivered", time: "Estimated: 09:45 AM", done: false },
-              ].map((step, idx) => (
-                <div key={idx} style={{ display: "flex", alignItems: "flex-start", gap: "12px" }}>
-                  <div
-                    style={{
-                      width: "24px",
-                      height: "24px",
-                      borderRadius: "50%",
-                      backgroundColor: step.done ? "#2563eb" : "#e2e8f0",
-                      color: "#ffffff",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontSize: "12px",
-                      fontWeight: "800",
-                      flexShrink: 0,
-                    }}
-                  >
-                    {step.done ? "✓" : idx + 1}
-                  </div>
-
-                  <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-                    <span
-                      style={{
-                        fontSize: "13.5px",
-                        fontWeight: step.current ? "900" : "700",
-                        color: step.current ? "#2563eb" : "#0f172a",
-                      }}
-                    >
-                      {step.title}
-                    </span>
-                    <span style={{ fontSize: "11.5px", color: "#64748b" }}>{step.time}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Rider Information Card */}
-          <div
-            style={{
-              backgroundColor: "#ffffff",
-              borderRadius: "20px",
-              padding: "16px",
-              border: "1px solid #e2e8f0",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-              <div
-                style={{
-                  width: "44px",
-                  height: "44px",
-                  borderRadius: "50%",
-                  backgroundColor: "#eff6ff",
-                  color: "#2563eb",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: "18px",
-                  fontWeight: "900",
-                }}
-              >
-                🚴
-              </div>
-              <div>
-                <div style={{ fontSize: "14.5px", fontWeight: "800", color: "#0f172a" }}>
-                  Sokha (Rider)
-                </div>
-                <div style={{ fontSize: "12px", color: "#64748b", fontWeight: "600" }}>
-                  ⭐ 4.9 • 088 123 456
-                </div>
-              </div>
-            </div>
-
-            <div style={{ display: "flex", gap: "8px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={{ fontSize: "15px", fontWeight: "800", color: "#0f172a" }}>
+                {t.deliveryProgress}
+              </span>
               <button
-                onClick={() => setActiveTab("chat")}
+                type="button"
+                onClick={loadTracking}
                 style={{
-                  backgroundColor: "#eff6ff",
-                  color: "#2563eb",
+                  background: "none",
                   border: "none",
-                  borderRadius: "10px",
-                  padding: "8px 12px",
                   fontSize: "12px",
+                  color: "#2563eb",
                   fontWeight: "700",
                   cursor: "pointer",
                 }}
               >
-                Chat
+                🔄 Refresh
               </button>
+            </div>
 
-              <a
-                href="tel:088123456"
-                style={{
-                  backgroundColor: "#2563eb",
-                  color: "#ffffff",
-                  borderRadius: "10px",
-                  padding: "8px 12px",
-                  fontSize: "12px",
-                  fontWeight: "700",
-                  textDecoration: "none",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "4px",
-                }}
-              >
-                <MdPhone size={14} />
-                <span>Call</span>
-              </a>
+            <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+              {(trackingData?.timeline || [
+                { title: "Booking Created", titleKh: "បានបង្កើតការផ្ញើ", time: order?.createdAt, isDone: true, isCurrent: order?.status === "pending" },
+                { title: "Pickup from Store", titleKh: "បានទទួលពីហាង", time: null, isDone: ["picked-up", "in-warehouse", "in-transit", "delivered"].includes(order?.status), isCurrent: ["picked-up", "in-warehouse"].includes(order?.status) },
+                { title: "In Delivery", titleKh: "កំពុងធ្វើដំណើរដឹកជញ្ជូន", time: null, isDone: ["in-transit", "delivered"].includes(order?.status), isCurrent: order?.status === "in-transit" },
+                { title: "Delivered", titleKh: "បានប្រគល់ជូនអតិថិជនជោគជ័យ", time: null, isDone: order?.status === "delivered", isCurrent: order?.status === "delivered" },
+              ]).map((step: any, idx: number) => {
+                const formattedTime = step.time
+                  ? new Date(step.time).toLocaleDateString([], {
+                      month: "short",
+                      day: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })
+                  : step.isCurrent
+                  ? (lang === "km" ? "កំពុងដំណើរការ..." : "In progress...")
+                  : (lang === "km" ? "រង់ចាំ" : "Pending");
+
+                return (
+                  <div key={idx} style={{ display: "flex", alignItems: "flex-start", gap: "12px" }}>
+                    <div
+                      style={{
+                        width: "26px",
+                        height: "26px",
+                        borderRadius: "50%",
+                        backgroundColor: step.isDone
+                          ? step.isTerminalFailed
+                            ? "#ef4444"
+                            : "#2563eb"
+                          : "#e2e8f0",
+                        color: "#ffffff",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: "12px",
+                        fontWeight: "800",
+                        flexShrink: 0,
+                        boxShadow: step.isCurrent ? "0 0 0 4px #dbeafe" : "none",
+                      }}
+                    >
+                      {step.isDone ? "✓" : idx + 1}
+                    </div>
+
+                    <div style={{ display: "flex", flexDirection: "column", gap: "2px", flex: 1 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <span
+                          style={{
+                            fontSize: "13.5px",
+                            fontWeight: step.isCurrent ? "900" : "700",
+                            color: step.isCurrent ? "#2563eb" : step.isTerminalFailed ? "#ef4444" : "#0f172a",
+                          }}
+                        >
+                          {lang === "km" && step.titleKh ? step.titleKh : step.title}
+                        </span>
+                        <span style={{ fontSize: "11px", color: step.isCurrent ? "#2563eb" : "#64748b", fontWeight: "600" }}>
+                          {formattedTime}
+                        </span>
+                      </div>
+                      {step.note && (
+                        <span style={{ fontSize: "12px", color: "#64748b", marginTop: "2px" }}>
+                          {step.note}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
+
+          {/* Rider Information Card */}
+          {trackingData?.driver ? (
+            <div
+              style={{
+                backgroundColor: "#ffffff",
+                borderRadius: "20px",
+                padding: "16px",
+                border: "1px solid #e2e8f0",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                <div
+                  style={{
+                    width: "44px",
+                    height: "44px",
+                    borderRadius: "50%",
+                    backgroundColor: "#eff6ff",
+                    color: "#2563eb",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: "20px",
+                    fontWeight: "900",
+                  }}
+                >
+                  🚴
+                </div>
+                <div>
+                  <div style={{ fontSize: "14.5px", fontWeight: "800", color: "#0f172a" }}>
+                    {trackingData.driver.nameKh || trackingData.driver.name}
+                  </div>
+                  <div style={{ fontSize: "12px", color: "#64748b", fontWeight: "600" }}>
+                    {trackingData.driver.vehicle} • {trackingData.driver.phone}
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: "flex", gap: "8px" }}>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("chat")}
+                  style={{
+                    backgroundColor: "#eff6ff",
+                    color: "#2563eb",
+                    border: "none",
+                    borderRadius: "10px",
+                    padding: "8px 12px",
+                    fontSize: "12px",
+                    fontWeight: "700",
+                    cursor: "pointer",
+                  }}
+                >
+                  {t.chat || "Chat"}
+                </button>
+
+                <a
+                  href={`tel:${trackingData.driver.phone}`}
+                  style={{
+                    backgroundColor: "#2563eb",
+                    color: "#ffffff",
+                    borderRadius: "10px",
+                    padding: "8px 12px",
+                    fontSize: "12px",
+                    fontWeight: "700",
+                    textDecoration: "none",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "4px",
+                  }}
+                >
+                  <MdPhone size={14} />
+                  <span>{t.callRider || "Call"}</span>
+                </a>
+              </div>
+            </div>
+          ) : (
+            <div
+              style={{
+                backgroundColor: "#ffffff",
+                borderRadius: "20px",
+                padding: "16px",
+                border: "1px dashed #cbd5e1",
+                textAlign: "center",
+                color: "#64748b",
+                fontSize: "13px",
+                fontWeight: "600",
+              }}
+            >
+              🛵 {lang === "km" ? "មិនទាន់មានអ្នកដឹកជញ្ជូនទទួលយកនៅឡើយទេ" : "No rider assigned yet"}
+            </div>
+          )}
         </div>
       )}
 

@@ -1,4 +1,9 @@
-import { Injectable, UnauthorizedException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  UnauthorizedException,
+  BadRequestException,
+  Logger,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
@@ -11,6 +16,8 @@ import { SaveDeviceTokenDto } from './dto/save-device-token.dto';
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     @InjectRepository(User) private readonly userRepo: Repository<User>,
     @InjectRepository(Merchant)
@@ -20,11 +27,68 @@ export class AuthService {
     @InjectRepository(DeviceToken)
     private readonly deviceTokenRepository: Repository<DeviceToken>,
     private readonly jwtService: JwtService,
-  ) { }
+  ) {}
+
+  /**
+   * Shared helper to resolve subscription expiration and account status
+   */
+  private async resolveSubscriptionState(
+    accessToken: string,
+    isActive: boolean,
+    tenantId?: number | string | null,
+    userId?: number | null,
+  ): Promise<{
+    expire_date: string;
+    status: 'active' | 'inactive' | 'expire';
+  }> {
+    const decoded: any = this.jwtService.decode(accessToken);
+    let expire_date = decoded?.exp
+      ? new Date(decoded.exp * 1000).toISOString()
+      : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+    let isExpired = false;
+
+    try {
+      if (tenantId || userId) {
+        let subQuery = this.refreshTokenRepository.manager
+          .createQueryBuilder()
+          .select('s.current_period_end', 'current_period_end')
+          .addSelect('s.status', 'status')
+          .from('saas_subscriptions', 's');
+
+        if (tenantId) {
+          subQuery = subQuery.where('s.tenant_id = :tenantId', { tenantId });
+        } else {
+          subQuery = subQuery.where('s.user_id = :userId', { userId });
+        }
+
+        const sub = await subQuery.orderBy('s.created_at', 'DESC').getRawOne();
+        if (sub?.current_period_end) {
+          expire_date = new Date(sub.current_period_end).toISOString();
+          if (
+            new Date(sub.current_period_end) < new Date() ||
+            sub.status === 'expired'
+          ) {
+            isExpired = true;
+          }
+        }
+      }
+    } catch (err) {
+      this.logger.warn(`Failed to query saas_subscriptions: ${err}`);
+    }
+
+    if (new Date(expire_date) < new Date()) {
+      isExpired = true;
+    }
+
+    const status = isExpired ? 'expire' : isActive ? 'active' : 'inactive';
+    return { expire_date, status };
+  }
 
   async driverLogin(identifier: string, password: string) {
     if (!identifier || !password) {
-      throw new UnauthorizedException('Identifier and password are required');
+      throw new UnauthorizedException(
+        'សូមបញ្ចូលលេខទូរស័ព្ទ/អ៊ីមែល និងពាក្យសម្ងាត់',
+      );
     }
 
     const cleanId = identifier.trim();
@@ -42,60 +106,32 @@ export class AuthService {
       })
       .getOne();
 
-    if (!user) throw new UnauthorizedException('Invalid driver credentials');
-
-    if (!user.password) {
-      throw new UnauthorizedException('Invalid credentials');
+    if (!user || !user.password) {
+      throw new UnauthorizedException(
+        'ព័ត៌មានគណនីអ្នកដឹកជញ្ជូនមិនត្រឹមត្រូវឡើយ',
+      );
     }
+
     const isValid = await bcrypt.compare(password, user.password);
+    if (!isValid)
+      throw new UnauthorizedException(
+        'លេខទូរស័ព្ទ/អ៊ីមែល ឬពាក្យសម្ងាត់មិនត្រឹមត្រូវឡើយ',
+      );
+    if (!user.isActive)
+      throw new UnauthorizedException('គណនីរបស់អ្នកត្រូវបានផ្អាកដំណើរការ');
 
-    if (!isValid) throw new UnauthorizedException('Invalid credentials');
-    if (!user.isActive) throw new UnauthorizedException('Account is disabled');
-
-    const { password: _, ...userWithoutPassword } = user;
     const payload = { sub: user.id, email: user.email, role: 'driver' };
-
     const access_token = this.jwtService.sign(payload);
     const refresh_token = this.jwtService.sign(payload, { expiresIn: '30d' });
 
-    // Calculate expiration date from the signed JWT access token or tenant subscription
-    const decoded: any = this.jwtService.decode(access_token);
-    let expire_date = decoded?.exp
-      ? new Date(decoded.exp * 1000).toISOString()
-      : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
-    let isExpired = false;
+    const { expire_date, status } = await this.resolveSubscriptionState(
+      access_token,
+      user.isActive,
+      user.tenantId,
+      user.id,
+    );
 
-    try {
-      if (user.tenantId || user.id) {
-        let subQuery = this.refreshTokenRepository.manager
-          .createQueryBuilder()
-          .select('s.current_period_end', 'current_period_end')
-          .addSelect('s.status', 'status')
-          .from('saas_subscriptions', 's');
-
-        if (user.tenantId) {
-          subQuery = subQuery.where('s.tenant_id = :tenantId', { tenantId: user.tenantId });
-        } else {
-          subQuery = subQuery.where('s.user_id = :userId', { userId: user.id });
-        }
-
-        const sub = await subQuery.orderBy('s.created_at', 'DESC').getRawOne();
-        if (sub && sub.current_period_end) {
-          expire_date = new Date(sub.current_period_end).toISOString();
-          if (new Date(sub.current_period_end) < new Date() || sub.status === 'expired') {
-            isExpired = true;
-          }
-        }
-      }
-    } catch {}
-
-    if (new Date(expire_date) < new Date()) {
-      isExpired = true;
-    }
-    const status = isExpired ? 'expire' : (user.isActive ? 'active' : 'inactive');
-
-    // Store refresh token in database
-    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
+    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
     const tokenEntity = this.refreshTokenRepository.create({
       token: refresh_token,
       expiresAt,
@@ -127,24 +163,30 @@ export class AuthService {
   }
 
   async merchantLogin(phoneOrEmail: string, password: string) {
-    // Merchants might use phone or email
+    if (!phoneOrEmail || !password) {
+      throw new UnauthorizedException(
+        'សូមបញ្ចូលអ៊ីមែល ឬលេខទូរស័ព្ទ និងពាក្យសម្ងាត់',
+      );
+    }
+
+    const cleanId = phoneOrEmail.trim();
+
     const user = await this.merchantRepo
       .createQueryBuilder('merchant')
       .addSelect('merchant.password')
-      .where('merchant.email = :id OR merchant.phone = :id', {
-        id: phoneOrEmail,
+      .where('LOWER(merchant.email) = LOWER(:id) OR merchant.phone = :id', {
+        id: cleanId,
       })
       .getOne();
 
-    if (!user) throw new UnauthorizedException('Invalid merchant credentials');
-
-    if (!user.password) {
-      throw new UnauthorizedException('Invalid credentials');
+    if (!user || !user.password) {
+      throw new UnauthorizedException('ព័ត៌មានគណនីហាងមិនត្រឹមត្រូវ');
     }
-    const isValid = await bcrypt.compare(password, user.password);
 
-    if (!isValid) throw new UnauthorizedException('Invalid credentials');
-    if (!user.active) throw new UnauthorizedException('Account is disabled');
+    const isValid = await bcrypt.compare(password, user.password);
+    if (!isValid) throw new UnauthorizedException('ពាក្យសម្ងាត់មិនត្រឹមត្រូវ');
+    if (!user.active)
+      throw new UnauthorizedException('គណនីនេះត្រូវបានផ្អាកដំណើរការ');
 
     const payload = {
       sub: user.id,
@@ -156,40 +198,14 @@ export class AuthService {
     const access_token = this.jwtService.sign(payload);
     const refresh_token = this.jwtService.sign(payload, { expiresIn: '30d' });
 
-    // Calculate expiration date from the signed JWT access token or tenant subscription
-    const decoded: any = this.jwtService.decode(access_token);
-    let expire_date = decoded?.exp
-      ? new Date(decoded.exp * 1000).toISOString()
-      : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
-    let isExpired = false;
+    const { expire_date, status } = await this.resolveSubscriptionState(
+      access_token,
+      user.active,
+      user.tenantId,
+      null,
+    );
 
-    try {
-      if (user.tenantId) {
-        const sub = await this.refreshTokenRepository.manager
-          .createQueryBuilder()
-          .select('s.current_period_end', 'current_period_end')
-          .addSelect('s.status', 'status')
-          .from('saas_subscriptions', 's')
-          .where('s.tenant_id = :tenantId', { tenantId: user.tenantId })
-          .orderBy('s.created_at', 'DESC')
-          .getRawOne();
-
-        if (sub && sub.current_period_end) {
-          expire_date = new Date(sub.current_period_end).toISOString();
-          if (new Date(sub.current_period_end) < new Date() || sub.status === 'expired') {
-            isExpired = true;
-          }
-        }
-      }
-    } catch {}
-
-    if (new Date(expire_date) < new Date()) {
-      isExpired = true;
-    }
-    const status = isExpired ? 'expire' : (user.active ? 'active' : 'inactive');
-
-    // Store refresh token in database
-    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
+    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
     const tokenEntity = this.refreshTokenRepository.create({
       token: refresh_token,
       expiresAt,
@@ -220,16 +236,47 @@ export class AuthService {
   }
 
   async refresh(refreshToken: string) {
+    if (!refreshToken) {
+      throw new UnauthorizedException('Refresh token is required');
+    }
+
     try {
       const payload = this.jwtService.verify(refreshToken);
-      
-      // Find and validate token in database
+
       const tokenDoc = await this.refreshTokenRepository.findOne({
         where: { token: refreshToken, isRevoked: false },
       });
 
       if (!tokenDoc || tokenDoc.expiresAt < new Date()) {
-        throw new UnauthorizedException('Invalid or expired refresh token');
+        throw new UnauthorizedException(
+          'សម័យកាលប្រើប្រាស់មិនត្រឹមត្រូវ ឬផុតកំណត់ហើយ សូមចូលប្រើប្រាស់ម្តងទៀត',
+        );
+      }
+
+      // Verify account is still active before issuing new tokens
+      let isActive = true;
+      let tenantId: any = null;
+
+      if (tokenDoc.merchantId) {
+        const merchant = await this.merchantRepo.findOne({
+          where: { id: tokenDoc.merchantId },
+        });
+        if (!merchant || !merchant.active) {
+          await this.refreshTokenRepository.remove(tokenDoc);
+          throw new UnauthorizedException('គណនីរបស់អ្នកត្រូវបានផ្អាកដំណើរការ');
+        }
+        isActive = merchant.active;
+        tenantId = merchant.tenantId;
+      } else if (tokenDoc.userId) {
+        const user = await this.userRepo.findOne({
+          where: { id: tokenDoc.userId },
+        });
+        if (!user || !user.isActive) {
+          await this.refreshTokenRepository.remove(tokenDoc);
+          throw new UnauthorizedException('គណនីរបស់អ្នកត្រូវបានផ្អាកដំណើរការ');
+        }
+        isActive = user.isActive;
+        tenantId = user.tenantId;
       }
 
       // Rotate token: Remove the used one
@@ -237,17 +284,17 @@ export class AuthService {
 
       const { iat, exp, ...cleanPayload } = payload;
       const newAccessToken = this.jwtService.sign(cleanPayload);
-      const newRefreshToken = this.jwtService.sign(cleanPayload, { expiresIn: '30d' });
+      const newRefreshToken = this.jwtService.sign(cleanPayload, {
+        expiresIn: '30d',
+      });
 
-      // Calculate exact expiration date from the new access token
-      const decoded: any = this.jwtService.decode(newAccessToken);
-      const expire_date = decoded?.exp
-        ? new Date(decoded.exp * 1000).toISOString()
-        : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
-      const isExpired = new Date(expire_date) < new Date();
-      const status = isExpired ? 'expire' : 'active';
+      const { expire_date, status } = await this.resolveSubscriptionState(
+        newAccessToken,
+        isActive,
+        tenantId,
+        tokenDoc.userId,
+      );
 
-      // Save the new refresh token
       const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
       const newRefreshTokenEntity = this.refreshTokenRepository.create({
         token: newRefreshToken,
@@ -264,8 +311,11 @@ export class AuthService {
         expires_at: expire_date,
         status,
       };
-    } catch {
-      throw new UnauthorizedException('Invalid or expired refresh token');
+    } catch (err) {
+      if (err instanceof UnauthorizedException) throw err;
+      throw new UnauthorizedException(
+        'សម័យកាលប្រើប្រាស់មិនត្រឹមត្រូវ ឬផុតកំណត់ហើយ សូមចូលប្រើប្រាស់ម្តងទៀត',
+      );
     }
   }
 
@@ -275,36 +325,38 @@ export class AuthService {
     } else {
       await this.refreshTokenRepository.delete({ userId: id });
     }
-    return { success: true, message: 'Logged out successfully' };
+    return { success: true, message: 'ចាកចេញពីប្រព័ន្ធដោយជោគជ័យ' };
   }
 
   async saveDeviceToken(role: string, id: number, dto: SaveDeviceTokenDto) {
     try {
       const { token, deviceType } = dto;
-
-      // 1. Clean up older stale tokens of this user/merchant so they don't pile up dead tokens
-      if (role === 'merchant') {
-        await this.deviceTokenRepository
-          .createQueryBuilder()
-          .delete()
-          .where('merchant_id = :id AND token != :token', { id, token })
-          .execute();
-      } else {
-        await this.deviceTokenRepository
-          .createQueryBuilder()
-          .delete()
-          .where('user_id = :id AND token != :token', { id, token })
-          .execute();
+      if (!token) {
+        throw new BadRequestException('Device token is required');
       }
 
-      // 2. Find if this exact token exists (or belonged to another account)
+      const isMerchant = role === 'merchant';
+
+      // 1. Clean up older stale tokens of this user/merchant
+      await this.deviceTokenRepository
+        .createQueryBuilder()
+        .delete()
+        .where(
+          isMerchant
+            ? 'merchant_id = :id AND token != :token'
+            : 'user_id = :id AND token != :token',
+          { id, token },
+        )
+        .execute();
+
+      // 2. Reassign or create the token record
       let deviceToken = await this.deviceTokenRepository.findOne({
         where: { token },
       });
 
       if (deviceToken) {
-        deviceToken.userId = role === 'merchant' ? null : id;
-        deviceToken.merchantId = role === 'merchant' ? id : null;
+        deviceToken.userId = isMerchant ? null : id;
+        deviceToken.merchantId = isMerchant ? id : null;
         if (deviceType) {
           deviceToken.deviceType = deviceType;
         }
@@ -312,44 +364,56 @@ export class AuthService {
         deviceToken = this.deviceTokenRepository.create({
           token,
           deviceType,
-          userId: role === 'merchant' ? null : id,
-          merchantId: role === 'merchant' ? id : null,
+          userId: isMerchant ? null : id,
+          merchantId: isMerchant ? id : null,
         });
       }
 
       await this.deviceTokenRepository.save(deviceToken);
-      console.log(`📱 [DeviceToken Registered] Role: ${role}, ID: ${id}, DeviceType: ${deviceType || 'unknown'}, Token: ${token?.slice(0, 20)}...`);
+      this.logger.log(
+        `📱 [DeviceToken Registered] Role: ${role}, ID: ${id}, DeviceType: ${deviceType || 'unknown'}, Token: ${token.slice(0, 20)}...`,
+      );
       return { success: true, message: 'Device token saved successfully' };
     } catch (err: any) {
-      console.error(`❌ [DeviceToken Error] Failed to register device token for ${role} #${id}:`, err);
+      this.logger.error(
+        `❌ [DeviceToken Error] Failed to register device token for ${role} #${id}:`,
+        err?.stack || err,
+      );
       throw err;
     }
   }
 
   async forgotPassword(identifier: string) {
     if (!identifier) {
-      throw new BadRequestException('Phone number or email is required');
+      throw new BadRequestException(
+        'សូមបញ្ចូលលេខទូរស័ព្ទ/អ៊ីមែល និងពាក្យសម្ងាត់',
+      );
     }
     const cleanId = identifier.trim();
-    const user = await this.userRepo
+
+    // Check if account exists without leaking internal user data in the response
+    await this.userRepo
       .createQueryBuilder('user')
       .where('(user.phone = :id OR LOWER(user.email) = LOWER(:id))', {
         id: cleanId,
       })
       .getOne();
 
+    const isProd = process.env.NODE_ENV === 'production';
+
     return {
       success: true,
-      message: 'ប្រសិនបើតួលេខទូរស័ព្ទត្រឹមត្រូវ ប្រព័ន្ធនឹងផ្ញើសារកូដផ្ទៀងផ្ទាត់ (OTP)',
-      phone: user?.phone || cleanId,
-      devOtp: '123456',
+      message:
+        'ប្រសិនបើតួលេខទូរស័ព្ទត្រឹមត្រូវ ប្រព័ន្ធនឹងផ្ញើសារកូដផ្ទៀងផ្ទាត់ (OTP)',
+      phone: cleanId,
+      ...(isProd ? {} : { devOtp: '123456' }),
     };
   }
 
   async resetPassword(identifier: string, otp: string, newPass: string) {
     if (!identifier || !otp || !newPass) {
       throw new BadRequestException(
-        'Identifier, OTP, and new password are required',
+        'សូមបញ្ចូលលេខទូរស័ព្ទ/អ៊ីមែល លេខកូដ OTP និងពាក្យសម្ងាត់ថ្មី',
       );
     }
     if (newPass.length < 6) {
@@ -373,6 +437,9 @@ export class AuthService {
 
     const hashed = await bcrypt.hash(newPass, 10);
     await this.userRepo.update(user.id, { password: hashed });
+
+    // Invalidate all existing sessions after password change
+    await this.refreshTokenRepository.delete({ userId: user.id });
 
     return {
       success: true,

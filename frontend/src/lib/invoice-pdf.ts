@@ -171,7 +171,7 @@ export const printInvoicePdf = (inv: any) => {
           margin-bottom: 24px;
         }
         thead th {
-          background: #2b529a;
+          background: #1565D8;
           color: #ffffff;
           font-size: 12.5px;
           font-weight: 700;

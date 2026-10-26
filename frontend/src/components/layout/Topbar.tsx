@@ -467,7 +467,7 @@ export default function Topbar({ title, subtitle }: TopbarProps) {
                 <button
                   onClick={() => handleMarkAsRead(activeToast)}
                   style={{
-                    background: '#2F55A5',
+                    background: '#1565D8',
                     color: '#ffffff',
                     border: 'none',
                     borderRadius: 6,
@@ -615,7 +615,7 @@ export default function Topbar({ title, subtitle }: TopbarProps) {
                   <button
                     onClick={() => setNotifTab('all')}
                     style={{
-                      background: notifTab === 'all' ? '#2F55A5' : 'transparent',
+                      background: notifTab === 'all' ? '#1565D8' : 'transparent',
                       color: notifTab === 'all' ? '#ffffff' : '#64748B',
                       border: 'none',
                       borderRadius: 8,
@@ -631,7 +631,7 @@ export default function Topbar({ title, subtitle }: TopbarProps) {
                   <button
                     onClick={() => setNotifTab('unread')}
                     style={{
-                      background: notifTab === 'unread' ? '#2F55A5' : 'transparent',
+                      background: notifTab === 'unread' ? '#1565D8' : 'transparent',
                       color: notifTab === 'unread' ? '#ffffff' : '#64748B',
                       border: 'none',
                       borderRadius: 8,

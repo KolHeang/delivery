@@ -260,14 +260,15 @@ export default function Sidebar() {
             )}
           </span>
           <span style={{
-            fontSize: 11,
-            color: 'rgba(255,255,255,0.65)',
-            fontWeight: 600,
+            fontSize: 12,
+            color: '#ffffff',
+            fontWeight: 700,
             marginTop: 2,
             letterSpacing: '0.2px',
             whiteSpace: 'nowrap',
             textOverflow: 'ellipsis',
-            overflow: 'hidden'
+            overflow: 'hidden',
+            textShadow: '0 1px 2px rgba(0,0,0,0.15)'
           }}>
             {lang === 'km' ? 'ប្រព័ន្ធដឹកជញ្ជូន' : 'Delivery System'}
           </span>
@@ -281,10 +282,10 @@ export default function Sidebar() {
           <Link
             href="/dashboard"
             className={`sidebar-item ${pathname === '/dashboard' ? 'active' : ''}`}
-            style={{ marginBottom: 4 }}
+            style={{ marginBottom: 4, color: '#ffffff', fontWeight: pathname === '/dashboard' ? 700 : 600 }}
           >
-            <span className="sidebar-item-icon"><MdDashboard size={18} /></span>
-            {t('dashboard')}
+            <span className="sidebar-item-icon" style={{ color: '#ffffff' }}><MdDashboard size={19} /></span>
+            <span style={{ color: '#ffffff' }}>{t('dashboard')}</span>
           </Link>
         )}
 
@@ -307,10 +308,10 @@ export default function Sidebar() {
                   key={group.key}
                   href={group.href}
                   className={`sidebar-item ${isActive ? 'active' : ''}`}
-                  style={{ marginBottom: 8 }}
+                  style={{ marginBottom: 8, color: '#ffffff', fontWeight: isActive ? 700 : 600 }}
                 >
-                  <span className="sidebar-item-icon"><Icon size={18} /></span>
-                  {group.label}
+                  <span className="sidebar-item-icon" style={{ color: '#ffffff' }}><Icon size={19} /></span>
+                  <span style={{ color: '#ffffff' }}>{group.label}</span>
                 </Link>
               );
             }
@@ -334,16 +335,16 @@ export default function Sidebar() {
                   className="sidebar-item"
                   style={{
                     justifyContent: 'space-between',
-                    background: isGroupActive ? 'rgba(255,255,255,0.05)' : 'transparent',
-                    color: isGroupActive ? '#fff' : 'var(--sidebar-text)',
+                    background: isGroupActive ? 'rgba(255, 255, 255, 0.14)' : 'transparent',
+                    color: '#ffffff',
                     fontWeight: 600,
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <span className="sidebar-item-icon"><Icon size={18} /></span>
-                    {group.label}
+                    <span className="sidebar-item-icon" style={{ color: '#ffffff' }}><Icon size={19} /></span>
+                    <span style={{ color: '#ffffff', fontWeight: 600 }}>{group.label}</span>
                   </div>
-                  {isOpen ? <MdKeyboardArrowUp size={16} /> : <MdKeyboardArrowDown size={16} />}
+                  {isOpen ? <MdKeyboardArrowUp size={18} color="#ffffff" /> : <MdKeyboardArrowDown size={18} color="#ffffff" />}
                 </button>
 
                 {/* Group Sub-items */}
@@ -351,7 +352,7 @@ export default function Sidebar() {
                   <div style={{
                     paddingLeft: 16,
                     marginLeft: 20,
-                    borderLeft: '1.5px solid rgba(255, 255, 255, 0.15)',
+                    borderLeft: '2px solid rgba(255, 255, 255, 0.35)',
                     marginTop: 4,
                     display: 'flex',
                     flexDirection: 'column',
@@ -372,9 +373,11 @@ export default function Sidebar() {
                           style={{
                             fontSize: '13.5px',
                             padding: '8px 12px',
-                            opacity: isItemActive ? 1 : 0.85,
+                            color: '#ffffff',
+                            fontWeight: isItemActive ? 700 : 600,
                             borderRadius: 'var(--radius-sm)',
                             position: 'relative',
+                            background: isItemActive ? 'rgba(255, 255, 255, 0.22)' : 'transparent',
                           }}
                         >
                           <span style={{
@@ -384,11 +387,11 @@ export default function Sidebar() {
                             width: 6,
                             height: 6,
                             borderRadius: '50%',
-                            background: isItemActive ? '#c084fc' : 'rgba(255, 255, 255, 0.25)',
-                            boxShadow: isItemActive ? '0 0 6px #c084fc' : 'none',
+                            background: isItemActive ? '#ffffff' : 'rgba(255, 255, 255, 0.5)',
+                            boxShadow: isItemActive ? '0 0 8px #ffffff' : 'none',
                             transition: 'all 0.2s ease',
                           }} />
-                          {item.label}
+                          <span style={{ color: '#ffffff' }}>{item.label}</span>
                         </Link>
                       );
                     })}

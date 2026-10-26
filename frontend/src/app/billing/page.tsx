@@ -511,7 +511,7 @@ export default function BillingPage() {
           <div style={{ overflowX: 'auto', width: '100%' }}>
             <table className="saas-custom-table" style={{ width: '100%', minWidth: 860, borderCollapse: 'collapse', textAlign: 'left' }}>
               <thead>
-                <tr style={{ background: '#2f55a5', color: '#ffffff' }}>
+                <tr style={{ background: '#1565D8', color: '#ffffff' }}>
                   <th style={{ width: 44, textAlign: 'center', whiteSpace: 'nowrap' }}>{tr('ល.រ', 'No.')}</th>
                   <th style={{ whiteSpace: 'nowrap' }}>{tr('លេខវិក្កយបត្រ', 'Invoice No.')}</th>
                   <th style={{ whiteSpace: 'nowrap' }}>{tr('កាលបរិច្ឆេទបង្កើត', 'Created Date')}</th>

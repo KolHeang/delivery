@@ -71,7 +71,7 @@ export function SaasMasterLayout({ activeTab, children }: SaasMasterLayoutProps)
         style={{
           width: 260,
           minWidth: 260,
-          background: '#2b529a',
+          background: '#1565D8',
           color: '#ffffff',
           display: 'flex',
           flexDirection: 'column',
@@ -180,7 +180,7 @@ export function SaasMasterLayout({ activeTab, children }: SaasMasterLayoutProps)
         <header
           style={{
             height: 64,
-            background: '#2b529a',
+            background: '#1565D8',
             borderBottom: '1px solid rgba(255, 255, 255, 0.12)',
             padding: '0 28px',
             display: 'flex',

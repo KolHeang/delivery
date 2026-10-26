@@ -4,10 +4,10 @@
    CSS DESIGN SYSTEM — Delivery Management
    ============================================================ */
 :root {
-  --sidebar-bg: #2f55a5;
-  --sidebar-hover: rgba(255, 255, 255, 0.08);
-  --sidebar-active: #1e3b75;
-  --sidebar-text: #cbd5e1;
+  --sidebar-bg: #1565D8;
+  --sidebar-hover: rgba(255, 255, 255, 0.14);
+  --sidebar-active: #0d47a1;
+  --sidebar-text: #ffffff;
   --sidebar-text-active: #ffffff;
   --sidebar-width: 260px;
 
@@ -19,9 +19,9 @@
   --text-secondary: #64748b;
   --text-muted: #94a3b8;
 
-  --accent: #2f55a5;
-  --accent-dark: #1e3b75;
-  --accent-light: #eef2fa;
+  --accent: #1565D8;
+  --accent-dark: #0d47a1;
+  --accent-light: #e8f1fc;
 
   --success: #10b981;
   --success-light: #ecfdf5;
@@ -121,6 +121,9 @@ body {
   flex-direction: column;
   z-index: 200;
   overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 .sidebar-logo {
@@ -173,12 +176,12 @@ body {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 9px 12px;
+  padding: 10px 14px;
   border-radius: var(--radius-sm);
-  color: var(--sidebar-text);
+  color: #ffffff;
   text-decoration: none;
-  font-size: 14px;
-  font-weight: 500;
+  font-size: 14.5px;
+  font-weight: 600;
   transition: all var(--transition-fast);
   margin-bottom: 2px;
   cursor: pointer;
@@ -186,19 +189,21 @@ body {
   background: none;
   width: 100%;
   text-align: left;
+  letter-spacing: 0.15px;
 }
 
 .sidebar-item:hover {
   background: var(--sidebar-hover);
-  color: #e2e8f0;
+  color: #ffffff;
 }
 
 .sidebar-item.active {
-  background: rgba(255, 255, 255, 0.12);
-  color: var(--sidebar-text-active);
-  border-right: 4px solid #c084fc;
+  background: rgba(255, 255, 255, 0.22);
+  color: #ffffff;
+  font-weight: 700;
+  border-right: 4px solid #ffffff;
   border-radius: var(--radius-sm) 0 0 var(--radius-sm);
-  box-shadow: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
 }
 
 .sidebar-item-icon {
@@ -281,8 +286,8 @@ body {
    ============================================================ */
 .topbar {
   height: 76px;
-  background: #2f55a5;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  background: #1565D8;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -340,7 +345,7 @@ body {
   height: 8px;
   background: var(--danger);
   border-radius: 50%;
-  border: 2px solid #2f55a5;
+  border: 2px solid #1565D8;
 }
 
 /* ============================================================
@@ -507,14 +512,14 @@ table {
 }
 
 thead th {
-  background: var(--accent);
+  background: #1565D8;
   padding: 12px 16px;
   text-align: left;
   font-weight: 600;
   color: #ffffff;
   font-size: 13px;
   white-space: nowrap;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
 }
 
 tbody tr {
@@ -691,16 +696,16 @@ tbody td {
 
 .btn-primary,
 .btn-save {
-  background: #2563eb;
+  background: #1565D8;
   color: #fff;
-  border: 1px solid #2563eb;
+  border: 1px solid #1565D8;
   font-weight: 700;
 }
 
 .btn-primary:hover,
 .btn-save:hover {
-  background: #1d4ed8;
-  border-color: #1d4ed8;
+  background: #0d47a1;
+  border-color: #0d47a1;
   color: #fff;
 }
 

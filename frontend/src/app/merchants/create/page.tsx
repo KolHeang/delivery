@@ -9,7 +9,8 @@ import api from '@/lib/api';
 import { useLanguage } from '@/lib/LanguageContext';
 import { useSettings } from '@/lib/SettingsContext';
 import LocationMapModal from '@/components/ui/LocationMapModal';
-import { MdArrowBack, MdSave, MdMap, MdVisibility, MdVisibilityOff } from 'react-icons/md';
+import { MdArrowBack, MdSave, MdMap, MdVisibility, MdVisibilityOff, MdOpenInNew, MdLink } from 'react-icons/md';
+import { parseMapLinkOrCoords, isShortGoogleMapsUrl, getGoogleMapsUrl } from '@/lib/geo-util';
 
 export default function CreateShopPage() {
   const router = useRouter();
@@ -419,14 +420,42 @@ export default function CreateShopPage() {
                   <label className="form-label" style={{ fontWeight: 600, fontSize: 13 }}>
                     {lang === 'km' ? 'អាសយដ្ឋាន' : 'Address'} <span style={{ color: 'var(--danger)' }}>*</span>
                   </label>
-                  <div style={{ display: 'flex', gap: 8 }}>
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                     <input
                       type="text"
                       className={`form-control ${errors.address ? 'is-invalid' : ''}`}
-                      placeholder={lang === 'km' ? 'បញ្ចូលអាសយដ្ឋាន ឬចុចជ្រើសរើសលើផែនទី...' : 'Enter address or select on map...'}
+                      placeholder={lang === 'km' ? 'បញ្ចូលអាសយដ្ឋាន ឬ paste Link Google Maps / រើសលើផែនទី...' : 'Enter address or paste Google Maps link / pick on map...'}
                       value={form.address}
-                      onChange={(e) => handleFieldChange('address', e.target.value)}
-                      style={{ flex: 1 }}
+                      onChange={async (e) => {
+                        const val = e.target.value;
+                        const parsed = parseMapLinkOrCoords(val);
+                        if (parsed) {
+                          setForm((prev) => ({
+                            ...prev,
+                            latitude: String(parsed.lat),
+                            longitude: String(parsed.lng),
+                            address: val.startsWith('http') || /^[-0-9.,\s]+$/.test(val.trim()) ? prev.address || 'Phnom Penh' : val,
+                          }));
+                          if (errors.address) {
+                            setErrors((prev) => { const n = { ...prev }; delete n.address; return n; });
+                          }
+                          return;
+                        }
+                        if (isShortGoogleMapsUrl(val)) {
+                          try {
+                            const res = await api.post('/settings/resolve-map-link', { url: val });
+                            if (res.data?.lat && res.data?.lng) {
+                              setForm((prev) => ({
+                                ...prev,
+                                latitude: String(res.data.lat),
+                                longitude: String(res.data.lng),
+                              }));
+                            }
+                          } catch (err) {}
+                        }
+                        handleFieldChange('address', val);
+                      }}
+                      style={{ flex: 1, height: 42, fontSize: 13.5 }}
                     />
                     <button
                       type="button"
@@ -434,17 +463,22 @@ export default function CreateShopPage() {
                       className="btn btn-outline"
                       style={{
                         whiteSpace: 'nowrap',
-                        fontWeight: 600,
+                        fontWeight: 700,
                         fontSize: 13,
                         display: 'inline-flex',
                         alignItems: 'center',
                         gap: 6,
                         color: '#2563eb',
-                        borderColor: '#2563eb',
+                        borderColor: '#bfdbfe',
+                        background: '#eff6ff',
+                        height: 42,
+                        padding: '0 16px',
+                        borderRadius: 10,
+                        cursor: 'pointer',
                       }}
                     >
                       <MdMap size={18} />
-                      {lang === 'km' ? 'រើសលើផែនទី' : 'Pick on Map'}
+                      {lang === 'km' ? 'រើសលើផែនទី / Link' : 'Pick on Map / Link'}
                     </button>
                   </div>
                   {errors.address && (
@@ -453,8 +487,27 @@ export default function CreateShopPage() {
                     </div>
                   )}
                   {form.latitude && form.longitude && (
-                    <div style={{ fontSize: 11.5, color: '#16a34a', marginTop: 4 }}>
-                      📍 GPS: {Number(form.latitude).toFixed(5)}, {Number(form.longitude).toFixed(5)}
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginTop: 6, background: '#f0fdf4', padding: '4px 10px', borderRadius: 8, border: '1px solid #bbf7d0' }}>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: '#16a34a' }}>
+                        📍 GPS: {Number(form.latitude).toFixed(5)}, {Number(form.longitude).toFixed(5)}
+                      </span>
+                      <a
+                        href={getGoogleMapsUrl(Number(form.latitude), Number(form.longitude))}
+                        target="_blank"
+                        rel="noreferrer"
+                        style={{ fontSize: 11.5, color: '#2563eb', fontWeight: 600, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 3 }}
+                      >
+                        <span>Google Maps</span>
+                        <MdOpenInNew size={12} />
+                      </a>
+                      <button
+                        type="button"
+                        onClick={() => setForm((prev) => ({ ...prev, latitude: '', longitude: '' }))}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: 0, fontSize: 13, lineHeight: 1 }}
+                        title="Clear coordinates"
+                      >
+                        ✕
+                      </button>
                     </div>
                   )}
                 </div>

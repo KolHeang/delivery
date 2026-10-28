@@ -9,7 +9,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { Observable, from, interval, merge, EMPTY } from 'rxjs';
-import { map } from 'rxjs/operators';
+import { map, filter } from 'rxjs/operators';
 import { Merchant } from '../../merchants/entities/merchant.entity';
 import { MerchantBranch } from '../../merchants/entities/merchant-branch.entity';
 import { Organisation } from '../../settings/entities/organisation.entity';
@@ -43,6 +43,79 @@ import {
   CreateMerchantContactDto,
   SendSupportMessageDto,
 } from './dto/merchant-mobile.dto';
+
+
+export interface MobileMerchantFilterOptions {
+  date?: string;
+  startDate?: string;
+  endDate?: string;
+  merchantId?: number;
+  branchId?: number;
+}
+
+function parseDateFilter(
+  date?: string,
+  startDate?: string,
+  endDate?: string,
+): { startIso?: string; endIso?: string; hasDate: boolean } {
+  let s = startDate;
+  let e = endDate;
+
+  if (date) {
+    s = date;
+    e = date;
+  }
+
+  if (!s && !e) {
+    return { hasDate: false };
+  }
+
+  let startIso: string | undefined;
+  let endIso: string | undefined;
+
+  if (s) {
+    const d = new Date(s.includes('T') ? s : `${s}T00:00:00.000Z`);
+    if (!isNaN(d.getTime())) {
+      startIso = d.toISOString();
+    }
+  }
+
+  if (e) {
+    const d = new Date(e.includes('T') ? e : `${e}T23:59:59.999Z`);
+    if (!isNaN(d.getTime())) {
+      endIso = d.toISOString();
+    }
+  }
+
+  return {
+    startIso,
+    endIso,
+    hasDate: Boolean(startIso || endIso),
+  };
+}
+
+function applyDateRangeToQb(
+  qb: any,
+  column: string,
+  dateFilter: { startIso?: string; endIso?: string; hasDate: boolean },
+  paramPrefix = 'dt',
+) {
+  if (!dateFilter.hasDate) return;
+  if (dateFilter.startIso && dateFilter.endIso) {
+    qb.andWhere(`${column} >= :${paramPrefix}Start AND ${column} <= :${paramPrefix}End`, {
+      [`${paramPrefix}Start`]: dateFilter.startIso,
+      [`${paramPrefix}End`]: dateFilter.endIso,
+    });
+  } else if (dateFilter.startIso) {
+    qb.andWhere(`${column} >= :${paramPrefix}Start`, {
+      [`${paramPrefix}Start`]: dateFilter.startIso,
+    });
+  } else if (dateFilter.endIso) {
+    qb.andWhere(`${column} <= :${paramPrefix}End`, {
+      [`${paramPrefix}End`]: dateFilter.endIso,
+    });
+  }
+}
 
 @Injectable()
 export class MerchantService {
@@ -128,15 +201,24 @@ export class MerchantService {
       limit?: number;
       startDate?: string;
       endDate?: string;
+      date?: string;
+      merchantId?: number;
+      branchId?: number;
     },
   ) {
+    const targetMerchantId = options?.merchantId ? Number(options.merchantId) : merchantId;
     const qb = this.parcelRepo
       .createQueryBuilder('parcel')
       .leftJoinAndSelect('parcel.customer', 'customer')
       .leftJoinAndSelect('parcel.driver', 'driver')
       .leftJoinAndSelect('parcel.pickupDriver', 'pickupDriver')
+      .leftJoinAndSelect('parcel.branch', 'branch')
       .leftJoinAndSelect('parcel.zone', 'zone')
-      .where('parcel.merchantId = :merchantId', { merchantId });
+      .where('parcel.merchantId = :merchantId', { merchantId: targetMerchantId });
+
+    if (options?.branchId) {
+      qb.andWhere('parcel.branchId = :branchId', { branchId: Number(options.branchId) });
+    }
 
     if (options?.status) {
       qb.andWhere('parcel.status = :status', { status: options.status });
@@ -150,20 +232,8 @@ export class MerchantService {
       );
     }
 
-    if (options?.startDate && options?.endDate) {
-      qb.andWhere('parcel.createdAt BETWEEN :startDate AND :endDate', {
-        startDate: new Date(options.startDate),
-        endDate: new Date(options.endDate),
-      });
-    } else if (options?.startDate) {
-      qb.andWhere('parcel.createdAt >= :startDate', {
-        startDate: new Date(options.startDate),
-      });
-    } else if (options?.endDate) {
-      qb.andWhere('parcel.createdAt <= :endDate', {
-        endDate: new Date(options.endDate),
-      });
-    }
+    const dateFilter = parseDateFilter(options?.date, options?.startDate, options?.endDate);
+    applyDateRangeToQb(qb, 'parcel.createdAt', dateFilter, 'gp');
 
     qb.orderBy('parcel.createdAt', 'DESC');
 
@@ -768,25 +838,67 @@ export class MerchantService {
     };
   }
 
-  async getDashboard(merchantId: number) {
+  async getDashboard(
+    merchantId: number,
+    options?: {
+      date?: string;
+      startDate?: string;
+      endDate?: string;
+      merchantId?: number;
+      branchId?: number;
+    },
+  ) {
+    const targetMerchantId = options?.merchantId ? Number(options.merchantId) : merchantId;
+    const branchId = options?.branchId ? Number(options.branchId) : undefined;
+    const dateFilter = parseDateFilter(options?.date, options?.startDate, options?.endDate);
+
     const merchant = await this.merchantRepo.findOne({
-      where: { id: merchantId },
+      where: { id: targetMerchantId },
     });
     if (!merchant) throw new NotFoundException('Merchant not found');
 
-    const totalParcel = await this.parcelRepo.count({ where: { merchantId } });
+    // 1. Total parcels
+    let totalParcelQb = this.parcelRepo
+      .createQueryBuilder('parcel')
+      .where('parcel.merchantId = :merchantId', { merchantId: targetMerchantId });
+    if (branchId) {
+      totalParcelQb = totalParcelQb.andWhere('parcel.branchId = :branchId', { branchId });
+    }
+    applyDateRangeToQb(totalParcelQb, 'parcel.createdAt', dateFilter, 'tp');
+    const totalParcel = await totalParcelQb.getCount();
 
-    const statusCounts = await this.parcelRepo
+    // 2. Status counts
+    let statusCountsQb = this.parcelRepo
       .createQueryBuilder('parcel')
       .select('parcel.status', 'status')
       .addSelect('COUNT(*)', 'count')
-      .where('parcel.merchantId = :merchantId', { merchantId })
-      .groupBy('parcel.status')
-      .getRawMany();
+      .where('parcel.merchantId = :merchantId', { merchantId: targetMerchantId });
+    if (branchId) {
+      statusCountsQb = statusCountsQb.andWhere('parcel.branchId = :branchId', { branchId });
+    }
+    applyDateRangeToQb(statusCountsQb, 'parcel.createdAt', dateFilter, 'sc');
+    const statusCounts = await statusCountsQb.groupBy('parcel.status').getRawMany();
+
+    // 3. Pickup request counts
+    let pickupPendingQb = this.pickupRequestRepo
+      .createQueryBuilder('pr')
+      .where('pr.merchantId = :merchantId', { merchantId: targetMerchantId })
+      .andWhere('pr.status = :status', { status: 'pending' });
+    let pickupPickedUpQb = this.pickupRequestRepo
+      .createQueryBuilder('pr')
+      .where('pr.merchantId = :merchantId', { merchantId: targetMerchantId })
+      .andWhere('pr.status = :status', { status: 'picked-up' });
+
+    if (branchId) {
+      pickupPendingQb = pickupPendingQb.andWhere('pr.branchId = :branchId', { branchId });
+      pickupPickedUpQb = pickupPickedUpQb.andWhere('pr.branchId = :branchId', { branchId });
+    }
+    applyDateRangeToQb(pickupPendingQb, 'pr.createdAt', dateFilter, 'pp');
+    applyDateRangeToQb(pickupPickedUpQb, 'pr.createdAt', dateFilter, 'pu');
 
     const [pickupPendingCount, pickupPickedUpCount] = await Promise.all([
-      this.pickupRequestRepo.count({ where: { merchantId, status: 'pending' } }),
-      this.pickupRequestRepo.count({ where: { merchantId, status: 'picked-up' } }),
+      pickupPendingQb.getCount(),
+      pickupPickedUpQb.getCount(),
     ]);
 
     const stats = statusCounts.reduce(
@@ -794,41 +906,50 @@ export class MerchantService {
       {} as Record<string, number>,
     );
 
-    // Calculate settled/paid COD (delivered parcels already paid to merchant)
-    const paidCOD = await this.parcelRepo
+    // 4. Settled/paid COD (delivered parcels already paid to merchant)
+    let paidCodQb = this.parcelRepo
       .createQueryBuilder('parcel')
       .select('SUM(parcel.cod)', 'total')
       .addSelect('parcel.codCurrency', 'currency')
-      .where('parcel.merchantId = :merchantId', { merchantId })
+      .where('parcel.merchantId = :merchantId', { merchantId: targetMerchantId })
       .andWhere('parcel.status = :status', { status: 'delivered' })
-      .andWhere('parcel.merchantPaymentStatus = :paid', { paid: 'paid' })
-      .groupBy('parcel.codCurrency')
-      .getRawMany();
+      .andWhere('parcel.merchantPaymentStatus = :paid', { paid: 'paid' });
+    if (branchId) {
+      paidCodQb = paidCodQb.andWhere('parcel.branchId = :branchId', { branchId });
+    }
+    applyDateRangeToQb(paidCodQb, 'parcel.createdAt', dateFilter, 'pc');
+    const paidCOD = await paidCodQb.groupBy('parcel.codCurrency').getRawMany();
 
-    // Calculate unpaid delivered COD (ready for payout)
-    const unpaidDeliveredCOD = await this.parcelRepo
+    // 5. Unpaid delivered COD (ready for payout)
+    let unpaidCodQb = this.parcelRepo
       .createQueryBuilder('parcel')
       .select('SUM(parcel.cod)', 'total')
       .addSelect('parcel.codCurrency', 'currency')
-      .where('parcel.merchantId = :merchantId', { merchantId })
+      .where('parcel.merchantId = :merchantId', { merchantId: targetMerchantId })
       .andWhere('parcel.status = :status', { status: 'delivered' })
       .andWhere('(parcel.merchantPaymentStatus = :unpaid OR parcel.merchantPaymentStatus IS NULL)', {
         unpaid: 'unpaid',
-      })
-      .groupBy('parcel.codCurrency')
-      .getRawMany();
+      });
+    if (branchId) {
+      unpaidCodQb = unpaidCodQb.andWhere('parcel.branchId = :branchId', { branchId });
+    }
+    applyDateRangeToQb(unpaidCodQb, 'parcel.createdAt', dateFilter, 'uc');
+    const unpaidDeliveredCOD = await unpaidCodQb.groupBy('parcel.codCurrency').getRawMany();
 
-    // Calculate active in-transit COD (not yet delivered)
-    const inTransitCOD = await this.parcelRepo
+    // 6. In-transit COD (not yet delivered)
+    let inTransitCodQb = this.parcelRepo
       .createQueryBuilder('parcel')
       .select('SUM(parcel.cod)', 'total')
       .addSelect('parcel.codCurrency', 'currency')
-      .where('parcel.merchantId = :merchantId', { merchantId })
+      .where('parcel.merchantId = :merchantId', { merchantId: targetMerchantId })
       .andWhere('parcel.status NOT IN (:...statuses)', {
         statuses: ['delivered', 'cancelled', 'returned'],
-      })
-      .groupBy('parcel.codCurrency')
-      .getRawMany();
+      });
+    if (branchId) {
+      inTransitCodQb = inTransitCodQb.andWhere('parcel.branchId = :branchId', { branchId });
+    }
+    applyDateRangeToQb(inTransitCodQb, 'parcel.createdAt', dateFilter, 'tc');
+    const inTransitCOD = await inTransitCodQb.groupBy('parcel.codCurrency').getRawMany();
 
     const amountCollectedUsd = parseFloat(paidCOD.find((c) => c.currency === 'USD')?.total || '0') || 0;
     const amountCollectedKhr = parseFloat(paidCOD.find((c) => c.currency === 'KHR')?.total || '0') || 0;
@@ -845,28 +966,55 @@ export class MerchantService {
     const amountToReceiveUsd = pendingAmountUsd;
     const amountToReceiveKhr = pendingAmountKhr;
 
-    const recentDeliveredParcels = await this.parcelRepo.find({
-      where: { merchantId, status: 'delivered' },
-      order: { updatedAt: 'DESC', createdAt: 'DESC', id: 'DESC' },
-      take: 5,
-    });
+    // 7. Recent delivered parcels
+    let recentParcelsQb = this.parcelRepo
+      .createQueryBuilder('parcel')
+      .leftJoinAndSelect('parcel.driver', 'driver')
+      .leftJoinAndSelect('parcel.branch', 'branch')
+      .where('parcel.merchantId = :merchantId', { merchantId: targetMerchantId })
+      .andWhere('parcel.status = :status', { status: 'delivered' });
+    if (branchId) {
+      recentParcelsQb = recentParcelsQb.andWhere('parcel.branchId = :branchId', { branchId });
+    }
+    applyDateRangeToQb(recentParcelsQb, 'parcel.createdAt', dateFilter, 'rp');
+    const recentDeliveredParcels = await recentParcelsQb
+      .orderBy('parcel.updatedAt', 'DESC')
+      .addOrderBy('parcel.createdAt', 'DESC')
+      .addOrderBy('parcel.id', 'DESC')
+      .take(10)
+      .getMany();
 
     const recentDeliveries = recentDeliveredParcels.map((p) => formatMerchantDelivery(p));
 
-    const activePickupRequests = await this.pickupRequestRepo.find({
-      where: { merchantId },
-      order: { createdAt: 'DESC', id: 'DESC' },
-      take: 10,
-      relations: { pickupDriver: true, branch: true },
-    });
+    // 8. Active pickup requests
+    let activePickupQb = this.pickupRequestRepo
+      .createQueryBuilder('pr')
+      .leftJoinAndSelect('pr.pickupDriver', 'pickupDriver')
+      .leftJoinAndSelect('pr.branch', 'branch')
+      .where('pr.merchantId = :merchantId', { merchantId: targetMerchantId });
+    if (branchId) {
+      activePickupQb = activePickupQb.andWhere('pr.branchId = :branchId', { branchId });
+    }
+    applyDateRangeToQb(activePickupQb, 'pr.createdAt', dateFilter, 'ap');
+    const activePickupRequests = await activePickupQb
+      .orderBy('pr.createdAt', 'DESC')
+      .addOrderBy('pr.id', 'DESC')
+      .take(10)
+      .getMany();
+
     const bookings = activePickupRequests.map((pr) => formatMerchantPickupRequest(pr));
 
-    const recentPayments = await this.merchantPaymentRepo.find({
-      where: { merchantId },
-      order: { createdAt: 'DESC', id: 'DESC' },
-      take: 10,
-      relations: { creator: true },
-    });
+    // 9. Recent payments (settlements)
+    let recentPaymentsQb = this.merchantPaymentRepo
+      .createQueryBuilder('mp')
+      .leftJoinAndSelect('mp.creator', 'creator')
+      .where('mp.merchantId = :merchantId', { merchantId: targetMerchantId });
+    applyDateRangeToQb(recentPaymentsQb, 'mp.createdAt', dateFilter, 'py');
+    const recentPayments = await recentPaymentsQb
+      .orderBy('mp.createdAt', 'DESC')
+      .addOrderBy('mp.id', 'DESC')
+      .take(10)
+      .getMany();
 
     const allParcelIds = Array.from(
       new Set(recentPayments.flatMap((p) => p.parcelIds || [])),
@@ -880,14 +1028,28 @@ export class MerchantService {
       parcelsMap = new Map(parcels.map((p) => [p.id, p]));
     }
 
-    const settlements = recentPayments.map((payment) => {
+    let settlements = recentPayments.map((payment) => {
       const pList = (payment.parcelIds || [])
         .map((pid) => parcelsMap.get(pid))
         .filter((p): p is Parcel => Boolean(p));
       return formatMerchantSettlement(payment, pList);
     });
 
+    if (branchId) {
+      settlements = settlements.filter(
+        (s) => s && (!s.branchId || Number(s.branchId) === branchId),
+      );
+    }
+
     return {
+      filter: {
+        date: options?.date || null,
+        startDate: options?.startDate || options?.date || null,
+        endDate: options?.endDate || options?.date || null,
+        merchantId: targetMerchantId,
+        merchantName: merchant.name,
+        branchId: branchId || null,
+      },
       balance: {
         amount: Number(merchant.balance) || 0,
         currency: 'USD',
@@ -938,13 +1100,38 @@ export class MerchantService {
   /**
    * Real-time Server-Sent Events (SSE) stream for merchant dashboard & recent deliveries
    */
-  getRealtimeDeliveriesStream(merchantId: number): Observable<MessageEvent> {
+  getRealtimeDeliveriesStream(
+    merchantId: number,
+    options?: {
+      date?: string;
+      startDate?: string;
+      endDate?: string;
+      merchantId?: number;
+      branchId?: number;
+    },
+  ): Observable<MessageEvent> {
+    const targetMerchantId = options?.merchantId ? Number(options.merchantId) : merchantId;
+    const branchId = options?.branchId ? Number(options.branchId) : undefined;
+    const dateFilter = parseDateFilter(options?.date, options?.startDate, options?.endDate);
+
+    let initialQb = this.parcelRepo
+      .createQueryBuilder('parcel')
+      .leftJoinAndSelect('parcel.driver', 'driver')
+      .leftJoinAndSelect('parcel.branch', 'branch')
+      .where('parcel.merchantId = :merchantId', { merchantId: targetMerchantId })
+      .andWhere('parcel.status = :status', { status: 'delivered' });
+    if (branchId) {
+      initialQb = initialQb.andWhere('parcel.branchId = :branchId', { branchId });
+    }
+    applyDateRangeToQb(initialQb, 'parcel.createdAt', dateFilter, 'rt');
+
     const initial$ = from(
-      this.parcelRepo.find({
-        where: { merchantId, status: 'delivered' },
-        order: { updatedAt: 'DESC', createdAt: 'DESC', id: 'DESC' },
-        take: 5,
-      }),
+      initialQb
+        .orderBy('parcel.updatedAt', 'DESC')
+        .addOrderBy('parcel.createdAt', 'DESC')
+        .addOrderBy('parcel.id', 'DESC')
+        .take(10)
+        .getMany(),
     ).pipe(
       map((parcels) => {
         const recentDeliveries = parcels.map((p) => formatMerchantDelivery(p));
@@ -953,6 +1140,13 @@ export class MerchantService {
             type: 'initial',
             recentDeliveries,
             total: recentDeliveries.length,
+            filter: {
+              merchantId: targetMerchantId,
+              branchId: branchId || null,
+              date: options?.date || null,
+              startDate: options?.startDate || options?.date || null,
+              endDate: options?.endDate || options?.date || null,
+            },
             timestamp: new Date().toISOString(),
           },
         } as MessageEvent;
@@ -960,9 +1154,13 @@ export class MerchantService {
     );
 
     const live$ = this.trackingGateway
-      ? this.trackingGateway.getMerchantDeliveryObservable(merchantId).pipe(
+      ? this.trackingGateway.getMerchantDeliveryObservable(targetMerchantId).pipe(
+          filter((event: any) => {
+            if (!branchId) return true;
+            return event.delivery?.branchId === branchId;
+          }),
           map(
-            (event) =>
+            (event: any) =>
               ({
                 data: {
                   type: event.type,
@@ -975,9 +1173,13 @@ export class MerchantService {
       : EMPTY;
 
     const pickupLive$ = this.trackingGateway
-      ? this.trackingGateway.getMerchantPickupObservable(merchantId).pipe(
+      ? this.trackingGateway.getMerchantPickupObservable(targetMerchantId).pipe(
+          filter((event: any) => {
+            if (!branchId) return true;
+            return event.pickupRequest?.branchId === branchId;
+          }),
           map(
-            (event) =>
+            (event: any) =>
               ({
                 data: {
                   type: event.type,
@@ -1005,14 +1207,36 @@ export class MerchantService {
   /**
    * Real-time Server-Sent Events (SSE) stream for pickup requests (bookings)
    */
-  getRealtimePickupRequestsStream(merchantId: number): Observable<MessageEvent> {
+  getRealtimePickupRequestsStream(
+    merchantId: number,
+    options?: {
+      date?: string;
+      startDate?: string;
+      endDate?: string;
+      merchantId?: number;
+      branchId?: number;
+    },
+  ): Observable<MessageEvent> {
+    const targetMerchantId = options?.merchantId ? Number(options.merchantId) : merchantId;
+    const branchId = options?.branchId ? Number(options.branchId) : undefined;
+    const dateFilter = parseDateFilter(options?.date, options?.startDate, options?.endDate);
+
+    let initialQb = this.pickupRequestRepo
+      .createQueryBuilder('pr')
+      .leftJoinAndSelect('pr.pickupDriver', 'pickupDriver')
+      .leftJoinAndSelect('pr.branch', 'branch')
+      .where('pr.merchantId = :merchantId', { merchantId: targetMerchantId });
+    if (branchId) {
+      initialQb = initialQb.andWhere('pr.branchId = :branchId', { branchId });
+    }
+    applyDateRangeToQb(initialQb, 'pr.createdAt', dateFilter, 'rtp');
+
     const initial$ = from(
-      this.pickupRequestRepo.find({
-        where: { merchantId },
-        order: { createdAt: 'DESC', id: 'DESC' },
-        take: 10,
-        relations: { pickupDriver: true, branch: true },
-      }),
+      initialQb
+        .orderBy('pr.createdAt', 'DESC')
+        .addOrderBy('pr.id', 'DESC')
+        .take(10)
+        .getMany(),
     ).pipe(
       map((requests) => {
         const bookings = requests.map((pr) => formatMerchantPickupRequest(pr));
@@ -1022,6 +1246,13 @@ export class MerchantService {
             bookings,
             pickupRequests: bookings,
             total: bookings.length,
+            filter: {
+              merchantId: targetMerchantId,
+              branchId: branchId || null,
+              date: options?.date || null,
+              startDate: options?.startDate || options?.date || null,
+              endDate: options?.endDate || options?.date || null,
+            },
             timestamp: new Date().toISOString(),
           },
         } as MessageEvent;
@@ -1029,9 +1260,13 @@ export class MerchantService {
     );
 
     const live$ = this.trackingGateway
-      ? this.trackingGateway.getMerchantPickupObservable(merchantId).pipe(
+      ? this.trackingGateway.getMerchantPickupObservable(targetMerchantId).pipe(
+          filter((event: any) => {
+            if (!branchId) return true;
+            return event.pickupRequest?.branchId === branchId;
+          }),
           map(
-            (event) =>
+            (event: any) =>
               ({
                 data: {
                   type: event.type,
@@ -1116,12 +1351,38 @@ export class MerchantService {
     return { success: true, message: 'សំណើទៅយកត្រូវបានលុបចោលដោយជោគជ័យ', request: formatted };
   }
 
-  async getPickupRequests(merchantId: number) {
-    const list = await this.pickupRequestRepo.find({
-      where: { merchantId },
-      relations: { pickupDriver: true, branch: true },
-      order: { createdAt: 'DESC', id: 'DESC' },
-    });
+  async getPickupRequests(
+    merchantId: number,
+    options?: {
+      date?: string;
+      startDate?: string;
+      endDate?: string;
+      merchantId?: number;
+      branchId?: number;
+      status?: string;
+    },
+  ) {
+    const targetMerchantId = options?.merchantId ? Number(options.merchantId) : merchantId;
+    const qb = this.pickupRequestRepo
+      .createQueryBuilder('pr')
+      .leftJoinAndSelect('pr.pickupDriver', 'pickupDriver')
+      .leftJoinAndSelect('pr.branch', 'branch')
+      .where('pr.merchantId = :merchantId', { merchantId: targetMerchantId });
+
+    if (options?.branchId) {
+      qb.andWhere('pr.branchId = :branchId', { branchId: Number(options.branchId) });
+    }
+
+    if (options?.status) {
+      qb.andWhere('pr.status = :status', { status: options.status });
+    }
+
+    const dateFilter = parseDateFilter(options?.date, options?.startDate, options?.endDate);
+    applyDateRangeToQb(qb, 'pr.createdAt', dateFilter, 'gpr');
+
+    qb.orderBy('pr.createdAt', 'DESC').addOrderBy('pr.id', 'DESC');
+
+    const list = await qb.getMany();
     return list.map((pr) => formatMerchantPickupRequest(pr));
   }
 
@@ -1136,18 +1397,35 @@ export class MerchantService {
 
   async getSettlements(
     merchantId: number,
-    query?: { status?: 'paid' | 'unpaid' | string; page?: number; limit?: number },
+    query?: {
+      status?: 'paid' | 'unpaid' | string;
+      page?: number;
+      limit?: number;
+      date?: string;
+      startDate?: string;
+      endDate?: string;
+      merchantId?: number;
+      branchId?: number;
+    },
   ) {
+    const targetMerchantId = query?.merchantId ? Number(query.merchantId) : merchantId;
     const page = query?.page ? Math.max(1, Number(query.page)) : 1;
     const limit = query?.limit ? Math.max(1, Number(query.limit)) : 50;
 
-    const [payments, total] = await this.merchantPaymentRepo.findAndCount({
-      where: { merchantId },
-      relations: { creator: true },
-      order: { createdAt: 'DESC', id: 'DESC' },
-      skip: (page - 1) * limit,
-      take: limit,
-    });
+    const qb = this.merchantPaymentRepo
+      .createQueryBuilder('payment')
+      .leftJoinAndSelect('payment.creator', 'creator')
+      .where('payment.merchantId = :merchantId', { merchantId: targetMerchantId });
+
+    const dateFilter = parseDateFilter(query?.date, query?.startDate, query?.endDate);
+    applyDateRangeToQb(qb, 'payment.createdAt', dateFilter, 'stl');
+
+    qb.orderBy('payment.createdAt', 'DESC')
+      .addOrderBy('payment.id', 'DESC')
+      .skip((page - 1) * limit)
+      .take(limit);
+
+    const [payments, total] = await qb.getManyAndCount();
 
     const allParcelIds = Array.from(
       new Set(payments.flatMap((p) => p.parcelIds || [])),
@@ -1161,12 +1439,19 @@ export class MerchantService {
       parcelsMap = new Map(parcels.map((p) => [p.id, p]));
     }
 
-    const formattedPayments = payments.map((payment) => {
+    let formattedPayments = payments.map((payment) => {
       const pList = (payment.parcelIds || [])
         .map((pid) => parcelsMap.get(pid))
         .filter((p): p is Parcel => Boolean(p));
       return formatMerchantSettlement(payment, pList);
     });
+
+    if (query?.branchId) {
+      const bId = Number(query.branchId);
+      formattedPayments = formattedPayments.filter(
+        (p) => p && (!p.branchId || Number(p.branchId) === bId),
+      );
+    }
 
     return {
       data: formattedPayments,

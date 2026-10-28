@@ -491,37 +491,48 @@ export default function FirebaseSettingsListPage() {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              marginBottom: 16,
-              borderBottom: '1px solid #e2e8f0',
-              paddingBottom: 0,
+              marginBottom: 20,
+              flexWrap: 'wrap',
+              gap: 12,
             }}
           >
-            <div style={{ display: 'flex', gap: 6 }}>
+            {/* Segmented Pill Tabs */}
+            <div
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                background: '#f1f5f9',
+                padding: 4,
+                borderRadius: 12,
+                gap: 4,
+              }}
+            >
               <button
                 type="button"
                 onClick={() => setActiveTab('logs')}
                 style={{
-                  padding: '10px 16px',
+                  padding: '7px 16px',
                   border: 'none',
-                  background: 'none',
+                  borderRadius: 9,
+                  background: activeTab === 'logs' ? '#ffffff' : 'transparent',
+                  color: activeTab === 'logs' ? '#0f172a' : '#64748b',
+                  boxShadow: activeTab === 'logs' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
                   cursor: 'pointer',
-                  fontSize: 13.5,
-                  fontWeight: activeTab === 'logs' ? 700 : 500,
-                  color: activeTab === 'logs' ? '#2563eb' : '#64748b',
-                  borderBottom: activeTab === 'logs' ? '2.5px solid #2563eb' : '2.5px solid transparent',
-                  marginBottom: -1,
+                  fontSize: 13,
+                  fontWeight: activeTab === 'logs' ? 700 : 600,
                   display: 'flex',
                   alignItems: 'center',
-                  gap: 6,
+                  gap: 8,
+                  transition: 'all 0.15s ease',
                 }}
               >
                 <span>{tr('តាមដាន Logs', 'Notification Logs')}</span>
                 <span
                   style={{
-                    backgroundColor: '#f1f5f9',
-                    color: '#475569',
+                    backgroundColor: activeTab === 'logs' ? '#eff6ff' : '#e2e8f0',
+                    color: activeTab === 'logs' ? '#2563eb' : '#64748b',
                     fontSize: 11,
-                    padding: '1px 6px',
+                    padding: '1px 7px',
                     borderRadius: 10,
                     fontWeight: 700,
                   }}
@@ -537,27 +548,28 @@ export default function FirebaseSettingsListPage() {
                   loadDevices();
                 }}
                 style={{
-                  padding: '10px 16px',
+                  padding: '7px 16px',
                   border: 'none',
-                  background: 'none',
+                  borderRadius: 9,
+                  background: activeTab === 'devices' ? '#ffffff' : 'transparent',
+                  color: activeTab === 'devices' ? '#0f172a' : '#64748b',
+                  boxShadow: activeTab === 'devices' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
                   cursor: 'pointer',
-                  fontSize: 13.5,
-                  fontWeight: activeTab === 'devices' ? 700 : 500,
-                  color: activeTab === 'devices' ? '#2563eb' : '#64748b',
-                  borderBottom: activeTab === 'devices' ? '2.5px solid #2563eb' : '2.5px solid transparent',
-                  marginBottom: -1,
+                  fontSize: 13,
+                  fontWeight: activeTab === 'devices' ? 700 : 600,
                   display: 'flex',
                   alignItems: 'center',
-                  gap: 6,
+                  gap: 8,
+                  transition: 'all 0.15s ease',
                 }}
               >
                 <span>{tr('ឧបករណ៍ទូរស័ព្ទ', 'Registered Devices')}</span>
                 <span
                   style={{
-                    backgroundColor: '#f1f5f9',
-                    color: '#475569',
+                    backgroundColor: activeTab === 'devices' ? '#eff6ff' : '#e2e8f0',
+                    color: activeTab === 'devices' ? '#2563eb' : '#64748b',
                     fontSize: 11,
-                    padding: '1px 6px',
+                    padding: '1px 7px',
                     borderRadius: 10,
                     fontWeight: 700,
                   }}
@@ -570,27 +582,28 @@ export default function FirebaseSettingsListPage() {
                 type="button"
                 onClick={() => setActiveTab('credentials')}
                 style={{
-                  padding: '10px 16px',
+                  padding: '7px 16px',
                   border: 'none',
-                  background: 'none',
+                  borderRadius: 9,
+                  background: activeTab === 'credentials' ? '#ffffff' : 'transparent',
+                  color: activeTab === 'credentials' ? '#0f172a' : '#64748b',
+                  boxShadow: activeTab === 'credentials' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
                   cursor: 'pointer',
-                  fontSize: 13.5,
-                  fontWeight: activeTab === 'credentials' ? 700 : 500,
-                  color: activeTab === 'credentials' ? '#2563eb' : '#64748b',
-                  borderBottom: activeTab === 'credentials' ? '2.5px solid #2563eb' : '2.5px solid transparent',
-                  marginBottom: -1,
+                  fontSize: 13,
+                  fontWeight: activeTab === 'credentials' ? 700 : 600,
                   display: 'flex',
                   alignItems: 'center',
-                  gap: 6,
+                  gap: 8,
+                  transition: 'all 0.15s ease',
                 }}
               >
                 <span>{tr('គណនី Firebase', 'Service Accounts')}</span>
                 <span
                   style={{
-                    backgroundColor: '#f1f5f9',
-                    color: '#475569',
+                    backgroundColor: activeTab === 'credentials' ? '#eff6ff' : '#e2e8f0',
+                    color: activeTab === 'credentials' ? '#2563eb' : '#64748b',
                     fontSize: 11,
-                    padding: '1px 6px',
+                    padding: '1px 7px',
                     borderRadius: 10,
                     fontWeight: 700,
                   }}
@@ -601,25 +614,27 @@ export default function FirebaseSettingsListPage() {
             </div>
 
             {/* Top Action: Test Connection Button */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingBottom: 6 }}>
-              <button
-                className="btn btn-primary btn-sm"
-                onClick={() => {
-                  setTestResult(null);
-                  setShowTestModal(true);
-                }}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 6,
-                  fontWeight: 600,
-                  fontSize: 12.5,
-                }}
-              >
-                <MdSend size={14} />
-                {tr('តេស្ត Push Notification', 'Test Push')}
-              </button>
-            </div>
+            <button
+              className="btn btn-primary"
+              onClick={() => {
+                setTestResult(null);
+                setShowTestModal(true);
+              }}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 7,
+                fontWeight: 700,
+                fontSize: 13,
+                padding: '8px 18px',
+                borderRadius: 10,
+                boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+                cursor: 'pointer',
+              }}
+            >
+              <MdSend size={15} />
+              <span>{tr('តេស្ត Push Notification', 'Test Push')}</span>
+            </button>
           </div>
 
           {/* ========================================================
@@ -627,188 +642,366 @@ export default function FirebaseSettingsListPage() {
              ======================================================== */}
           {activeTab === 'logs' && (
             <>
-              {/* Stat Cards - Clean Minimalist Metrics */}
+              {/* Stat Cards - Modern Clean KPI Cards */}
               <div
                 style={{
                   display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
-                  gap: 12,
-                  marginBottom: 16,
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                  gap: 14,
+                  marginBottom: 18,
                 }}
               >
+                {/* Total */}
                 <div
-                  className="card"
                   style={{
-                    padding: '12px 16px',
-                    borderRadius: 10,
+                    background: '#ffffff',
+                    borderRadius: 14,
+                    padding: '14px 18px',
+                    border: '1px solid #e2e8f0',
+                    boxShadow: '0 2px 6px rgba(0,0,0,0.02)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 14,
                   }}
                 >
-                  <div style={{ fontSize: 12, color: '#64748b', fontWeight: 600 }}>
-                    {tr('សរុប', 'Total')}
+                  <div
+                    style={{
+                      width: 44,
+                      height: 44,
+                      borderRadius: 12,
+                      background: '#eff6ff',
+                      color: '#2563eb',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0,
+                    }}
+                  >
+                    <MdNotificationsActive size={22} />
                   </div>
-                  <div style={{ fontSize: 22, fontWeight: 800, color: '#0f172a', marginTop: 2 }}>
-                    {logStats.total}
+                  <div>
+                    <div style={{ fontSize: 12, color: '#64748b', fontWeight: 600 }}>
+                      {tr('សរុប', 'Total Logs')}
+                    </div>
+                    <div style={{ fontSize: 22, fontWeight: 900, color: '#0f172a', marginTop: 2 }}>
+                      {logStats.total.toLocaleString()}
+                    </div>
                   </div>
                 </div>
 
+                {/* Success */}
                 <div
-                  className="card"
                   style={{
-                    padding: '12px 16px',
-                    borderRadius: 10,
+                    background: '#ffffff',
+                    borderRadius: 14,
+                    padding: '14px 18px',
+                    border: '1px solid #e2e8f0',
+                    boxShadow: '0 2px 6px rgba(0,0,0,0.02)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 14,
                   }}
                 >
-                  <div style={{ fontSize: 12, color: '#16a34a', fontWeight: 600 }}>
-                    {tr('ជោគជ័យ', 'Success')}
+                  <div
+                    style={{
+                      width: 44,
+                      height: 44,
+                      borderRadius: 12,
+                      background: '#ecfdf5',
+                      color: '#059669',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0,
+                    }}
+                  >
+                    <MdCheckCircle size={22} />
                   </div>
-                  <div style={{ fontSize: 22, fontWeight: 800, color: '#16a34a', marginTop: 2 }}>
-                    {logStats.success}
+                  <div>
+                    <div style={{ fontSize: 12, color: '#059669', fontWeight: 600 }}>
+                      {tr('ជោគជ័យ', 'Success')}
+                    </div>
+                    <div style={{ fontSize: 22, fontWeight: 900, color: '#059669', marginTop: 2 }}>
+                      {logStats.success.toLocaleString()}
+                    </div>
                   </div>
                 </div>
 
+                {/* Failed */}
                 <div
-                  className="card"
                   style={{
-                    padding: '12px 16px',
-                    borderRadius: 10,
+                    background: '#ffffff',
+                    borderRadius: 14,
+                    padding: '14px 18px',
+                    border: '1px solid #e2e8f0',
+                    boxShadow: '0 2px 6px rgba(0,0,0,0.02)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 14,
                   }}
                 >
-                  <div style={{ fontSize: 12, color: '#dc2626', fontWeight: 600 }}>
-                    {tr('បរាជ័យ', 'Failed')}
+                  <div
+                    style={{
+                      width: 44,
+                      height: 44,
+                      borderRadius: 12,
+                      background: '#fef2f2',
+                      color: '#dc2626',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0,
+                    }}
+                  >
+                    <MdErrorOutline size={22} />
                   </div>
-                  <div style={{ fontSize: 22, fontWeight: 800, color: '#dc2626', marginTop: 2 }}>
-                    {logStats.failed}
+                  <div>
+                    <div style={{ fontSize: 12, color: '#dc2626', fontWeight: 600 }}>
+                      {tr('បរាជ័យ', 'Failed')}
+                    </div>
+                    <div style={{ fontSize: 22, fontWeight: 900, color: '#dc2626', marginTop: 2 }}>
+                      {logStats.failed.toLocaleString()}
+                    </div>
                   </div>
                 </div>
 
+                {/* Skipped */}
                 <div
-                  className="card"
                   style={{
-                    padding: '12px 16px',
-                    borderRadius: 10,
+                    background: '#ffffff',
+                    borderRadius: 14,
+                    padding: '14px 18px',
+                    border: '1px solid #e2e8f0',
+                    boxShadow: '0 2px 6px rgba(0,0,0,0.02)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 14,
                   }}
                 >
-                  <div style={{ fontSize: 12, color: '#d97706', fontWeight: 600 }}>
-                    {tr('រំលង', 'Skipped')}
+                  <div
+                    style={{
+                      width: 44,
+                      height: 44,
+                      borderRadius: 12,
+                      background: '#fffbeb',
+                      color: '#d97706',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0,
+                    }}
+                  >
+                    <MdWarning size={22} />
                   </div>
-                  <div style={{ fontSize: 22, fontWeight: 800, color: '#d97706', marginTop: 2 }}>
-                    {logStats.skipped}
+                  <div>
+                    <div style={{ fontSize: 12, color: '#d97706', fontWeight: 600 }}>
+                      {tr('រំលង', 'Skipped')}
+                    </div>
+                    <div style={{ fontSize: 22, fontWeight: 900, color: '#d97706', marginTop: 2 }}>
+                      {logStats.skipped.toLocaleString()}
+                    </div>
                   </div>
                 </div>
               </div>
 
               {/* Logs Filter & Controls Bar */}
-              <div className="card" style={{ marginBottom: 14 }}>
-                <div
-                  style={{
-                    padding: '10px 16px',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    flexWrap: 'wrap',
-                    gap: 10,
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, flexWrap: 'wrap' }}>
-                    <div className="search-input-wrapper" style={{ minWidth: 220, maxWidth: 360 }}>
-                      <MdSearch className="search-icon" />
-                      <input
-                        className="form-control search-input"
-                        placeholder={tr('ស្វែងរក logs...', 'Search logs...')}
-                        value={logsSearch}
-                        onChange={(e) => {
-                          setLogsSearch(e.target.value);
-                          setLogsPage(1);
-                        }}
-                      />
-                    </div>
-
-                    {/* Status filter dropdown */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <select
-                        className="form-control"
-                        value={statusFilter}
-                        onChange={(e) => {
-                          setStatusFilter(e.target.value);
-                          setLogsPage(1);
-                        }}
-                        style={{ height: 36, padding: '4px 10px', fontSize: 12, minWidth: 120 }}
-                      >
-                        <option value="all">{tr('ស្ថានភាពទាំងអស់', 'All Statuses')}</option>
-                        <option value="SUCCESS">{tr('ជោគជ័យ (SUCCESS)', 'SUCCESS')}</option>
-                        <option value="FAILED">{tr('បរាជ័យ (FAILED)', 'FAILED')}</option>
-                        <option value="SKIPPED">{tr('រំលង (SKIPPED)', 'SKIPPED')}</option>
-                        <option value="PARTIAL">{tr('មួយចំនួន (PARTIAL)', 'PARTIAL')}</option>
-                      </select>
-                    </div>
+              <div
+                style={{
+                  background: '#ffffff',
+                  borderRadius: 14,
+                  padding: '12px 18px',
+                  border: '1px solid #e2e8f0',
+                  boxShadow: '0 2px 6px rgba(0,0,0,0.02)',
+                  marginBottom: 16,
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  flexWrap: 'wrap',
+                  gap: 12,
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, flexWrap: 'wrap' }}>
+                  <div
+                    style={{
+                      position: 'relative',
+                      minWidth: 220,
+                      maxWidth: 340,
+                      flex: '1 1 220px',
+                    }}
+                  >
+                    <MdSearch
+                      size={18}
+                      style={{
+                        position: 'absolute',
+                        left: 12,
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        color: '#94a3b8',
+                        pointerEvents: 'none',
+                      }}
+                    />
+                    <input
+                      placeholder={tr('ស្វែងរក logs...', 'Search logs...')}
+                      value={logsSearch}
+                      onChange={(e) => {
+                        setLogsSearch(e.target.value);
+                        setLogsPage(1);
+                      }}
+                      style={{
+                        width: '100%',
+                        height: 38,
+                        paddingLeft: 36,
+                        paddingRight: 12,
+                        borderRadius: 10,
+                        border: '1px solid #e2e8f0',
+                        fontSize: 13,
+                        outline: 'none',
+                        background: '#f8fafc',
+                        color: '#0f172a',
+                        boxSizing: 'border-box',
+                      }}
+                      onFocus={(e) => {
+                        e.currentTarget.style.borderColor = 'var(--accent, #2563eb)';
+                        e.currentTarget.style.background = '#ffffff';
+                      }}
+                      onBlur={(e) => {
+                        e.currentTarget.style.borderColor = '#e2e8f0';
+                        e.currentTarget.style.background = '#f8fafc';
+                      }}
+                    />
                   </div>
 
-                  {/* Right Actions: Auto Refresh Toggle, Manual Refresh, Clear */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <label
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 6,
-                        fontSize: 12,
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                        color: autoRefresh ? '#2563eb' : '#64748b',
-                        padding: '4px 8px',
-                      }}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={autoRefresh}
-                        onChange={(e) => setAutoRefresh(e.target.checked)}
-                        style={{ cursor: 'pointer' }}
-                      />
-                      <span>{tr('Auto-refresh (10s)', 'Auto-refresh (10s)')}</span>
-                    </label>
+                  {/* Status filter dropdown */}
+                  <select
+                    value={statusFilter}
+                    onChange={(e) => {
+                      setStatusFilter(e.target.value);
+                      setLogsPage(1);
+                    }}
+                    style={{
+                      height: 38,
+                      padding: '0 12px',
+                      fontSize: 13,
+                      borderRadius: 10,
+                      border: '1px solid #e2e8f0',
+                      background: '#f8fafc',
+                      color: '#0f172a',
+                      outline: 'none',
+                      cursor: 'pointer',
+                      fontWeight: 600,
+                    }}
+                  >
+                    <option value="all">{tr('ស្ថានភាពទាំងអស់', 'All Statuses')}</option>
+                    <option value="SUCCESS">{tr('ជោគជ័យ (SUCCESS)', 'SUCCESS')}</option>
+                    <option value="FAILED">{tr('បរាជ័យ (FAILED)', 'FAILED')}</option>
+                    <option value="SKIPPED">{tr('រំលង (SKIPPED)', 'SKIPPED')}</option>
+                    <option value="PARTIAL">{tr('មួយចំនួន (PARTIAL)', 'PARTIAL')}</option>
+                  </select>
+                </div>
 
+                {/* Right Actions: Auto Refresh Toggle, Manual Refresh, Clear */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <label
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      fontSize: 12.5,
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      color: autoRefresh ? '#2563eb' : '#64748b',
+                      background: autoRefresh ? '#eff6ff' : '#f8fafc',
+                      padding: '7px 12px',
+                      borderRadius: 9,
+                      border: `1px solid ${autoRefresh ? '#bfdbfe' : '#e2e8f0'}`,
+                      transition: 'all 0.15s ease',
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={autoRefresh}
+                      onChange={(e) => setAutoRefresh(e.target.checked)}
+                      style={{ cursor: 'pointer', accentColor: '#2563eb' }}
+                    />
+                    <span>{tr('Auto-refresh (10s)', 'Auto-refresh (10s)')}</span>
+                  </label>
+
+                  <button
+                    type="button"
+                    onClick={() => loadLogs()}
+                    disabled={loadingLogs}
+                    title="Refresh"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 5,
+                      height: 38,
+                      padding: '0 14px',
+                      borderRadius: 10,
+                      border: '1px solid #e2e8f0',
+                      background: '#ffffff',
+                      color: '#475569',
+                      fontSize: 12.5,
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                    }}
+                  >
+                    <MdRefresh size={16} className={loadingLogs ? 'spinner' : ''} />
+                    <span>{tr('ផ្ទុកឡើងវិញ', 'Refresh')}</span>
+                  </button>
+
+                  {logs.length > 0 && (
                     <button
                       type="button"
-                      className="btn btn-outline btn-sm"
-                      onClick={() => loadLogs()}
-                      disabled={loadingLogs}
-                      title="Refresh"
-                      style={{ display: 'flex', alignItems: 'center', gap: 4, height: 34 }}
+                      onClick={handleClearLogs}
+                      title="Clear"
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 5,
+                        height: 38,
+                        padding: '0 14px',
+                        borderRadius: 10,
+                        border: '1px solid #fecaca',
+                        background: '#fef2f2',
+                        color: '#dc2626',
+                        fontSize: 12.5,
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease',
+                      }}
                     >
-                      <MdRefresh size={15} className={loadingLogs ? 'spinner' : ''} />
-                      <span>{tr('ផ្ទុកឡើងវិញ', 'Refresh')}</span>
+                      <MdDelete size={15} />
+                      <span>{tr('សម្អាត Logs', 'Clear Logs')}</span>
                     </button>
-
-                    {logs.length > 0 && (
-                      <button
-                        type="button"
-                        className="btn btn-outline btn-sm"
-                        onClick={handleClearLogs}
-                        title="Clear"
-                        style={{ color: '#ef4444', borderColor: '#fca5a5', display: 'flex', alignItems: 'center', gap: 4, height: 34 }}
-                      >
-                        <MdDelete size={14} />
-                        <span>{tr('សម្អាត Logs', 'Clear')}</span>
-                      </button>
-                    )}
-                  </div>
+                  )}
                 </div>
               </div>
 
-              {/* Logs Table */}
-              <div className="card">
-                <div style={{ overflowX: 'auto' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                    <thead>
-                      <tr>
-                        <th style={{ width: 45, textAlign: 'center' }}>#</th>
-                        <th style={{ width: 100, textAlign: 'center' }}>{tr('ស្ថានភាព', 'Status')}</th>
-                        <th style={{ minWidth: 140 }}>{tr('អ្នកទទួល', 'Recipient')}</th>
-                        <th style={{ minWidth: 200 }}>{tr('ខ្លឹមសារសារ', 'Notification')}</th>
-                        <th style={{ width: 80, textAlign: 'center' }}>{tr('ឧបករណ៍', 'Devices')}</th>
-                        <th style={{ width: 80, textAlign: 'center' }}>{tr('លទ្ធផល', 'Delivered')}</th>
-                        <th style={{ minWidth: 200 }}>{tr('ព័ត៌មាន / កំហុស', 'Info / Diagnostics')}</th>
-                        <th style={{ width: 150 }}>{tr('កាលបរិច្ឆេទ', 'Timestamp')}</th>
-                        <th style={{ width: 60, textAlign: 'center' }}>{tr('មើល', 'View')}</th>
+              {/* Logs Table Card */}
+              <div
+                style={{
+                  background: '#ffffff',
+                  borderRadius: 16,
+                  border: '1px solid #e2e8f0',
+                  boxShadow: '0 4px 20px rgba(0, 0, 0, 0.03)',
+                  overflow: 'hidden',
+                }}
+              >
+                <div style={{ overflowX: 'auto', width: '100%' }}>
+                  <table style={{ width: '100%', minWidth: 920, borderCollapse: 'collapse', textAlign: 'left' }}>
+                    <thead style={{ background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff' }}>
+                      <tr style={{ background: 'var(--sidebar-bg, #1565D8)' }}>
+                        <th style={{ width: 45, textAlign: 'center', padding: '12px 14px', border: 'none', color: '#ffffff', fontSize: 13, fontWeight: 700 }}>#</th>
+                        <th style={{ width: 110, textAlign: 'center', padding: '12px 14px', border: 'none', color: '#ffffff', fontSize: 13, fontWeight: 700 }}>{tr('ស្ថានភាព', 'Status')}</th>
+                        <th style={{ minWidth: 140, padding: '12px 14px', border: 'none', color: '#ffffff', fontSize: 13, fontWeight: 700 }}>{tr('អ្នកទទួល', 'Recipient')}</th>
+                        <th style={{ minWidth: 220, padding: '12px 14px', border: 'none', color: '#ffffff', fontSize: 13, fontWeight: 700 }}>{tr('ខ្លឹមសារសារ', 'Notification')}</th>
+                        <th style={{ width: 80, textAlign: 'center', padding: '12px 14px', border: 'none', color: '#ffffff', fontSize: 13, fontWeight: 700 }}>{tr('ឧបករណ៍', 'Devices')}</th>
+                        <th style={{ width: 80, textAlign: 'center', padding: '12px 14px', border: 'none', color: '#ffffff', fontSize: 13, fontWeight: 700 }}>{tr('លទ្ធផល', 'Delivered')}</th>
+                        <th style={{ minWidth: 200, padding: '12px 14px', border: 'none', color: '#ffffff', fontSize: 13, fontWeight: 700 }}>{tr('ព័ត៌មាន / កំហុស', 'Info / Diagnostics')}</th>
+                        <th style={{ width: 160, padding: '12px 14px', border: 'none', color: '#ffffff', fontSize: 13, fontWeight: 700 }}>{tr('កាលបរិច្ឆេទ', 'Timestamp')}</th>
+                        <th style={{ width: 65, textAlign: 'center', padding: '12px 14px', border: 'none', color: '#ffffff', fontSize: 13, fontWeight: 700 }}>{tr('មើល', 'View')}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -816,10 +1009,10 @@ export default function FirebaseSettingsListPage() {
                         <TableSkeleton columns={9} rows={6} />
                       ) : pagedLogs.length === 0 ? (
                         <tr>
-                          <td colSpan={9} style={{ padding: '36px 20px', textAlign: 'center', color: '#94a3b8' }}>
-                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
-                              <MdNotificationsActive size={32} color="#cbd5e1" />
-                              <span style={{ fontSize: 13, fontWeight: 600, color: '#64748b' }}>
+                          <td colSpan={9} style={{ padding: '48px 20px', textAlign: 'center', color: '#94a3b8' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+                              <MdNotificationsActive size={36} color="#cbd5e1" />
+                              <span style={{ fontSize: 13.5, fontWeight: 600, color: '#64748b' }}>
                                 {tr('មិនទាន់មានប្រវត្តិកត់ត្រា Firebase នៅឡើយទេ', 'No Firebase notification logs recorded yet')}
                               </span>
                             </div>
@@ -830,54 +1023,86 @@ export default function FirebaseSettingsListPage() {
                           const isSuccess = log.status === 'SUCCESS';
                           const isFailed = log.status === 'FAILED';
                           const isSkipped = log.status === 'SKIPPED';
+                          const isPartial = log.status === 'PARTIAL';
+
+                          const statusBg = isSuccess ? '#ecfdf5' : isFailed ? '#fef2f2' : isSkipped ? '#f1f5f9' : '#fffbeb';
+                          const statusColor = isSuccess ? '#059669' : isFailed ? '#dc2626' : isSkipped ? '#475569' : '#b45309';
+                          const statusBorder = isSuccess ? '#a7f3d0' : isFailed ? '#fecaca' : isSkipped ? '#e2e8f0' : '#fde68a';
+                          const statusDot = isSuccess ? '#10b981' : isFailed ? '#ef4444' : isSkipped ? '#94a3b8' : '#f59e0b';
+                          const statusText = isSuccess ? tr('ជោគជ័យ', 'SUCCESS') : isFailed ? tr('បរាជ័យ', 'FAILED') : isSkipped ? tr('រំលង', 'SKIPPED') : tr('មួយចំនួន', 'PARTIAL');
 
                           return (
-                            <tr key={log.id}>
-                              <td style={{ textAlign: 'center', color: '#94a3b8', fontSize: 12 }}>
+                            <tr
+                              key={log.id}
+                              style={{
+                                borderBottom: '1px solid #f1f5f9',
+                                fontSize: 13,
+                                transition: 'background 0.15s ease',
+                              }}
+                              onMouseEnter={(e) => { e.currentTarget.style.background = '#f8fafc'; }}
+                              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                            >
+                              <td style={{ textAlign: 'center', color: '#94a3b8', fontSize: 12, padding: '12px 14px' }}>
                                 {(logsPage - 1) * logsPageSize + i + 1}
                               </td>
 
                               {/* Status Badge */}
-                              <td style={{ textAlign: 'center' }}>
+                              <td style={{ textAlign: 'center', padding: '12px 14px' }}>
                                 <span
                                   style={{
-                                    display: 'inline-block',
-                                    fontSize: 10.5,
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: 5,
+                                    fontSize: 11.5,
                                     fontWeight: 700,
-                                    padding: '2px 8px',
-                                    borderRadius: 6,
-                                    backgroundColor: isSuccess ? '#ecfdf5' : isFailed ? '#fef2f2' : isSkipped ? '#f1f5f9' : '#fef3c7',
-                                    color: isSuccess ? '#059669' : isFailed ? '#dc2626' : isSkipped ? '#64748b' : '#b45309',
-                                    border: `1px solid ${isSuccess ? '#a7f3d0' : isFailed ? '#fecaca' : isSkipped ? '#e2e8f0' : '#fde68a'}`,
+                                    padding: '3px 10px',
+                                    borderRadius: 20,
+                                    backgroundColor: statusBg,
+                                    color: statusColor,
+                                    border: `1px solid ${statusBorder}`,
                                   }}
                                 >
-                                  {log.status}
+                                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: statusDot }} />
+                                  {statusText}
                                 </span>
                               </td>
 
                               {/* Recipient */}
-                              <td>
-                                <div style={{ fontWeight: 600, fontSize: 13, color: '#1e293b' }}>
-                                  {log.recipientName || `ID: ${log.recipientId || '—'}`}
-                                </div>
-                                <div style={{ fontSize: 11, color: '#64748b', textTransform: 'capitalize' }}>
-                                  {log.recipientType}
+                              <td style={{ padding: '12px 14px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                  <span style={{ fontWeight: 800, fontSize: 13, color: '#0f172a' }}>
+                                    {log.recipientName || `ID: ${log.recipientId || '—'}`}
+                                  </span>
+                                  <span
+                                    style={{
+                                      fontSize: 10.5,
+                                      fontWeight: 700,
+                                      padding: '1px 6px',
+                                      borderRadius: 6,
+                                      backgroundColor: log.recipientType === 'merchant' ? '#f3e8ff' : log.recipientType === 'driver' ? '#eff6ff' : '#f1f5f9',
+                                      color: log.recipientType === 'merchant' ? '#7e22ce' : log.recipientType === 'driver' ? '#2563eb' : '#475569',
+                                      textTransform: 'capitalize',
+                                    }}
+                                  >
+                                    {log.recipientType}
+                                  </span>
                                 </div>
                               </td>
 
                               {/* Notification Title & Body */}
-                              <td>
-                                <div style={{ fontWeight: 600, fontSize: 13, color: '#0f172a' }}>
+                              <td style={{ padding: '12px 14px' }}>
+                                <div style={{ fontWeight: 700, fontSize: 13, color: '#0f172a' }}>
                                   {log.title}
                                 </div>
                                 <div
                                   style={{
-                                    fontSize: 11.5,
+                                    fontSize: 12,
                                     color: '#64748b',
-                                    maxWidth: 280,
+                                    maxWidth: 300,
                                     overflow: 'hidden',
                                     textOverflow: 'ellipsis',
                                     whiteSpace: 'nowrap',
+                                    marginTop: 2,
                                   }}
                                   title={log.body}
                                 >
@@ -886,25 +1111,54 @@ export default function FirebaseSettingsListPage() {
                               </td>
 
                               {/* Devices Count */}
-                              <td style={{ textAlign: 'center', fontSize: 12, color: '#64748b', fontWeight: 600 }}>
-                                {log.tokensCount}
+                              <td style={{ textAlign: 'center', fontSize: 12.5, color: '#475569', fontWeight: 700, padding: '12px 14px' }}>
+                                <span style={{ background: '#f1f5f9', padding: '2px 8px', borderRadius: 10 }}>
+                                  {log.tokensCount}
+                                </span>
                               </td>
 
                               {/* Delivered / Failed */}
-                              <td style={{ textAlign: 'center' }}>
-                                <span style={{ fontSize: 12, fontWeight: 600, color: isSuccess ? '#16a34a' : isFailed ? '#dc2626' : '#64748b' }}>
+                              <td style={{ textAlign: 'center', padding: '12px 14px' }}>
+                                <span style={{ fontSize: 12.5, fontWeight: 700, color: log.successCount > 0 ? '#059669' : log.failureCount > 0 ? '#dc2626' : '#94a3b8' }}>
                                   {log.successCount}/{log.failureCount}
                                 </span>
                               </td>
 
                               {/* Diagnostics / Error Message */}
-                              <td>
-                                {log.errorMessage ? (
+                              <td style={{ padding: '12px 14px' }}>
+                                {isSuccess ? (
+                                  <span style={{ fontSize: 12, fontWeight: 600, color: '#059669', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                    <MdCheckCircle size={14} />
+                                    <span>{tr('ផ្ញើបានជោគជ័យ', 'Delivered')}</span>
+                                  </span>
+                                ) : log.errorMessage?.includes('No active device tokens') || isSkipped ? (
+                                  <span
+                                    style={{
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: 4,
+                                      fontSize: 11.5,
+                                      fontWeight: 600,
+                                      color: '#b45309',
+                                      background: '#fffbeb',
+                                      border: '1px solid #fde68a',
+                                      padding: '2px 8px',
+                                      borderRadius: 6,
+                                    }}
+                                    title={log.errorMessage || 'No active device tokens found'}
+                                  >
+                                    <MdWarning size={13} />
+                                    <span>{tr('គ្មាន Device Token', 'No Device Token')}</span>
+                                  </span>
+                                ) : log.errorMessage ? (
                                   <span
                                     style={{
                                       fontSize: 11.5,
-                                      color: isSkipped ? '#d97706' : '#dc2626',
-                                      display: 'inline-block',
+                                      fontWeight: 600,
+                                      color: '#dc2626',
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: 4,
                                       maxWidth: 240,
                                       overflow: 'hidden',
                                       textOverflow: 'ellipsis',
@@ -912,29 +1166,48 @@ export default function FirebaseSettingsListPage() {
                                     }}
                                     title={log.errorMessage}
                                   >
-                                    {log.errorMessage}
+                                    <MdErrorOutline size={14} />
+                                    <span>{log.errorMessage}</span>
                                   </span>
                                 ) : (
-                                  <span style={{ fontSize: 11.5, color: '#16a34a' }}>
-                                    {tr('ជោគជ័យ', 'Delivered')}
-                                  </span>
+                                  <span style={{ color: '#94a3b8' }}>—</span>
                                 )}
                               </td>
 
                               {/* Timestamp */}
-                              <td style={{ fontSize: 11.5, color: '#64748b', whiteSpace: 'nowrap' }}>
+                              <td style={{ fontSize: 12, color: '#64748b', whiteSpace: 'nowrap', padding: '12px 14px' }}>
                                 {formatDateTime(log.createdAt)}
                               </td>
 
                               {/* Action */}
-                              <td style={{ textAlign: 'center' }}>
+                              <td style={{ textAlign: 'center', padding: '12px 14px' }}>
                                 <button
                                   type="button"
-                                  className="btn btn-ghost btn-sm btn-icon"
                                   onClick={() => setSelectedLog(log)}
+                                  style={{
+                                    border: '1px solid #e2e8f0',
+                                    background: '#ffffff',
+                                    color: '#2563eb',
+                                    width: 32,
+                                    height: 32,
+                                    borderRadius: 8,
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.15s ease',
+                                  }}
+                                  onMouseEnter={(e) => {
+                                    e.currentTarget.style.background = '#eff6ff';
+                                    e.currentTarget.style.borderColor = '#bfdbfe';
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    e.currentTarget.style.background = '#ffffff';
+                                    e.currentTarget.style.borderColor = '#e2e8f0';
+                                  }}
                                   title="View Details"
                                 >
-                                  <FaEye size={13} color="#2563eb" />
+                                  <FaEye size={13} />
                                 </button>
                               </td>
                             </tr>
@@ -946,7 +1219,7 @@ export default function FirebaseSettingsListPage() {
                 </div>
 
                 {filteredLogs.length > logsPageSize && (
-                  <div style={{ padding: '10px 16px', borderTop: '1px solid #f1f5f9' }}>
+                  <div style={{ padding: '12px 18px', borderTop: '1px solid #f1f5f9' }}>
                     <Pagination
                       currentPage={logsPage}
                       totalItems={filteredLogs.length}
@@ -1049,18 +1322,26 @@ export default function FirebaseSettingsListPage() {
               </div>
 
               {/* Devices Table / Empty State */}
-              <div className="card">
-                <div className="table-responsive">
-                  <table className="data-table">
-                    <thead>
-                      <tr>
-                        <th style={{ width: 60, textAlign: 'center' }}>#</th>
-                        <th>{tr('អ្នកប្រើប្រាស់ / គណនី', 'User / Account')}</th>
-                        <th style={{ width: 140 }}>{tr('លេខទូរស័ព្ទ', 'Phone')}</th>
-                        <th style={{ width: 120 }}>{tr('ប្រព័ន្ធ (OS)', 'Platform')}</th>
-                        <th>{tr('FCM Device Token', 'FCM Device Token')}</th>
-                        <th style={{ width: 180 }}>{tr('កាលបរិច្ឆេទចុះឈ្មោះ', 'Registered / Updated')}</th>
-                        <th style={{ width: 130, textAlign: 'center' }}>{tr('សកម្មភាព', 'Action')}</th>
+              <div
+                style={{
+                  background: '#ffffff',
+                  borderRadius: 16,
+                  border: '1px solid #e2e8f0',
+                  boxShadow: '0 4px 20px rgba(0, 0, 0, 0.03)',
+                  overflow: 'hidden',
+                }}
+              >
+                <div style={{ overflowX: 'auto', width: '100%' }}>
+                  <table style={{ width: '100%', minWidth: 860, borderCollapse: 'collapse', textAlign: 'left' }}>
+                    <thead style={{ background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff' }}>
+                      <tr style={{ background: 'var(--sidebar-bg, #1565D8)' }}>
+                        <th style={{ width: 60, textAlign: 'center', padding: '12px 14px', border: 'none', color: '#ffffff', fontSize: 13, fontWeight: 700 }}>#</th>
+                        <th style={{ padding: '12px 14px', border: 'none', color: '#ffffff', fontSize: 13, fontWeight: 700 }}>{tr('អ្នកប្រើប្រាស់ / គណនី', 'User / Account')}</th>
+                        <th style={{ width: 140, padding: '12px 14px', border: 'none', color: '#ffffff', fontSize: 13, fontWeight: 700 }}>{tr('លេខទូរស័ព្ទ', 'Phone')}</th>
+                        <th style={{ width: 120, padding: '12px 14px', border: 'none', color: '#ffffff', fontSize: 13, fontWeight: 700 }}>{tr('ប្រព័ន្ធ (OS)', 'Platform')}</th>
+                        <th style={{ padding: '12px 14px', border: 'none', color: '#ffffff', fontSize: 13, fontWeight: 700 }}>{tr('FCM Device Token', 'FCM Device Token')}</th>
+                        <th style={{ width: 180, padding: '12px 14px', border: 'none', color: '#ffffff', fontSize: 13, fontWeight: 700 }}>{tr('កាលបរិច្ឆេទចុះឈ្មោះ', 'Registered / Updated')}</th>
+                        <th style={{ width: 130, textAlign: 'center', padding: '12px 14px', border: 'none', color: '#ffffff', fontSize: 13, fontWeight: 700 }}>{tr('សកម្មភាព', 'Action')}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1262,29 +1543,42 @@ export default function FirebaseSettingsListPage() {
               </div>
 
               {/* Credentials Table */}
-              <div className="card">
+              <div
+                style={{
+                  background: '#ffffff',
+                  borderRadius: 16,
+                  border: '1px solid #e2e8f0',
+                  boxShadow: '0 4px 20px rgba(0, 0, 0, 0.03)',
+                  overflow: 'hidden',
+                }}
+              >
                 <div
-                  className="card-header"
-                  style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                  style={{
+                    padding: '16px 20px',
+                    borderBottom: '1px solid #f1f5f9',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                  }}
                 >
-                  <span className="card-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontSize: 15, fontWeight: 800, color: '#0f172a', display: 'flex', alignItems: 'center', gap: 8 }}>
                     <SiFirebase color="#f59e0b" size={18} />
                     {tr('បញ្ជី Firebase Service Accounts', 'Firebase Service Accounts List')}
                   </span>
                 </div>
 
-                <div style={{ overflowX: 'auto' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                    <thead>
-                      <tr>
-                        <th style={{ width: 60, textAlign: 'center' }}>{t('colNo') || tr('ល.រ', 'No.')}</th>
-                        <th>{tr('Firebase Project ID', 'Project ID')}</th>
-                        <th>{tr('Client Email', 'Client Email')}</th>
-                        <th>{tr('Private Key ID', 'Key ID')}</th>
-                        <th>{tr('ប្រភេទ (Type)', 'Type')}</th>
-                        <th>{tr('កាលបរិច្ឆេទ', 'Created / Updated')}</th>
-                        <th style={{ textAlign: 'center', width: 100 }}>{tr('ស្ថានភាព', 'Status')}</th>
-                        <th style={{ width: 140, textAlign: 'center' }}>
+                <div style={{ overflowX: 'auto', width: '100%' }}>
+                  <table style={{ width: '100%', minWidth: 860, borderCollapse: 'collapse', textAlign: 'left' }}>
+                    <thead style={{ background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff' }}>
+                      <tr style={{ background: 'var(--sidebar-bg, #1565D8)' }}>
+                        <th style={{ width: 60, textAlign: 'center', padding: '12px 14px', border: 'none', color: '#ffffff', fontSize: 13, fontWeight: 700 }}>{t('colNo') || tr('ល.រ', 'No.')}</th>
+                        <th style={{ padding: '12px 14px', border: 'none', color: '#ffffff', fontSize: 13, fontWeight: 700 }}>{tr('Firebase Project ID', 'Project ID')}</th>
+                        <th style={{ padding: '12px 14px', border: 'none', color: '#ffffff', fontSize: 13, fontWeight: 700 }}>{tr('Client Email', 'Client Email')}</th>
+                        <th style={{ padding: '12px 14px', border: 'none', color: '#ffffff', fontSize: 13, fontWeight: 700 }}>{tr('Private Key ID', 'Key ID')}</th>
+                        <th style={{ padding: '12px 14px', border: 'none', color: '#ffffff', fontSize: 13, fontWeight: 700 }}>{tr('ប្រភេទ (Type)', 'Type')}</th>
+                        <th style={{ padding: '12px 14px', border: 'none', color: '#ffffff', fontSize: 13, fontWeight: 700 }}>{tr('កាលបរិច្ឆេទ', 'Created / Updated')}</th>
+                        <th style={{ textAlign: 'center', width: 100, padding: '12px 14px', border: 'none', color: '#ffffff', fontSize: 13, fontWeight: 700 }}>{tr('ស្ថានភាព', 'Status')}</th>
+                        <th style={{ width: 140, textAlign: 'center', padding: '12px 14px', border: 'none', color: '#ffffff', fontSize: 13, fontWeight: 700 }}>
                           {t('actions') || tr('សកម្មភាព', 'Actions')}
                         </th>
                       </tr>

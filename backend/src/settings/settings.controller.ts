@@ -297,4 +297,15 @@ export class SettingsController {
   deleteFirebase() {
     return this.settingsService.deleteFirebaseConfig();
   }
+
+  @Post('resolve-map-link')
+  @ApiOperation({ summary: 'Resolve Google Maps link or coordinates to lat/lng' })
+  async resolveMapLink(@Body() body: { url: string }) {
+    if (!body?.url) throw new BadRequestException('URL or coordinates string is required');
+    const result = await this.settingsService.resolveMapLink(body.url);
+    if (!result) {
+      throw new BadRequestException('Could not extract coordinates from the provided link or text');
+    }
+    return result;
+  }
 }

@@ -6,7 +6,17 @@ import { isAuthenticated } from '@/lib/auth';
 import Sidebar from '@/components/layout/Sidebar';
 import Topbar from '@/components/layout/Topbar';
 import api from '@/lib/api';
-import { MdSearch } from 'react-icons/md';
+import {
+  MdSearch,
+  MdFilterList,
+  MdRefresh,
+  MdSave,
+  MdCheckCircle,
+  MdCancel,
+  MdAssignmentReturn,
+  MdLocalShipping,
+  MdDoneAll,
+} from 'react-icons/md';
 import { useLanguage } from '@/lib/LanguageContext';
 import DateInput, { formatDateToDDMMYYYY } from '@/components/ui/DateInput';
 import SearchableSelect from '@/components/ui/SearchableSelect';
@@ -35,15 +45,27 @@ export default function CompletePackagePage() {
 
   const [orders, setOrders] = useState<any[]>([]);
   const [drivers, setDrivers] = useState<any[]>([]);
+  const [merchants, setMerchants] = useState<any[]>([]);
+  const [branches, setBranches] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
   // Filters state
   const [filterDate, setFilterDate] = useState('');
+  const [filterMerchant, setFilterMerchant] = useState('');
+  const [filterBranch, setFilterBranch] = useState('');
   const [filterDriver, setFilterDriver] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
-  const [appliedFilters, setAppliedFilters] = useState<{ date: string; driverId: string; status: string }>(() => ({
+  const [appliedFilters, setAppliedFilters] = useState<{
+    date: string;
+    merchantId: string;
+    branchId: string;
+    driverId: string;
+    status: string;
+  }>(() => ({
     date: '',
+    merchantId: '',
+    branchId: '',
     driverId: '',
     status: '',
   }));
@@ -122,9 +144,29 @@ export default function CompletePackagePage() {
     }
   };
 
+  const loadMerchants = async () => {
+    try {
+      const res = await api.get('/merchants');
+      const list = Array.isArray(res.data) ? res.data : (res.data?.results || res.data?.result || res.data?.data || []);
+      setMerchants(list);
+    } catch (err) {
+      console.error('Error fetching merchants:', err);
+    }
+  };
+
+  const loadBranches = async () => {
+    try {
+      const res = await api.get('/merchants/branches/all');
+      const list = Array.isArray(res.data) ? res.data : (res.data?.results || res.data?.result || res.data?.data || []);
+      setBranches(list);
+    } catch (err) {
+      console.error('Error fetching branches:', err);
+    }
+  };
+
   const loadData = async () => {
     setLoading(true);
-    await Promise.all([loadActiveOrders(), loadDrivers()]);
+    await Promise.all([loadActiveOrders(), loadDrivers(), loadMerchants(), loadBranches()]);
     setLoading(false);
   };
 
@@ -140,11 +182,32 @@ export default function CompletePackagePage() {
   const handleFilterClick = () => {
     setAppliedFilters({
       date: filterDate,
+      merchantId: filterMerchant,
+      branchId: filterBranch,
       driverId: filterDriver,
       status: filterStatus,
     });
     setCurrentPage(1);
     setSelectedIds([]); // Reset selection on filter change
+  };
+
+  // Reset Filters
+  const handleResetFilters = () => {
+    setFilterDate('');
+    setFilterMerchant('');
+    setFilterBranch('');
+    setFilterDriver('');
+    setFilterStatus('');
+    setAppliedFilters({
+      date: '',
+      merchantId: '',
+      branchId: '',
+      driverId: '',
+      status: '',
+    });
+    setSearch('');
+    setCurrentPage(1);
+    setSelectedIds([]);
   };
 
   // Toggle selection for a single row
@@ -230,11 +293,6 @@ export default function CompletePackagePage() {
     setRowPaymentMethod(prev => ({ ...prev, [id]: value }));
   };
 
-  const handleCompletedDateChange = (id: number, value: string) => {
-    setSelectedIds(prev => Array.from(new Set([...prev, id])));
-    setRowCompletedDate(prev => ({ ...prev, [id]: value }));
-  };
-
   const handleNoteChange = (id: number, value: string) => {
     setSelectedIds(prev => Array.from(new Set([...prev, id])));
     setRowNotes(prev => ({ ...prev, [id]: value }));
@@ -242,17 +300,29 @@ export default function CompletePackagePage() {
 
   // Filter and Search logic
   const filteredOrders = orders.filter(o => {
-    // 1. Filter by applied driver
+    // 1. Filter by applied merchant
+    if (appliedFilters.merchantId) {
+      const mId = String(o.merchantId || o.merchant?.id || '');
+      if (mId !== appliedFilters.merchantId) return false;
+    }
+
+    // 2. Filter by applied branch
+    if (appliedFilters.branchId) {
+      const bId = String(o.branchId || o.branch?.id || '');
+      if (bId !== appliedFilters.branchId) return false;
+    }
+
+    // 3. Filter by applied driver
     if (appliedFilters.driverId) {
       if (!o.driverId || String(o.driverId) !== appliedFilters.driverId) return false;
     }
 
-    // 2. Filter by applied status
+    // 4. Filter by applied status
     if (appliedFilters.status) {
       if (o.status !== appliedFilters.status) return false;
     }
 
-    // 3. Filter by applied date
+    // 5. Filter by applied date
     if (appliedFilters.date) {
       const orderDateStr = getLocalDateString(new Date(o.createdAt));
       if (orderDateStr !== appliedFilters.date) return false;
@@ -364,28 +434,39 @@ export default function CompletePackagePage() {
         <Topbar title={t('completePackageTitle')} subtitle={t('completePackageSubtitle')} />
         <div className="page-content">
 
-          {/* Filters Card */}
-          <div className="card" style={{ padding: '20px', marginBottom: '20px' }}>
-            <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
-              <DateInput
-                labelEn="Date"
-                labelKh="កាលបរិច្ឆេទ"
-                value={filterDate}
-                onChange={setFilterDate}
-                style={{ minWidth: 220 }}
-                allowEmpty={true}
-              />
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: '200px' }}>
-                <label style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--text-main, #374151)' }}>
+          {/* ── Modern Filter Card ── */}
+          <div className="card" style={{ padding: '16px 20px', marginBottom: '20px', border: '1.5px solid var(--border)' }}>
+            <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+              <div style={{ flex: '1 1 200px', minWidth: '180px' }}>
+                <DateInput
+                  labelEn="Date"
+                  labelKh="កាលបរិច្ឆេទ"
+                  value={filterDate}
+                  onChange={setFilterDate}
+                  allowEmpty={true}
+                />
+              </div>
+
+              <div style={{ flex: '1 1 180px', minWidth: '160px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary, #475569)' }}>
                   {lang === 'km' ? 'ស្ថានភាព៖' : 'Status:'}
                 </label>
                 <select
-                  className="form-control"
                   value={filterStatus}
                   onChange={e => setFilterStatus(e.target.value)}
-                  style={{ height: '38px', padding: '8px 12px', borderRadius: '6px', border: '1px solid #d1d5db', backgroundColor: '#fff' }}
+                  style={{
+                    height: '38px',
+                    padding: '6px 12px',
+                    borderRadius: '8px',
+                    border: '1px solid var(--border, #d1d5db)',
+                    backgroundColor: 'var(--bg-card, #fff)',
+                    color: 'var(--text-primary, #1e293b)',
+                    fontSize: '13px',
+                    outline: 'none',
+                    cursor: 'pointer'
+                  }}
                 >
-                  <option value="">{lang === 'km' ? '— ទាំងអស់ —' : '— All —'}</option>
+                  <option value="">{lang === 'km' ? '— ទាំងអស់ —' : '— All Statuses —'}</option>
                   <option value="pending">{lang === 'km' ? 'រង់ចាំ' : 'Pending'}</option>
                   <option value="in-warehouse">{lang === 'km' ? 'ក្នុងឃ្លាំង' : 'In Warehouse'}</option>
                   <option value="assigned">{lang === 'km' ? 'បានចាត់ចែង' : 'Assigned'}</option>
@@ -394,14 +475,61 @@ export default function CompletePackagePage() {
                   <option value="failed">{lang === 'km' ? 'មិនបានសម្រេច' : 'Failed'}</option>
                 </select>
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: '250px' }}>
-                <label style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--text-main, #374151)' }}>
+
+              {/* Merchant Filter */}
+              <div style={{ flex: '1 1 200px', minWidth: '180px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary, #475569)' }}>
+                  {lang === 'km' ? 'ហាង / អាជីវករ៖' : 'Merchant:'}
+                </label>
+                <SearchableSelect
+                  value={filterMerchant}
+                  onChange={val => {
+                    setFilterMerchant(val);
+                    setFilterBranch('');
+                  }}
+                  style={{ height: '38px', borderRadius: '8px' }}
+                  placeholder={lang === 'km' ? '— ជ្រើសរើសហាង —' : '— Select Merchant —'}
+                  options={[
+                    { value: '', label: lang === 'km' ? '— ជ្រើសរើសហាង —' : '— Select Merchant —' },
+                    ...merchants.map(m => ({
+                      value: String(m.id),
+                      label: (lang === 'km' && m.nameKh ? m.nameKh : m.name) + (m.phone ? ` (${m.phone})` : ''),
+                    })),
+                  ]}
+                />
+              </div>
+
+              {/* Branch Filter */}
+              <div style={{ flex: '1 1 180px', minWidth: '160px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary, #475569)' }}>
+                  {lang === 'km' ? 'សាខា៖' : 'Branch:'}
+                </label>
+                <SearchableSelect
+                  value={filterBranch}
+                  onChange={setFilterBranch}
+                  style={{ height: '38px', borderRadius: '8px' }}
+                  placeholder={lang === 'km' ? '— ជ្រើសរើសសាខា —' : '— Select Branch —'}
+                  options={[
+                    { value: '', label: lang === 'km' ? '— ជ្រើសរើសសាខា —' : '— Select Branch —' },
+                    ...branches
+                      .filter(b => !filterMerchant || String(b.merchantId || b.merchant?.id) === filterMerchant)
+                      .map(b => ({
+                        value: String(b.id),
+                        label: (lang === 'km' && b.branchNameKh ? b.branchNameKh : (b.branchName || b.name)) + (b.phone ? ` (${b.phone})` : ''),
+                      })),
+                  ]}
+                />
+              </div>
+
+              {/* Driver Filter */}
+              <div style={{ flex: '1 1 200px', minWidth: '180px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary, #475569)' }}>
                   {lang === 'km' ? 'អ្នកដឹក៖' : 'Driver:'}
                 </label>
                 <SearchableSelect
                   value={filterDriver}
                   onChange={setFilterDriver}
-                  style={{ height: '38px', borderRadius: '6px' }}
+                  style={{ height: '38px', borderRadius: '8px' }}
                   placeholder={lang === 'km' ? '— ជ្រើសរើសអ្នកដឹក —' : '— Select Driver —'}
                   options={[
                     { value: '', label: lang === 'km' ? '— ជ្រើសរើសអ្នកដឹក —' : '— Select Driver —' },
@@ -412,188 +540,337 @@ export default function CompletePackagePage() {
                   ]}
                 />
               </div>
-              <button
-                className="btn btn-success"
-                onClick={handleFilterClick}
-                style={{
-                  height: '38px',
-                  padding: '0 24px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  fontWeight: '600',
-                  borderRadius: '6px',
-                  backgroundColor: '#16a34a',
-                  borderColor: '#16a34a',
-                  color: '#fff',
-                  cursor: 'pointer'
-                }}
-              >
-                <MdSearch size={18} />
-                <span>Filter</span>
-              </button>
+
+              {/* Action Buttons */}
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <button
+                  type="button"
+                  onClick={handleFilterClick}
+                  style={{
+                    height: '38px',
+                    padding: '0 20px',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    fontWeight: 600,
+                    fontSize: '13px',
+                    borderRadius: '8px',
+                    backgroundColor: 'var(--sidebar-bg, #1565D8)',
+                    color: '#ffffff',
+                    border: 'none',
+                    cursor: 'pointer',
+                    boxShadow: '0 2px 4px rgba(21, 101, 216, 0.2)',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  <MdFilterList size={18} />
+                  <span>{lang === 'km' ? 'ចម្រាញ់' : 'Filter'}</span>
+                </button>
+
+                {(filterDate || filterMerchant || filterBranch || filterDriver || filterStatus || appliedFilters.date || appliedFilters.merchantId || appliedFilters.branchId || appliedFilters.driverId || appliedFilters.status) && (
+                  <button
+                    type="button"
+                    onClick={handleResetFilters}
+                    style={{
+                      height: '38px',
+                      padding: '0 14px',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      fontWeight: 500,
+                      fontSize: '13px',
+                      borderRadius: '8px',
+                      backgroundColor: 'transparent',
+                      color: 'var(--text-secondary, #64748b)',
+                      border: '1px solid var(--border, #e2e8f0)',
+                      cursor: 'pointer'
+                    }}
+                    title={lang === 'km' ? 'សម្អាត Filter' : 'Reset Filters'}
+                  >
+                    <MdRefresh size={18} />
+                    <span>{lang === 'km' ? 'សម្អាត' : 'Reset'}</span>
+                  </button>
+                )}
+              </div>
             </div>
           </div>
 
-          {/* Grid & Actions Card */}
-          <div className="card" style={{ padding: '20px' }}>
+          {/* ── Table & Actions Card ── */}
+          <div className="card" style={{ padding: '20px', border: '1.5px solid var(--border)' }}>
 
-            {/* Header with Save in Batch Button */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e5e7eb', paddingBottom: '16px', marginBottom: '16px', flexWrap: 'wrap', gap: 12 }}>
-              <div>
-                  <span className="card-title" style={{ fontSize: 16, fontWeight: 'bold' }}>
-                    {lang === 'km' ? 'បញ្ជីទំនិញ' : 'Parcels List'}
-                  </span>
-                  <div style={{ fontSize: 13, color: 'var(--text-muted, #6b7280)', marginTop: 2 }}>
-                    {filteredOrders.length} {lang === 'km' ? 'កញ្ចប់ត្រូវបានរកឃើញ' : 'packages found'}
-                  </div>
-                </div>
+            {/* Card Header & Batch Controls */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border, #e5e7eb)', paddingBottom: '16px', marginBottom: '16px', flexWrap: 'wrap', gap: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span className="card-title" style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary, #0f172a)' }}>
+                  {lang === 'km' ? 'បញ្ជីទំនិញ' : 'Parcels List'}
+                </span>
+                <span style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  padding: '2px 10px',
+                  borderRadius: '12px',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  backgroundColor: 'rgba(21, 101, 216, 0.08)',
+                  color: 'var(--sidebar-bg, #1565D8)',
+                  border: '1px solid rgba(21, 101, 216, 0.15)'
+                }}>
+                  {filteredOrders.length} {lang === 'km' ? 'កញ្ចប់' : 'parcels'}
+                </span>
+              </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
                 {selectedIds.length > 0 && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#f8fafc', padding: '4px 10px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                    <span style={{ fontSize: '12px', fontWeight: 600, color: '#475569' }}>
-                      {lang === 'km' ? `ជ្រើសរើស ${selectedIds.length}:` : `Selected ${selectedIds.length}:`}
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    background: '#f8fafc',
+                    padding: '4px 10px',
+                    borderRadius: '8px',
+                    border: '1px solid #e2e8f0'
+                  }}>
+                    <span style={{ fontSize: '12px', fontWeight: 600, color: '#475569', marginRight: 4 }}>
+                      {lang === 'km' ? `ជ្រើសបាន ${selectedIds.length}៖` : `Selected ${selectedIds.length}:`}
                     </span>
                     <button
                       type="button"
                       onClick={() => handleBulkSetStatus('delivered')}
-                      style={{ fontSize: '11px', padding: '4px 8px', borderRadius: '4px', border: '1px solid #bbf7d0', background: '#dcfce7', color: '#166534', cursor: 'pointer', fontWeight: 600 }}
-                      title={lang === 'km' ? 'កំណត់បានដឹកទាំងអស់' : 'Set all delivered'}
+                      style={{
+                        fontSize: '11.5px',
+                        padding: '4px 9px',
+                        borderRadius: '6px',
+                        border: '1px solid #bbf7d0',
+                        background: '#dcfce7',
+                        color: '#166534',
+                        cursor: 'pointer',
+                        fontWeight: 600,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 4
+                      }}
+                      title={lang === 'km' ? 'កំណត់បានដឹកជោគជ័យទាំងអស់' : 'Set all delivered'}
                     >
+                      <MdCheckCircle size={14} />
                       {lang === 'km' ? 'ជោគជ័យ' : 'Delivered'}
                     </button>
                     <button
                       type="button"
                       onClick={() => handleBulkSetStatus('failed')}
-                      style={{ fontSize: '11px', padding: '4px 8px', borderRadius: '4px', border: '1px solid #fecaca', background: '#fee2e2', color: '#991b1b', cursor: 'pointer', fontWeight: 600 }}
+                      style={{
+                        fontSize: '11.5px',
+                        padding: '4px 9px',
+                        borderRadius: '6px',
+                        border: '1px solid #fecaca',
+                        background: '#fee2e2',
+                        color: '#991b1b',
+                        cursor: 'pointer',
+                        fontWeight: 600,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 4
+                      }}
                       title={lang === 'km' ? 'កំណត់មិនបានសម្រេចទាំងអស់' : 'Set all failed'}
                     >
+                      <MdCancel size={14} />
                       {lang === 'km' ? 'មិនជោគជ័យ' : 'Failed'}
                     </button>
                     <button
                       type="button"
                       onClick={() => handleBulkSetStatus('returned')}
-                      style={{ fontSize: '11px', padding: '4px 8px', borderRadius: '4px', border: '1px solid #fed7aa', background: '#ffedd5', color: '#9a3412', cursor: 'pointer', fontWeight: 600 }}
+                      style={{
+                        fontSize: '11.5px',
+                        padding: '4px 9px',
+                        borderRadius: '6px',
+                        border: '1px solid #fed7aa',
+                        background: '#ffedd5',
+                        color: '#9a3412',
+                        cursor: 'pointer',
+                        fontWeight: 600,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 4
+                      }}
                       title={lang === 'km' ? 'កំណត់បង្វិលត្រឡប់ទាំងអស់' : 'Set all returned'}
                     >
+                      <MdAssignmentReturn size={14} />
                       {lang === 'km' ? 'បង្វិលត្រឡប់' : 'Returned'}
                     </button>
                   </div>
                 )}
 
                 <button
-                  className="btn btn-primary"
+                  type="button"
                   onClick={handleBatchSave}
                   disabled={saving}
                   style={{
-                    height: '42px',
+                    height: '40px',
                     padding: '0 20px',
-                    display: 'flex',
+                    display: 'inline-flex',
                     alignItems: 'center',
                     gap: '8px',
-                    fontWeight: '600',
-                    borderRadius: '6px',
-                    backgroundColor: '#2563eb',
-                    borderColor: '#2563eb',
-                    color: '#fff',
+                    fontWeight: 600,
+                    fontSize: '13px',
+                    borderRadius: '8px',
+                    backgroundColor: 'var(--sidebar-bg, #1565D8)',
+                    color: '#ffffff',
+                    border: 'none',
                     opacity: saving ? 0.6 : 1,
-                    cursor: saving ? 'not-allowed' : 'pointer'
+                    cursor: saving ? 'not-allowed' : 'pointer',
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                    transition: 'all 0.15s ease'
                   }}
                 >
+                  <MdSave size={18} />
                   <span>
                     {saving
                       ? (lang === 'km' ? 'កំពុងរក្សាទុក...' : 'Saving...')
                       : (lang === 'km' 
-                          ? (selectedIds.length > 0 ? `រក្សាទុកការទូទាត់ / បញ្ចប់ (${selectedIds.length})` : 'រក្សាទុកការទូទាត់ / បញ្ចប់') 
-                          : (selectedIds.length > 0 ? `Save Settlement / Complete (${selectedIds.length})` : 'Save Settlement / Complete'))
+                          ? (selectedIds.length > 0 ? `រក្សាទុកការទូទាត់ (${selectedIds.length})` : 'រក្សាទុកការទូទាត់ / បញ្ចប់') 
+                          : (selectedIds.length > 0 ? `Save Settlement (${selectedIds.length})` : 'Save Settlement / Complete'))
                     }
                   </span>
                 </button>
               </div>
             </div>
 
-            {/* Datatable Controls */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', gap: '16px', flexWrap: 'wrap' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', color: '#4b5563' }}>
-                <span>Show</span>
+            {/* ── Modern Table Controls (Replaces legacy DataTables) ── */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', gap: '16px', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: 'var(--text-secondary, #64748b)' }}>
+                <span>{lang === 'km' ? 'បង្ហាញ' : 'Show'}</span>
                 <select
-                  className="form-control"
                   value={pageSize}
                   onChange={e => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
-                  style={{ width: '70px', height: '34px', padding: '4px 8px', borderRadius: '4px', border: '1px solid #d1d5db', backgroundColor: '#fff' }}
+                  style={{
+                    height: '34px',
+                    padding: '4px 10px',
+                    borderRadius: '6px',
+                    border: '1px solid var(--border, #cbd5e1)',
+                    backgroundColor: 'var(--bg-card, #fff)',
+                    fontSize: '13px',
+                    fontWeight: 500,
+                    color: 'var(--text-primary, #1e293b)',
+                    outline: 'none',
+                    cursor: 'pointer'
+                  }}
                 >
                   <option value="10">10</option>
                   <option value="25">25</option>
                   <option value="50">50</option>
                   <option value="100">100</option>
                 </select>
-                <span>entries</span>
+                <span>{lang === 'km' ? 'ជួរ' : 'entries'}</span>
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', color: '#4b5563' }}>
-                <span>Search:</span>
+              <div style={{ position: 'relative', width: '280px', maxWidth: '100%' }}>
+                <MdSearch size={18} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', pointerEvents: 'none' }} />
                 <input
                   type="text"
-                  className="form-control"
                   value={search}
                   onChange={e => { setSearch(e.target.value); setCurrentPage(1); }}
-                  style={{ width: '220px', height: '34px', padding: '4px 10px', borderRadius: '4px', border: '1px solid #d1d5db', backgroundColor: '#fff' }}
+                  placeholder={lang === 'km' ? 'ស្វែងរកលេខកូដ, ហាង, ទូរស័ព្ទ...' : 'Search code, shop, phone...'}
+                  style={{
+                    width: '100%',
+                    height: '36px',
+                    paddingLeft: '34px',
+                    paddingRight: search ? '30px' : '12px',
+                    borderRadius: '8px',
+                    border: '1px solid var(--border, #cbd5e1)',
+                    backgroundColor: 'var(--bg-card, #fff)',
+                    fontSize: '13px',
+                    color: 'var(--text-primary, #1e293b)',
+                    outline: 'none'
+                  }}
                 />
+                {search && (
+                  <button
+                    type="button"
+                    onClick={() => setSearch('')}
+                    style={{
+                      position: 'absolute',
+                      right: 8,
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      border: 'none',
+                      background: 'transparent',
+                      color: '#94a3b8',
+                      cursor: 'pointer',
+                      fontSize: '14px',
+                      padding: 2
+                    }}
+                    title={lang === 'km' ? 'សម្អាតការស្វែងរក' : 'Clear search'}
+                  >
+                    ✕
+                  </button>
+                )}
               </div>
             </div>
 
-            {/* Data Table */}
-            <div className="table-responsive" style={{ overflowX: 'auto', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-card)' }}>
+            {/* ── Data Table (Modern Clean Header, No Vertical Lines, Checkbox in Col 1) ── */}
+            <div className="table-responsive" style={{ overflowX: 'auto', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg-card)' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                 <thead>
                   <tr style={{ background: 'var(--sidebar-bg, #1565D8)' }}>
-                    <th style={{ padding: '12px 10px', textAlign: 'center', width: 44, background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>
-                      {lang === 'km' ? 'ល.រ' : 'No.'}
-                    </th>
-                    <th style={{ padding: '12px 10px', textAlign: 'left', background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>
-                      {lang === 'km' ? 'លេខកូដ' : 'Tracking Code'}
-                    </th>
-                    <th style={{ padding: '12px 10px', textAlign: 'left', background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>
-                      {lang === 'km' ? 'ឈ្មោះហាង' : 'Shop/Merchant'}
-                    </th>
-                    <th style={{ padding: '12px 10px', textAlign: 'left', background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>
-                      {lang === 'km' ? 'លេខអ្នកទទួល' : 'Receiver Phone'}
-                    </th>
-                    <th style={{ padding: '12px 10px', textAlign: 'left', background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>
-                      {lang === 'km' ? 'កាលបរិច្ឆេទ' : 'Date'}
-                    </th>
-                    <th style={{ padding: '12px 10px', textAlign: 'left', background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>
-                      {lang === 'km' ? 'ទីតាំង' : 'Location'}
-                    </th>
-                    <th style={{ padding: '12px 10px', textAlign: 'right', background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>
-                      {lang === 'km' ? 'សេវាដឹក' : 'Delivery Fee'}
-                    </th>
-                    <th style={{ padding: '12px 10px', textAlign: 'right', background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>
-                      {lang === 'km' ? 'ប្រាក់ COD' : 'Amount/COD'}
-                    </th>
-                    <th style={{ padding: '12px 10px', textAlign: 'center', width: 50, background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>
+                    {/* Column 1: Bulk Checkbox */}
+                    <th style={{ width: 44, padding: '12px 14px', background: 'var(--sidebar-bg, #1565D8)', border: 'none', textAlign: 'center', verticalAlign: 'middle' }}>
                       <input
                         type="checkbox"
                         checked={currentPageItems.length > 0 && currentPageItems.every(item => selectedIds.includes(item.id))}
                         onChange={handleSelectAll}
-                        style={{ width: '16px', height: '16px', cursor: 'pointer', verticalAlign: 'middle', accentColor: '#2563eb' }}
-                        title={lang === 'km' ? 'ជ្រើសរើសទាំងអស់' : 'Select All'}
+                        style={{ width: '16px', height: '16px', cursor: 'pointer', verticalAlign: 'middle', accentColor: '#ffffff' }}
+                        title={lang === 'km' ? 'ជ្រើសរើសទាំងអស់លើទំព័រនេះ' : 'Select all on this page'}
                       />
                     </th>
-                    <th style={{ padding: '12px 10px', textAlign: 'left', minWidth: 150, background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>
+                    {/* Column 2: Number */}
+                    <th style={{ padding: '12px 10px', textAlign: 'center', width: 48, background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none', whiteSpace: 'nowrap' }}>
+                      {lang === 'km' ? 'ល.រ' : 'No.'}
+                    </th>
+                    {/* Column 3: Tracking Code */}
+                    <th style={{ padding: '12px 12px', textAlign: 'left', background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none', whiteSpace: 'nowrap' }}>
+                      {lang === 'km' ? 'លេខកូដ' : 'Tracking Code'}
+                    </th>
+                    {/* Column 4: Shop Name */}
+                    <th style={{ padding: '12px 12px', textAlign: 'left', background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none', whiteSpace: 'nowrap' }}>
+                      {lang === 'km' ? 'ឈ្មោះហាង' : 'Shop/Merchant'}
+                    </th>
+                    {/* Column 5: Receiver Phone */}
+                    <th style={{ padding: '12px 12px', textAlign: 'left', background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none', whiteSpace: 'nowrap' }}>
+                      {lang === 'km' ? 'លេខអ្នកទទួល' : 'Receiver Phone'}
+                    </th>
+                    {/* Column 6: Date */}
+                    <th style={{ padding: '12px 12px', textAlign: 'left', background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none', whiteSpace: 'nowrap' }}>
+                      {lang === 'km' ? 'កាលបរិច្ឆេទ' : 'Date'}
+                    </th>
+                    {/* Column 7: Location */}
+                    <th style={{ padding: '12px 12px', textAlign: 'left', background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none', whiteSpace: 'nowrap' }}>
+                      {lang === 'km' ? 'ទីតាំង' : 'Location'}
+                    </th>
+                    {/* Column 8: Delivery Fee */}
+                    <th style={{ padding: '12px 12px', textAlign: 'right', background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none', whiteSpace: 'nowrap' }}>
+                      {lang === 'km' ? 'សេវាដឹក' : 'Fee'}
+                    </th>
+                    {/* Column 9: Amount COD */}
+                    <th style={{ padding: '12px 12px', textAlign: 'right', background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none', whiteSpace: 'nowrap' }}>
+                      {lang === 'km' ? 'ប្រាក់ COD' : 'COD Amount'}
+                    </th>
+                    {/* Column 10: Status */}
+                    <th style={{ padding: '12px 12px', textAlign: 'left', minWidth: 150, background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none', whiteSpace: 'nowrap' }}>
                       {lang === 'km' ? 'ស្ថានភាព' : 'Status'}
                     </th>
-                    <th style={{ padding: '12px 10px', textAlign: 'center', width: 105, background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>
+                    {/* Column 11: Cash KHR */}
+                    <th style={{ padding: '12px 10px', textAlign: 'center', width: 120, background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none', whiteSpace: 'nowrap' }}>
                       {lang === 'km' ? 'សាច់ប្រាក់ KHR' : 'Cash KHR'}
                     </th>
-                    <th style={{ padding: '12px 10px', textAlign: 'center', width: 105, background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>
+                    {/* Column 12: Cash USD */}
+                    <th style={{ padding: '12px 10px', textAlign: 'center', width: 110, background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none', whiteSpace: 'nowrap' }}>
                       {lang === 'km' ? 'សាច់ប្រាក់ USD' : 'Cash USD'}
                     </th>
-                    <th style={{ padding: '12px 10px', textAlign: 'left', minWidth: 150, background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>
+                    {/* Column 13: Payment Method */}
+                    <th style={{ padding: '12px 12px', textAlign: 'left', minWidth: 145, background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none', whiteSpace: 'nowrap' }}>
                       {lang === 'km' ? 'វិធីសាស្ត្រទូទាត់' : 'Payment Method'}
                     </th>
-                    <th style={{ padding: '12px 10px', textAlign: 'left', minWidth: 220, background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>
+                    {/* Column 14: Reason / Notes */}
+                    <th style={{ padding: '12px 12px', textAlign: 'left', minWidth: 220, background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none', whiteSpace: 'nowrap' }}>
                       {lang === 'km' ? 'មូលហេតុ / ចំណាំ' : 'Reason / Notes'}
                     </th>
                   </tr>
@@ -601,8 +878,27 @@ export default function CompletePackagePage() {
                 <tbody>
                   {currentPageItems.length === 0 ? (
                     <tr>
-                      <td colSpan={14} style={{ textAlign: 'center', padding: '36px', color: 'var(--text-muted)', fontSize: '13px' }}>
-                        {lang === 'km' ? 'គ្មានទិន្នន័យក្នុងតារាងទេ' : 'No data available in table'}
+                      <td colSpan={14} style={{ textAlign: 'center', padding: '48px 20px', color: 'var(--text-muted, #94a3b8)', fontSize: '13px' }}>
+                        <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+                          <div style={{
+                            width: 52,
+                            height: 52,
+                            borderRadius: '50%',
+                            background: '#f1f5f9',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: '#94a3b8'
+                          }}>
+                            <MdLocalShipping size={26} />
+                          </div>
+                          <span style={{ fontWeight: 600, color: 'var(--text-secondary, #64748b)' }}>
+                            {lang === 'km' ? 'មិនមានកញ្ចប់អីវ៉ាន់ដែលត្រូវបញ្ចប់ទេ' : 'No parcels available for completion'}
+                          </span>
+                          <span style={{ fontSize: 12, color: 'var(--text-muted, #94a3b8)' }}>
+                            {lang === 'km' ? 'សូមជ្រើសរើស Filter ឬផ្លាស់ប្តូរពាក្យស្វែងរកឡើងវិញ' : 'Try adjusting your filters or search keywords'}
+                          </span>
+                        </div>
                       </td>
                     </tr>
                   ) : (
@@ -615,66 +911,78 @@ export default function CompletePackagePage() {
                           key={o.id}
                           style={{
                             borderBottom: '1px solid #f1f5f9',
-                            backgroundColor: isSelected ? 'rgba(37, 99, 235, 0.04)' : 'transparent',
+                            backgroundColor: isSelected ? 'rgba(37, 99, 235, 0.05)' : 'transparent',
                             transition: 'background-color 0.15s ease'
                           }}
                         >
-                          <td style={{ padding: '10px', textAlign: 'center', fontSize: '13px', color: 'var(--text-muted)' }}>
-                            {(currentPage - 1) * pageSize + idx + 1}
-                          </td>
-                          <td style={{ padding: '10px', fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>
-                            {o.trackingCode}
-                          </td>
-                          <td style={{ padding: '10px', fontSize: '13px', color: 'var(--text-primary)' }}>
-                            {lang === 'km' && o.merchant?.nameKh ? o.merchant.nameKh : ((o.merchant?.name && o.merchant.name !== '-' && o.merchant.name !== '—') ? o.merchant.name : '')}
-                          </td>
-                          <td style={{ padding: '10px', fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)' }}>
-                            {(o.receiverPhone && o.receiverPhone !== '-' && o.receiverPhone !== '—') ? o.receiverPhone : ''}
-                          </td>
-                          <td style={{ padding: '10px', fontSize: '13px', color: 'var(--text-secondary)' }}>
-                            {formatDateToDDMMYYYY(o.createdAt)}
-                          </td>
-                          <td style={{ padding: '10px', fontSize: '13px', color: 'var(--text-secondary)', maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {(o.receiverAddress && o.receiverAddress !== '-' && o.receiverAddress !== '—') ? o.receiverAddress : ''}
-                          </td>
-                          <td style={{ padding: '10px', textAlign: 'right', fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>
-                            {formatFee(o.deliveryFee)}
-                          </td>
-                          <td style={{ padding: '10px', textAlign: 'right', fontSize: '13px', fontWeight: 700, color: '#16a34a' }}>
-                            {formatCODDisplay(o.cod, o.codCurrency)}
-                          </td>
-                          <td style={{ padding: '10px', textAlign: 'center' }}>
+                          {/* Col 1: Checkbox */}
+                          <td style={{ padding: '10px 14px', textAlign: 'center', verticalAlign: 'middle' }}>
                             <input
                               type="checkbox"
                               checked={isSelected}
                               onChange={() => toggleSelectRow(o.id)}
-                              style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+                              style={{ width: '16px', height: '16px', cursor: 'pointer', verticalAlign: 'middle', accentColor: '#2563eb' }}
                             />
                           </td>
-                          <td style={{ padding: '6px 8px' }}>
+                          {/* Col 2: No. */}
+                          <td style={{ padding: '10px 10px', textAlign: 'center', fontSize: '12.5px', color: 'var(--text-muted, #64748b)' }}>
+                            {(currentPage - 1) * pageSize + idx + 1}
+                          </td>
+                          {/* Col 3: Tracking Code */}
+                          <td style={{ padding: '10px 12px', fontSize: '13px', fontWeight: 700, color: 'var(--text-primary, #0f172a)' }}>
+                            <span style={{ fontFamily: 'monospace', letterSpacing: '0.02em', background: '#f1f5f9', padding: '3px 7px', borderRadius: 6, fontSize: 12 }}>
+                              {o.trackingCode}
+                            </span>
+                          </td>
+                          {/* Col 4: Shop Name */}
+                          <td style={{ padding: '10px 12px', fontSize: '13px', fontWeight: 500, color: 'var(--text-primary, #1e293b)' }}>
+                            {lang === 'km' && o.merchant?.nameKh ? o.merchant.nameKh : ((o.merchant?.name && o.merchant.name !== '-' && o.merchant.name !== '—') ? o.merchant.name : '—')}
+                          </td>
+                          {/* Col 5: Receiver Phone */}
+                          <td style={{ padding: '10px 12px', fontSize: '13px', fontWeight: 500, color: 'var(--text-primary, #1e293b)' }}>
+                            {(o.receiverPhone && o.receiverPhone !== '-' && o.receiverPhone !== '—') ? o.receiverPhone : '—'}
+                          </td>
+                          {/* Col 6: Date */}
+                          <td style={{ padding: '10px 12px', fontSize: '12.5px', color: 'var(--text-secondary, #64748b)', whiteSpace: 'nowrap' }}>
+                            {formatDateToDDMMYYYY(o.createdAt)}
+                          </td>
+                          {/* Col 7: Location */}
+                          <td style={{ padding: '10px 12px', fontSize: '12.5px', color: 'var(--text-secondary, #64748b)', maxWidth: '170px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={o.receiverAddress || ''}>
+                            {(o.receiverAddress && o.receiverAddress !== '-' && o.receiverAddress !== '—') ? o.receiverAddress : '—'}
+                          </td>
+                          {/* Col 8: Delivery Fee */}
+                          <td style={{ padding: '10px 12px', textAlign: 'right', fontSize: '13px', fontWeight: 600, color: 'var(--text-primary, #1e293b)' }}>
+                            {formatFee(o.deliveryFee)}
+                          </td>
+                          {/* Col 9: Amount COD */}
+                          <td style={{ padding: '10px 12px', textAlign: 'right', fontSize: '13px', fontWeight: 700, color: '#16a34a' }}>
+                            {formatCODDisplay(o.cod, o.codCurrency)}
+                          </td>
+                          {/* Col 10: Status Select */}
+                          <td style={{ padding: '8px 10px' }}>
                             <select
                               value={currentStatus}
                               onChange={e => handleStatusChange(o.id, e.target.value)}
                               style={{
                                 width: '100%',
-                                minWidth: '140px',
+                                minWidth: '135px',
                                 height: '32px',
                                 padding: '2px 8px',
                                 borderRadius: '6px',
-                                border: currentStatus === 'delivered' ? '1px solid #22c55e' :
-                                        (currentStatus === 'assigned' || currentStatus === 'in-warehouse') ? '1px solid #f59e0b' :
-                                        currentStatus === 'in-transit' ? '1px solid #3b82f6' :
-                                        (currentStatus === 'failed' || currentStatus === 'cancelled') ? '1px solid #ef4444' :
-                                        currentStatus === 'returned' ? '1px solid #f97316' : '1px solid #94a3b8',
+                                border: currentStatus === 'delivered' ? '1px solid #86efac' :
+                                        (currentStatus === 'assigned' || currentStatus === 'in-warehouse') ? '1px solid #fde047' :
+                                        currentStatus === 'in-transit' ? '1px solid #93c5fd' :
+                                        (currentStatus === 'failed' || currentStatus === 'cancelled') ? '1px solid #fca5a5' :
+                                        currentStatus === 'returned' ? '1px solid #fdba74' : '1px solid #cbd5e1',
                                 backgroundColor: currentStatus === 'delivered' ? '#f0fdf4' :
-                                                 (currentStatus === 'assigned' || currentStatus === 'in-warehouse') ? '#fffbeb' :
+                                                 (currentStatus === 'assigned' || currentStatus === 'in-warehouse') ? '#fefce8' :
                                                  currentStatus === 'in-transit' ? '#eff6ff' :
-                                                 (currentStatus === 'failed' || currentStatus === 'cancelled') ? '#fef2f2' :
+                                                 (currentStatus === 'failed' || currentStatus === 'cancelled') ? '#fff1f2' :
                                                  currentStatus === 'returned' ? '#fff7ed' : '#f8fafc',
                                 color: currentStatus === 'delivered' ? '#15803d' :
-                                       (currentStatus === 'assigned' || currentStatus === 'in-warehouse') ? '#b45309' :
+                                       (currentStatus === 'assigned' || currentStatus === 'in-warehouse') ? '#854d0e' :
                                        currentStatus === 'in-transit' ? '#1d4ed8' :
-                                       (currentStatus === 'failed' || currentStatus === 'cancelled') ? '#b91c1c' :
+                                       (currentStatus === 'failed' || currentStatus === 'cancelled') ? '#be123c' :
                                        currentStatus === 'returned' ? '#c2410c' : '#475569',
                                 fontWeight: 600,
                                 fontSize: '12px',
@@ -699,72 +1007,85 @@ export default function CompletePackagePage() {
                               )}
                             </select>
                           </td>
-                          <td style={{ padding: '6px 8px' }}>
-                            <input
-                              type="number"
-                              value={rowCashKHR[o.id] ?? ''}
-                              onChange={e => handleCashKHRChange(o.id, e.target.value)}
-                              disabled={!isDelivered}
-                              style={{
-                                width: '100%',
-                                height: '32px',
-                                padding: '2px 8px',
-                                borderRadius: '6px',
-                                border: '1px solid #d1d5db',
-                                fontSize: '13px',
-                                textAlign: 'center',
-                                outline: 'none',
-                                background: !isDelivered ? '#f3f4f6' : '#fff',
-                                color: !isDelivered ? '#9ca3af' : '#111827'
-                              }}
-                            />
+                          {/* Col 11: Cash KHR */}
+                          <td style={{ padding: '8px 8px' }}>
+                            <div style={{ position: 'relative', width: '100%', minWidth: '95px' }}>
+                              <input
+                                type="number"
+                                value={rowCashKHR[o.id] ?? ''}
+                                onChange={e => handleCashKHRChange(o.id, e.target.value)}
+                                disabled={!isDelivered}
+                                style={{
+                                  width: '100%',
+                                  height: '32px',
+                                  padding: '2px 24px 2px 8px',
+                                  borderRadius: '6px',
+                                  border: '1px solid #d1d5db',
+                                  fontSize: '12.5px',
+                                  fontWeight: 600,
+                                  textAlign: 'right',
+                                  outline: 'none',
+                                  background: !isDelivered ? '#f8fafc' : '#fff',
+                                  color: !isDelivered ? '#94a3b8' : '#0f172a'
+                                }}
+                              />
+                              <span style={{ position: 'absolute', right: 7, top: '50%', transform: 'translateY(-50%)', fontSize: 11, color: !isDelivered ? '#cbd5e1' : '#64748b', pointerEvents: 'none', fontWeight: 600 }}>៛</span>
+                            </div>
                           </td>
-                          <td style={{ padding: '6px 8px' }}>
-                            <input
-                              type="number"
-                              value={rowCashUSD[o.id] ?? ''}
-                              onChange={e => handleCashUSDChange(o.id, e.target.value)}
-                              disabled={!isDelivered}
-                              style={{
-                                width: '100%',
-                                height: '32px',
-                                padding: '2px 8px',
-                                borderRadius: '6px',
-                                border: '1px solid #d1d5db',
-                                fontSize: '13px',
-                                textAlign: 'center',
-                                outline: 'none',
-                                background: !isDelivered ? '#f3f4f6' : '#fff',
-                                color: !isDelivered ? '#9ca3af' : '#111827'
-                              }}
-                            />
+                          {/* Col 12: Cash USD */}
+                          <td style={{ padding: '8px 8px' }}>
+                            <div style={{ position: 'relative', width: '100%', minWidth: '85px' }}>
+                              <input
+                                type="number"
+                                step="0.01"
+                                value={rowCashUSD[o.id] ?? ''}
+                                onChange={e => handleCashUSDChange(o.id, e.target.value)}
+                                disabled={!isDelivered}
+                                style={{
+                                  width: '100%',
+                                  height: '32px',
+                                  padding: '2px 20px 2px 8px',
+                                  borderRadius: '6px',
+                                  border: '1px solid #d1d5db',
+                                  fontSize: '12.5px',
+                                  fontWeight: 600,
+                                  textAlign: 'right',
+                                  outline: 'none',
+                                  background: !isDelivered ? '#f8fafc' : '#fff',
+                                  color: !isDelivered ? '#94a3b8' : '#0f172a'
+                                }}
+                              />
+                              <span style={{ position: 'absolute', right: 7, top: '50%', transform: 'translateY(-50%)', fontSize: 11, color: !isDelivered ? '#cbd5e1' : '#64748b', pointerEvents: 'none', fontWeight: 600 }}>$</span>
+                            </div>
                           </td>
-                          <td style={{ padding: '6px 8px' }}>
+                          {/* Col 13: Payment Method */}
+                          <td style={{ padding: '8px 8px' }}>
                             <select
                               value={rowPaymentMethod[o.id] || 'cash'}
                               onChange={e => handlePaymentMethodChange(o.id, e.target.value)}
                               disabled={!isDelivered}
                               style={{
                                 width: '100%',
-                                minWidth: '140px',
+                                minWidth: '135px',
                                 height: '32px',
                                 padding: '2px 8px',
                                 borderRadius: '6px',
                                 border: '1px solid #d1d5db',
-                                backgroundColor: !isDelivered ? '#f3f4f6' : '#fff',
-                                color: !isDelivered ? '#9ca3af' : '#111827',
+                                backgroundColor: !isDelivered ? '#f8fafc' : '#fff',
+                                color: !isDelivered ? '#94a3b8' : '#1e293b',
                                 fontSize: '12px',
                                 cursor: !isDelivered ? 'not-allowed' : 'pointer',
                                 outline: 'none'
                               }}
                             >
-                              <option value="cash">{lang === 'km' ? 'ទទួលសាច់ប្រាក់' : 'Cash'}</option>
+                              <option value="cash">{lang === 'km' ? 'សាច់ប្រាក់ (Cash)' : 'Cash'}</option>
                               <option value="bank">{lang === 'km' ? 'ផ្ទេរប្រាក់ / KHQR' : 'Bank Transfer / KHQR'}</option>
                               <option value="unpaid">{lang === 'km' ? 'ជំពាក់ / មិនទាន់គិត' : 'Unpaid'}</option>
                             </select>
                           </td>
-                          <td style={{ padding: '6px 8px' }}>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: '180px' }}>
+                          {/* Col 14: Reason / Notes */}
+                          <td style={{ padding: '8px 8px' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: '190px' }}>
                               {!isDelivered && (
                                 <select
                                   value=""
@@ -775,17 +1096,19 @@ export default function CompletePackagePage() {
                                   }}
                                   style={{
                                     width: '100%',
-                                    height: '24px',
-                                    padding: '0 6px',
-                                    borderRadius: '4px',
-                                    border: '1px dashed #f87171',
-                                    backgroundColor: '#fff1f2',
-                                    color: '#be123c',
-                                    fontSize: '11px',
-                                    cursor: 'pointer'
+                                    height: '26px',
+                                    padding: '0 8px',
+                                    borderRadius: '6px',
+                                    border: '1px solid #fed7aa',
+                                    backgroundColor: '#fffaf5',
+                                    color: '#c2410c',
+                                    fontSize: '11.5px',
+                                    fontWeight: 500,
+                                    cursor: 'pointer',
+                                    outline: 'none'
                                   }}
                                 >
-                                  <option value="">{lang === 'km' ? '⚡ មូលហេតុលឿន...' : '⚡ Quick Reason...'}</option>
+                                  <option value="">{lang === 'km' ? '⚡ ជ្រើសមូលហេតុលឿន...' : '⚡ Quick Reason...'}</option>
                                   {FAILURE_REASONS.map((r, rIdx) => (
                                     <option key={rIdx} value={r.value}>
                                       {lang === 'km' ? r.labelKm : r.labelEn}
@@ -799,7 +1122,7 @@ export default function CompletePackagePage() {
                                 onChange={e => handleNoteChange(o.id, e.target.value)}
                                 placeholder={
                                   !isDelivered
-                                    ? (lang === 'km' ? 'មូលហេតុបញ្ហា / បោះបង់...' : 'Reason for failure/cancel...')
+                                    ? (lang === 'km' ? 'បញ្ជាក់មូលហេតុ...' : 'Reason for failure/cancel...')
                                     : (lang === 'km' ? 'ចំណាំផ្សេងៗ (បើមាន)...' : 'Remarks (optional)...')
                                 }
                                 style={{
@@ -807,9 +1130,10 @@ export default function CompletePackagePage() {
                                   height: '30px',
                                   padding: '2px 8px',
                                   borderRadius: '6px',
-                                  border: !isDelivered ? '1px solid #fca5a5' : '1px solid #d1d5db',
-                                  backgroundColor: !isDelivered ? '#fffafb' : '#fff',
+                                  border: '1px solid #d1d5db',
+                                  backgroundColor: '#fff',
                                   fontSize: '12px',
+                                  color: 'var(--text-primary, #0f172a)',
                                   outline: 'none'
                                 }}
                               />
@@ -823,33 +1147,49 @@ export default function CompletePackagePage() {
               </table>
             </div>
 
-            {/* Pagination controls */}
+            {/* ── Modern Pagination Controls ── */}
             {totalPages > 0 && (
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px', flexWrap: 'wrap', gap: '16px' }}>
-                <div style={{ fontSize: '14px', color: '#6b7280' }}>
-                  Showing {startEntry} to {endEntry} of {totalEntries} entries
+                <div style={{ fontSize: '13px', color: 'var(--text-secondary, #64748b)' }}>
+                  {lang === 'km' 
+                    ? `បង្ហាញ ${startEntry} ដល់ ${endEntry} នៃ ${totalEntries} កញ្ចប់សរុប` 
+                    : `Showing ${startEntry} to ${endEntry} of ${totalEntries} entries`}
                 </div>
-                <div style={{ display: 'flex', gap: '4px' }}>
+                <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                   <button
-                    className="btn btn-outline btn-sm"
+                    type="button"
                     disabled={currentPage === 1}
                     onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                    style={{ padding: '4px 10px', height: '30px', fontSize: '12px', cursor: 'pointer' }}
+                    style={{
+                      padding: '4px 12px',
+                      height: '32px',
+                      fontSize: '12.5px',
+                      fontWeight: 500,
+                      borderRadius: '6px',
+                      border: '1px solid var(--border, #cbd5e1)',
+                      backgroundColor: 'transparent',
+                      color: currentPage === 1 ? '#94a3b8' : 'var(--text-primary, #1e293b)',
+                      cursor: currentPage === 1 ? 'not-allowed' : 'pointer'
+                    }}
                   >
-                    Previous
+                    {lang === 'km' ? 'ថយក្រោយ' : 'Previous'}
                   </button>
                   {Array.from({ length: totalPages }, (_, idx) => idx + 1).map(pageNum => (
                     <button
                       key={pageNum}
-                      className={`btn btn-sm ${currentPage === pageNum ? 'btn-primary' : 'btn-outline'}`}
+                      type="button"
                       onClick={() => setCurrentPage(pageNum)}
                       style={{
                         padding: '4px 10px',
-                        height: '30px',
-                        fontSize: '12px',
-                        backgroundColor: currentPage === pageNum ? 'var(--accent, #1565D8)' : 'transparent',
-                        borderColor: '#2563eb',
-                        color: currentPage === pageNum ? '#ffffff' : 'var(--accent, #1565D8)',
+                        height: '32px',
+                        minWidth: '32px',
+                        fontSize: '12.5px',
+                        fontWeight: 600,
+                        borderRadius: '6px',
+                        border: '1px solid',
+                        borderColor: currentPage === pageNum ? 'var(--sidebar-bg, #1565D8)' : 'var(--border, #cbd5e1)',
+                        backgroundColor: currentPage === pageNum ? 'var(--sidebar-bg, #1565D8)' : 'transparent',
+                        color: currentPage === pageNum ? '#ffffff' : 'var(--text-primary, #1e293b)',
                         cursor: 'pointer'
                       }}
                     >
@@ -857,12 +1197,22 @@ export default function CompletePackagePage() {
                     </button>
                   ))}
                   <button
-                    className="btn btn-outline btn-sm"
+                    type="button"
                     disabled={currentPage === totalPages || totalPages === 0}
                     onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                    style={{ padding: '4px 10px', height: '30px', fontSize: '12px', cursor: 'pointer' }}
+                    style={{
+                      padding: '4px 12px',
+                      height: '32px',
+                      fontSize: '12.5px',
+                      fontWeight: 500,
+                      borderRadius: '6px',
+                      border: '1px solid var(--border, #cbd5e1)',
+                      backgroundColor: 'transparent',
+                      color: currentPage === totalPages || totalPages === 0 ? '#94a3b8' : 'var(--text-primary, #1e293b)',
+                      cursor: currentPage === totalPages || totalPages === 0 ? 'not-allowed' : 'pointer'
+                    }}
                   >
-                    Next
+                    {lang === 'km' ? 'បន្ទាប់' : 'Next'}
                   </button>
                 </div>
               </div>

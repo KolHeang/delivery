@@ -56,7 +56,7 @@ export default function ExpenseListPage() {
         <div className="page-content">
           <div className="card">
             <div className="card-header">
-              <span className="card-title">📉 {t('outlaysTitle') || 'Expenses & Outflows'}</span>
+              <span className="card-title">{t('outlaysTitle') || 'Expenses & Outflows'}</span>
               <button className="btn btn-primary btn-sm" onClick={() => router.push('/expense/create')}>
                 <FiPlusCircle size={14} /> {t('addExpense') || 'Add Expense'}
               </button>

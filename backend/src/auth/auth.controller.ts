@@ -5,6 +5,7 @@ import {
   Get,
   UseGuards,
   Request,
+  Headers,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
@@ -21,8 +22,15 @@ export class AuthController {
   @Throttle({ default: { limit: 10, ttl: 60000 } })
   @Post('login')
   @ApiOperation({ summary: 'Login and get JWT token' })
-  login(@Body() dto: LoginDto) {
-    return this.authService.login(dto.email, dto.password);
+  login(
+    @Body() dto: LoginDto,
+    @Headers('x-tenant-subdomain') headerSubdomain?: string,
+    @Headers('x-tenant-domain') headerDomain?: string,
+    @Request() req?: any,
+  ) {
+    const subdomain = dto.subdomain || headerSubdomain;
+    const domain = dto.domain || headerDomain || req?.headers?.['host'];
+    return this.authService.login(dto.email, dto.password, subdomain, domain);
   }
 
   @Post('refresh')

@@ -145,7 +145,7 @@ export default function IncomeTypePage() {
                 onClick={() => setAddModalOpen(true)}
                 style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700 }}
               >
-                <FiPlusCircle size={16} /> {t('addCategory') || 'Add Category'}
+                <FiPlusCircle size={16} /> {t('addIncomeCategory')}
               </button>
             </div>
             <div className="card-body" style={{ padding: 0 }}>
@@ -153,7 +153,7 @@ export default function IncomeTypePage() {
                 <thead>
                   <tr>
                     <th style={{ width: 80 }}>{t('no') || '#'}</th>
-                    <th>{t('categoryName') || 'Category Name'}</th>
+                    <th>{t('incomeCategoryName')}</th>
                     <th>{t('description') || 'Description'}</th>
                     <th style={{ width: 120, textAlign: 'center' }}>{t('actions') || 'Actions'}</th>
                   </tr>
@@ -214,7 +214,7 @@ export default function IncomeTypePage() {
         <Modal
           open={addModalOpen}
           onClose={() => setAddModalOpen(false)}
-          title={`➕ ${t('addIncomeCategory') || 'Add Income Category'}`}
+          title={t('addIncomeCategory')}
           size="md"
         >
           <form noValidate onSubmit={handleSubmit}>

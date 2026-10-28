@@ -311,17 +311,17 @@ export default function BatchEntryPage() {
             <div style={{ overflowX: 'auto' }}>
               <table style={{ minWidth: 1050, width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
-                  <tr style={{ background: '#1565D8' }}>
-                    <th style={{ width: 45, padding: '12px 8px', textAlign: 'center', background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'ល.រ' : 'No.'}</th>
-                    <th style={{ width: 180, padding: '12px 8px', background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('receiverAddressCol')}</th>
-                    <th style={{ width: 130, padding: '12px 8px', background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('receiverPhoneColRequired')}</th>
-                    <th style={{ width: 85, padding: '12px 8px', background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('deliveryFee')}</th>
-                    <th style={{ width: 95, padding: '12px 8px', background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('amountUSD')}</th>
-                    <th style={{ width: 105, padding: '12px 8px', background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('amountKHR')}</th>
-                    <th style={{ width: 145, padding: '12px 8px', background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('pickupPerson')}</th>
-                    <th style={{ width: 145, padding: '12px 8px', background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('deliveryPerson')}</th>
-                    <th style={{ width: 120, padding: '12px 8px', background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('note')}</th>
-                    <th style={{ width: 60, padding: '12px 8px', textAlign: 'center', background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('actions')}</th>
+                  <tr style={{ background: 'var(--sidebar-bg, #1565D8)' }}>
+                    <th style={{ width: 45, padding: '12px 8px', textAlign: 'center', background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'ល.រ' : 'No.'}</th>
+                    <th style={{ width: 180, padding: '12px 8px', background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('receiverAddressCol')}</th>
+                    <th style={{ width: 130, padding: '12px 8px', background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('receiverPhoneColRequired')}</th>
+                    <th style={{ width: 85, padding: '12px 8px', background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('deliveryFee')}</th>
+                    <th style={{ width: 95, padding: '12px 8px', background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('amountUSD')}</th>
+                    <th style={{ width: 105, padding: '12px 8px', background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('amountKHR')}</th>
+                    <th style={{ width: 145, padding: '12px 8px', background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('pickupPerson')}</th>
+                    <th style={{ width: 145, padding: '12px 8px', background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('deliveryPerson')}</th>
+                    <th style={{ width: 120, padding: '12px 8px', background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('note')}</th>
+                    <th style={{ width: 60, padding: '12px 8px', textAlign: 'center', background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('actions')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -477,11 +477,11 @@ export default function BatchEntryPage() {
               {/* Left metrics */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
                 <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)' }}>
-                  📦 {rows.length} {lang === 'km' ? 'កញ្ចប់' : 'parcels'}
+                  {rows.length} {lang === 'km' ? 'កញ្ចប់' : 'parcels'}
                 </span>
                 {(totalCodUSD > 0 || totalCodKHR > 0) && (
                   <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--accent)', background: 'var(--accent-light)', padding: '3px 10px', borderRadius: 8 }}>
-                    💰 COD: {totalCodUSD > 0 ? `$${totalCodUSD.toFixed(2)}` : ''} {totalCodUSD > 0 && totalCodKHR > 0 ? ' | ' : ''} {totalCodKHR > 0 ? `${totalCodKHR.toLocaleString()} ៛` : ''}
+                    COD: {totalCodUSD > 0 ? `$${totalCodUSD.toFixed(2)}` : ''} {totalCodUSD > 0 && totalCodKHR > 0 ? ' | ' : ''} {totalCodKHR > 0 ? `${totalCodKHR.toLocaleString()} ៛` : ''}
                   </span>
                 )}
               </div>

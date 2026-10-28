@@ -7,13 +7,13 @@ import Toast from '@/components/ui/Toast';
 interface LanguageContextType {
   lang: Lang;
   setLang: (l: Lang) => void;
-  t: (key: TranslationKey | string) => string;
+  t: (key: TranslationKey | string, fallback?: string) => string;
 }
 
 const LanguageContext = createContext<LanguageContextType>({
   lang: 'en',
   setLang: () => {},
-  t: (key) => (translations['en'] as any)[key] || (key as string),
+  t: (key, fallback) => (translations['en'] as any)[key] || fallback || (key as string),
 });
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
@@ -112,8 +112,12 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('app-lang', l);
   };
 
-  const t = (key: TranslationKey | string): string => {
-    return ((translations[lang] as any)?.[key] ?? (translations['en'] as any)?.[key] ?? key) as string;
+  const t = (key: TranslationKey | string, fallback?: string): string => {
+    const val = (translations[lang] as any)?.[key] ?? (translations['en'] as any)?.[key];
+    if (val !== undefined && val !== null && val !== '') {
+      return val as string;
+    }
+    return fallback !== undefined ? fallback : (key as string);
   };
 
   return (

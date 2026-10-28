@@ -992,7 +992,7 @@ export default function SaasMasterPortal({ initialTab }: { initialTab?: 'dashboa
   const handleCreateCompanySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!companyForm.companyName || !companyForm.subdomain || !companyForm.email || !companyForm.password) {
-      alert(tr('សូមបំពេញព័ត៌មានចាំបាច់ឱ្យបានគ្រប់គ្រាន់ (*)', 'Please fill in all required fields (*)'));
+      alert(tr('សូមបំពេញព័ត៌មានចាំបាច់ឱ្យបានគ្រប់គ្រាន់', 'Please fill in all required fields'));
       return;
     }
 
@@ -1073,8 +1073,8 @@ export default function SaasMasterPortal({ initialTab }: { initialTab?: 'dashboa
 -----------------------------------------
 🏢 ${tr('ក្រុមហ៊ុន', 'Company')}: ${createdCredentials.companyName}
 🌐 ${tr('តំណភ្ជាប់ចូលប្រើប្រាស់', 'Login Portal')}: ${createdCredentials.url}/auth
-👤 ${tr('អ៊ីមែល (Email)', 'Email')}: ${createdCredentials.email}
-🔑 ${tr('ពាក្យសម្ងាត់ (Password)', 'Password')}: ${createdCredentials.password}
+👤 ${tr('អ៊ីមែល', 'Email')}: ${createdCredentials.email}
+🔑 ${tr('ពាក្យសម្ងាត់', 'Password')}: ${createdCredentials.password}
 🏷️ ${tr('កញ្ចប់សេវា', 'Plan')}: ${createdCredentials.planName}
 -----------------------------------------
 ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស់ប្តូរពាក្យសម្ងាត់តាមការគួរ។', 'Please login and change your password as recommended.')}`;
@@ -1100,7 +1100,7 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
   };
 
   const handleApproveCommission = async (id: number, status: 'approved' | 'paid') => {
-    const ref = status === 'paid' ? prompt(tr('សូមបញ្ចូលលេខយោងផ្ទេរប្រាក់ (Payout Reference):', 'Enter Payout Reference:'), 'ABA-TRX-' + Date.now()) : undefined;
+    const ref = status === 'paid' ? prompt(tr('សូមបញ្ចូលលេខយោងផ្ទេរប្រាក់:', 'Enter Payout Reference:'), 'ABA-TRX-' + Date.now()) : undefined;
     if (status === 'paid' && !ref) return;
 
     try {
@@ -1321,7 +1321,7 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
   const paginatedCommissions = filteredCommissions.slice((commissionsPage - 1) * commissionsLimit, commissionsPage * commissionsLimit);
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: '#f8fafc', fontFamily: "'Kantumruy Pro', 'Inter', sans-serif", width: '100%', maxWidth: '100vw', overflowX: 'hidden' }}>
+    <div style={{ display: 'flex', height: '100vh', maxHeight: '100vh', background: '#f8fafc', fontFamily: "'Kantumruy Pro', 'Inter', sans-serif", width: '100vw', maxWidth: '100vw', overflow: 'hidden' }}>
       {/* 1. DEDICATED SAAS MASTER SIDEBAR */}
       <aside
         style={{
@@ -1335,7 +1335,8 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
           top: 0,
           bottom: 0,
           left: 0,
-          zIndex: 90,
+          height: '100vh',
+          zIndex: 100,
           boxShadow: '4px 0 20px rgba(0,0,0,0.1)',
         }}
       >
@@ -1585,18 +1586,19 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
       </aside>
 
       {/* 2. MAIN CONTENT AREA WITH DEDICATED TOPBAR */}
-      <div style={{ flex: 1, marginLeft: 260, minWidth: 0, maxWidth: 'calc(100vw - 260px)', display: 'flex', flexDirection: 'column', minHeight: '100vh', overflowX: 'hidden' }}>
+      <div style={{ flex: 1, marginLeft: 260, minWidth: 0, width: 'calc(100vw - 260px)', maxWidth: 'calc(100vw - 260px)', display: 'flex', flexDirection: 'column', height: '100vh', maxHeight: '100vh', overflow: 'hidden' }}>
         {/* Dedicated SaaS Master Topbar / Navbar */}
         <header
           style={{
             height: 64,
+            minHeight: 64,
             background: '#1565D8',
             borderBottom: '1px solid rgba(255, 255, 255, 0.12)',
             padding: '0 28px',
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
-            position: 'sticky',
+            flexShrink: 0,
             top: 0,
             zIndex: 80,
             boxShadow: '0 4px 16px rgba(0,0,0,0.06)',
@@ -1610,7 +1612,7 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
               {/* Language Switcher Button */}
               <button
                 onClick={() => setLang(lang === 'en' ? 'km' : 'en')}
-                title={tr('ប្តូរភាសា (Switch Language)', 'Switch Language')}
+                title={tr('ប្តូរភាសា', 'Switch Language')}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -1762,7 +1764,7 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
                         }}
                       >
                         <MdLogout size={18} />
-                        <span>{tr('ចាកចេញ (Logout)', 'Logout')}</span>
+                        <span>{tr('ចាកចេញពីប្រព័ន្ធ', 'Logout')}</span>
                       </button>
                     </div>
                   </div>
@@ -1774,7 +1776,7 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
       </header>
 
         {/* 3. DYNAMIC DASHBOARD BODY */}
-        <main style={{ flex: 1, padding: '24px 28px', width: '100%', maxWidth: '100%', minWidth: 0, boxSizing: 'border-box' }}>
+        <main style={{ flex: 1, padding: '24px 28px', width: '100%', maxWidth: '100%', minWidth: 0, boxSizing: 'border-box', overflowY: 'auto', overflowX: 'hidden' }}>
           <style jsx global>{`
             .saas-custom-table {
               width: 100% !important;
@@ -1812,7 +1814,7 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
               {activeMenu === 'dashboard' && tr('ផ្ទាំងគ្រប់គ្រងទិន្នន័យទូទៅ', 'SaaS Master Overview')}
               {activeMenu === 'tenants' && tr('បញ្ជីក្រុមហ៊ុនជាវសេវា', 'All Tenant Companies')}
               {activeMenu === 'invoices' && tr('ប្រវត្តិវិក្កយបត្រ & ការទូទាត់ទាំងអស់', 'All Billing Invoices & Payments')}
-              {activeMenu === 'create-invoice' && tr('ចេញវិក្កយបត្រជូនក្រុមហ៊ុន (បង់តាមក្រោយ)', 'Issue Invoice to Tenant (Pay Later)')}
+              {activeMenu === 'create-invoice' && tr('ចេញវិក្កយបត្រជូនក្រុមហ៊ុន', 'Issue Invoice to Tenant (Pay Later)')}
               {activeMenu === 'create-partner' && (editingPartnerId ? tr('កែប្រែដៃគូសហការ', 'Edit Affiliate Partner') : tr('បង្កើតដៃគូសហការថ្មី', 'Add New Affiliate Partner'))}
               {activeMenu === 'users' && tr('អ្នកគ្រប់គ្រងប្រព័ន្ធ SaaS', 'SaaS Platform Admins')}
               {activeMenu === 'plans' && tr('គម្រោងតម្លៃកញ្ចប់សេវា', 'Subscription Plans & Pricing')}
@@ -1870,7 +1872,7 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
                     💰
                   </div>
                   <div>
-                    <div style={{ fontSize: 13, color: '#64748b', fontWeight: 600 }}>{tr('ចំណូលប្រចាំខែ (MRR)', 'Monthly Revenue (MRR)')}</div>
+                    <div style={{ fontSize: 13, color: '#64748b', fontWeight: 600 }}>{tr('ចំណូលប្រចាំខែ', 'Monthly Revenue')}</div>
                     <div style={{ fontSize: 28, fontWeight: 900, color: '#059669', marginTop: 2 }}>${totalMonthlyRevenue.toFixed(2)}</div>
                     <div style={{ fontSize: 11.5, color: '#64748b', fontWeight: 600, marginTop: 4 }}>{tr('ចំណូលបន្តប្រចាំខែ', 'Recurring Monthly')}</div>
                   </div>
@@ -2269,7 +2271,7 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
                                 className="btn btn-ghost btn-icon btn-sm"
                                 style={{ color: '#16a34a' }}
                                 onClick={() => handleDeleteTenant(s.tenantId || s.tenant?.id || s.id, s.companyName || `Tenant #${s.id}`, true)}
-                                title={tr('បើកដំណើរការក្រុមហ៊ុនឡើងវិញ (Reactivate)', 'Reactivate Tenant')}
+                                title={tr('បើកដំណើរការក្រុមហ៊ុនឡើងវិញ', 'Reactivate Tenant')}
                               >
                                 <MdCheck size={16} />
                               </button>
@@ -2278,7 +2280,7 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
                                 className="btn btn-ghost btn-icon btn-sm"
                                 style={{ color: 'var(--danger)' }}
                                 onClick={() => handleDeleteTenant(s.tenantId || s.tenant?.id || s.id, s.companyName || `Tenant #${s.id}`, false)}
-                                title={tr('ផ្អាកដំណើរការក្រុមហ៊ុន (Suspend)', 'Suspend Tenant')}
+                                title={tr('ផ្អាកដំណើរការក្រុមហ៊ុន', 'Suspend Tenant')}
                               >
                                 <FaTrashAlt size={13} />
                               </button>
@@ -2887,7 +2889,7 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
                     <div style={{ fontSize: 12.5, color: '#92400e', lineHeight: 1.5 }}>
                       <strong>{tr('ការទូទាត់បែប Offline ត្រូវការការអនុម័តពី Admin SAAS', 'Offline Payment requires Admin Approval')}:</strong>{' '}
                       {tr(
-                        'អតិថិជនបានផ្ទេរប្រាក់តាមរយៈការផ្ទេរធនាគារ (ABA, ACLEDA) និងបានបញ្ចូល Transaction ID។ សូមពិនិត្យផ្ទៀងផ្ទាត់ទឹកប្រាក់ក្នុងគណនីធនាគារ រួចចុច «អនុម័ត» ដើម្បីឱ្យគម្រោងក្រុមហ៊ុនត្រូវបានបើកដំណើរការ ឬបន្តសុពលភាពភ្លាមៗ។',
+                        'អតិថិជនបានផ្ទេរប្រាក់តាមរយៈការផ្ទេរធនាគារ ABA ឬ ACLEDA និងបានបញ្ចូល Transaction ID។ សូមពិនិត្យផ្ទៀងផ្ទាត់ទឹកប្រាក់ក្នុងគណនីធនាគារ រួចចុច «អនុម័ត» ដើម្បីឱ្យគម្រោងក្រុមហ៊ុនត្រូវបានបើកដំណើរការ ឬបន្តសុពលភាពភ្លាមៗ។',
                         'Tenants transferred funds via bank transfer and submitted their Transaction ID. Please verify the amount in your bank account, then click «Approve» to immediately activate or extend their company subscription.'
                       )}
                     </div>
@@ -3080,7 +3082,7 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
                     <div>
                       <span className="card-title">{tr('ប្រវត្តិប្រតិបត្តិការទូទាត់ទាំងអស់', 'All Payments Transaction History')}</span>
                       <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
-                        {tr('កំណត់ត្រាការទូទាត់គ្រប់វិធីសាស្ត្រ (Offline, Bank Transfer, API, etc.)', 'Complete payment logs for all subscription billing events')}
+                        {tr('កំណត់ត្រាការទូទាត់គ្រប់វិធីសាស្ត្រទាំងអស់', 'Complete payment logs for all subscription billing events')}
                       </div>
                     </div>
 
@@ -3103,9 +3105,9 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
                         style={{ width: 'auto', padding: '6px 12px', fontSize: 13, height: 38, borderRadius: 'var(--radius)', borderColor: 'var(--border)' }}
                       >
                         <option value="all">{tr('ស្ថានភាពទាំងអស់', 'All Statuses')}</option>
-                        <option value="success">{tr('ជោគជ័យ (Success)', 'Success')}</option>
-                        <option value="pending">{tr('រង់ចាំអនុម័ត (Pending)', 'Pending')}</option>
-                        <option value="failed">{tr('បរាជ័យ (Failed)', 'Failed')}</option>
+                        <option value="success">{tr('ជោគជ័យ', 'Success')}</option>
+                        <option value="pending">{tr('រង់ចាំអនុម័ត', 'Pending')}</option>
+                        <option value="failed">{tr('បរាជ័យ', 'Failed')}</option>
                       </select>
                     </div>
                   </div>
@@ -3256,7 +3258,7 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
           {activeMenu === 'create-invoice' && (
             <div className="card" style={{ width: '100%' }}>
               <div className="card-header">
-                <span className="card-title">{tr('ចេញវិក្កយបត្រជូនក្រុមហ៊ុន (បង់តាមក្រោយ)', 'Issue Invoice to Tenant (Pay Later)')}</span>
+                <span className="card-title">{tr('ចេញវិក្កយបត្រជូនក្រុមហ៊ុន', 'Issue Invoice to Tenant (Pay Later)')}</span>
               </div>
 
               <div className="card-body" style={{ padding: '24px 28px' }}>
@@ -3356,7 +3358,7 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
                   <div className="form-row" style={{ marginBottom: 16 }}>
                     <div className="form-group">
                       <label className="form-label">
-                        {tr('តម្លៃដើម ($)', 'Subtotal Amount ($)')} <span style={{ color: '#dc2626' }}>*</span>
+                        {tr('តម្លៃដើម', 'Subtotal Amount')} <span style={{ color: '#dc2626' }}>*</span>
                       </label>
                       <input
                         type="number"
@@ -3371,7 +3373,7 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
 
                     <div className="form-group">
                       <label className="form-label">
-                        {tr('ទឹកប្រាក់បញ្ចុះតម្លៃ ($)', 'Discount Amount ($)')}
+                        {tr('ទឹកប្រាក់បញ្ចុះតម្លៃ', 'Discount Amount')}
                       </label>
                       <input
                         type="number"
@@ -3837,7 +3839,7 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
                             </span>
                           </td>
                           <td style={{ textTransform: 'capitalize', color: 'var(--text-secondary)' }}>
-                            {c.discountType === 'percentage' ? tr('ភាគរយ (%)', 'Percentage (%)') : tr('ចំនួនថេរ ($)', 'Fixed ($)')}
+                            {c.discountType === 'percentage' ? tr('ភាគរយ', 'Percentage') : tr('ចំនួនថេរ', 'Fixed')}
                           </td>
                           <td style={{ fontWeight: 600, color: '#059669' }}>
                             {c.discountType === 'percentage' ? `${c.discountValue}%` : `$${Number(c.discountValue).toFixed(2)}`}
@@ -4276,7 +4278,7 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
 
                   <div className="form-group" style={{ marginBottom: 24, maxWidth: 360 }}>
                     <label className="form-label">
-                      {tr('ភាគរយកម្រៃជើងសារ (%)', 'Commission Rate (%)')} <span style={{ color: '#ef4444' }}>*</span>
+                      {tr('ភាគរយកម្រៃជើងសារ', 'Commission Rate')} <span style={{ color: '#ef4444' }}>*</span>
                     </label>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                       <input
@@ -4396,14 +4398,14 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
                       <MdAccountBalance size={22} />
                     </div>
                     <span style={{ background: '#ecfdf5', color: '#059669', border: '1px solid #a7f3d0', padding: '2px 8px', borderRadius: 20, fontSize: 11, fontWeight: 700 }}>
-                      ● {tr('សកម្ម (Active)', 'Active')}
+                      ● {tr('សកម្ម', 'Active')}
                     </span>
                   </div>
                   <div style={{ fontSize: 14.5, fontWeight: 800, color: '#0f172a', marginBottom: 4 }}>
-                    {tr('ការទូទាត់តាមធនាគារ (Offline)', 'Offline Bank Transfer')}
+                    {tr('ការទូទាត់តាមធនាគារ', 'Offline Bank Transfer')}
                   </div>
                   <div style={{ fontSize: 12, color: '#64748b', lineHeight: 1.4 }}>
-                    {tr('អតិថិជនផ្ទេរប្រាក់ និងបញ្ចូលលេខប្រតិបត្តិការ (តម្រូវឱ្យ Admin អនុម័ត)', 'Tenants transfer and submit Tx ID (Requires Admin approval)')}
+                    {tr('អតិថិជនផ្ទេរប្រាក់ និងបញ្ចូលលេខប្រតិបត្តិការ ដោយតម្រូវឱ្យ Admin អនុម័ត', 'Tenants transfer and submit Tx ID - Requires Admin approval')}
                   </div>
                 </div>
 
@@ -4414,14 +4416,14 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
                       <MdPayment size={22} />
                     </div>
                     <span style={{ background: '#fff7ed', color: '#ea580c', border: '1px solid #fed7aa', padding: '2px 8px', borderRadius: 20, fontSize: 11, fontWeight: 700 }}>
-                      ⏳ {tr('រង់ចាំតភ្ជាប់ (Pending)', 'Pending API')}
+                      ⏳ {tr('រង់ចាំតភ្ជាប់', 'Pending API')}
                     </span>
                   </div>
                   <div style={{ fontSize: 14.5, fontWeight: 800, color: '#0f172a', marginBottom: 4 }}>
                     {tr('ABA PayWay / KHQR API', 'ABA PayWay Direct')}
                   </div>
                   <div style={{ fontSize: 12, color: '#64748b', lineHeight: 1.4 }}>
-                    {tr('កាត់ប្រាក់ស្វ័យប្រវត្តិតាម Bank API (កំពុងរៀបចំការតភ្ជាប់)', 'Automatic direct bank payment gateway (Integration pending)')}
+                    {tr('កាត់ប្រាក់ស្វ័យប្រវត្តិតាម Bank API កំពុងរៀបចំការតភ្ជាប់', 'Automatic direct bank payment gateway - Integration pending')}
                   </div>
                 </div>
 
@@ -4502,9 +4504,9 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
                       style={{ height: 36, padding: '0 10px', fontSize: 12.5, borderRadius: 8, border: '1px solid #e2e8f0', background: '#f8fafc', color: '#334155', fontWeight: 600, outline: 'none', cursor: 'pointer' }}
                     >
                       <option value="all">{tr('ស្ថានភាពទាំងអស់', 'All Statuses')}</option>
-                      <option value="active">{tr('សកម្ម (Active)', 'Active')}</option>
-                      <option value="pending">{tr('រង់ចាំតភ្ជាប់ (Pending)', 'Pending')}</option>
-                      <option value="inactive">{tr('អសកម្ម (Inactive)', 'Inactive')}</option>
+                      <option value="active">{tr('សកម្ម', 'Active')}</option>
+                      <option value="pending">{tr('រង់ចាំតភ្ជាប់', 'Pending')}</option>
+                      <option value="inactive">{tr('អសកម្ម', 'Inactive')}</option>
                     </select>
 
                     {/* Action Button */}
@@ -4879,7 +4881,7 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
                       onChange={(e) => setNewDomainForm({ ...newDomainForm, isPrimary: e.target.checked })}
                       style={{ width: 14, height: 14, accentColor: '#2563eb', cursor: 'pointer' }}
                     />
-                    <span>{tr('កំណត់ជា Domain ចម្បង (Primary)', 'Set as Primary Domain')}</span>
+                    <span>{tr('កំណត់ជា Domain ចម្បង', 'Set as Primary Domain')}</span>
                   </label>
 
                   <select
@@ -4906,7 +4908,7 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
               {/* Connected Domains List */}
               <div>
                 <div style={{ fontSize: 12.5, fontWeight: 800, color: '#334155', marginBottom: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span>{tr('Domains ដែលបានភ្ជាប់', 'Connected Domains')} ({tenantDomainsList.length})</span>
+                  <span>{tr('Domains ដែលបានភ្ជាប់', 'Connected Domains')} • {tenantDomainsList.length}</span>
                   {loadingDomains && <span style={{ fontSize: 11, color: '#2563eb' }}>{tr('កំពុងទាញ...', 'Loading...')}</span>}
                 </div>
 
@@ -5368,7 +5370,7 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
                       onChange={() => setRenewDuration('custom')}
                       style={{ width: 16, height: 16, accentColor: '#2563eb', cursor: 'pointer' }}
                     />
-                    <span>{tr('ឬ កំណត់កាលបរិច្ឆេទជាក់លាក់ (Custom Expiry Date)', 'Or set custom expiry date')}</span>
+                    <span>{tr('ឬ កំណត់កាលបរិច្ឆេទជាក់លាក់', 'Or set custom expiry date')}</span>
                   </label>
 
                   {renewDuration === 'custom' && (
@@ -5641,7 +5643,7 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                   <div>
                     <label style={{ display: 'block', fontSize: 12.5, fontWeight: 700, color: '#334155', marginBottom: 6 }}>
-                      {tr('កញ្ចប់គម្រោង (Plan)', 'Subscription Plan')}
+                      {tr('កញ្ចប់គម្រោង', 'Subscription Plan')}
                     </label>
                     <select
                       value={editTenantForm.planId}
@@ -5687,10 +5689,10 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
                         cursor: 'pointer',
                       }}
                     >
-                      <option value="active">Active (សកម្ម)</option>
-                      <option value="suspended">Suspended (ផ្អាក)</option>
-                      <option value="trial">Trial (សាកល្បង)</option>
-                      <option value="expired">Expired (ផុតកំណត់)</option>
+                      <option value="active">{tr('សកម្ម', 'Active')}</option>
+                      <option value="suspended">{tr('ផ្អាកដំណើរការ', 'Suspended')}</option>
+                      <option value="trial">{tr('សាកល្បង', 'Trial')}</option>
+                      <option value="expired">{tr('ផុតកំណត់', 'Expired')}</option>
                     </select>
                   </div>
                 </div>
@@ -5884,7 +5886,7 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
 
               <div>
                 <label style={{ display: 'block', fontSize: 12.5, fontWeight: 700, color: '#334155', marginBottom: 6 }}>
-                  {tr('មូលហេតុនៃការបដិសេធ (Rejection Reason)', 'Rejection Reason')} *
+                  {tr('មូលហេតុនៃការបដិសេធ', 'Rejection Reason')} *
                 </label>
                 <textarea
                   rows={3}

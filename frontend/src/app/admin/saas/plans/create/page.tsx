@@ -160,7 +160,7 @@ export default function CreatePlanPage() {
     {
       key: 'payment',
       icon: MdAccountBalanceWallet,
-      label: tr('ការទូទាត់ប្រាក់ (COD)', 'Payment Settlement'),
+      label: tr('ការទូទាត់ប្រាក់ COD', 'Payment Settlement'),
       desc: tr('ទូទាត់ប្រាក់ជាមួយអ្នកដឹក និងទូទាត់ប្រាក់ជូនហាង', 'Cash settlements with delivery drivers and merchant shops'),
     },
     {
@@ -224,7 +224,7 @@ export default function CreatePlanPage() {
           </Link>
 
           <h1 style={{ fontSize: 22, fontWeight: 800, color: '#0f172a', margin: '0 0 4px', letterSpacing: '-0.3px' }}>
-            {tr('បង្កើតកញ្ចប់សេវាថ្មី (Subscription Plan)', 'Create Subscription Plan')}
+            {tr('បង្កើតកញ្ចប់សេវាថ្មី', 'Create Subscription Plan')}
           </h1>
           <p style={{ fontSize: 13, color: '#64748b', margin: 0 }}>
             {tr('កំណត់ព័ត៌មាន តម្លៃ កូតាធនធាន និងសិទ្ធិបើកមើលម៉ូឌុលនៅលើ Sidebar សម្រាប់ក្រុមហ៊ុនជាវសេវា', 'Set plan info, pricing, quotas, and sidebar module permissions for subscribers')}
@@ -308,7 +308,7 @@ export default function CreatePlanPage() {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 18, marginBottom: 20 }}>
               <div>
                 <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#334155', marginBottom: 6 }}>
-                  {tr('តម្លៃប្រចាំខែ ($)', 'Monthly Price ($)')} <span style={{ color: '#ef4444' }}>*</span>
+                  {tr('តម្លៃប្រចាំខែ', 'Monthly Price')} <span style={{ color: '#ef4444' }}>*</span>
                 </label>
                 <div style={{ position: 'relative' }}>
                   <span style={{ position: 'absolute', left: 12, top: 10, fontWeight: 700, color: '#94a3b8' }}>$</span>
@@ -333,7 +333,7 @@ export default function CreatePlanPage() {
 
               <div>
                 <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#334155', marginBottom: 6 }}>
-                  {tr('តម្លៃប្រចាំឆ្នាំ ($)', 'Yearly Price ($)')} <span style={{ color: '#ef4444' }}>*</span>
+                  {tr('តម្លៃប្រចាំឆ្នាំ', 'Yearly Price')} <span style={{ color: '#ef4444' }}>*</span>
                 </label>
                 <div style={{ position: 'relative' }}>
                   <span style={{ position: 'absolute', left: 12, top: 10, fontWeight: 700, color: '#94a3b8' }}>$</span>
@@ -381,7 +381,7 @@ export default function CreatePlanPage() {
                   style={{ accentColor: '#d97706', cursor: 'pointer' }}
                 />
                 <MdStar size={16} color={planForm.isPopular ? '#d97706' : '#94a3b8'} />
-                <span>{tr('កញ្ចប់ពេញនិយម (Popular)', 'Mark as Popular')}</span>
+                <span>{tr('កញ្ចប់ពេញនិយម', 'Mark as Popular')}</span>
               </label>
 
               <label
@@ -408,7 +408,7 @@ export default function CreatePlanPage() {
                   style={{ accentColor: '#16a34a', cursor: 'pointer' }}
                 />
                 <MdCheckCircle size={16} color={planForm.isActive ? '#16a34a' : '#94a3b8'} />
-                <span>{tr('បើកដំណើរការ (Active)', 'Active Plan')}</span>
+                <span>{tr('បើកដំណើរការ', 'Active Plan')}</span>
               </label>
             </div>
           </div>
@@ -430,7 +430,7 @@ export default function CreatePlanPage() {
                   {tr('កម្រិតធនធាន និង Quota', 'Resource Quotas & Limits')}
                 </div>
                 <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>
-                  {tr('កំណត់កម្រិតប្រើប្រាស់ (ដាក់លេខ 0 ដើម្បីមិនកំណត់ / Unlimited)', 'Set resource limits per tenant (Set 0 for Unlimited)')}
+                  {tr('កំណត់កម្រិតប្រើប្រាស់ • ដាក់លេខ 0 ដើម្បីមិនកំណត់', 'Set resource limits per tenant • Set 0 for Unlimited')}
                 </div>
               </div>
             </div>

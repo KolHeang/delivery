@@ -19,10 +19,11 @@ export default function MerchantLoginPage() {
   const [form, setForm] = useState({ identifier: "", password: "" });
   const [rememberMe, setRememberMe] = useState(true);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [errorKey, setErrorKey] = useState("");
+  const [rawError, setRawError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
-  const t = {
+  const t: Record<string, string> = {
     title: "E-Express",
     tagline: lang === "km" ? "ដៃគូដឹកជញ្ជូនរបស់អ្នក" : "Your Delivery Partner",
     phonePlaceholder: lang === "km" ? "លេខទូរស័ព្ទ / អ៊ីមែល" : "Phone Number / Email",
@@ -32,6 +33,8 @@ export default function MerchantLoginPage() {
     loginBtn: lang === "km" ? "ចូលប្រព័ន្ធ" : "Login",
     loggingIn: lang === "km" ? "កំពុងចូល..." : "Logging in...",
     fingerprintBtn: lang === "km" ? "ប្រើប្រាស់ស្នាមម្រាមដៃ" : "Use Fingerprint",
+    requiredFields: lang === "km" ? "សូមបញ្ចូលលេខទូរស័ព្ទ និងពាក្យសម្ងាត់" : "Please enter your phone number and password",
+    biometricFailed: lang === "km" ? "មិនអាចផ្ទៀងផ្ទាត់ស្នាមម្រាមដៃបានទេ" : "Biometric authentication failed. Please enter password.",
     errorMsg:
       lang === "km"
         ? "លេខទូរស័ព្ទ ឬពាក្យសម្ងាត់មិនត្រឹមត្រូវឡើយ"
@@ -51,15 +54,13 @@ export default function MerchantLoginPage() {
     if (loading) return;
 
     if (!form.identifier.trim() || !form.password) {
-      setError(
-        lang === "km"
-          ? "សូមបញ្ចូលលេខទូរស័ព្ទ និងពាក្យសម្ងាត់"
-          : "Please enter your phone number and password"
-      );
+      setErrorKey("requiredFields");
+      setRawError("");
       return;
     }
 
-    setError("");
+    setErrorKey("");
+    setRawError("");
     setLoading(true);
     try {
       const res = await api.post("/mobile/auth/merchant/login", {
@@ -75,7 +76,11 @@ export default function MerchantLoginPage() {
       if (Array.isArray(msg)) {
         msg = msg.join(" • ");
       }
-      setError(msg || t.errorMsg);
+      if (msg) {
+        setRawError(msg);
+      } else {
+        setErrorKey("errorMsg");
+      }
     } finally {
       setLoading(false);
     }
@@ -84,7 +89,8 @@ export default function MerchantLoginPage() {
   const handleFingerprintLogin = async () => {
     // Quick biometric test login
     setLoading(true);
-    setError("");
+    setErrorKey("");
+    setRawError("");
     try {
       const res = await api.post("/mobile/auth/merchant/login", {
         identifier: form.identifier.trim() || "0962212400",
@@ -94,11 +100,7 @@ export default function MerchantLoginPage() {
       setAuth(data.access_token || data.token, data.user);
       router.push("/merchant/dashboard");
     } catch {
-      setError(
-        lang === "km"
-          ? "មិនអាចផ្ទៀងផ្ទាត់ស្នាមម្រាមដៃបានទេ"
-          : "Biometric authentication failed. Please enter password."
-      );
+      setErrorKey("biometricFailed");
       setLoading(false);
     }
   };
@@ -155,8 +157,8 @@ export default function MerchantLoginPage() {
               width: "72px",
               height: "72px",
               borderRadius: "20px",
-              backgroundColor: "#2563eb",
-              boxShadow: "0 10px 25px rgba(37, 99, 235, 0.35)",
+              backgroundColor: "var(--accent, #2563eb)",
+              boxShadow: "0 10px 25px var(--accent-glow, rgba(37, 99, 235, 0.35))",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -235,7 +237,7 @@ export default function MerchantLoginPage() {
         }}
       >
         <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-          {error && (
+          {(errorKey || rawError) && (
             <div
               style={{
                 backgroundColor: "#fef2f2",
@@ -247,7 +249,7 @@ export default function MerchantLoginPage() {
                 border: "1px solid #fee2e2",
               }}
             >
-              {error}
+              {(t as any)[errorKey] || errorKey || rawError}
             </div>
           )}
 
@@ -358,7 +360,7 @@ export default function MerchantLoginPage() {
                 style={{
                   width: "16px",
                   height: "16px",
-                  accentColor: "#2563eb",
+                  accentColor: "var(--accent, #2563eb)",
                   borderRadius: "4px",
                 }}
               />
@@ -367,7 +369,7 @@ export default function MerchantLoginPage() {
 
             <span
               style={{
-                color: "#2563eb",
+                color: "var(--accent, #2563eb)",
                 cursor: "pointer",
               }}
               onClick={() => alert("Please contact E-Express customer support to reset your password.")}
@@ -383,14 +385,14 @@ export default function MerchantLoginPage() {
             style={{
               width: "100%",
               padding: "15px",
-              backgroundColor: "#2563eb",
+              backgroundColor: "var(--accent, #2563eb)",
               color: "#ffffff",
               border: "none",
               borderRadius: "16px",
               fontSize: "15.5px",
               fontWeight: "800",
               cursor: "pointer",
-              boxShadow: "0 6px 18px rgba(37, 99, 235, 0.3)",
+              boxShadow: "0 6px 18px var(--accent-glow, rgba(37, 99, 235, 0.3))",
               transition: "transform 0.15s ease",
               marginTop: "8px",
             }}
@@ -409,9 +411,9 @@ export default function MerchantLoginPage() {
               alignItems: "center",
               justifyContent: "center",
               gap: "8px",
-              backgroundColor: "#eff6ff",
-              color: "#2563eb",
-              border: "1.5px solid #bfdbfe",
+              backgroundColor: "var(--accent-light, #eff6ff)",
+              color: "var(--accent, #2563eb)",
+              border: "1.5px solid var(--accent-light, #bfdbfe)",
               borderRadius: "16px",
               padding: "12px 24px",
               width: "100%",

@@ -36,7 +36,7 @@ export default function CreatePaymentOptionPage() {
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
-      alert(tr('សូមជ្រើសរើសឯកសាររូបភាពប៉ុណ្ណោះ (PNG, JPG, ...)', 'Please select an image file'));
+      alert(tr('សូមជ្រើសរើសឯកសាររូបភាពប៉ុណ្ណោះ PNG ឬ JPG', 'Please select an image file'));
       return;
     }
 
@@ -165,7 +165,7 @@ export default function CreatePaymentOptionPage() {
 
               <div className="form-group" style={{ flex: 1 }}>
                 <label className="form-label">
-                  {tr('លំដាប់បង្ហាញ (Sort Order)', 'Sort Order')}
+                  {tr('លំដាប់បង្ហាញ', 'Sort Order')}
                 </label>
                 <input
                   type="number"
@@ -180,7 +180,7 @@ export default function CreatePaymentOptionPage() {
             <div className="form-row">
               <div className="form-group">
                 <label className="form-label">
-                  {tr('ប្រភេទជម្រើស (Type)', 'Gateway Type')} <span style={{ color: '#ef4444' }}>*</span>
+                  {tr('ប្រភេទជម្រើស', 'Gateway Type')} <span style={{ color: '#ef4444' }}>*</span>
                 </label>
                 <select
                   className="form-control"
@@ -202,16 +202,16 @@ export default function CreatePaymentOptionPage() {
 
               <div className="form-group">
                 <label className="form-label">
-                  {tr('ស្ថានភាព (Status)', 'Status')} <span style={{ color: '#ef4444' }}>*</span>
+                  {tr('ស្ថានភាព', 'Status')} <span style={{ color: '#ef4444' }}>*</span>
                 </label>
                 <select
                   className="form-control"
                   value={formData.status}
                   onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
                 >
-                  <option value="active">{tr('សកម្ម (Active)', 'Active')}</option>
-                  <option value="pending">{tr('រង់ចាំតភ្ជាប់ (Pending API)', 'Pending API')}</option>
-                  <option value="inactive">{tr('អសកម្ម (Inactive)', 'Inactive')}</option>
+                  <option value="active">{tr('សកម្ម', 'Active')}</option>
+                  <option value="pending">{tr('រង់ចាំតភ្ជាប់', 'Pending API')}</option>
+                  <option value="inactive">{tr('អសកម្ម', 'Inactive')}</option>
                 </select>
               </div>
             </div>
@@ -220,7 +220,7 @@ export default function CreatePaymentOptionPage() {
             <div className="form-row">
               <div className="form-group">
                 <label className="form-label">
-                  {tr('ឈ្មោះធនាគារ (Bank Name)', 'Bank Name')}
+                  {tr('ឈ្មោះធនាគារ', 'Bank Name')}
                 </label>
                 <input
                   type="text"
@@ -233,7 +233,7 @@ export default function CreatePaymentOptionPage() {
 
               <div className="form-group">
                 <label className="form-label">
-                  {tr('ឈ្មោះគណនី (Account Name)', 'Account Name')}
+                  {tr('ឈ្មោះគណនី', 'Account Name')}
                 </label>
                 <input
                   type="text"
@@ -246,7 +246,7 @@ export default function CreatePaymentOptionPage() {
 
               <div className="form-group">
                 <label className="form-label">
-                  {tr('លេខគណនី (Account Number)', 'Account Number')}
+                  {tr('លេខគណនី', 'Account Number')}
                 </label>
                 <input
                   type="text"
@@ -262,7 +262,7 @@ export default function CreatePaymentOptionPage() {
             <div className="form-group" style={{ marginBottom: 20 }}>
               <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <MdQrCode2 size={18} color="#2563eb" />
-                <span>{tr('រូបភាព QR Code / KHQR (QR Code Image)', 'QR Code / KHQR Image')}</span>
+                <span>{tr('រូបភាព QR Code / KHQR', 'QR Code / KHQR Image')}</span>
               </label>
 
               <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', flexWrap: 'wrap' }}>
@@ -359,7 +359,7 @@ export default function CreatePaymentOptionPage() {
                         {qrUploading ? tr('កំពុងផ្ទុកឡើង...', 'Uploading...') : tr('ចុចទីនេះដើម្បី Upload រូបភាព QR Code / KHQR', 'Click to upload QR Code image')}
                       </div>
                       <div style={{ fontSize: 11.5, color: '#64748b', marginTop: 2 }}>
-                        {tr('គាំទ្ររូបភាព PNG, JPG, WebP (ទំហំអតិបរមា 5MB)', 'Supports PNG, JPG, WebP (Max 5MB)')}
+                        {tr('គាំទ្ររូបភាព PNG, JPG, WebP • ទំហំអតិបរមា 5MB', 'Supports PNG, JPG, WebP • Max 5MB')}
                       </div>
                     </div>
                   </div>
@@ -380,7 +380,7 @@ export default function CreatePaymentOptionPage() {
                   type="text"
                   className="form-control"
                   style={{ fontSize: 12 }}
-                  placeholder={tr('ឬបញ្ចូលតំណភ្ជាប់ URL រូបភាព QR Code (https://...)', 'Or enter direct image URL (https://...)')}
+                  placeholder={tr('ឬបញ្ចូលតំណភ្ជាប់ URL រូបភាព QR Code', 'Or enter direct image URL')}
                   value={formData.qrCodeUrl}
                   onChange={(e) => setFormData({ ...formData, qrCodeUrl: e.target.value })}
                 />
@@ -390,12 +390,12 @@ export default function CreatePaymentOptionPage() {
             {/* Row 5: Customer Instructions */}
             <div className="form-group" style={{ marginBottom: 20 }}>
               <label className="form-label">
-                {tr('ការណែនាំសម្រាប់អតិថិជន (Customer Instructions)', 'Customer Instructions')}
+                {tr('ការណែនាំសម្រាប់អតិថិជន', 'Customer Instructions')}
               </label>
               <textarea
                 className="form-control"
                 rows={3}
-                placeholder={tr('សូមផ្ទេរប្រាក់ទៅកាន់គណនីខាងលើ រួចបញ្ចូលលេខប្រតិបត្តិការ (Transaction ID)...', 'Please transfer to the bank account and enter your Transaction ID...')}
+                placeholder={tr('សូមផ្ទេរប្រាក់ទៅកាន់គណនីខាងលើ រួចបញ្ចូលលេខប្រតិបត្តិការ Transaction ID...', 'Please transfer to the bank account and enter your Transaction ID...')}
                 value={formData.instructions}
                 onChange={(e) => setFormData({ ...formData, instructions: e.target.value })}
               />
@@ -410,7 +410,7 @@ export default function CreatePaymentOptionPage() {
                   onChange={(e) => setFormData({ ...formData, requiresApproval: e.target.checked })}
                   style={{ width: 17, height: 17, cursor: 'pointer', accentColor: '#2563eb' }}
                 />
-                <span>{tr('តម្រូវឱ្យមានការអនុម័តពី Admin SAAS (Requires Admin Approval)', 'Requires Admin SaaS Approval')}</span>
+                <span>{tr('តម្រូវឱ្យមានការអនុម័តពី Admin SAAS', 'Requires Admin SaaS Approval')}</span>
               </label>
               <div style={{ fontSize: 12, color: 'var(--text-muted)', marginLeft: 27, marginTop: 2 }}>
                 {tr('ប្រសិនបើបើក ការទូទាត់របស់ក្រុមហ៊ុននឹងស្ថិតក្នុងស្ថានភាពរង់ចាំពិនិត្យរហូតដល់ Admin អនុម័ត', 'Tenant offline payments will wait in pending queue until approved by SaaS Admin')}

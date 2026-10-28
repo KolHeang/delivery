@@ -476,7 +476,7 @@ export default function PrintInvoicePage() {
           {/* Filter Card */}
           <div className="card filter-section" style={{ marginBottom: 20 }}>
             <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
-              <span className="card-title">🔍 {lang === 'km' ? 'ត្រងទិន្នន័យ' : 'Filter Options'}</span>
+              <span className="card-title">{lang === 'km' ? 'ត្រងទិន្នន័យ' : 'Filter Options'}</span>
               <button 
                 onClick={handlePrint}
                 disabled={selectedIds.length === 0 || isPrinting}
@@ -599,7 +599,7 @@ export default function PrintInvoicePage() {
           <div className="card table-container" style={{ marginBottom: 30 }}>
             <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <span className="card-title">📦 {lang === 'km' ? 'បញ្ជីកញ្ចប់សម្រាប់បោះពុម្ព' : 'Parcel List for Printing'}</span>
+                <span className="card-title">{lang === 'km' ? 'បញ្ជីកញ្ចប់សម្រាប់បោះពុម្ព' : 'Parcel List for Printing'}</span>
                 <span style={{ 
                   background: '#e0e7ff', 
                   color: '#3730a3', 

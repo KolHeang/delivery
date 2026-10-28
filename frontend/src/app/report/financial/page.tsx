@@ -30,17 +30,17 @@ export default function FinancialReportMenuPage() {
           {/* Tab bar */}
           <div className="no-print" style={{ display: 'flex', gap: 12, marginBottom: 20, borderBottom: '1px solid var(--border)', paddingBottom: 12 }}>
             <button
-              className="btn btn-primary btn-sm"
-              style={{ padding: '8px 16px', borderRadius: 8, fontSize: 13, fontWeight: 600 }}
-            >
-              💵 {t('financialReport')}
-            </button>
-            <button
               onClick={() => router.push('/report/operation')}
               className="btn btn-outline btn-sm"
               style={{ padding: '8px 16px', borderRadius: 8, fontSize: 13, fontWeight: 600 }}
             >
-              📊 {t('operationReport')}
+              {t('operationReports')}
+            </button>
+            <button
+              className="btn btn-primary btn-sm"
+              style={{ padding: '8px 16px', borderRadius: 8, fontSize: 13, fontWeight: 600 }}
+            >
+              {t('financialReports')}
             </button>
           </div>
 

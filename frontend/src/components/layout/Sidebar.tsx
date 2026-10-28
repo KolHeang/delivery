@@ -8,6 +8,7 @@ import { useLanguage } from '@/lib/LanguageContext';
 import { useTenant } from '@/lib/TenantContext';
 import api from '@/lib/api';
 import { saasApi } from '@/lib/saas-api';
+import { applyBrandTheme, initBrandTheme } from '@/lib/theme';
 import {
   MdDashboard, MdStorefront, MdPeople, MdLocalShipping,
   MdAccountBalanceWallet, MdReceipt, MdSettings,
@@ -21,7 +22,30 @@ export default function Sidebar() {
   const [user, setUser] = useState<any>(null);
   const [mounted, setMounted] = useState(false);
 
-  const menuGroups = [
+  interface MenuItemChild {
+    href: string;
+    label: string;
+    permission?: string;
+  }
+
+  interface MenuItem {
+    key?: string;
+    href?: string;
+    label: string;
+    permission?: string;
+    children?: MenuItemChild[];
+  }
+
+  interface MenuGroup {
+    key: string;
+    label: string;
+    icon: any;
+    permission?: string;
+    href?: string;
+    items?: MenuItem[];
+  }
+
+  const menuGroups: MenuGroup[] = [
     {
       key: 'summary',
       label: t('summaryMenu'),
@@ -49,7 +73,6 @@ export default function Sidebar() {
         { href: '/delivery/live-map', label: lang === 'km' ? 'ផែនទីតាមដាន' : 'Live Fleet Map', permission: 'parcels.read' },
       ],
     },
-
     {
       key: 'shops',
       label: t('manageShops'),
@@ -96,8 +119,36 @@ export default function Sidebar() {
       key: 'reports',
       label: t('report'),
       icon: MdBarChart,
-      href: '/report',
       permission: 'reports.view, reports.export, reports.operation_daily, reports.financial_ledger',
+      items: [
+        {
+          key: 'operation',
+          href: '/report/operation',
+          label: t('operationReports'),
+          permission: 'reports.operation_daily, reports.view',
+          children: [
+            { href: '/report/operation/1', label: t('rpt1Menu'), permission: 'reports.operation_daily, reports.view' },
+            { href: '/report/operation/2', label: t('rpt2Menu'), permission: 'reports.operation_driver, reports.view' },
+            { href: '/report/operation/3', label: t('rpt3Menu'), permission: 'reports.operation_driver_daily, reports.view' },
+            { href: '/report/operation/4', label: t('rpt4Menu'), permission: 'reports.operation_merchant, reports.view' },
+            { href: '/report/operation/5', label: t('rpt5Menu'), permission: 'reports.operation_merchant_daily, reports.view' },
+            { href: '/report/operation/6', label: t('rpt6Menu'), permission: 'reports.operation_package, reports.view' },
+            { href: '/report/operation/7', label: t('rpt7Menu'), permission: 'reports.operation_pickup, reports.view' },
+            { href: '/report/operation/8', label: t('rpt8Menu'), permission: 'reports.operation_stock, reports.view' },
+          ],
+        },
+        {
+          key: 'financial',
+          href: '/report/financial',
+          label: t('financialReports'),
+          permission: 'reports.financial_ledger, reports.view',
+          children: [
+            { href: '/report/financial/1', label: t('frpt1Menu'), permission: 'reports.financial_ledger, reports.view' },
+            { href: '/report/financial/2', label: t('frpt2Menu'), permission: 'reports.financial_collection, reports.view' },
+            { href: '/report/financial/3', label: t('frpt3Menu'), permission: 'reports.financial_balance, reports.view' },
+          ],
+        },
+      ],
     },
     {
       key: 'settings',
@@ -117,55 +168,70 @@ export default function Sidebar() {
     },
   ];
 
-  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
-    summary: false,
-    shops: false,
-    delivery: false,
-    staff: false,
-    payment: false,
-    accounting: false,
-    settings: false,
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => {
+    const initialState: Record<string, boolean> = {
+      summary: false,
+      delivery: false,
+      shops: false,
+      staff: false,
+      payment: false,
+      accounting: false,
+      reports: false,
+      settings: false,
+    };
+    return initialState;
   });
+
+  const [openSubMenus, setOpenSubMenus] = useState<Record<string, boolean>>({
+    operation: false,
+    financial: false,
+  });
+
+  const toggleSubMenu = (key: string) => {
+    setOpenSubMenus(prev => ({
+      operation: key === 'operation' ? !prev.operation : false,
+      financial: key === 'financial' ? !prev.financial : false,
+    }));
+  };
 
   const [subscription, setSubscription] = useState<any>(null);
 
-  // Load user client-side and set up listeners
   useEffect(() => {
     setMounted(true);
-    setUser(getUser());
+    const u = getUser();
+    setUser(u);
 
-    const loadSubscription = async () => {
-      try {
-        const sub = await saasApi.getMySubscription();
-        if (sub && sub.hasSubscription) {
-          setSubscription(sub);
-        }
-      } catch (err) {
-        // Ignore if not subscribed
+    // Fetch tenant subscription features
+    saasApi.getMySubscription().then(sub => {
+      if (sub) {
+        setSubscription(sub);
       }
-    };
-    loadSubscription();
-
-    const handleUserUpdate = () => {
-      setUser(getUser());
-      loadSubscription();
-    };
-    window.addEventListener('storage', handleUserUpdate);
-    window.addEventListener('user-updated', handleUserUpdate);
-
-    return () => {
-      window.removeEventListener('storage', handleUserUpdate);
-      window.removeEventListener('user-updated', handleUserUpdate);
-    };
+    }).catch(() => {});
   }, []);
 
-  // Auto-expand active group on load
+  // Auto-expand active group and submenus on load
   useEffect(() => {
     const activeGroup = menuGroups.find(group =>
-      'items' in group && group.items && group.items.some(item => pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href)))
+      'items' in group && group.items && group.items.some(item => {
+        if (item.href && (pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href)))) return true;
+        if (item.children && item.children.some(c => pathname === c.href || pathname.startsWith(c.href + '/'))) return true;
+        return false;
+      })
     );
     if (activeGroup) {
       setOpenGroups(prev => ({ ...prev, [activeGroup.key]: true }));
+
+      if (activeGroup.items) {
+        activeGroup.items.forEach(item => {
+          if (item.children) {
+            const hasMatch = (item.href && (pathname === item.href || pathname.startsWith(item.href + '/'))) ||
+              item.children.some(c => pathname === c.href || pathname.startsWith(c.href + '/'));
+            if (hasMatch && item.key) {
+              setOpenSubMenus(prev => ({ ...prev, [item.key!]: true }));
+            }
+          }
+        });
+      }
     }
   }, [pathname]);
 
@@ -176,45 +242,83 @@ export default function Sidebar() {
   const { tenant, isTenant } = useTenant();
   const [orgName, setOrgName] = useState<string>('');
   const [orgLogo, setOrgLogo] = useState<string>('');
+  const [orgColor, setOrgColor] = useState<string>('');
 
   useEffect(() => {
+    initBrandTheme();
     const updateOrg = () => {
       try {
         const cacheKey = tenant?.subdomain ? `app-org-settings-${tenant.subdomain}` : 'app-org-settings';
-        const cached = localStorage.getItem(cacheKey) || (!isTenant ? localStorage.getItem('app-org-settings') : null);
+        const cached = localStorage.getItem(cacheKey) || localStorage.getItem('app-org-settings');
         if (cached) {
           const parsed = JSON.parse(cached);
           if (parsed?.name) setOrgName(parsed.name);
           if (parsed?.logo !== undefined) setOrgLogo(parsed.logo || '');
+          const col = parsed?.primaryColor || parsed?.primary_color;
+          if (col) {
+            setOrgColor(col);
+            applyBrandTheme(col);
+          }
         }
       } catch {}
     };
+
+    const handleColorPreview = (e: any) => {
+      const col = e?.detail;
+      if (col) {
+        setOrgColor(col);
+        applyBrandTheme(col);
+      }
+    };
+
     updateOrg();
     api.get('/settings/organisation').then((res: any) => {
       if (res.data) {
         if (res.data.name) setOrgName(res.data.name);
         if (res.data.logo !== undefined) setOrgLogo(res.data.logo || '');
+        const col = res.data.primaryColor || res.data.primary_color;
+        if (col) {
+          setOrgColor(col);
+          applyBrandTheme(col);
+        }
         if (typeof window !== 'undefined') {
           const cacheKey = tenant?.subdomain ? `app-org-settings-${tenant.subdomain}` : 'app-org-settings';
           localStorage.setItem(cacheKey, JSON.stringify(res.data));
+          if (col) {
+            localStorage.setItem('app-brand-color', col);
+          }
         }
       }
     }).catch(() => {});
 
     window.addEventListener('org-settings-updated', updateOrg);
-    return () => window.removeEventListener('org-settings-updated', updateOrg);
+    window.addEventListener('brand-color-preview', handleColorPreview);
+    return () => {
+      window.removeEventListener('org-settings-updated', updateOrg);
+      window.removeEventListener('brand-color-preview', handleColorPreview);
+    };
   }, [tenant?.subdomain, isTenant]);
 
   const activeCompanyName = 
     (isTenant && tenant?.companyName && (!orgName || orgName === 'EBS Digital Solutions'))
       ? tenant.companyName
       : (orgName && orgName !== 'EBS Digital Solutions' ? orgName : (tenant?.companyName || subscription?.companyName || orgName));
-  const activeSubdomain = tenant?.subdomain || subscription?.subdomain;
 
   const currentLogo = tenant?.logoUrl || orgLogo;
 
   return (
-    <aside className="sidebar" style={{ width: 260 }}>
+    <aside
+      className="sidebar"
+      style={{
+        width: 260,
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        height: '100vh',
+        zIndex: 100,
+        background: 'var(--sidebar-bg, #1565D8)',
+      }}
+    >
       {/* Brand Logo */}
       <div className="sidebar-logo" style={{ height: 76, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: 12, padding: '0 16px', borderBottom: '1px solid rgba(255,255,255,0.12)' }}>
         {currentLogo ? (
@@ -289,7 +393,6 @@ export default function Sidebar() {
           </Link>
         )}
 
-
         {mounted && menuGroups
           .filter(group => {
             const planFeatures = subscription?.plan?.features;
@@ -301,7 +404,7 @@ export default function Sidebar() {
           .map(group => {
             const Icon = group.icon;
 
-            if ('href' in group && group.href) {
+            if (group.href) {
               const isActive = pathname === group.href || (group.href !== '/dashboard' && pathname.startsWith(group.href));
               return (
                 <Link
@@ -317,12 +420,14 @@ export default function Sidebar() {
             }
 
             const isOpen = openGroups[group.key];
-            const isGroupActive = 'items' in group && group.items && group.items.some(item =>
-              pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href))
-            );
+            const isGroupActive = 'items' in group && group.items && group.items.some(item => {
+              if (item.href && (pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href)))) return true;
+              if (item.children && item.children.some(c => pathname === c.href || pathname.startsWith(c.href + '/'))) return true;
+              return false;
+            });
 
-            const visibleItems = 'items' in group && group.items
-              ? (group.items as any[]).filter((item: any) => !item.permission || hasPermission(item.permission))
+            const visibleItems: MenuItem[] = 'items' in group && group.items
+              ? group.items.filter((item: MenuItem) => !item.permission || hasPermission(item.permission))
               : [];
 
             if (visibleItems.length === 0) return null;
@@ -359,25 +464,137 @@ export default function Sidebar() {
                     gap: 2
                   }}>
                     {visibleItems.map(item => {
-                      const isItemActive = pathname === item.href || (
+                      const hasChildren = item.children && item.children.length > 0;
+                      const isSubOpen = hasChildren && !!openSubMenus[item.key || ''];
+                      const isChildActive = hasChildren && item.children!.some((c: MenuItemChild) => pathname === c.href || pathname.startsWith(c.href + '/'));
+                      const isItemActive = (item.href && pathname === item.href) || isChildActive;
+
+                      if (hasChildren) {
+                        return (
+                          <div key={item.key || item.href} style={{ display: 'flex', flexDirection: 'column', marginBottom: 2 }}>
+                            {/* Submenu Header */}
+                            <button
+                              type="button"
+                              onClick={() => toggleSubMenu(item.key || '')}
+                              style={{
+                                width: '100%',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                position: 'relative',
+                                borderRadius: 'var(--radius-sm)',
+                                background: isItemActive ? 'rgba(255, 255, 255, 0.16)' : 'transparent',
+                                border: 'none',
+                                padding: '8px 12px',
+                                color: '#ffffff',
+                                cursor: 'pointer',
+                                textAlign: 'left',
+                                transition: 'all 0.15s ease',
+                              }}
+                              onMouseEnter={e => {
+                                if (!isItemActive) e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
+                              }}
+                              onMouseLeave={e => {
+                                if (!isItemActive) e.currentTarget.style.background = 'transparent';
+                              }}
+                            >
+                              <span style={{
+                                position: 'absolute',
+                                left: -19.75,
+                                top: 'calc(50% - 3px)',
+                                width: 6,
+                                height: 6,
+                                borderRadius: '50%',
+                                background: isItemActive ? '#ffffff' : 'rgba(255, 255, 255, 0.5)',
+                                boxShadow: isItemActive ? '0 0 8px #ffffff' : 'none',
+                                transition: 'all 0.2s ease',
+                              }} />
+                              <span style={{ fontSize: '13.5px', fontWeight: 600, color: '#ffffff' }}>
+                                {item.label}
+                              </span>
+                              <span style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                transform: isSubOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                                transition: 'transform 0.2s ease',
+                                opacity: 0.85,
+                              }}>
+                                <MdKeyboardArrowDown size={17} />
+                              </span>
+                            </button>
+
+                            {/* Clean child reports list (no dashed line, no dots, no truncation) */}
+                            {isSubOpen && (
+                              <div style={{
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: 2,
+                                paddingLeft: 12,
+                                marginTop: 3,
+                                marginBottom: 4,
+                              }}>
+                                {item.children!
+                                  .filter((c: MenuItemChild) => !c.permission || hasPermission(c.permission))
+                                  .map((child: MenuItemChild) => {
+                                    const isCurrent = pathname === child.href;
+                                    return (
+                                      <Link
+                                        key={child.href}
+                                        href={child.href}
+                                        style={{
+                                          fontSize: '13px',
+                                          padding: '7px 12px',
+                                          color: isCurrent ? '#ffffff' : 'rgba(255, 255, 255, 0.82)',
+                                          fontWeight: isCurrent ? 700 : 500,
+                                          borderRadius: 'var(--radius-sm)',
+                                          background: isCurrent ? 'rgba(255, 255, 255, 0.24)' : 'transparent',
+                                          textDecoration: 'none',
+                                          display: 'block',
+                                          whiteSpace: 'nowrap',
+                                          overflow: 'hidden',
+                                          textOverflow: 'ellipsis',
+                                          transition: 'all 0.15s ease',
+                                        }}
+                                        title={child.label}
+                                        onMouseEnter={e => {
+                                          if (!isCurrent) (e.currentTarget as HTMLAnchorElement).style.background = 'rgba(255, 255, 255, 0.1)';
+                                          (e.currentTarget as HTMLAnchorElement).style.color = '#ffffff';
+                                        }}
+                                        onMouseLeave={e => {
+                                          if (!isCurrent) (e.currentTarget as HTMLAnchorElement).style.background = 'transparent';
+                                          (e.currentTarget as HTMLAnchorElement).style.color = isCurrent ? '#ffffff' : 'rgba(255, 255, 255, 0.82)';
+                                        }}
+                                      >
+                                        {child.label}
+                                      </Link>
+                                    );
+                                  })}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      }
+
+                      // Regular single item (no children)
+                      const isSingleActive = pathname === item.href || (
                         item.href !== '/dashboard' &&
                         pathname.startsWith(item.href + '/') &&
-                        !visibleItems.some(other => other.href !== item.href && other.href.startsWith(item.href) && (pathname === other.href || pathname.startsWith(other.href + '/')))
+                        !visibleItems.some(other => other.href !== item.href && other.href?.startsWith(item.href!) && (pathname === other.href || pathname.startsWith(other.href + '/')))
                       );
 
                       return (
                         <Link
                           key={item.href}
-                          href={item.href}
-                          className={`sidebar-item ${isItemActive ? 'active' : ''}`}
+                          href={item.href || '#'}
+                          className={`sidebar-item ${isSingleActive ? 'active' : ''}`}
                           style={{
                             fontSize: '13.5px',
                             padding: '8px 12px',
                             color: '#ffffff',
-                            fontWeight: isItemActive ? 700 : 600,
+                            fontWeight: isSingleActive ? 700 : 600,
                             borderRadius: 'var(--radius-sm)',
                             position: 'relative',
-                            background: isItemActive ? 'rgba(255, 255, 255, 0.22)' : 'transparent',
+                            background: isSingleActive ? 'rgba(255, 255, 255, 0.22)' : 'transparent',
                           }}
                         >
                           <span style={{
@@ -387,8 +604,8 @@ export default function Sidebar() {
                             width: 6,
                             height: 6,
                             borderRadius: '50%',
-                            background: isItemActive ? '#ffffff' : 'rgba(255, 255, 255, 0.5)',
-                            boxShadow: isItemActive ? '0 0 8px #ffffff' : 'none',
+                            background: isSingleActive ? '#ffffff' : 'rgba(255, 255, 255, 0.5)',
+                            boxShadow: isSingleActive ? '0 0 8px #ffffff' : 'none',
                             transition: 'all 0.2s ease',
                           }} />
                           <span style={{ color: '#ffffff' }}>{item.label}</span>
@@ -401,7 +618,6 @@ export default function Sidebar() {
             );
           })}
       </div>
-
     </aside>
   );
 }

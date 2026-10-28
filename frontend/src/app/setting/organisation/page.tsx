@@ -8,7 +8,21 @@ import Topbar from '@/components/layout/Topbar';
 import api from '@/lib/api';
 import { useLanguage } from '@/lib/LanguageContext';
 import { useTenant } from '@/lib/TenantContext';
+import { applyBrandTheme } from '@/lib/theme';
 import { MdCloudUpload, MdDeleteOutline, MdBusiness } from 'react-icons/md';
+
+const PRESET_BRAND_COLORS = [
+  { name: 'Royal Blue - ពណ៌លំនាំដើម', color: '#2563eb' },
+  { name: 'Emerald Express - ពណ៌បៃតង', color: '#059669' },
+  { name: 'Flame Orange - ពណ៌ទឹកក្រូច', color: '#ea580c' },
+  { name: 'Crimson Red - ពណ៌ក្រហម', color: '#dc2626' },
+  { name: 'Deep Purple - ពណ៌ស្វាយ', color: '#7c3aed' },
+  { name: 'Amber Gold - ពណ៌លឿងទុំ', color: '#d97706' },
+  { name: 'Cyan Tech - ពណ៌ផ្ទៃមេឃ', color: '#0284c7' },
+  { name: 'Midnight Dark - ពណ៌ខ្មៅរលោង', color: '#0f172a' },
+  { name: 'Rose Pink - ពណ៌ផ្កាឈូក', color: '#e11d48' },
+  { name: 'Teal Modern - ពណ៌ត្បូងកណ្តៀង', color: '#0d9488' },
+];
 
 export default function OrganisationSettingsPage() {
   const router = useRouter();
@@ -21,6 +35,7 @@ export default function OrganisationSettingsPage() {
     website: '',
     address: '',
     logo: '',
+    primaryColor: '#2563eb',
   });
   const [logoPreview, setLogoPreview] = useState<string>('');
   const [logoUploading, setLogoUploading] = useState(false);
@@ -29,6 +44,16 @@ export default function OrganisationSettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
+
+  const triggerColorUpdate = (color: string) => {
+    setForm(prev => ({ ...prev, primaryColor: color }));
+    if (/^#[0-9A-Fa-f]{3,6}$/.test(color)) {
+      applyBrandTheme(color);
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('brand-color-preview', { detail: color }));
+      }
+    }
+  };
 
   useEffect(() => {
     if (!isAuthenticated()) { router.push('/'); return; }
@@ -41,6 +66,7 @@ export default function OrganisationSettingsPage() {
             : (res.data.name || '');
 
           const existingLogo = res.data.logo || (tenant?.logoUrl || '');
+          const defaultColor = res.data.primaryColor || res.data.primary_color || tenant?.primaryColor || '#2563eb';
 
           setForm({
             name: defaultName,
@@ -49,14 +75,18 @@ export default function OrganisationSettingsPage() {
             website: res.data.website || '',
             address: res.data.address || '',
             logo: existingLogo,
+            primaryColor: defaultColor,
           });
           setLogoPreview(existingLogo);
+          if (defaultColor) {
+            applyBrandTheme(defaultColor);
+          }
         }
       } catch {}
       setLoading(false);
     };
     load();
-  }, [router, tenant?.companyName, tenant?.logoUrl, isTenant]);
+  }, [router, tenant?.companyName, tenant?.logoUrl, tenant?.primaryColor, isTenant]);
 
   const handleLogoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -126,6 +156,10 @@ export default function OrganisationSettingsPage() {
         const cacheKey = tenant?.subdomain ? `app-org-settings-${tenant.subdomain}` : 'app-org-settings';
         localStorage.setItem(cacheKey, JSON.stringify(form));
         localStorage.setItem('app-org-settings', JSON.stringify(form));
+        if (form.primaryColor) {
+          localStorage.setItem('app-brand-color', form.primaryColor);
+          applyBrandTheme(form.primaryColor);
+        }
         window.dispatchEvent(new Event('org-settings-updated'));
       }
       if (refetchTenant) {
@@ -206,7 +240,7 @@ export default function OrganisationSettingsPage() {
                           style={{
                             position: 'absolute',
                             inset: 0,
-                            background: 'rgba(255,255,255,0.85)',
+                            background: 'rgba(0,0,0,0.4)',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
@@ -218,72 +252,158 @@ export default function OrganisationSettingsPage() {
                     </div>
 
                     {/* Logo Actions */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flex: 1, minWidth: 240 }}>
-                      <input
-                        type="file"
-                        ref={fileInputRef}
-                        accept="image/png,image/jpeg,image/jpg,image/webp,image/svg+xml"
-                        style={{ display: 'none' }}
-                        onChange={handleLogoChange}
-                      />
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
                         <button
                           type="button"
-                          className="btn btn-secondary"
+                          className="btn btn-primary"
                           onClick={() => fileInputRef.current?.click()}
-                          disabled={logoUploading || saving}
-                          style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 16px', fontSize: 13, fontWeight: 600 }}
+                          disabled={logoUploading}
+                          style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13, padding: '9px 18px' }}
                         >
                           <MdCloudUpload size={18} />
-                          {logoPreview ? t('changeLogo') : t('uploadLogo')}
+                          <span>{logoPreview ? (lang === 'km' ? 'ប្តូរឡូហ្គោ' : 'Change Logo') : (lang === 'km' ? 'ជ្រើសរើស Logo' : 'Upload Logo')}</span>
                         </button>
 
                         {logoPreview && (
                           <button
                             type="button"
-                            className="btn btn-danger-outline"
+                            className="btn btn-outline-danger"
                             onClick={handleRemoveLogo}
-                            disabled={logoUploading || saving}
-                            style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: 6,
-                              padding: '8px 14px',
-                              fontSize: 13,
-                              border: '1px solid #fee2e2',
-                              background: '#fff',
-                              color: '#ef4444',
-                              borderRadius: 8,
-                              cursor: 'pointer',
-                            }}
+                            disabled={logoUploading}
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, padding: '9px 16px' }}
                           >
                             <MdDeleteOutline size={18} />
-                            {t('removeLogo')}
+                            <span>{lang === 'km' ? 'លុបឡូហ្គោ' : 'Remove Logo'}</span>
                           </button>
                         )}
                       </div>
 
-                      <div style={{ fontSize: 12, color: '#64748b', lineHeight: 1.5 }}>
-                        {t('logoUploadHint')}
-                      </div>
-                      {logoUploading && (
-                        <div style={{ fontSize: 12, color: '#3b82f6', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
-                          <span>{t('logoUploading')}</span>
-                        </div>
-                      )}
+                      <span style={{ fontSize: 12, color: '#64748b', lineHeight: 1.5 }}>
+                        {t('logoRequirement')} (ទម្រង់ការ៉េ 1:1 ត្រូវបានណែនាំ)
+                      </span>
+
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                        style={{ display: 'none' }}
+                        onChange={handleLogoChange}
+                      />
                     </div>
                   </div>
                 </div>
 
-                <div className="form-group">
-                  <label className="form-label">{t('companyName')} <span>*</span></label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    value={form.name}
-                    onChange={e => setForm({ ...form, name: e.target.value })}
-                    required
-                  />
+                {/* Organization Brand Color Picker Section */}
+                <div className="form-group" style={{ marginBottom: 24, paddingBottom: 24, borderBottom: '1px solid #f1f5f9' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, flexWrap: 'wrap', gap: 10 }}>
+                    <div>
+                      <label className="form-label" style={{ fontWeight: 700, fontSize: 14, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 8, color: '#1e293b' }}>
+                        <span>{lang === 'km' ? 'ពណ៌សម្គាល់ស្ថាប័ន' : 'Organization Brand Color'}</span>
+                      </label>
+                      <p style={{ fontSize: 12.5, color: '#64748b', margin: 0 }}>
+                        {lang === 'km'
+                          ? 'ជ្រើសរើសពណ៌ចម្បងសម្រាប់ស្ថាប័ន សម្រាប់របារម៉ឺនុយ ប៊ូតុង និងពណ៌សំខាន់ៗ'
+                          : 'Select primary brand color for organization sidebar, buttons and highlights'}
+                      </p>
+                    </div>
+
+                    {/* Live Preview Button */}
+                    <div style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 8,
+                      padding: '6px 14px',
+                      borderRadius: 8,
+                      background: form.primaryColor,
+                      color: '#ffffff',
+                      fontSize: 12,
+                      fontWeight: 700,
+                      boxShadow: `0 4px 12px ${form.primaryColor}40`,
+                      transition: 'all 0.2s ease',
+                    }}>
+                      <span>{lang === 'km' ? 'គំរូពណ៌' : 'Preview'}</span>
+                    </div>
+                  </div>
+
+                  {/* Preset Swatches and Color Picker */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                      {PRESET_BRAND_COLORS.map(p => {
+                        const isSelected = form.primaryColor?.toLowerCase() === p.color.toLowerCase();
+                        return (
+                          <button
+                            key={p.color}
+                            type="button"
+                            onClick={() => triggerColorUpdate(p.color)}
+                            title={p.name}
+                            style={{
+                              width: 32,
+                              height: 32,
+                              borderRadius: 8,
+                              background: p.color,
+                              border: isSelected ? '2.5px solid #0f172a' : '2px solid #ffffff',
+                              boxShadow: isSelected ? '0 0 0 2px #64748b' : '0 1px 3px rgba(0,0,0,0.15)',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              color: '#ffffff',
+                              fontSize: 14,
+                              fontWeight: 800,
+                              transition: 'all 0.15s ease',
+                              transform: isSelected ? 'scale(1.12)' : 'scale(1)',
+                            }}
+                          >
+                            {isSelected && '✓'}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Custom Color Input */}
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 8,
+                      background: '#ffffff',
+                      padding: '4px 10px',
+                      borderRadius: 8,
+                      border: '1.5px solid #cbd5e1',
+                    }}>
+                      <input
+                        type="color"
+                        value={form.primaryColor}
+                        onChange={(e) => triggerColorUpdate(e.target.value)}
+                        style={{
+                          width: 26,
+                          height: 26,
+                          border: 'none',
+                          borderRadius: 4,
+                          cursor: 'pointer',
+                          background: 'transparent',
+                          padding: 0,
+                        }}
+                        title={lang === 'km' ? 'ជ្រើសរើសពណ៌ផ្ទាល់ខ្លួន' : 'Choose custom color'}
+                      />
+                      <input
+                        type="text"
+                        value={form.primaryColor}
+                        onChange={(e) => triggerColorUpdate(e.target.value)}
+                        style={{
+                          width: 80,
+                          border: 'none',
+                          background: 'transparent',
+                          fontSize: 12.5,
+                          fontWeight: 700,
+                          fontFamily: 'monospace',
+                          color: '#1e293b',
+                          outline: 'none',
+                        }}
+                        placeholder="#2563eb"
+                      />
+                    </div>
+                  </div>
                 </div>
 
                 <div className="form-row">
@@ -297,6 +417,7 @@ export default function OrganisationSettingsPage() {
                       required
                     />
                   </div>
+
                   <div className="form-group">
                     <label className="form-label">{t('orgEmail')} <span>*</span></label>
                     <input

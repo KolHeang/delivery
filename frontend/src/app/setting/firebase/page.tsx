@@ -118,7 +118,7 @@ export default function FirebaseSettingsListPage() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [logsPage, setLogsPage] = useState(1);
   const [logsPageSize, setLogsPageSize] = useState(15);
-  const [autoRefresh, setAutoRefresh] = useState(true);
+  const [autoRefresh, setAutoRefresh] = useState(false);
   const autoRefreshTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // ── Registered Mobile Devices States ──
@@ -166,9 +166,9 @@ export default function FirebaseSettingsListPage() {
     }
   }, []);
 
-  // Load Logs list
-  const loadLogs = useCallback(async () => {
-    setLoadingLogs(true);
+  // Load Logs list (supports silent background fetch)
+  const loadLogs = useCallback(async (silent = false) => {
+    if (!silent) setLoadingLogs(true);
     try {
       const params = new URLSearchParams();
       params.append('limit', '100');
@@ -180,13 +180,13 @@ export default function FirebaseSettingsListPage() {
     } catch (err) {
       console.error('Failed to load Firebase logs', err);
     } finally {
-      setLoadingLogs(false);
+      if (!silent) setLoadingLogs(false);
     }
   }, [statusFilter]);
 
   // Load Registered Mobile Devices list
-  const loadDevices = useCallback(async () => {
-    setLoadingDevices(true);
+  const loadDevices = useCallback(async (silent = false) => {
+    if (!silent) setLoadingDevices(true);
     try {
       const res = await api.get('/settings/firebase/tokens');
       setDevices(Array.isArray(res.data) ? res.data : []);
@@ -194,7 +194,7 @@ export default function FirebaseSettingsListPage() {
       console.error('Failed to load registered devices', err);
       setDevices([]);
     } finally {
-      setLoadingDevices(false);
+      if (!silent) setLoadingDevices(false);
     }
   }, []);
 
@@ -208,24 +208,25 @@ export default function FirebaseSettingsListPage() {
     loadDevices();
   }, [router, loadData, loadLogs, loadDevices]);
 
-  // Handle Auto-Refresh for Logs & Devices tab
+  // Handle Auto-Refresh ONLY for Logs tab when explicitly toggled on by user
   useEffect(() => {
-    if (autoRefresh && (activeTab === 'logs' || activeTab === 'devices')) {
+    if (autoRefresh && activeTab === 'logs') {
       autoRefreshTimerRef.current = setInterval(() => {
-        if (activeTab === 'logs') loadLogs();
-        if (activeTab === 'devices') loadDevices();
-      }, 6000);
+        loadLogs(true); // Silent background refresh without flickering table
+      }, 10000);
     } else {
       if (autoRefreshTimerRef.current) {
         clearInterval(autoRefreshTimerRef.current);
+        autoRefreshTimerRef.current = null;
       }
     }
     return () => {
       if (autoRefreshTimerRef.current) {
         clearInterval(autoRefreshTimerRef.current);
+        autoRefreshTimerRef.current = null;
       }
     };
-  }, [autoRefresh, activeTab, loadLogs, loadDevices]);
+  }, [autoRefresh, activeTab, loadLogs]);
 
   // Copy to clipboard helper
   const copyToClipboard = (text: string, keyName: string) => {
@@ -762,7 +763,7 @@ export default function FirebaseSettingsListPage() {
                         onChange={(e) => setAutoRefresh(e.target.checked)}
                         style={{ cursor: 'pointer' }}
                       />
-                      <span>{tr('Auto-refresh (6s)', 'Auto-refresh (6s)')}</span>
+                      <span>{tr('Auto-refresh (10s)', 'Auto-refresh (10s)')}</span>
                     </label>
 
                     <button

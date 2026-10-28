@@ -35,17 +35,17 @@ export default function OperationReportMenuPage() {
           {/* Tab bar */}
           <div className="no-print" style={{ display: 'flex', gap: 12, marginBottom: 20, borderBottom: '1px solid var(--border)', paddingBottom: 12 }}>
             <button
+              className="btn btn-primary btn-sm"
+              style={{ padding: '8px 16px', borderRadius: 8, fontSize: 13, fontWeight: 600 }}
+            >
+              {t('operationReports')}
+            </button>
+            <button
               onClick={() => router.push('/report/financial')}
               className="btn btn-outline btn-sm"
               style={{ padding: '8px 16px', borderRadius: 8, fontSize: 13, fontWeight: 600 }}
             >
-              💵 {t('financialReport')}
-            </button>
-            <button
-              className="btn btn-primary btn-sm"
-              style={{ padding: '8px 16px', borderRadius: 8, fontSize: 13, fontWeight: 600 }}
-            >
-              📊 {t('operationReport')}
+              {t('financialReports')}
             </button>
           </div>
 

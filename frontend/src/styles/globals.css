@@ -286,7 +286,7 @@ body {
    ============================================================ */
 .topbar {
   height: 76px;
-  background: #1565D8;
+  background: var(--sidebar-bg, #1565D8);
   border-bottom: 1px solid rgba(255, 255, 255, 0.15);
   display: flex;
   align-items: center;
@@ -512,7 +512,7 @@ table {
 }
 
 thead th {
-  background: #1565D8;
+  background: var(--sidebar-bg, #1565D8);
   padding: 12px 16px;
   text-align: left;
   font-weight: 600;
@@ -696,9 +696,9 @@ tbody td {
 
 .btn-primary,
 .btn-save {
-  background: #1565D8;
+  background: var(--sidebar-bg, #1565D8);
   color: #fff;
-  border: 1px solid #1565D8;
+  border: 1px solid var(--sidebar-bg, #1565D8);
   font-weight: 700;
 }
 
@@ -1931,5 +1931,135 @@ body.dark .skeleton-shimmer {
 
 .searchable-select-option:hover {
   background-color: var(--bg-hover, #f3f4f6);
+}
+
+
+
+/* ============================================================
+   GLOBAL DYNAMIC BRAND THEME SYSTEM
+   Enforces consistent primary/accent brand colors across:
+   - All tables, table headers, and sticky header rows
+   - Primary action buttons, save buttons, and submit buttons
+   - Topbar background, notification indicators, and active tabs
+   - Pagination buttons, checkboxes, focus rings, and spinners
+   ============================================================ */
+
+/* 1. Global Table Headers */
+table thead,
+table thead tr,
+table thead th,
+.table thead,
+.table thead tr,
+.table thead th,
+thead,
+thead tr,
+thead th,
+th[style*="1565D8"],
+tr[style*="1565D8"],
+thead[style*="1565D8"],
+th[style*="2563eb"],
+tr[style*="2563eb"],
+th[style*="2563EB"],
+tr[style*="2563EB"] {
+  background: var(--sidebar-bg, #1565D8) !important;
+  background-color: var(--sidebar-bg, #1565D8) !important;
+  color: #ffffff !important;
+  border-color: rgba(255, 255, 255, 0.15) !important;
+}
+
+/* 2. Primary & Action Buttons */
+.btn-primary,
+.btn-save,
+button.btn-primary,
+a.btn-primary,
+input[type="submit"].btn-primary,
+button[type="submit"]:not(.btn-danger):not(.btn-cancel):not(.btn-secondary):not(.btn-outline),
+.btn[style*="2563eb"],
+.btn[style*="2563EB"],
+button[style*="2563eb"],
+button[style*="2563EB"],
+button[style*="1565D8"],
+a[style*="2563eb"],
+a[style*="2563EB"],
+a[style*="1565D8"] {
+  background: var(--accent, #1565D8) !important;
+  background-color: var(--accent, #1565D8) !important;
+  border-color: var(--accent, #1565D8) !important;
+  color: #ffffff !important;
+}
+
+.btn-primary:hover,
+.btn-save:hover,
+button.btn-primary:hover,
+a.btn-primary:hover,
+input[type="submit"].btn-primary:hover,
+button[type="submit"]:not(.btn-danger):not(.btn-cancel):not(.btn-secondary):not(.btn-outline):hover,
+button[style*="2563eb"]:hover,
+button[style*="2563EB"]:hover,
+button[style*="1565D8"]:hover,
+a[style*="2563eb"]:hover,
+a[style*="2563EB"]:hover,
+a[style*="1565D8"]:hover {
+  background: var(--accent-dark, #0d47a1) !important;
+  background-color: var(--accent-dark, #0d47a1) !important;
+  border-color: var(--accent-dark, #0d47a1) !important;
+  color: #ffffff !important;
+}
+
+/* 3. Topbar & Header Components */
+.topbar {
+  background: var(--sidebar-bg, #1565D8) !important;
+}
+
+.notification-dot {
+  border-color: var(--sidebar-bg, #1565D8) !important;
+}
+
+/* 4. Active Pagination Buttons */
+.pagination .active,
+.pagination button.active,
+.pagination-item.active,
+.page-item.active .page-link,
+button.btn-primary[style*="2563eb"],
+button.btn-primary[style*="1565D8"] {
+  background: var(--accent, #1565D8) !important;
+  background-color: var(--accent, #1565D8) !important;
+  border-color: var(--accent, #1565D8) !important;
+  color: #ffffff !important;
+}
+
+/* 5. Checkboxes, Radios, and Focus Rings */
+input[type="checkbox"],
+input[type="radio"] {
+  accent-color: var(--accent, #1565D8) !important;
+}
+
+input:focus,
+select:focus,
+textarea:focus,
+.form-control:focus {
+  border-color: var(--accent, #1565D8) !important;
+  box-shadow: 0 0 0 3px var(--accent-glow, rgba(21, 101, 216, 0.2)) !important;
+}
+
+/* 6. Active Tabs & Links */
+.nav-tab.active,
+.tab-active,
+button.active[style*="2563eb"] {
+  color: var(--accent, #1565D8) !important;
+  border-color: var(--accent, #1565D8) !important;
+}
+
+/* 7. Spinners */
+.spinner,
+.loading-spinner {
+  border-top-color: var(--accent, #1565D8) !important;
+}
+
+/* 8. Primary Badges */
+.badge-primary,
+.badge.badge-primary {
+  background: var(--accent-light, #e8f1fc) !important;
+  color: var(--accent, #1565D8) !important;
 }
 

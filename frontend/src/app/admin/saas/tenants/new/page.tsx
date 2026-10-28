@@ -36,6 +36,19 @@ import {
 import { SaasCloudIcon } from '@/components/ui/SaasCloudIcon';
 import { getDomainSuffix } from '@/lib/domain';
 
+const PRESET_BRAND_COLORS = [
+  { name: 'Royal Blue - ពណ៌លំនាំដើម', color: '#2563eb' },
+  { name: 'Emerald Express - ពណ៌បៃតង', color: '#059669' },
+  { name: 'Flame Orange - ពណ៌ទឹកក្រូច', color: '#ea580c' },
+  { name: 'Crimson Red - ពណ៌ក្រហម', color: '#dc2626' },
+  { name: 'Deep Purple - ពណ៌ស្វាយ', color: '#7c3aed' },
+  { name: 'Amber Gold - ពណ៌លឿងទុំ', color: '#d97706' },
+  { name: 'Cyan Tech - ពណ៌ផ្ទៃមេឃ', color: '#0284c7' },
+  { name: 'Midnight Dark - ពណ៌ខ្មៅរលោង', color: '#0f172a' },
+  { name: 'Rose Pink - ពណ៌ផ្កាឈូក', color: '#e11d48' },
+  { name: 'Teal Modern - ពណ៌ត្បូងកណ្តៀង', color: '#0d9488' },
+];
+
 export default function CreateTenantPage() {
   const router = useRouter();
   const [plans, setPlans] = useState<Plan[]>([]);
@@ -53,6 +66,7 @@ export default function CreateTenantPage() {
     companyName: '',
     subdomain: '',
     logo: '',
+    primaryColor: '#2563eb',
     planId: 2,
     billingCycle: 'monthly' as 'monthly' | 'yearly',
     couponCode: '',
@@ -112,7 +126,7 @@ export default function CreateTenantPage() {
   }, []);
 
   const handleLogout = () => {
-    if (confirm('តើអ្នកពិតជាចង់ចាកចេញពីប្រព័ន្ធ (Logout) មែនទេ?')) {
+    if (confirm('តើអ្នកពិតជាចង់ចាកចេញពីប្រព័ន្ធមែនទេ?')) {
       clearAuth();
       localStorage.removeItem('saas_admin');
       router.push('/admin/saas/login');
@@ -168,7 +182,7 @@ export default function CreateTenantPage() {
     if (!file) return;
 
     if (file.size > 5 * 1024 * 1024) {
-      alert('ទំហំរូបភាពត្រូវតែតូចជាង 5MB (Image size must be less than 5MB)');
+      alert('ទំហំរូបភាពត្រូវតែតូចជាង 5MB');
       return;
     }
 
@@ -259,6 +273,7 @@ export default function CreateTenantPage() {
         phone: companyForm.phone.trim(),
         password: companyForm.password,
         logo: companyForm.logo || undefined,
+        primaryColor: companyForm.primaryColor || '#2563eb',
       });
 
       // Return immediately to the company list
@@ -272,12 +287,12 @@ export default function CreateTenantPage() {
 
   const getShareableText = () => {
     if (!createdCredentials) return '';
-    return `📦 ព័ត៌មានគណនីប្រើប្រាស់ប្រព័ន្ធដឹកជញ្ជូន (EBS Delivery System)
+    return `📦 ព័ត៌មានគណនីប្រើប្រាស់ប្រព័ន្ធដឹកជញ្ជូន EBS Delivery System
 -----------------------------------------
 🏢 ក្រុមហ៊ុន: ${createdCredentials.companyName}
 🌐 តំណភ្ជាប់ចូលប្រើប្រាស់: ${createdCredentials.url}/auth
-👤 អ៊ីមែល (Email): ${createdCredentials.email}
-🔑 ពាក្យសម្ងាត់ (Password): ${createdCredentials.password}
+👤 អ៊ីមែល: ${createdCredentials.email}
+🔑 ពាក្យសម្ងាត់: ${createdCredentials.password}
 🏷️ កញ្ចប់សេវា: ${createdCredentials.planName}
 -----------------------------------------
 សូមចូលប្រើប្រាស់ និងផ្លាស់ប្តូរពាក្យសម្ងាត់តាមការគួរ។`;
@@ -439,7 +454,7 @@ export default function CreateTenantPage() {
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
                         <span style={{ fontSize: 13.5, fontWeight: 700, color: '#1e293b' }}>
-                          រូបសញ្ញាក្រុមហ៊ុន (Company Logo)
+                          រូបសញ្ញាក្រុមហ៊ុន
                         </span>
                         {logoUploading && (
                           <span style={{ fontSize: 11, background: '#dbeafe', color: '#1e40af', padding: '2px 8px', borderRadius: 10, fontWeight: 600 }}>
@@ -453,7 +468,7 @@ export default function CreateTenantPage() {
                         )}
                       </div>
                       <p style={{ fontSize: 12, color: '#64748b', margin: '0 0 8px 0' }}>
-                        គាំទ្រទម្រង់ PNG, JPG, WebP ឬ SVG (ទំហំរូបភាពមិនលើសពី 5MB)
+                        គាំទ្រទម្រង់ PNG, JPG, WebP ឬ SVG • ទំហំមិនលើសពី 5MB
                       </p>
                       <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                         <button
@@ -550,6 +565,123 @@ export default function CreateTenantPage() {
                     </div>
                   </div>
 
+                  {/* Brand Theme Color Selector */}
+                  <div style={{
+                    background: '#f8fafc',
+                    border: '1.5px solid #e2e8f0',
+                    borderRadius: 14,
+                    padding: '16px 18px',
+                    marginBottom: 20,
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, flexWrap: 'wrap', gap: 10 }}>
+                      <div>
+                        <label style={{ fontSize: 13.5, fontWeight: 700, color: '#1e293b', display: 'flex', alignItems: 'center', gap: 6, margin: 0 }}>
+                          <span>🎨</span>
+                          <span>ពណ៌សម្គាល់ក្រុមហ៊ុន</span>
+                        </label>
+                        <p style={{ fontSize: 12, color: '#64748b', margin: '3px 0 0 0' }}>
+                          ជ្រើសរើសពណ៌ចម្បងសម្រាប់ Workspace ក្រុមហ៊ុននេះ សម្រាប់ប៊ូតុង របារម៉ឺនុយ និងពណ៌សំខាន់ៗ
+                        </p>
+                      </div>
+
+                      {/* Live Preview Button */}
+                      <div style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 8,
+                        padding: '6px 14px',
+                        borderRadius: 8,
+                        background: companyForm.primaryColor,
+                        color: '#ffffff',
+                        fontSize: 12,
+                        fontWeight: 700,
+                        boxShadow: `0 4px 12px ${companyForm.primaryColor}40`,
+                        transition: 'all 0.2s ease',
+                      }}>
+                        <span>✨ គំរូពណ៌</span>
+                      </div>
+                    </div>
+
+                    {/* Preset Swatches and Color Picker */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                        {PRESET_BRAND_COLORS.map(p => {
+                          const isSelected = companyForm.primaryColor.toLowerCase() === p.color.toLowerCase();
+                          return (
+                            <button
+                              key={p.color}
+                              type="button"
+                              onClick={() => setCompanyForm(prev => ({ ...prev, primaryColor: p.color }))}
+                              title={p.name}
+                              style={{
+                                width: 32,
+                                height: 32,
+                                borderRadius: 8,
+                                background: p.color,
+                                border: isSelected ? '2.5px solid #0f172a' : '2px solid #ffffff',
+                                boxShadow: isSelected ? '0 0 0 2px #64748b' : '0 1px 3px rgba(0,0,0,0.15)',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                color: '#ffffff',
+                                fontSize: 14,
+                                fontWeight: 800,
+                                transition: 'all 0.15s ease',
+                                transform: isSelected ? 'scale(1.12)' : 'scale(1)',
+                              }}
+                            >
+                              {isSelected && '✓'}
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      {/* Custom Color Input */}
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 8,
+                        background: '#ffffff',
+                        padding: '4px 10px',
+                        borderRadius: 8,
+                        border: '1.5px solid #cbd5e1',
+                      }}>
+                        <input
+                          type="color"
+                          value={companyForm.primaryColor}
+                          onChange={(e) => setCompanyForm(prev => ({ ...prev, primaryColor: e.target.value }))}
+                          style={{
+                            width: 26,
+                            height: 26,
+                            border: 'none',
+                            borderRadius: 4,
+                            cursor: 'pointer',
+                            background: 'transparent',
+                            padding: 0,
+                          }}
+                          title="ជ្រើសរើសពណ៌ផ្ទាល់ខ្លួន"
+                        />
+                        <input
+                          type="text"
+                          value={companyForm.primaryColor}
+                          onChange={(e) => setCompanyForm(prev => ({ ...prev, primaryColor: e.target.value }))}
+                          style={{
+                            width: 80,
+                            border: 'none',
+                            background: 'transparent',
+                            fontSize: 12.5,
+                            fontWeight: 700,
+                            fontFamily: 'monospace',
+                            color: '#1e293b',
+                            outline: 'none',
+                          }}
+                          placeholder="#2563eb"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
                   <div className="form-row">
                     <div className="form-group">
                       <label className="form-label">កញ្ចប់គម្រោងតម្លៃ</label>
@@ -559,7 +691,7 @@ export default function CreateTenantPage() {
                         onChange={(e) => setCompanyForm({ ...companyForm, planId: Number(e.target.value) })}
                       >
                         {plans.map((p) => (
-                          <option key={p.id} value={p.id}>{p.name} (${Number(p.priceMonthly).toFixed(2)}/ខែ — {p.maxOrdersPerMonth} orders/ខែ)</option>
+                          <option key={p.id} value={p.id}>{p.name} - ${Number(p.priceMonthly).toFixed(2)}/ខែ — {p.maxOrdersPerMonth} orders/ខែ</option>
                         ))}
                       </select>
                     </div>
@@ -572,7 +704,7 @@ export default function CreateTenantPage() {
                         onChange={(e) => setCompanyForm({ ...companyForm, billingCycle: e.target.value as any })}
                       >
                         <option value="monthly">ទូទាត់ប្រចាំខែ</option>
-                        <option value="yearly">ទូទាត់ប្រចាំឆ្នាំ (មានបញ្ចុះតម្លៃពិសេស)</option>
+                        <option value="yearly">ទូទាត់ប្រចាំឆ្នាំ</option>
                       </select>
                     </div>
                   </div>

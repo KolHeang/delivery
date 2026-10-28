@@ -213,6 +213,27 @@ export class MerchantController {
     description: 'Filter range end date (YYYY-MM-DD)',
     example: '2026-10-15',
   })
+  @ApiQuery({
+    name: 'date',
+    required: false,
+    type: String,
+    description: 'Filter parcels by exact date (YYYY-MM-DD)',
+    example: '2026-10-28',
+  })
+  @ApiQuery({
+    name: 'merchantId',
+    required: false,
+    type: Number,
+    description: 'Filter parcels by merchant ID (optional, defaults to authenticated merchant)',
+    example: 10,
+  })
+  @ApiQuery({
+    name: 'branchId',
+    required: false,
+    type: Number,
+    description: 'Filter parcels by specific merchant branch ID',
+    example: 1,
+  })
   @ApiResponse({
     status: 200,
     description: 'List of parcels created by this merchant (paginated or array)',
@@ -256,6 +277,9 @@ export class MerchantController {
     @Query('limit') limit?: string,
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
+    @Query('date') date?: string,
+    @Query('merchantId') merchantId?: string,
+    @Query('branchId') branchId?: string,
   ) {
     return this.merchantService.getParcels(req.user.id, {
       status,
@@ -264,6 +288,9 @@ export class MerchantController {
       limit: limit ? Number(limit) : undefined,
       startDate,
       endDate,
+      date,
+      merchantId: merchantId ? Number(merchantId) : undefined,
+      branchId: branchId ? Number(branchId) : undefined,
     });
   }
 
@@ -461,6 +488,41 @@ export class MerchantController {
 
   @Get('dashboard')
   @ApiOperation({ summary: 'Get merchant dashboard data' })
+  @ApiQuery({
+    name: 'date',
+    required: false,
+    type: String,
+    description: 'Filter dashboard stats by specific date (YYYY-MM-DD)',
+    example: '2026-10-28',
+  })
+  @ApiQuery({
+    name: 'startDate',
+    required: false,
+    type: String,
+    description: 'Filter dashboard stats start date (YYYY-MM-DD)',
+    example: '2026-10-01',
+  })
+  @ApiQuery({
+    name: 'endDate',
+    required: false,
+    type: String,
+    description: 'Filter dashboard stats end date (YYYY-MM-DD)',
+    example: '2026-10-28',
+  })
+  @ApiQuery({
+    name: 'merchantId',
+    required: false,
+    type: Number,
+    description: 'Filter dashboard by specific merchant ID (optional, defaults to authenticated merchant)',
+    example: 10,
+  })
+  @ApiQuery({
+    name: 'branchId',
+    required: false,
+    type: Number,
+    description: 'Filter dashboard by specific merchant branch ID',
+    example: 1,
+  })
   @ApiResponse({
     status: 200,
     description: 'Merchant dashboard statistics and revenue balances',
@@ -469,6 +531,14 @@ export class MerchantController {
         status: true,
         message: 'Successfully',
         data: {
+          filter: {
+            date: '2026-10-28',
+            startDate: '2026-10-01',
+            endDate: '2026-10-28',
+            merchantId: 10,
+            merchantName: 'Phnom Penh Fashion Store',
+            branchId: 1,
+          },
           balance: {
             amount: 150.0,
             currency: 'USD',
@@ -495,21 +565,83 @@ export class MerchantController {
       },
     },
   })
-  getDashboard(@Request() req: any) {
-    return this.merchantService.getDashboard(req.user.id);
+  getDashboard(
+    @Request() req: any,
+    @Query('date') date?: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+    @Query('merchantId') merchantId?: string,
+    @Query('branchId') branchId?: string,
+  ) {
+    return this.merchantService.getDashboard(req.user.id, {
+      date,
+      startDate,
+      endDate,
+      merchantId: merchantId ? Number(merchantId) : undefined,
+      branchId: branchId ? Number(branchId) : undefined,
+    });
   }
 
   @Sse('realtime')
   @ApiOperation({
     summary: 'Server-Sent Events (SSE) real-time stream for recent deliveries & orders',
-    description: 'Establishes a persistent SSE stream delivering real-time delivery events for merchant: 1) "initial" with current recent successful deliveries, 2) "new_delivery" / "delivery_completed" when a driver completes delivery, 3) "ping" heartbeat every 25s.',
+    description:
+      'Establishes a persistent SSE stream delivering real-time delivery events for merchant: 1) "initial" with current recent successful deliveries, 2) "new_delivery" / "delivery_completed" when a driver completes delivery, 3) "ping" heartbeat every 25s.',
+  })
+  @ApiQuery({
+    name: 'date',
+    required: false,
+    type: String,
+    description: 'Filter initial stream by specific date (YYYY-MM-DD)',
+    example: '2026-10-28',
+  })
+  @ApiQuery({
+    name: 'startDate',
+    required: false,
+    type: String,
+    description: 'Filter initial stream start date (YYYY-MM-DD)',
+    example: '2026-10-01',
+  })
+  @ApiQuery({
+    name: 'endDate',
+    required: false,
+    type: String,
+    description: 'Filter initial stream end date (YYYY-MM-DD)',
+    example: '2026-10-28',
+  })
+  @ApiQuery({
+    name: 'merchantId',
+    required: false,
+    type: Number,
+    description: 'Filter real-time events by merchant ID (optional)',
+    example: 10,
+  })
+  @ApiQuery({
+    name: 'branchId',
+    required: false,
+    type: Number,
+    description: 'Filter real-time events by branch ID (optional)',
+    example: 1,
   })
   @ApiResponse({
     status: 200,
     description: 'Continuous Server-Sent Events stream for merchant.',
   })
-  realtime(@Request() req: any): Observable<MessageEvent> {
-    return this.merchantService.getRealtimeDeliveriesStream(req.user.id);
+  realtime(
+    @Request() req: any,
+    @Query('date') date?: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+    @Query('merchantId') merchantId?: string,
+    @Query('branchId') branchId?: string,
+  ): Observable<MessageEvent> {
+    return this.merchantService.getRealtimeDeliveriesStream(req.user.id, {
+      date,
+      startDate,
+      endDate,
+      merchantId: merchantId ? Number(merchantId) : undefined,
+      branchId: branchId ? Number(branchId) : undefined,
+    });
   }
 
   @Sse('deliveries/realtime')
@@ -517,21 +649,118 @@ export class MerchantController {
     summary: 'Alias for SSE real-time stream for recent deliveries',
     description: 'Alias of /api/mobile/merchant/realtime',
   })
-  deliveriesRealtime(@Request() req: any): Observable<MessageEvent> {
-    return this.merchantService.getRealtimeDeliveriesStream(req.user.id);
+  @ApiQuery({
+    name: 'date',
+    required: false,
+    type: String,
+    description: 'Filter initial stream by specific date (YYYY-MM-DD)',
+    example: '2026-10-28',
+  })
+  @ApiQuery({
+    name: 'startDate',
+    required: false,
+    type: String,
+    description: 'Filter initial stream start date (YYYY-MM-DD)',
+    example: '2026-10-01',
+  })
+  @ApiQuery({
+    name: 'endDate',
+    required: false,
+    type: String,
+    description: 'Filter initial stream end date (YYYY-MM-DD)',
+    example: '2026-10-28',
+  })
+  @ApiQuery({
+    name: 'merchantId',
+    required: false,
+    type: Number,
+    description: 'Filter real-time events by merchant ID (optional)',
+    example: 10,
+  })
+  @ApiQuery({
+    name: 'branchId',
+    required: false,
+    type: Number,
+    description: 'Filter real-time events by branch ID (optional)',
+    example: 1,
+  })
+  deliveriesRealtime(
+    @Request() req: any,
+    @Query('date') date?: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+    @Query('merchantId') merchantId?: string,
+    @Query('branchId') branchId?: string,
+  ): Observable<MessageEvent> {
+    return this.merchantService.getRealtimeDeliveriesStream(req.user.id, {
+      date,
+      startDate,
+      endDate,
+      merchantId: merchantId ? Number(merchantId) : undefined,
+      branchId: branchId ? Number(branchId) : undefined,
+    });
   }
 
   @Sse('pickup-requests/realtime')
   @ApiOperation({
     summary: 'Server-Sent Events (SSE) real-time stream for pickup requests (bookings)',
-    description: 'Establishes a persistent SSE stream delivering real-time pickup request events for merchant: 1) "initial" with current active pickup requests, 2) "pickup_request_created" / "pickup_request_assigned" / "pickup_request_picked_up" live updates, 3) "ping" heartbeat every 25s.',
+    description:
+      'Establishes a persistent SSE stream delivering real-time pickup request events for merchant: 1) "initial" with current active pickup requests, 2) "pickup_request_created" / "pickup_request_assigned" / "pickup_request_picked_up" live updates, 3) "ping" heartbeat every 25s.',
+  })
+  @ApiQuery({
+    name: 'date',
+    required: false,
+    type: String,
+    description: 'Filter initial bookings by specific date (YYYY-MM-DD)',
+    example: '2026-10-28',
+  })
+  @ApiQuery({
+    name: 'startDate',
+    required: false,
+    type: String,
+    description: 'Filter initial bookings start date (YYYY-MM-DD)',
+    example: '2026-10-01',
+  })
+  @ApiQuery({
+    name: 'endDate',
+    required: false,
+    type: String,
+    description: 'Filter initial bookings end date (YYYY-MM-DD)',
+    example: '2026-10-28',
+  })
+  @ApiQuery({
+    name: 'merchantId',
+    required: false,
+    type: Number,
+    description: 'Filter pickup request events by merchant ID (optional)',
+    example: 10,
+  })
+  @ApiQuery({
+    name: 'branchId',
+    required: false,
+    type: Number,
+    description: 'Filter pickup request events by branch ID (optional)',
+    example: 1,
   })
   @ApiResponse({
     status: 200,
     description: 'Continuous Server-Sent Events stream for merchant pickup requests.',
   })
-  pickupRequestsRealtime(@Request() req: any): Observable<MessageEvent> {
-    return this.merchantService.getRealtimePickupRequestsStream(req.user.id);
+  pickupRequestsRealtime(
+    @Request() req: any,
+    @Query('date') date?: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+    @Query('merchantId') merchantId?: string,
+    @Query('branchId') branchId?: string,
+  ): Observable<MessageEvent> {
+    return this.merchantService.getRealtimePickupRequestsStream(req.user.id, {
+      date,
+      startDate,
+      endDate,
+      merchantId: merchantId ? Number(merchantId) : undefined,
+      branchId: branchId ? Number(branchId) : undefined,
+    });
   }
 
   @Sse('bookings/realtime')
@@ -539,8 +768,56 @@ export class MerchantController {
     summary: 'Alias for SSE real-time stream for pickup requests (bookings)',
     description: 'Alias of /api/mobile/merchant/pickup-requests/realtime',
   })
-  bookingsRealtime(@Request() req: any): Observable<MessageEvent> {
-    return this.merchantService.getRealtimePickupRequestsStream(req.user.id);
+  @ApiQuery({
+    name: 'date',
+    required: false,
+    type: String,
+    description: 'Filter initial bookings by specific date (YYYY-MM-DD)',
+    example: '2026-10-28',
+  })
+  @ApiQuery({
+    name: 'startDate',
+    required: false,
+    type: String,
+    description: 'Filter initial bookings start date (YYYY-MM-DD)',
+    example: '2026-10-01',
+  })
+  @ApiQuery({
+    name: 'endDate',
+    required: false,
+    type: String,
+    description: 'Filter initial bookings end date (YYYY-MM-DD)',
+    example: '2026-10-28',
+  })
+  @ApiQuery({
+    name: 'merchantId',
+    required: false,
+    type: Number,
+    description: 'Filter pickup request events by merchant ID (optional)',
+    example: 10,
+  })
+  @ApiQuery({
+    name: 'branchId',
+    required: false,
+    type: Number,
+    description: 'Filter pickup request events by branch ID (optional)',
+    example: 1,
+  })
+  bookingsRealtime(
+    @Request() req: any,
+    @Query('date') date?: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+    @Query('merchantId') merchantId?: string,
+    @Query('branchId') branchId?: string,
+  ): Observable<MessageEvent> {
+    return this.merchantService.getRealtimePickupRequestsStream(req.user.id, {
+      date,
+      startDate,
+      endDate,
+      merchantId: merchantId ? Number(merchantId) : undefined,
+      branchId: branchId ? Number(branchId) : undefined,
+    });
   }
 
   @Get('settlements')
@@ -551,6 +828,41 @@ export class MerchantController {
     enum: ['paid', 'unpaid'],
     description: 'Filter settlements by payout status (paid or unpaid)',
     example: 'paid',
+  })
+  @ApiQuery({
+    name: 'date',
+    required: false,
+    type: String,
+    description: 'Filter settlements by exact date (YYYY-MM-DD)',
+    example: '2026-10-28',
+  })
+  @ApiQuery({
+    name: 'startDate',
+    required: false,
+    type: String,
+    description: 'Filter settlements start date (YYYY-MM-DD)',
+    example: '2026-10-01',
+  })
+  @ApiQuery({
+    name: 'endDate',
+    required: false,
+    type: String,
+    description: 'Filter settlements end date (YYYY-MM-DD)',
+    example: '2026-10-28',
+  })
+  @ApiQuery({
+    name: 'merchantId',
+    required: false,
+    type: Number,
+    description: 'Filter settlements by merchant ID (optional)',
+    example: 10,
+  })
+  @ApiQuery({
+    name: 'branchId',
+    required: false,
+    type: Number,
+    description: 'Filter settlements by branch ID (optional)',
+    example: 1,
   })
   @ApiQuery({
     name: 'page',
@@ -574,51 +886,11 @@ export class MerchantController {
         status: true,
         message: 'Successfully',
         data: {
-          data: [
-            {
-              id: 'SETTLE-SHOP-879002',
-              rawId: 12,
-              reference: 'SETTLE-SHOP-879002',
-              branchId: '1',
-              status: 'paid',
-              statusKh: 'បានទូទាត់',
-              orderIds: ['EX90001', 'EX90002'],
-              totalOrders: 2,
-              total: {
-                usd: 24.5,
-                usdCents: 2450,
-                khr: 98000,
-              },
-              totalAmount: 24.5,
-              totalAmountKhr: 98000,
-              date: '2026-10-22T00:00:00.000Z',
-              paidAt: '2026-10-22T07:25:46.687Z',
-              paymentDate: '2026-10-22T00:00:00.000Z',
-              checkedBy: 'Finance Team',
-              note: 'ទូទាត់ប្រាក់ COD កញ្ចប់ EX90001 & EX90002',
-              paymentMethod: 'Bank Transfer / Cash',
-              transferRef: 'SETTLE-SHOP-879002',
-              creator: 'Finance Team',
-              orders: [
-                {
-                  id: 'EX90001',
-                  trackingCode: 'EX90001',
-                  customerName: 'Srey Neang',
-                  phone: '010670101',
-                  address: 'Street 310, Boeung Keng Kang, Phnom Penh',
-                  amount: 24.5,
-                  currency: 'USD',
-                  status: 'delivered',
-                  statusKh: 'បានដឹកជញ្ជូន',
-                  deliveredAt: '2026-10-23T04:19:25.122Z',
-                },
-              ],
-            },
-          ],
-          total: 2,
+          data: [],
+          total: 0,
           page: 1,
           limit: 10,
-          totalPages: 1,
+          totalPages: 0,
         },
       },
     },
@@ -628,11 +900,21 @@ export class MerchantController {
     @Query('status') status?: 'paid' | 'unpaid',
     @Query('page') page?: string,
     @Query('limit') limit?: string,
+    @Query('date') date?: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+    @Query('merchantId') merchantId?: string,
+    @Query('branchId') branchId?: string,
   ) {
     return this.merchantService.getSettlements(req.user.id, {
       status,
       page: page ? Number(page) : undefined,
       limit: limit ? Number(limit) : undefined,
+      date,
+      startDate,
+      endDate,
+      merchantId: merchantId ? Number(merchantId) : undefined,
+      branchId: branchId ? Number(branchId) : undefined,
     });
   }
 
@@ -720,30 +1002,69 @@ export class MerchantController {
 
   @Get('pickup-requests')
   @ApiOperation({ summary: 'Get all pickup requests for this merchant' })
+  @ApiQuery({
+    name: 'date',
+    required: false,
+    type: String,
+    description: 'Filter pickup requests by exact date (YYYY-MM-DD)',
+    example: '2026-10-28',
+  })
+  @ApiQuery({
+    name: 'startDate',
+    required: false,
+    type: String,
+    description: 'Filter pickup requests start date (YYYY-MM-DD)',
+    example: '2026-10-01',
+  })
+  @ApiQuery({
+    name: 'endDate',
+    required: false,
+    type: String,
+    description: 'Filter pickup requests end date (YYYY-MM-DD)',
+    example: '2026-10-28',
+  })
+  @ApiQuery({
+    name: 'merchantId',
+    required: false,
+    type: Number,
+    description: 'Filter pickup requests by merchant ID (optional)',
+    example: 10,
+  })
+  @ApiQuery({
+    name: 'branchId',
+    required: false,
+    type: Number,
+    description: 'Filter pickup requests by merchant branch ID',
+    example: 1,
+  })
+  @ApiQuery({
+    name: 'status',
+    required: false,
+    type: String,
+    description: 'Filter by pickup status (pending, assigned, picked-up, cancelled)',
+    example: 'pending',
+  })
   @ApiResponse({
     status: 200,
     description: 'List of all pickup requests for the authenticated merchant',
-    schema: {
-      example: {
-        status: true,
-        message: 'Successfully',
-        data: [
-          {
-            id: 14,
-            declaredQuantity: 5,
-            actualQuantity: null,
-            pickupAddress: 'Building #45, Street 271, Phnom Penh',
-            pickupTime: '2026-10-15T15:00:00.000Z',
-            status: 'pending',
-            note: 'Please pick up packages before 4PM',
-            pickupDriver: null,
-          },
-        ],
-      },
-    },
   })
-  getPickupRequests(@Request() req: any) {
-    return this.merchantService.getPickupRequests(req.user.id);
+  getPickupRequests(
+    @Request() req: any,
+    @Query('date') date?: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+    @Query('merchantId') merchantId?: string,
+    @Query('branchId') branchId?: string,
+    @Query('status') status?: string,
+  ) {
+    return this.merchantService.getPickupRequests(req.user.id, {
+      date,
+      startDate,
+      endDate,
+      merchantId: merchantId ? Number(merchantId) : undefined,
+      branchId: branchId ? Number(branchId) : undefined,
+      status,
+    });
   }
 
   @Get('pickup-requests/:id')

@@ -195,15 +195,15 @@ export default function BillingPage() {
     <MainLayout>
       <div style={{ width: '100%', paddingBottom: 40 }}>
         {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32, flexWrap: 'wrap', gap: 16 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexWrap: 'wrap', gap: 16 }}>
           <div>
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 12px', borderRadius: 20, background: '#eff6ff', color: '#3b82f6', fontSize: 12, fontWeight: 700, marginBottom: 8 }}>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 12px', borderRadius: 20, background: '#eff6ff', color: '#2563eb', fontSize: 12, fontWeight: 700, marginBottom: 8, border: '1px solid #dbeafe' }}>
               <MdWorkspacePremium size={15} /> {tr('SaaS គម្រោង & វិក្កយបត្រ', 'SaaS Billing & Subscriptions')}
             </div>
-            <h1 style={{ fontSize: 28, fontWeight: 900, color: '#0f172a', margin: '0 0 6px', letterSpacing: '-0.5px' }}>
+            <h1 style={{ fontSize: 26, fontWeight: 900, color: '#0f172a', margin: '0 0 6px', letterSpacing: '-0.4px' }}>
               {tr('ការគ្រប់គ្រងគម្រោង & វិក្កយបត្រ', 'Plans & Billing Management')}
             </h1>
-            <p style={{ fontSize: 14, color: '#64748b', margin: 0 }}>
+            <p style={{ fontSize: 13.5, color: '#64748b', margin: 0 }}>
               {tr('ពិនិត្យមើលស្ថានភាពនៃការជាវសេវា ដែនកំណត់ និងប្រវត្តិវិក្កយបត្ររបស់អ្នក', 'Review your subscription status, resource limits, and billing history')}
             </p>
           </div>
@@ -218,7 +218,10 @@ export default function BillingPage() {
               padding: '10px 22px',
               fontSize: 13.5,
               fontWeight: 800,
-              boxShadow: '0 4px 14px rgba(37,99,235,0.25)',
+              borderRadius: 12,
+              boxShadow: '0 4px 14px rgba(0,0,0,0.12)',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
             }}
           >
             <MdPayment size={18} />
@@ -231,93 +234,104 @@ export default function BillingPage() {
           <div
             style={{
               background: '#ffffff',
-              borderRadius: 24,
-              padding: '36px',
+              borderRadius: 20,
+              padding: '24px 28px',
               color: '#0f172a',
-              marginBottom: 36,
-              boxShadow: '0 10px 30px -10px rgba(15, 23, 42, 0.05)',
-              position: 'relative',
-              border: '1.5px solid #e2e8f0',
+              marginBottom: 28,
+              boxShadow: '0 4px 20px rgba(0, 0, 0, 0.04)',
+              border: '1px solid #e2e8f0',
             }}
           >
             <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 20, marginBottom: 24 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 20, marginBottom: 22 }}>
                 <div>
                   <div
                     style={{
                       display: 'inline-flex',
                       alignItems: 'center',
                       gap: 6,
-                      background: '#eff6ff',
-                      padding: '4px 14px',
+                      background: '#f0fdf4',
+                      padding: '4px 12px',
                       borderRadius: 20,
                       fontSize: 12,
-                      fontWeight: 800,
-                      color: '#2563eb',
-                      marginBottom: 12,
-                      border: '1px solid #bfdbfe',
+                      fontWeight: 700,
+                      color: '#15803d',
+                      marginBottom: 10,
+                      border: '1px solid #bbf7d0',
                     }}
                   >
                     <MdWorkspacePremium size={14} />
                     <span>{tr('គម្រោងបច្ចុប្បន្ន', 'Current Plan')}</span>
                   </div>
 
-                  <h2 style={{ fontSize: 32, fontWeight: 900, color: '#0f172a', margin: '0 0 6px', letterSpacing: '-0.5px' }}>
-                    {subInfo.plan?.name || 'Professional Plan'}
-                  </h2>
-                  <p style={{ fontSize: 14, color: '#64748b', margin: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
+                    <h2 style={{ fontSize: 26, fontWeight: 900, color: '#0f172a', margin: 0, letterSpacing: '-0.3px' }}>
+                      {subInfo.plan?.name || 'Professional Plan'}
+                    </h2>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: '#64748b' }}>
+                      ({subInfo.billingCycle === 'yearly' ? tr('គម្រោងប្រចាំឆ្នាំ', 'Annual Plan') : tr('គម្រោងប្រចាំខែ', 'Monthly Plan')})
+                    </span>
+                  </div>
+                  <p style={{ fontSize: 13.5, color: '#64748b', margin: '6px 0 0' }}>
                     {subInfo.plan?.description || tr('កញ្ចប់ពេញនិយមបំផុត សម្រាប់ក្រុមហ៊ុនដឹកជញ្ជូនដែលកំពុងរីកចម្រើន', 'Most popular package for growing logistics companies')}
                   </p>
                 </div>
 
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: 12, color: '#64748b', marginBottom: 6, fontWeight: 700 }}>
-                    {tr('ស្ថានភាព', 'Status')}
-                  </div>
-                  <span
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 6,
-                      background: subInfo.status === 'active' ? '#ecfdf5' : '#fef2f2',
-                      color: subInfo.status === 'active' ? '#059669' : '#dc2626',
-                      border: subInfo.status === 'active' ? '1px solid #a7f3d0' : '1px solid #fecaca',
-                      padding: '5px 16px',
-                      borderRadius: 20,
-                      fontSize: 13,
-                      fontWeight: 800,
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.5px',
-                    }}
-                  >
-                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: subInfo.status === 'active' ? '#10b981' : '#ef4444' }} />
-                    {subInfo.status === 'active' ? tr('សកម្ម', 'ACTIVE') : subInfo.status.toUpperCase()}
-                  </span>
-                  {(() => {
-                    const isExpiringSoon = typeof subInfo.daysRemaining === 'number' && subInfo.daysRemaining <= 60;
-                    return (
-                      <div style={{ marginTop: 8 }}>
-                        <div
+                {(() => {
+                  const isExpiringSoon = typeof subInfo.daysRemaining === 'number' && subInfo.daysRemaining <= 60;
+                  return (
+                    <div
+                      style={{
+                        background: '#f8fafc',
+                        borderRadius: 14,
+                        padding: '12px 18px',
+                        border: '1px solid #e2e8f0',
+                        textAlign: 'right',
+                        minWidth: 180,
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6, marginBottom: 6 }}>
+                        <span style={{ fontSize: 11.5, color: '#64748b', fontWeight: 600 }}>{tr('ស្ថានភាព៖', 'Status:')}</span>
+                        <span
                           style={{
-                            fontSize: 13,
-                            color: isExpiringSoon ? '#dc2626' : '#2563eb',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 5,
+                            background: subInfo.status === 'active' ? '#ecfdf5' : '#fef2f2',
+                            color: subInfo.status === 'active' ? '#059669' : '#dc2626',
+                            border: subInfo.status === 'active' ? '1px solid #a7f3d0' : '1px solid #fecaca',
+                            padding: '2px 10px',
+                            borderRadius: 20,
+                            fontSize: 11.5,
                             fontWeight: 800,
                           }}
                         >
-                          {formatRemainingDuration(subInfo.daysRemaining, lang)}
-                        </div>
-                        {subInfo.currentPeriodEnd && (
-                          <div style={{ fontSize: 11.5, color: '#64748b', marginTop: 3, fontWeight: 600 }}>
-                            {tr('ផុតកំណត់៖', 'Expires:')}{' '}
-                            <span style={{ color: isExpiringSoon ? '#dc2626' : '#0f172a', fontWeight: 700 }}>
-                              {formatDate(subInfo.currentPeriodEnd)}
-                            </span>
-                          </div>
-                        )}
+                          <span style={{ width: 6, height: 6, borderRadius: '50%', background: subInfo.status === 'active' ? '#10b981' : '#ef4444' }} />
+                          {subInfo.status === 'active' ? tr('សកម្ម', 'Active') : subInfo.status}
+                        </span>
                       </div>
-                    );
-                  })()}
-                </div>
+
+                      <div
+                        style={{
+                          fontSize: 13,
+                          color: isExpiringSoon ? '#dc2626' : '#2563eb',
+                          fontWeight: 800,
+                        }}
+                      >
+                        {formatRemainingDuration(subInfo.daysRemaining, lang)}
+                      </div>
+
+                      {subInfo.currentPeriodEnd && (
+                        <div style={{ fontSize: 11.5, color: '#64748b', marginTop: 3 }}>
+                          {tr('ផុតកំណត់៖', 'Expires:')}{' '}
+                          <span style={{ color: isExpiringSoon ? '#dc2626' : '#0f172a', fontWeight: 700 }}>
+                            {formatDate(subInfo.currentPeriodEnd)}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
 
               {/* Workspace / Domain Badge Card */}
@@ -325,41 +339,41 @@ export default function BillingPage() {
                 <div
                   style={{
                     background: '#f8fafc',
-                    borderRadius: 18,
-                    padding: '18px 22px',
-                    border: '1.5px solid #e2e8f0',
+                    borderRadius: 14,
+                    padding: '14px 18px',
+                    border: '1px solid #e2e8f0',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
                     flexWrap: 'wrap',
-                    gap: 16,
-                    marginBottom: 28,
+                    gap: 12,
+                    marginBottom: 20,
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                     <div
                       style={{
-                        width: 44,
-                        height: 44,
-                        borderRadius: 12,
+                        width: 38,
+                        height: 38,
+                        borderRadius: 10,
                         background: '#eff6ff',
                         color: '#2563eb',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        fontSize: 22,
+                        fontSize: 18,
                         border: '1px solid #bfdbfe',
                       }}
                     >
                       🏢
                     </div>
                     <div>
-                      <div style={{ fontSize: 11.5, color: '#64748b', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                        {tr('WORKSPACE ក្រុមហ៊ុន & DOMAIN', 'COMPANY WORKSPACE & DOMAIN')}:
+                      <div style={{ fontSize: 11, color: '#64748b', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+                        {tr('WORKSPACE ក្រុមហ៊ុន & DOMAIN', 'COMPANY WORKSPACE & DOMAIN')}
                       </div>
-                      <div style={{ fontSize: 15, fontWeight: 900, color: '#0f172a', marginTop: 2 }}>
-                        {subInfo.companyName || 'Angkor Express'}{' '}
-                        <span style={{ color: '#4f46e5', fontWeight: 700 }}>— {getTenantWorkspaceUrl(subInfo.subdomain)}</span>
+                      <div style={{ fontSize: 14, fontWeight: 800, color: '#0f172a', marginTop: 1 }}>
+                        {subInfo.companyName || 'EBS Express'}{' '}
+                        <span style={{ color: '#4f46e5', fontWeight: 600 }}>— {getTenantWorkspaceUrl(subInfo.subdomain)}</span>
                       </div>
                     </div>
                   </div>
@@ -372,18 +386,18 @@ export default function BillingPage() {
                       display: 'inline-flex',
                       alignItems: 'center',
                       gap: 6,
-                      padding: '10px 20px',
-                      borderRadius: 12,
+                      padding: '7px 16px',
+                      borderRadius: 10,
                       background: '#0f172a',
                       color: '#ffffff',
-                      fontWeight: 800,
-                      fontSize: 13.5,
+                      fontWeight: 700,
+                      fontSize: 12.5,
                       textDecoration: 'none',
-                      boxShadow: '0 4px 12px rgba(15,23,42,0.15)',
+                      boxShadow: '0 2px 8px rgba(15,23,42,0.12)',
                     }}
                   >
                     <span>{tr('បើក Workspace', 'Open Workspace')}</span>
-                    <MdOpenInNew size={15} />
+                    <MdOpenInNew size={14} />
                   </a>
                 </div>
               )}
@@ -392,59 +406,118 @@ export default function BillingPage() {
               <div
                 style={{
                   display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-                  gap: 16,
-                  marginTop: 16,
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))',
+                  gap: 14,
                 }}
               >
                 <div
                   style={{
                     background: '#f8fafc',
-                    padding: '16px 20px',
-                    borderRadius: 16,
-                    border: '1.5px solid #e2e8f0',
+                    padding: '16px 18px',
+                    borderRadius: 14,
+                    border: '1px solid #e2e8f0',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 14,
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#4f46e5', fontSize: 13, fontWeight: 700, marginBottom: 6 }}>
-                    <MdLocalShipping size={18} />
-                    <span>{tr('ដែនកំណត់ការដឹក', 'Orders Limit')}</span>
+                  <div
+                    style={{
+                      width: 44,
+                      height: 44,
+                      borderRadius: 12,
+                      background: '#eff6ff',
+                      color: '#2563eb',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: 22,
+                      flexShrink: 0,
+                    }}
+                  >
+                    <MdLocalShipping size={22} />
                   </div>
-                  <div style={{ fontSize: 24, fontWeight: 900, color: '#0f172a' }}>
-                    {subInfo.limits?.maxOrdersPerMonth || 3000} <span style={{ fontSize: 13, fontWeight: 600, color: '#64748b' }}>{tr('/ ខែ', '/ mo')}</span>
+                  <div>
+                    <div style={{ color: '#64748b', fontSize: 12, fontWeight: 600, marginBottom: 2 }}>
+                      {tr('ដែនកំណត់ការដឹក', 'Orders Limit')}
+                    </div>
+                    <div style={{ fontSize: 20, fontWeight: 900, color: '#0f172a' }}>
+                      {(subInfo.limits?.maxOrdersPerMonth || 3000).toLocaleString()} <span style={{ fontSize: 12, fontWeight: 600, color: '#64748b' }}>{tr('/ ខែ', '/ mo')}</span>
+                    </div>
                   </div>
                 </div>
 
                 <div
                   style={{
                     background: '#f8fafc',
-                    padding: '16px 20px',
-                    borderRadius: 16,
-                    border: '1.5px solid #e2e8f0',
+                    padding: '16px 18px',
+                    borderRadius: 14,
+                    border: '1px solid #e2e8f0',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 14,
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#4f46e5', fontSize: 13, fontWeight: 700, marginBottom: 6 }}>
-                    <MdPeople size={18} />
-                    <span>{tr('គណនីបុគ្គលិក', 'Staff Accounts')}</span>
+                  <div
+                    style={{
+                      width: 44,
+                      height: 44,
+                      borderRadius: 12,
+                      background: '#ecfdf5',
+                      color: '#059669',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: 22,
+                      flexShrink: 0,
+                    }}
+                  >
+                    <MdPeople size={22} />
                   </div>
-                  <div style={{ fontSize: 24, fontWeight: 900, color: '#0f172a' }}>
-                    {subInfo.limits?.maxUsers || 10} <span style={{ fontSize: 13, fontWeight: 600, color: '#64748b' }}>{tr('នាក់', 'staff')}</span>
+                  <div>
+                    <div style={{ color: '#64748b', fontSize: 12, fontWeight: 600, marginBottom: 2 }}>
+                      {tr('គណនីបុគ្គលិក', 'Staff Accounts')}
+                    </div>
+                    <div style={{ fontSize: 20, fontWeight: 900, color: '#0f172a' }}>
+                      {subInfo.limits?.maxUsers || 10} <span style={{ fontSize: 12, fontWeight: 600, color: '#64748b' }}>{tr('នាក់', 'staff')}</span>
+                    </div>
                   </div>
                 </div>
 
                 <div
                   style={{
                     background: '#f8fafc',
-                    padding: '16px 20px',
-                    borderRadius: 16,
-                    border: '1.5px solid #e2e8f0',
+                    padding: '16px 18px',
+                    borderRadius: 14,
+                    border: '1px solid #e2e8f0',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 14,
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#4f46e5', fontSize: 13, fontWeight: 700, marginBottom: 6 }}>
-                    <MdDirectionsCar size={18} />
-                    <span>{tr('ចំនួនអ្នកបើកបរ', 'Drivers Limit')}</span>
+                  <div
+                    style={{
+                      width: 44,
+                      height: 44,
+                      borderRadius: 12,
+                      background: '#fff7ed',
+                      color: '#ea580c',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: 22,
+                      flexShrink: 0,
+                    }}
+                  >
+                    <MdDirectionsCar size={22} />
                   </div>
-                  <div style={{ fontSize: 24, fontWeight: 900, color: '#0f172a' }}>
-                    {subInfo.limits?.maxDrivers || 25} <span style={{ fontSize: 13, fontWeight: 600, color: '#64748b' }}>{tr('នាក់', 'drivers')}</span>
+                  <div>
+                    <div style={{ color: '#64748b', fontSize: 12, fontWeight: 600, marginBottom: 2 }}>
+                      {tr('ចំនួនអ្នកបើកបរ', 'Drivers Limit')}
+                    </div>
+                    <div style={{ fontSize: 20, fontWeight: 900, color: '#0f172a' }}>
+                      {subInfo.limits?.maxDrivers || 25} <span style={{ fontSize: 12, fontWeight: 600, color: '#64748b' }}>{tr('នាក់', 'drivers')}</span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -503,143 +576,213 @@ export default function BillingPage() {
         )}
 
         {/* Standard Clean Billing History List */}
-        <div className="card">
-          <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span className="card-title">🧾 {tr('ប្រវត្តិវិក្កយបត្រ', 'Billing History')}</span>
+        <div
+          style={{
+            background: '#ffffff',
+            borderRadius: 20,
+            border: '1px solid #e2e8f0',
+            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.03)',
+            overflow: 'hidden',
+          }}
+        >
+          <div
+            style={{
+              padding: '16px 22px',
+              borderBottom: '1px solid #f1f5f9',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: 16 }}>🧾</span>
+              <span style={{ fontSize: 15, fontWeight: 800, color: '#0f172a' }}>
+                {tr('ប្រវត្តិវិក្កយបត្រ', 'Billing History')}
+              </span>
+              <span
+                style={{
+                  background: '#f1f5f9',
+                  color: '#475569',
+                  fontSize: 12,
+                  fontWeight: 700,
+                  padding: '2px 8px',
+                  borderRadius: 12,
+                }}
+              >
+                {invoices.length}
+              </span>
+            </div>
           </div>
 
           <div style={{ overflowX: 'auto', width: '100%' }}>
-            <table className="saas-custom-table" style={{ width: '100%', minWidth: 860, borderCollapse: 'collapse', textAlign: 'left' }}>
-              <thead>
-                <tr style={{ background: '#1565D8', color: '#ffffff' }}>
-                  <th style={{ width: 44, textAlign: 'center', whiteSpace: 'nowrap' }}>{tr('ល.រ', 'No.')}</th>
-                  <th style={{ whiteSpace: 'nowrap' }}>{tr('លេខវិក្កយបត្រ', 'Invoice No.')}</th>
-                  <th style={{ whiteSpace: 'nowrap' }}>{tr('កាលបរិច្ឆេទបង្កើត', 'Created Date')}</th>
-                  <th style={{ whiteSpace: 'nowrap' }}>{tr('ថ្ងៃផុតកំណត់', 'Due Date')}</th>
-                  <th style={{ whiteSpace: 'nowrap' }}>{tr('តម្លៃដើម', 'Subtotal')}</th>
-                  <th style={{ whiteSpace: 'nowrap' }}>{tr('បញ្ចុះតម្លៃ', 'Discount')}</th>
-                  <th style={{ whiteSpace: 'nowrap' }}>{tr('ទឹកប្រាក់បង់', 'Total Paid')}</th>
-                  <th style={{ whiteSpace: 'nowrap' }}>{tr('ស្ថានភាព', 'Status')}</th>
-                  <th style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>{tr('សកម្មភាព', 'Action')}</th>
+            <table style={{ width: '100%', minWidth: 860, borderCollapse: 'collapse', textAlign: 'left' }}>
+              <thead style={{ background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff' }}>
+                <tr style={{ background: 'var(--sidebar-bg, #1565D8)' }}>
+                  <th style={{ width: 50, textAlign: 'center', whiteSpace: 'nowrap', padding: '12px 14px', border: 'none', color: '#ffffff', fontSize: 13, fontWeight: 700 }}>{tr('ល.រ', 'No.')}</th>
+                  <th style={{ whiteSpace: 'nowrap', padding: '12px 14px', border: 'none', color: '#ffffff', fontSize: 13, fontWeight: 700 }}>{tr('លេខវិក្កយបត្រ', 'Invoice No.')}</th>
+                  <th style={{ whiteSpace: 'nowrap', padding: '12px 14px', border: 'none', color: '#ffffff', fontSize: 13, fontWeight: 700 }}>{tr('កាលបរិច្ឆេទបង្កើត', 'Created Date')}</th>
+                  <th style={{ whiteSpace: 'nowrap', padding: '12px 14px', border: 'none', color: '#ffffff', fontSize: 13, fontWeight: 700 }}>{tr('ថ្ងៃផុតកំណត់', 'Due Date')}</th>
+                  <th style={{ whiteSpace: 'nowrap', padding: '12px 14px', border: 'none', color: '#ffffff', fontSize: 13, fontWeight: 700 }}>{tr('តម្លៃដើម', 'Subtotal')}</th>
+                  <th style={{ whiteSpace: 'nowrap', padding: '12px 14px', border: 'none', color: '#ffffff', fontSize: 13, fontWeight: 700, textAlign: 'center' }}>{tr('បញ្ចុះតម្លៃ', 'Discount')}</th>
+                  <th style={{ whiteSpace: 'nowrap', padding: '12px 14px', border: 'none', color: '#ffffff', fontSize: 13, fontWeight: 700 }}>{tr('ទឹកប្រាក់បង់', 'Total Paid')}</th>
+                  <th style={{ whiteSpace: 'nowrap', padding: '12px 14px', border: 'none', color: '#ffffff', fontSize: 13, fontWeight: 700, textAlign: 'center' }}>{tr('ស្ថានភាព', 'Status')}</th>
+                  <th style={{ textAlign: 'center', whiteSpace: 'nowrap', padding: '12px 16px', border: 'none', color: '#ffffff', fontSize: 13, fontWeight: 700 }}>{tr('សកម្មភាព', 'Action')}</th>
                 </tr>
               </thead>
               <tbody>
                 {invoices.length === 0 ? (
                   <tr>
-                    <td colSpan={9} style={{ textAlign: 'center', padding: '40px 0', color: '#94a3b8', fontSize: 13.5 }}>
-                      {tr('មិនទាន់មានប្រវត្តិវិក្កយបត្រនៅឡើយទេ', 'No billing history records found')}
+                    <td colSpan={9} style={{ textAlign: 'center', padding: '48px 0', color: '#94a3b8', fontSize: 13.5 }}>
+                      <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontSize: 32 }}>📄</span>
+                        <span>{tr('មិនទាន់មានប្រវត្តិវិក្កយបត្រនៅឡើយទេ', 'No billing history records found')}</span>
+                      </div>
                     </td>
                   </tr>
                 ) : (
-                  invoices.map((inv, idx) => (
-                    <tr
-                      key={inv.id}
-                      style={{
-                        borderBottom: '1px solid #f1f5f9',
-                        fontSize: 13.5,
-                        transition: 'background 0.15s',
-                      }}
-                    >
-                      <td style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: 12.5 }}>
-                        {idx + 1}
-                      </td>
-                      <td style={{ fontWeight: 800, color: '#2563eb', fontFamily: 'monospace' }}>
-                        {inv.invoiceNumber}
-                      </td>
-                      <td style={{ color: '#64748b' }}>
-                        {formatDate(inv.createdAt)}
-                      </td>
-                      <td style={{ color: '#64748b', fontWeight: 600 }}>
-                        {formatDate(inv.dueDate || inv.subscription?.currentPeriodEnd || new Date(new Date(inv.createdAt).getTime() + 30 * 24 * 60 * 60 * 1000))}
-                      </td>
-                      <td style={{ color: '#64748b' }}>
-                        ${Number(inv.subtotal).toFixed(2)}
-                      </td>
-                      <td style={{ color: '#10b981', fontWeight: 700 }}>
-                        -${Number(inv.discountAmount).toFixed(2)}
-                      </td>
-                      <td style={{ fontWeight: 900, color: '#0f172a' }}>
-                        ${Number(inv.totalAmount).toFixed(2)}
-                      </td>
-                      <td>
-                        <span
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: 6,
-                            padding: '3px 10px',
-                            borderRadius: 20,
-                            fontSize: 11.5,
-                            fontWeight: 800,
-                            textTransform: 'uppercase',
-                            border: inv.status === 'paid' 
-                              ? '1px solid #a7f3d0' 
-                              : inv.status === 'pending' 
-                                ? '1px solid #fde68a' 
-                                : '1px solid #fecaca',
-                            background: inv.status === 'paid' 
-                              ? '#ecfdf5' 
-                              : inv.status === 'pending' 
-                                ? '#fef3c7' 
-                                : '#fef2f2',
-                            color: inv.status === 'paid' 
-                              ? '#059669' 
-                              : inv.status === 'pending' 
-                                ? '#d97706' 
-                                : '#dc2626',
-                          }}
-                        >
+                  invoices.map((inv, idx) => {
+                    const discountNum = Number(inv.discountAmount) || 0;
+                    return (
+                      <tr
+                        key={inv.id}
+                        style={{
+                          borderBottom: '1px solid #f1f5f9',
+                          fontSize: 13.5,
+                          transition: 'background 0.15s ease',
+                        }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = '#f8fafc'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                      >
+                        <td style={{ textAlign: 'center', color: '#94a3b8', fontSize: 12.5, padding: '13px 14px' }}>
+                          {idx + 1}
+                        </td>
+                        <td style={{ padding: '13px 14px' }}>
+                          <span style={{ fontWeight: 800, color: '#2563eb', fontFamily: 'monospace', fontSize: 13 }}>
+                            {inv.invoiceNumber}
+                          </span>
+                        </td>
+                        <td style={{ color: '#64748b', padding: '13px 14px' }}>
+                          {formatDate(inv.createdAt)}
+                        </td>
+                        <td style={{ color: '#64748b', fontWeight: 600, padding: '13px 14px' }}>
+                          {formatDate(inv.dueDate || inv.subscription?.currentPeriodEnd || new Date(new Date(inv.createdAt).getTime() + 30 * 24 * 60 * 60 * 1000))}
+                        </td>
+                        <td style={{ color: '#64748b', padding: '13px 14px' }}>
+                          ${Number(inv.subtotal).toFixed(2)}
+                        </td>
+                        <td style={{ padding: '13px 14px', textAlign: 'center' }}>
+                          {discountNum > 0 ? (
+                            <span style={{ color: '#059669', fontWeight: 700 }}>
+                              -${discountNum.toFixed(2)}
+                            </span>
+                          ) : (
+                            <span style={{ color: '#94a3b8', fontWeight: 500 }}>—</span>
+                          )}
+                        </td>
+                        <td style={{ fontWeight: 800, color: '#0f172a', padding: '13px 14px' }}>
+                          ${Number(inv.totalAmount).toFixed(2)}
+                        </td>
+                        <td style={{ textAlign: 'center', padding: '13px 14px' }}>
                           <span
                             style={{
-                              width: 6,
-                              height: 6,
-                              borderRadius: '50%',
-                              background: inv.status === 'paid' 
-                                ? '#10b981' 
-                                : inv.status === 'pending' 
-                                  ? '#f59e0b' 
-                                  : '#ef4444',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 6,
+                              padding: '4px 12px',
+                              borderRadius: 20,
+                              fontSize: 12,
+                              fontWeight: 700,
+                              border: inv.status === 'paid'
+                                ? '1px solid #a7f3d0'
+                                : inv.status === 'pending'
+                                  ? '1px solid #fde68a'
+                                  : '1px solid #fecaca',
+                              background: inv.status === 'paid'
+                                ? '#ecfdf5'
+                                : inv.status === 'pending'
+                                  ? '#fffbeb'
+                                  : '#fef2f2',
+                              color: inv.status === 'paid'
+                                ? '#059669'
+                                : inv.status === 'pending'
+                                  ? '#b45309'
+                                  : '#dc2626',
                             }}
-                          />
-                          {inv.status === 'paid' ? tr('បង់រួច', 'PAID') : inv.status.toUpperCase()}
-                        </span>
-                      </td>
-                      <td style={{ textAlign: 'right' }}>
-                        <div style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
-                          {inv.status !== 'paid' && (
-                            <button
-                              onClick={() => handleOpenPayment(inv)}
-                              className="btn btn-primary btn-sm"
+                          >
+                            <span
                               style={{
-                                fontSize: 11.5,
-                                fontWeight: 800,
-                                padding: '4px 10px',
+                                width: 6,
+                                height: 6,
+                                borderRadius: '50%',
+                                background: inv.status === 'paid'
+                                  ? '#10b981'
+                                  : inv.status === 'pending'
+                                    ? '#f59e0b'
+                                    : '#ef4444',
+                              }}
+                            />
+                            {inv.status === 'paid'
+                              ? tr('បង់រួច', 'PAID')
+                              : inv.status === 'pending'
+                                ? tr('រង់ចាំការទូទាត់', 'PENDING')
+                                : tr('បរាជ័យ', 'FAILED')}
+                          </span>
+                        </td>
+                        <td style={{ textAlign: 'center', padding: '13px 16px' }}>
+                          <div style={{ display: 'inline-flex', gap: 6, alignItems: 'center', justifyContent: 'center' }}>
+                            {inv.status !== 'paid' && (
+                              <button
+                                onClick={() => handleOpenPayment(inv)}
+                                className="btn btn-primary btn-sm"
+                                style={{
+                                  fontSize: 11.5,
+                                  fontWeight: 800,
+                                  padding: '4px 10px',
+                                  borderRadius: 8,
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: 4,
+                                }}
+                              >
+                                <MdPayment size={13} /> {tr('បង់ប្រាក់', 'Pay')}
+                              </button>
+                            )}
+                            <button
+                              onClick={() => printInvoicePdf(inv)}
+                              style={{
+                                fontSize: 12,
+                                fontWeight: 700,
                                 display: 'inline-flex',
                                 alignItems: 'center',
                                 gap: 4,
+                                padding: '5px 12px',
+                                borderRadius: 8,
+                                border: '1px solid #e2e8f0',
+                                background: '#ffffff',
+                                color: '#475569',
+                                cursor: 'pointer',
+                                transition: 'all 0.15s ease',
+                                boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
                               }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.background = '#f8fafc';
+                                e.currentTarget.style.borderColor = '#cbd5e1';
+                                e.currentTarget.style.color = '#1e293b';
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.background = '#ffffff';
+                                e.currentTarget.style.borderColor = '#e2e8f0';
+                                e.currentTarget.style.color = '#475569';
+                              }}
+                              title={tr('បោះពុម្ព / ទាញយកជា PDF', 'Print / Download PDF')}
                             >
-                              <MdPayment size={13} /> {tr('បង់ប្រាក់', 'Pay')}
+                              <MdDownload size={14} /> PDF
                             </button>
-                          )}
-                          <button
-                            onClick={() => printInvoicePdf(inv)}
-                            className="btn btn-ghost btn-sm"
-                            style={{
-                              fontSize: 12,
-                              fontWeight: 700,
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: 4,
-                            }}
-                            title={tr('បោះពុម្ព / ទាញយកជា PDF', 'Print / Download PDF')}
-                          >
-                            <MdDownload size={14} /> PDF
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>

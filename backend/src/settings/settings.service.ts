@@ -500,4 +500,50 @@ export class SettingsService {
     await this.currencyRepo.remove(cur);
     return { success: true };
   }
+
+  async resolveMapLink(url: string): Promise<{ lat: number; lng: number; resolvedUrl?: string } | null> {
+    if (!url || typeof url !== 'string') return null;
+    const trimmed = url.trim();
+
+    const extractCoords = (str: string) => {
+      let m = str.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+      if (m) return { lat: parseFloat(m[1]), lng: parseFloat(m[2]) };
+
+      m = str.match(/[?&](?:q|ll)=(-?\d+\.\d+),(-?\d+\.\d+)/);
+      if (m) return { lat: parseFloat(m[1]), lng: parseFloat(m[2]) };
+
+      m = str.match(/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/);
+      if (m) return { lat: parseFloat(m[1]), lng: parseFloat(m[2]) };
+
+      m = str.match(/(-?\d+\.\d+)[,\s]+(-?\d+\.\d+)/);
+      if (m) return { lat: parseFloat(m[1]), lng: parseFloat(m[2]) };
+
+      return null;
+    };
+
+    const direct = extractCoords(trimmed);
+    if (direct) return direct;
+
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+      try {
+        const response = await fetch(trimmed, {
+          method: 'GET',
+          redirect: 'follow',
+          headers: {
+            'User-Agent':
+              'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          },
+        });
+        const finalUrl = response.url;
+        const coords = extractCoords(finalUrl);
+        if (coords) {
+          return { ...coords, resolvedUrl: finalUrl };
+        }
+      } catch (err: any) {
+        this.logger.warn(`Failed to resolve map link: ${trimmed} - ${err?.message}`);
+      }
+    }
+
+    return null;
+  }
 }

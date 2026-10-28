@@ -7,7 +7,8 @@ import Sidebar from '@/components/layout/Sidebar';
 import Topbar from '@/components/layout/Topbar';
 import api from '@/lib/api';
 import { useLanguage } from '@/lib/LanguageContext';
-import { MdArrowBack, MdMap, MdSave } from 'react-icons/md';
+import { MdArrowBack, MdMap, MdSave, MdOpenInNew, MdLink } from 'react-icons/md';
+import { parseMapLinkOrCoords, isShortGoogleMapsUrl, getGoogleMapsUrl } from '@/lib/geo-util';
 import LocationMapModal from '@/components/ui/LocationMapModal';
 
 function CreateBranchContent() {
@@ -254,17 +255,41 @@ function CreateBranchContent() {
                   <label className="form-label" style={{ fontWeight: 600, fontSize: 13, marginBottom: 6 }}>
                     {lang === 'km' ? 'អាសយដ្ឋាន' : 'Address'} <span style={{ color: 'var(--danger)' }}>*</span>
                   </label>
-                  <div style={{ display: 'flex', gap: 8 }}>
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                     <input
                       type="text"
                       className={`form-control ${errors.address ? 'is-invalid' : ''}`}
-                      placeholder={lang === 'km' ? 'បញ្ចូលអាសយដ្ឋាន ឬជ្រើសរើសលើផែនទី...' : 'Enter address or select on map...'}
+                      placeholder={lang === 'km' ? 'បញ្ចូលអាសយដ្ឋាន ឬ paste Link Google Maps / រើសលើផែនទី...' : 'Enter address or paste Google Maps link / pick on map...'}
                       value={form.address}
-                      onChange={(e) => {
-                        setForm({ ...form, address: e.target.value });
+                      onChange={async (e) => {
+                        const val = e.target.value;
+                        const parsed = parseMapLinkOrCoords(val);
+                        if (parsed) {
+                          setForm((prev) => ({
+                            ...prev,
+                            latitude: String(parsed.lat),
+                            longitude: String(parsed.lng),
+                            address: val.startsWith('http') || /^[-0-9.,\s]+$/.test(val.trim()) ? prev.address || 'Phnom Penh' : val,
+                          }));
+                          if (errors.address) setErrors((prev) => ({ ...prev, address: '' }));
+                          return;
+                        }
+                        if (isShortGoogleMapsUrl(val)) {
+                          try {
+                            const res = await api.post('/settings/resolve-map-link', { url: val });
+                            if (res.data?.lat && res.data?.lng) {
+                              setForm((prev) => ({
+                                ...prev,
+                                latitude: String(res.data.lat),
+                                longitude: String(res.data.lng),
+                              }));
+                            }
+                          } catch (err) {}
+                        }
+                        setForm({ ...form, address: val });
                         if (errors.address) setErrors((prev) => ({ ...prev, address: '' }));
                       }}
-                      style={{ flex: 1, height: 42, fontSize: 14 }}
+                      style={{ flex: 1, height: 42, fontSize: 13.5 }}
                     />
                     <button
                       type="button"
@@ -272,19 +297,22 @@ function CreateBranchContent() {
                       className="btn btn-outline"
                       style={{
                         whiteSpace: 'nowrap',
-                        fontWeight: 600,
+                        fontWeight: 700,
                         fontSize: 13,
                         display: 'inline-flex',
                         alignItems: 'center',
                         gap: 6,
                         color: '#2563eb',
-                        borderColor: '#2563eb',
+                        borderColor: '#bfdbfe',
+                        background: '#eff6ff',
                         padding: '0 16px',
                         height: 42,
+                        borderRadius: 10,
+                        cursor: 'pointer',
                       }}
                     >
                       <MdMap size={18} />
-                      {lang === 'km' ? 'រើសលើផែនទី' : 'Pick on Map'}
+                      {lang === 'km' ? 'រើសលើផែនទី / Link' : 'Pick on Map / Link'}
                     </button>
                   </div>
                   {errors.address && (
@@ -293,8 +321,27 @@ function CreateBranchContent() {
                     </div>
                   )}
                   {form.latitude && form.longitude && (
-                    <div style={{ fontSize: 11.5, color: '#16a34a', marginTop: 5, display: 'flex', alignItems: 'center', gap: 4 }}>
-                      <span>📍 GPS: {Number(form.latitude).toFixed(5)}, {Number(form.longitude).toFixed(5)}</span>
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginTop: 6, background: '#f0fdf4', padding: '4px 10px', borderRadius: 8, border: '1px solid #bbf7d0' }}>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: '#16a34a' }}>
+                        📍 GPS: {Number(form.latitude).toFixed(5)}, {Number(form.longitude).toFixed(5)}
+                      </span>
+                      <a
+                        href={getGoogleMapsUrl(Number(form.latitude), Number(form.longitude))}
+                        target="_blank"
+                        rel="noreferrer"
+                        style={{ fontSize: 11.5, color: '#2563eb', fontWeight: 600, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 3 }}
+                      >
+                        <span>Google Maps</span>
+                        <MdOpenInNew size={12} />
+                      </a>
+                      <button
+                        type="button"
+                        onClick={() => setForm((prev) => ({ ...prev, latitude: '', longitude: '' }))}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: 0, fontSize: 13, lineHeight: 1 }}
+                        title="Clear coordinates"
+                      >
+                        ✕
+                      </button>
                     </div>
                   )}
                 </div>

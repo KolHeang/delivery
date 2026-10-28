@@ -1964,7 +1964,10 @@ tr[style*="2563EB"] {
   background: var(--sidebar-bg, #1565D8) !important;
   background-color: var(--sidebar-bg, #1565D8) !important;
   color: #ffffff !important;
-  border-color: rgba(255, 255, 255, 0.15) !important;
+  border-left: none !important;
+  border-right: none !important;
+  border-top: none !important;
+  border-color: rgba(255, 255, 255, 0.15);
 }
 
 /* 2. Primary & Action Buttons */

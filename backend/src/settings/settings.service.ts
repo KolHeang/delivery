@@ -54,6 +54,7 @@ export class SettingsService {
             website: `https://${tenant.slug}.new-delivery.rithyboth.work`,
             address: tenant.address || 'Phnom Penh, Cambodia',
             logo: tenant.logo || null,
+            primaryColor: tenant.primaryColor || '#2563eb',
             tenantId: resolvedTenantId,
           });
           org = await this.orgRepo.save(org);
@@ -70,6 +71,9 @@ export class SettingsService {
       } else {
         if (tenant?.logo && !org.logo) {
           org.logo = tenant.logo;
+        }
+        if (tenant?.primaryColor && !org.primaryColor) {
+          org.primaryColor = tenant.primaryColor;
           org = await this.orgRepo.save(org);
         }
         return org;
@@ -112,11 +116,13 @@ export class SettingsService {
           website: attrs.website || 'https://ebs.com',
           address: attrs.address || tenant?.address || 'Phnom Penh, Cambodia',
           logo: attrs.logo !== undefined ? attrs.logo : (tenant?.logo || null),
+          primaryColor: attrs.primaryColor || tenant?.primaryColor || '#2563eb',
         });
       }
       const tenantUpdates: any = {};
       if (attrs.name) tenantUpdates.name = attrs.name;
       if (attrs.logo !== undefined) tenantUpdates.logo = attrs.logo || null;
+      if (attrs.primaryColor !== undefined) tenantUpdates.primaryColor = attrs.primaryColor || '#2563eb';
       if (Object.keys(tenantUpdates).length > 0) {
         await this.tenantRepo.update({ id: resolvedTenantId }, tenantUpdates);
       }

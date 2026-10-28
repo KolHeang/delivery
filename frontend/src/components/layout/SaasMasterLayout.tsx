@@ -58,12 +58,13 @@ export function SaasMasterLayout({ activeTab, children }: SaasMasterLayoutProps)
     <div
       style={{
         display: 'flex',
-        minHeight: '100vh',
+        height: '100vh',
+        maxHeight: '100vh',
         background: '#f8fafc',
         fontFamily: "'Kantumruy Pro', 'Inter', sans-serif",
-        width: '100%',
+        width: '100vw',
         maxWidth: '100vw',
-        overflowX: 'hidden',
+        overflow: 'hidden',
       }}
     >
       {/* 1. DEDICATED SAAS MASTER SIDEBAR */}
@@ -71,7 +72,7 @@ export function SaasMasterLayout({ activeTab, children }: SaasMasterLayoutProps)
         style={{
           width: 260,
           minWidth: 260,
-          background: '#1565D8',
+          background: 'var(--sidebar-bg, #1565D8)',
           color: '#ffffff',
           display: 'flex',
           flexDirection: 'column',
@@ -79,7 +80,8 @@ export function SaasMasterLayout({ activeTab, children }: SaasMasterLayoutProps)
           top: 0,
           bottom: 0,
           left: 0,
-          zIndex: 90,
+          height: '100vh',
+          zIndex: 100,
           boxShadow: '4px 0 20px rgba(0,0,0,0.1)',
         }}
       >
@@ -169,25 +171,27 @@ export function SaasMasterLayout({ activeTab, children }: SaasMasterLayoutProps)
           flex: 1,
           marginLeft: 260,
           minWidth: 0,
+          width: 'calc(100vw - 260px)',
           maxWidth: 'calc(100vw - 260px)',
           display: 'flex',
           flexDirection: 'column',
-          minHeight: '100vh',
-          overflowX: 'hidden',
+          height: '100vh',
+          maxHeight: '100vh',
+          overflow: 'hidden',
         }}
       >
         {/* Unified Topbar */}
         <header
           style={{
             height: 64,
-            background: '#1565D8',
+            minHeight: 64,
+            background: 'var(--sidebar-bg, #1565D8)',
             borderBottom: '1px solid rgba(255, 255, 255, 0.12)',
             padding: '0 28px',
             display: 'flex',
             justifyContent: 'flex-end',
             alignItems: 'center',
-            position: 'sticky',
-            top: 0,
+            flexShrink: 0,
             zIndex: 80,
             boxShadow: '0 4px 16px rgba(0,0,0,0.06)',
             width: '100%',
@@ -198,7 +202,7 @@ export function SaasMasterLayout({ activeTab, children }: SaasMasterLayoutProps)
             {/* Language Switcher */}
             <button
               onClick={() => setLang(lang === 'en' ? 'km' : 'en')}
-              title={tr('ប្តូរភាសា (Switch Language)', 'Switch Language')}
+              title={tr('ប្តូរភាសា', 'Switch Language')}
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -346,7 +350,7 @@ export function SaasMasterLayout({ activeTab, children }: SaasMasterLayoutProps)
         </header>
 
         {/* Main Content Body */}
-        <main style={{ flex: 1, padding: '24px 28px', minWidth: 0, overflowX: 'hidden' }}>
+        <main style={{ flex: 1, padding: '24px 28px', minWidth: 0, overflowY: 'auto', overflowX: 'hidden' }}>
           {children}
         </main>
       </div>

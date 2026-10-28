@@ -153,6 +153,8 @@ export const saasApi = {
     phone?: string;
     password?: string;
     logo?: string;
+    primaryColor?: string;
+    color?: string;
   }) => {
     const res = await api.post('/saas/subscriptions/register-and-checkout', data);
     return res.data;

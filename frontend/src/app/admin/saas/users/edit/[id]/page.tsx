@@ -70,7 +70,7 @@ export default function EditSaasAdminPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!adminForm.name.trim() || !adminForm.email.trim()) {
-      alert(tr('សូមបំពេញព័ត៌មានចាំបាច់ឱ្យបានគ្រប់គ្រាន់ (*)', 'Please fill in required fields (*)'));
+      alert(tr('សូមបំពេញព័ត៌មានចាំបាច់ឱ្យបានគ្រប់គ្រាន់', 'Please fill in required fields'));
       return;
     }
 
@@ -189,7 +189,7 @@ export default function EditSaasAdminPage() {
 
                 <div className="form-group">
                   <label className="form-label">
-                    {tr('ពាក្យសម្ងាត់ថ្មី (ទុកទទេបើមិនប្តូរ)', 'New Password (Leave empty to keep current)')}
+                    {tr('ពាក្យសម្ងាត់ថ្មី • ទុកទទេបើមិនប្តូរ', 'New Password • Leave empty to keep current')}
                   </label>
                   <input
                     type="password"
@@ -213,9 +213,9 @@ export default function EditSaasAdminPage() {
                     value={adminForm.role}
                     onChange={(e) => setAdminForm({ ...adminForm, role: e.target.value })}
                   >
-                    <option value="super_admin">{tr('Super Admin (សិទ្ធិពេញលេញលើ SaaS)', 'Super Admin (Full SaaS Access)')}</option>
-                    <option value="finance_admin">{tr('Finance Admin (គ្រប់គ្រងការទូទាត់ & គម្រោង)', 'Finance Admin (Billing & Plans)')}</option>
-                    <option value="support_admin">{tr('Support Admin (ជំនួយការបច្ចេកទេស)', 'Support Admin (Technical Support)')}</option>
+                    <option value="super_admin">{tr('Super Admin — សិទ្ធិពេញលេញលើ SaaS', 'Super Admin — Full SaaS Access')}</option>
+                    <option value="finance_admin">{tr('Finance Admin — គ្រប់គ្រងការទូទាត់ & គម្រោង', 'Finance Admin — Billing & Plans')}</option>
+                    <option value="support_admin">{tr('Support Admin — ជំនួយការបច្ចេកទេស', 'Support Admin — Technical Support')}</option>
                   </select>
                 </div>
 
@@ -228,8 +228,8 @@ export default function EditSaasAdminPage() {
                     value={adminForm.isActive ? 'true' : 'false'}
                     onChange={(e) => setAdminForm({ ...adminForm, isActive: e.target.value === 'true' })}
                   >
-                    <option value="true">{tr('● សកម្ម (Active)', '● Active')}</option>
-                    <option value="false">{tr('● ផ្អាកដំណើរការ (Inactive)', '● Inactive')}</option>
+                    <option value="true">{tr('● សកម្ម', '● Active')}</option>
+                    <option value="false">{tr('● ផ្អាកដំណើរការ', '● Inactive')}</option>
                   </select>
                 </div>
               </div>

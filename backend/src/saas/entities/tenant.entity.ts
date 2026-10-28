@@ -30,6 +30,9 @@ export class Tenant {
   @Column({ type: 'text', nullable: true })
   logo: string;
 
+  @Column({ name: 'primary_color', length: 50, nullable: true, default: '#2563eb' })
+  primaryColor: string;
+
   @Column({ length: 50, nullable: true })
   phone: string;
 

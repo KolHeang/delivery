@@ -39,6 +39,9 @@ export class Organisation {
   @Column({ type: 'text', nullable: true })
   logo: string | null;
 
+  @Column({ name: 'primary_color', length: 50, nullable: true, default: '#2563eb' })
+  primaryColor: string;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 

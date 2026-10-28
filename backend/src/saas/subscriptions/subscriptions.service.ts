@@ -205,6 +205,8 @@ export class SubscriptionsService {
     phone?: string;
     password?: string;
     logo?: string;
+    primaryColor?: string;
+    color?: string;
   }) {
     if (!dto.email || !dto.companyName || !dto.subdomain) {
       throw new BadRequestException('Please provide company name, subdomain, and email');
@@ -220,6 +222,7 @@ export class SubscriptionsService {
     let tenant = await this.tenantRepo.findOne({
       where: { slug: cleanSubdomain },
     });
+    const brandColor = dto.primaryColor || dto.color || '#2563eb';
     if (!tenant) {
       tenant = this.tenantRepo.create({
         name: dto.companyName,
@@ -230,11 +233,24 @@ export class SubscriptionsService {
         status: 'active',
         planId: dto.planId,
         logo: dto.logo || undefined,
+        primaryColor: brandColor,
+        settings: { primaryColor: brandColor },
       });
       tenant = await this.tenantRepo.save(tenant);
-    } else if (dto.logo) {
-      tenant.logo = dto.logo;
-      await this.tenantRepo.save(tenant);
+    } else {
+      let shouldSave = false;
+      if (dto.logo) {
+        tenant.logo = dto.logo;
+        shouldSave = true;
+      }
+      if (dto.primaryColor || dto.color) {
+        tenant.primaryColor = brandColor;
+        tenant.settings = { ...(tenant.settings || {}), primaryColor: brandColor };
+        shouldSave = true;
+      }
+      if (shouldSave) {
+        await this.tenantRepo.save(tenant);
+      }
     }
 
     // 1.1 Auto-register default domain in saas_domains

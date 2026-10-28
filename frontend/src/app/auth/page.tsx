@@ -10,6 +10,7 @@ import { useTenant } from '@/lib/TenantContext';
 import { MdEmail, MdLock, MdVisibility, MdVisibilityOff } from 'react-icons/md';
 import { FlagKm, FlagEn } from '@/components/ui/Flags';
 import { detectTenantSubdomain } from '@/lib/domain';
+import { applyBrandTheme, initBrandTheme } from '@/lib/theme';
 
 const loginTranslations: Record<string, Record<string, string>> = {
   en: {
@@ -26,9 +27,16 @@ const loginTranslations: Record<string, Record<string, string>> = {
     forgotPasswordAlert: 'Please contact the system administrator to reset your password.',
     signInBtn: 'Sign In',
     signingIn: 'Signing in...',
+    systemSuffix: 'Delivery System',
+    defaultSystem: 'EBS Express • Delivery Management System',
+    saasAdminLink: 'EBS Master SaaS Super Admin',
+    modalOk: 'OK',
+    invalidCredentials: 'Invalid email or password',
+    userNotFound: 'User account not found',
+    accountDisabled: 'Your account has been deactivated',
   },
   km: {
-    subtitle: 'ចូលគណនីដើម្បីគ្រប់គ្រងការដឹកជញ្ជូនរបស់អ្នក',
+    subtitle: 'ចូលគ្រប់គ្រងប្រព័ន្ធដឹកជញ្ជូន',
     emailLabel: 'អ៊ីមែល',
     emailPlaceholder: 'បញ្ចូលអ៊ីមែល',
     emailRequired: 'សូមបំពេញអ៊ីម៉ែល',
@@ -41,6 +49,13 @@ const loginTranslations: Record<string, Record<string, string>> = {
     forgotPasswordAlert: 'សូមទាក់ទងអ្នកគ្រប់គ្រងប្រព័ន្ធ ដើម្បីកំណត់ពាក្យសម្ងាត់របស់អ្នកឡើងវិញ។',
     signInBtn: 'ចូលប្រើប្រាស់',
     signingIn: 'កំពុងចូល...',
+    systemSuffix: 'ប្រព័ន្ធគ្រប់គ្រងការដឹកជញ្ជូន',
+    defaultSystem: 'EBS Express • ប្រព័ន្ធគ្រប់គ្រងការដឹកជញ្ជូន',
+    saasAdminLink: 'ចូលគណនី EBS Master SaaS Super Admin',
+    modalOk: 'យល់ព្រម',
+    invalidCredentials: 'អ៊ីមែល ឬ ពាក្យសម្ងាត់មិនត្រឹមត្រូវទេ',
+    userNotFound: 'រកមិនឃើញគណនីនេះក្នុងប្រព័ន្ធទេ',
+    accountDisabled: 'គណនីរបស់អ្នកត្រូវបានផ្អាកដំណើរការ',
   }
 };
 
@@ -52,7 +67,8 @@ export default function LoginPage() {
   const [form, setForm] = useState({ email: '', password: '' });
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [errorKey, setErrorKey] = useState('');
+  const [rawError, setRawError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showForgotModal, setShowForgotModal] = useState(false);
 
@@ -61,7 +77,12 @@ export default function LoginPage() {
     if (sub) {
       setCurrentSubdomain(sub);
     }
-  }, []);
+    if (tenant?.primaryColor) {
+      applyBrandTheme(tenant.primaryColor);
+    } else {
+      initBrandTheme();
+    }
+  }, [tenant?.primaryColor]);
 
   const activeSubdomain = workspaceSubdomain || currentSubdomain;
   const activeCompanyName = tenant?.companyName || (activeSubdomain ? activeSubdomain.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') : null);
@@ -75,15 +96,15 @@ export default function LoginPage() {
     const newErrors: { email?: string; password?: string } = {};
     const emailVal = form.email.trim();
     if (!emailVal) {
-      newErrors.email = t.emailRequired;
+      newErrors.email = 'emailRequired';
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal)) {
-      newErrors.email = t.emailInvalid;
+      newErrors.email = 'emailInvalid';
     }
 
     if (!form.password) {
-      newErrors.password = t.passwordRequired;
+      newErrors.password = 'passwordRequired';
     } else if (form.password.length < 6) {
-      newErrors.password = t.passwordMin;
+      newErrors.password = 'passwordMin';
     }
 
     if (Object.keys(newErrors).length > 0) {
@@ -93,9 +114,17 @@ export default function LoginPage() {
 
     setErrors({});
     setLoading(true);
-    setError('');
+    setErrorKey('');
+    setRawError('');
     try {
       const res = await api.post('/auth/login', form);
+      const col = res.data?.user?.primaryColor || res.data?.primaryColor || tenant?.primaryColor;
+      if (col) {
+        try {
+          localStorage.setItem('app-brand-color', col);
+          applyBrandTheme(col);
+        } catch {}
+      }
       setAuth(res.data.access_token, res.data.user);
       window.location.href = '/dashboard';
       return;
@@ -119,7 +148,21 @@ export default function LoginPage() {
         // fallback to standard error
       }
 
-      setError(err.response?.data?.message || (lang === 'km' ? 'អ៊ីមែល ឬ ពាក្យសម្ងាត់មិនត្រឹមត្រូវទេ' : 'Invalid email or password'));
+      const serverMsg = err.response?.data?.message;
+      if (serverMsg) {
+        const lower = String(serverMsg).toLowerCase();
+        if (lower.includes('credential') || lower.includes('password') || lower.includes('email') || lower.includes('login') || lower.includes('unauthorized') || lower.includes('invalid')) {
+          setErrorKey('invalidCredentials');
+        } else if (lower.includes('not found')) {
+          setErrorKey('userNotFound');
+        } else if (lower.includes('disabled') || lower.includes('deactivated') || lower.includes('inactive')) {
+          setErrorKey('accountDisabled');
+        } else {
+          setRawError(serverMsg);
+        }
+      } else {
+        setErrorKey('invalidCredentials');
+      }
     } finally {
       setLoading(false);
     }
@@ -200,7 +243,7 @@ export default function LoginPage() {
           overflow: hidden;
         }
 
-        /* SaaS-style Dot Matrix + Grid (delivery orange accent) */
+        /* SaaS-style Dot Matrix + Grid (clean light accent) */
         .blueprint-grid {
           position: absolute;
           inset: 0;
@@ -280,13 +323,14 @@ export default function LoginPage() {
         .clean-card {
           width: 100%;
           max-width: 420px;
-          background: #ffffff;
-          border-radius: 22px;
-          padding: 40px 34px;
-          border: 1px solid #e2e8f0;
-          box-shadow: 0 20px 40px -12px rgba(15, 23, 42, 0.08), 0 1px 3px rgba(0, 0, 0, 0.02);
+          background: linear-gradient(135deg, var(--sidebar-bg, #1565D8) 0%, var(--accent-dark, #0d47a1) 100%);
+          border-radius: 26px;
+          padding: 42px 36px;
+          border: 1px solid rgba(255, 255, 255, 0.22);
+          box-shadow: 0 25px 60px -15px var(--accent-glow, rgba(15, 23, 42, 0.35)), 0 10px 25px -5px rgba(0, 0, 0, 0.15);
           position: relative;
           z-index: 10;
+          color: #ffffff;
         }
       `}</style>
 
@@ -488,7 +532,7 @@ export default function LoginPage() {
             fontSize: 12.5,
             fontWeight: 700,
             cursor: 'pointer',
-            background: lang === 'km' ? '#1565D8' : 'transparent',
+            background: lang === 'km' ? 'var(--accent, #1565D8)' : 'transparent',
             color: lang === 'km' ? '#ffffff' : '#64748b',
             transition: 'all 0.15s ease',
           }}
@@ -509,7 +553,7 @@ export default function LoginPage() {
             fontSize: 12.5,
             fontWeight: 700,
             cursor: 'pointer',
-            background: lang === 'en' ? '#1565D8' : 'transparent',
+            background: lang === 'en' ? 'var(--accent, #1565D8)' : 'transparent',
             color: lang === 'en' ? '#ffffff' : '#64748b',
             transition: 'all 0.15s ease',
           }}
@@ -520,7 +564,12 @@ export default function LoginPage() {
       </div>
 
       {/* 8. Clean Centered Card - FULLY DYNAMIC BRANDING */}
-      <div className="clean-card">
+      <div
+        className="clean-card"
+        style={{
+          background: 'linear-gradient(135deg, var(--sidebar-bg, #1565D8) 0%, var(--accent-dark, #0d47a1) 100%)',
+        }}
+      >
         {/* Dynamic Brand Header */}
         <div style={{ textAlign: 'center', marginBottom: 28 }}>
           <div
@@ -528,14 +577,14 @@ export default function LoginPage() {
               width: 90,
               height: 90,
               borderRadius: 22,
-              background: tenant?.logoUrl ? '#ffffff' : 'linear-gradient(135deg, #1e3a8a 0%, #1565D8 60%, #3b6cc4 100%)',
+              background: '#ffffff',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               margin: '0 auto 16px',
-              boxShadow: '0 8px 24px rgba(43, 82, 154, 0.28)',
+              boxShadow: '0 8px 24px rgba(0, 0, 0, 0.2)',
               color: '#ffffff',
-              border: '2.5px solid #e2e8f0',
+              border: '2.5px solid rgba(255, 255, 255, 0.6)',
               overflow: 'hidden',
               padding: tenant?.logoUrl ? 8 : 0,
             }}
@@ -548,11 +597,11 @@ export default function LoginPage() {
               />
             ) : (
               <svg width="58" height="58" viewBox="0 0 58 58" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <rect x="5" y="24" width="30" height="17" rx="3" fill="white" fillOpacity="0.95" />
-                <path d="M35 27H45C47 27 49.5 29 50.5 32L52 37C52.5 38.5 51.5 41 49.5 41H35V27Z" fill="white" fillOpacity="0.82" />
+                <rect x="5" y="24" width="30" height="17" rx="3" fill="#1565D8" />
+                <path d="M35 27H45C47 27 49.5 29 50.5 32L52 37C52.5 38.5 51.5 41 49.5 41H35V27Z" fill="#1565D8" />
                 <path d="M37 29H43L46 35H37V29Z" fill="#93c5fd" />
                 <rect x="9" y="27" width="9" height="6" rx="1.5" fill="#93c5fd" />
-                <path d="M9 36H22M9 39H18" stroke="#1565D8" strokeWidth="1.5" strokeLinecap="round" />
+                <path d="M9 36H22M9 39H18" stroke="#ffffff" strokeWidth="1.5" strokeLinecap="round" />
                 <rect x="50" y="34" width="3" height="4" rx="1" fill="#fbbf24" />
                 <circle cx="15" cy="41" r="5" fill="#1e3a8a" stroke="white" strokeWidth="1.5" />
                 <circle cx="15" cy="41" r="2" fill="white" />
@@ -569,7 +618,7 @@ export default function LoginPage() {
             style={{
               fontSize: 27,
               fontWeight: 900,
-              color: '#0f172a',
+              color: '#ffffff',
               margin: '0 0 6px',
               letterSpacing: '-0.4px',
             }}
@@ -577,12 +626,12 @@ export default function LoginPage() {
             {activeCompanyName ? (
               <span>{activeCompanyName}</span>
             ) : (
-              <>EBS<span style={{ color: '#1565D8' }}>Express</span></>
+              <>EBS<span>Express</span></>
             )}
           </h1>
 
           {/* Dynamic Subtitle */}
-          <p style={{ fontSize: 13, color: '#64748b', margin: 0, fontWeight: 500 }}>
+          <p style={{ fontSize: 13, color: 'rgba(255, 255, 255, 0.88)', margin: 0, fontWeight: 500 }}>
             {activeCompanyName
               ? (lang === 'km' ? `ចូលគ្រប់គ្រងប្រព័ន្ធដឹកជញ្ជូន ${activeCompanyName}` : `Sign in to manage ${activeCompanyName} logistics`)
               : t.subtitle}
@@ -590,7 +639,7 @@ export default function LoginPage() {
         </div>
 
         {/* Error Alert */}
-        {error && (
+        {(errorKey || rawError) && (
           <div
             style={{
               background: '#fef2f2',
@@ -607,7 +656,7 @@ export default function LoginPage() {
             }}
           >
             <span>⚠️</span>
-            <span>{error}</span>
+            <span>{errorKey ? (t[errorKey] || errorKey) : rawError}</span>
           </div>
         )}
 
@@ -620,7 +669,7 @@ export default function LoginPage() {
                 display: 'block',
                 fontSize: 13.5,
                 fontWeight: 700,
-                color: '#1e293b',
+                color: '#ffffff',
                 marginBottom: 7,
               }}
             >
@@ -629,7 +678,7 @@ export default function LoginPage() {
             <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
               <MdEmail
                 size={19}
-                color={errors.email ? '#ef4444' : '#94a3b8'}
+                color={errors.email ? '#ef4444' : '#64748b'}
                 style={{ position: 'absolute', left: 14, pointerEvents: 'none' }}
               />
               <input
@@ -646,29 +695,30 @@ export default function LoginPage() {
                   width: '100%',
                   padding: '13px 16px 13px 44px',
                   borderRadius: 14,
-                  border: errors.email ? '1.5px solid #ef4444' : '1.5px solid #e2e8f0',
-                  background: errors.email ? '#fff8f8' : '#f8fafc',
+                  border: errors.email ? '1.5px solid #ef4444' : '1.5px solid rgba(255, 255, 255, 0.4)',
+                  background: '#ffffff',
                   fontSize: 14.5,
                   fontWeight: 500,
                   color: '#0f172a',
                   outline: 'none',
                   transition: 'all 0.2s ease',
+                  boxShadow: '0 2px 6px rgba(0, 0, 0, 0.08)',
                 }}
                 onFocus={(e) => {
-                  e.currentTarget.style.borderColor = errors.email ? '#ef4444' : '#1565D8';
+                  e.currentTarget.style.borderColor = errors.email ? '#ef4444' : '#ffffff';
                   e.currentTarget.style.background = '#ffffff';
-                  e.currentTarget.style.boxShadow = errors.email ? '0 0 0 4px rgba(239, 68, 68, 0.15)' : '0 0 0 4px rgba(21, 101, 216, 0.14)';
+                  e.currentTarget.style.boxShadow = errors.email ? '0 0 0 4px rgba(239, 68, 68, 0.25)' : '0 0 0 4px rgba(255, 255, 255, 0.45)';
                 }}
                 onBlur={(e) => {
-                  e.currentTarget.style.borderColor = errors.email ? '#ef4444' : '#e2e8f0';
-                  e.currentTarget.style.background = errors.email ? '#fff8f8' : '#f8fafc';
-                  e.currentTarget.style.boxShadow = 'none';
+                  e.currentTarget.style.borderColor = errors.email ? '#ef4444' : 'rgba(255, 255, 255, 0.4)';
+                  e.currentTarget.style.background = '#ffffff';
+                  e.currentTarget.style.boxShadow = '0 2px 6px rgba(0, 0, 0, 0.08)';
                 }}
               />
             </div>
             {errors.email && (
-              <div style={{ color: '#dc2626', fontSize: '12.5px', fontWeight: 600, marginTop: '6px', lineHeight: '1.4' }}>
-                {errors.email}
+              <div style={{ color: '#fef2f2', background: 'rgba(239, 68, 68, 0.4)', padding: '4px 8px', borderRadius: 8, fontSize: '12px', fontWeight: 600, marginTop: '6px', lineHeight: '1.4' }}>
+                {t[errors.email] || errors.email}
               </div>
             )}
           </div>
@@ -680,7 +730,7 @@ export default function LoginPage() {
                 display: 'block',
                 fontSize: 13.5,
                 fontWeight: 700,
-                color: '#1e293b',
+                color: '#ffffff',
                 marginBottom: 7,
               }}
             >
@@ -689,7 +739,7 @@ export default function LoginPage() {
             <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
               <MdLock
                 size={19}
-                color={errors.password ? '#ef4444' : '#94a3b8'}
+                color={errors.password ? '#ef4444' : '#64748b'}
                 style={{ position: 'absolute', left: 14, pointerEvents: 'none' }}
               />
               <input
@@ -706,23 +756,24 @@ export default function LoginPage() {
                   width: '100%',
                   padding: '13px 44px 13px 44px',
                   borderRadius: 14,
-                  border: errors.password ? '1.5px solid #ef4444' : '1.5px solid #e2e8f0',
-                  background: errors.password ? '#fff8f8' : '#f8fafc',
+                  border: errors.password ? '1.5px solid #ef4444' : '1.5px solid rgba(255, 255, 255, 0.4)',
+                  background: '#ffffff',
                   fontSize: 14.5,
                   fontWeight: 500,
                   color: '#0f172a',
                   outline: 'none',
                   transition: 'all 0.2s ease',
+                  boxShadow: '0 2px 6px rgba(0, 0, 0, 0.08)',
                 }}
                 onFocus={(e) => {
-                  e.currentTarget.style.borderColor = errors.password ? '#ef4444' : '#1565D8';
+                  e.currentTarget.style.borderColor = errors.password ? '#ef4444' : '#ffffff';
                   e.currentTarget.style.background = '#ffffff';
-                  e.currentTarget.style.boxShadow = errors.password ? '0 0 0 4px rgba(239, 68, 68, 0.15)' : '0 0 0 4px rgba(21, 101, 216, 0.14)';
+                  e.currentTarget.style.boxShadow = errors.password ? '0 0 0 4px rgba(239, 68, 68, 0.25)' : '0 0 0 4px rgba(255, 255, 255, 0.45)';
                 }}
                 onBlur={(e) => {
-                  e.currentTarget.style.borderColor = errors.password ? '#ef4444' : '#e2e8f0';
-                  e.currentTarget.style.background = errors.password ? '#fff8f8' : '#f8fafc';
-                  e.currentTarget.style.boxShadow = 'none';
+                  e.currentTarget.style.borderColor = errors.password ? '#ef4444' : 'rgba(255, 255, 255, 0.4)';
+                  e.currentTarget.style.background = '#ffffff';
+                  e.currentTarget.style.boxShadow = '0 2px 6px rgba(0, 0, 0, 0.08)';
                 }}
               />
               <button
@@ -734,7 +785,7 @@ export default function LoginPage() {
                   background: 'none',
                   border: 'none',
                   cursor: 'pointer',
-                  color: '#94a3b8',
+                  color: '#64748b',
                   padding: 4,
                   display: 'flex',
                   alignItems: 'center',
@@ -744,8 +795,8 @@ export default function LoginPage() {
               </button>
             </div>
             {errors.password && (
-              <div style={{ color: '#dc2626', fontSize: '12.5px', fontWeight: 600, marginTop: '6px', lineHeight: '1.4' }}>
-                {errors.password}
+              <div style={{ color: '#fef2f2', background: 'rgba(239, 68, 68, 0.4)', padding: '4px 8px', borderRadius: 8, fontSize: '12px', fontWeight: 600, marginTop: '6px', lineHeight: '1.4' }}>
+                {t[errors.password] || errors.password}
               </div>
             )}
           </div>
@@ -755,10 +806,11 @@ export default function LoginPage() {
             <span
               onClick={() => setShowForgotModal(true)}
               style={{
-                color: '#1565D8',
+                color: '#ffffff',
                 fontSize: 12.5,
-                fontWeight: 600,
+                fontWeight: 700,
                 cursor: 'pointer',
+                opacity: 0.95,
               }}
               onMouseEnter={(e) => (e.currentTarget.style.textDecoration = 'underline')}
               onMouseLeave={(e) => (e.currentTarget.style.textDecoration = 'none')}
@@ -777,16 +829,16 @@ export default function LoginPage() {
               padding: '13.5px 20px',
               borderRadius: 14,
               border: 'none',
-              background: 'linear-gradient(135deg, #1565D8 0%, #0d47a1 100%)',
-              color: '#ffffff',
-              fontSize: 15,
-              fontWeight: 700,
+              background: '#ffffff',
+              color: 'var(--sidebar-bg, #1565D8)',
+              fontSize: 15.5,
+              fontWeight: 800,
               cursor: loading ? 'not-allowed' : 'pointer',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               gap: 8,
-              boxShadow: '0 4px 14px rgba(21, 101, 216, 0.35)',
+              boxShadow: '0 8px 20px rgba(0, 0, 0, 0.22)',
               transition: 'all 0.2s ease',
               opacity: loading ? 0.8 : 1,
             }}
@@ -806,15 +858,16 @@ export default function LoginPage() {
                 gap: 6,
                 fontSize: 12.5,
                 fontWeight: 700,
-                color: '#4f46e5',
+                color: '#ffffff',
                 textDecoration: 'none',
                 padding: '6px 12px',
                 borderRadius: 8,
-                backgroundColor: '#eef2ff',
+                backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                backdropFilter: 'blur(4px)',
                 transition: 'background 0.15s',
               }}
             >
-              <span>👑</span> EBS Master SaaS Super Admin &rarr;
+              {t.saasAdminLink} &rarr;
             </a>
           </div>
         )}
@@ -824,11 +877,11 @@ export default function LoginPage() {
             marginTop: 18,
             textAlign: 'center',
             fontSize: 12,
-            color: '#94a3b8',
+            color: 'rgba(255, 255, 255, 0.82)',
             fontWeight: 500,
           }}
         >
-          {tenant?.companyName ? `${tenant.companyName} • Delivery System` : 'EBS Express • Delivery Management System'}
+          {activeCompanyName ? `${activeCompanyName} • ${t.systemSuffix}` : t.defaultSystem}
         </div>
       </div>
 
@@ -861,7 +914,9 @@ export default function LoginPage() {
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div style={{ fontSize: 36, marginBottom: 12 }}>🔑</div>
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}>
+              <MdLock size={36} color="var(--accent, #1565D8)" />
+            </div>
             <h3 style={{ fontSize: 17, fontWeight: 800, color: '#0f172a', marginBottom: 8 }}>
               {t.forgotPassword}
             </h3>
@@ -872,7 +927,7 @@ export default function LoginPage() {
               type="button"
               onClick={() => setShowForgotModal(false)}
               style={{
-                background: '#2563eb',
+                background: 'var(--accent, #1565D8)',
                 color: '#ffffff',
                 border: 'none',
                 padding: '10px 20px',
@@ -881,10 +936,10 @@ export default function LoginPage() {
                 borderRadius: 10,
                 cursor: 'pointer',
                 width: '100%',
-                boxShadow: '0 4px 12px rgba(37, 99, 235, 0.25)',
+                boxShadow: '0 4px 12px var(--accent-glow, rgba(37, 99, 235, 0.25))',
               }}
             >
-              OK
+              {t.modalOk}
             </button>
           </div>
         </div>

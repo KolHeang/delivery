@@ -96,6 +96,10 @@ export class SaasService {
     paymentMethod?: string;
     customDomain?: string;
     address?: string;
+    logo?: string;
+    primaryColor?: string;
+    color?: string;
+    settings?: Record<string, any>;
   }) {
     const rawSlug = dto.slug || dto.subdomain || dto.companyName.toLowerCase().replace(/[^a-z0-9-]/g, '-');
     const cleanSlug = rawSlug.replace(/^-+|-+$/g, '') || `tenant-${Date.now()}`;
@@ -118,6 +122,7 @@ export class SaasService {
     const planPrice = plan ? Number(plan.priceMonthly) : 0;
 
     // 3. Create Tenant
+    const brandColor = dto.primaryColor || dto.color || '#2563eb';
     const tenant = this.tenantRepo.create({
       name: dto.companyName,
       slug: cleanSlug,
@@ -125,6 +130,9 @@ export class SaasService {
       phone: dto.phone,
       email: cleanEmail,
       address: dto.address,
+      logo: dto.logo || undefined,
+      primaryColor: brandColor,
+      settings: { ...(dto.settings || {}), primaryColor: brandColor },
       status: 'active',
       planId: plan ? plan.id : undefined,
     });
@@ -298,6 +306,10 @@ export class SaasService {
     if (dto.slug) tenant.slug = dto.slug;
     if (dto.code !== undefined) tenant.code = dto.code;
     if (dto.logo !== undefined) tenant.logo = dto.logo;
+    if (dto.primaryColor || dto.color) {
+      tenant.primaryColor = dto.primaryColor || dto.color;
+      tenant.settings = { ...(tenant.settings || {}), primaryColor: tenant.primaryColor };
+    }
     if (dto.phone !== undefined) tenant.phone = dto.phone;
     if (dto.email !== undefined) tenant.email = dto.email;
     if (dto.address !== undefined) tenant.address = dto.address;
@@ -477,6 +489,7 @@ export class SaasService {
         code: tenant.code,
         status: tenant.status,
         logo: tenant.logo,
+        primaryColor: tenant.primaryColor || tenant.settings?.primaryColor || '#2563eb',
         phone: tenant.phone,
         email: tenant.email,
         address: tenant.address,

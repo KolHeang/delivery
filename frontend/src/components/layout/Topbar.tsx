@@ -390,7 +390,7 @@ export default function Topbar({ title, subtitle }: TopbarProps) {
             width: 380,
             maxWidth: 'calc(100vw - 32px)',
             background: '#ffffff',
-            border: '2px solid #2563EB',
+            border: '2px solid var(--accent, #1565D8)',
             borderRadius: 16,
             boxShadow: '0 20px 45px -10px rgba(15, 23, 42, 0.3), 0 4px 12px rgba(37, 99, 235, 0.2)',
             padding: '14px 16px',
@@ -460,14 +460,14 @@ export default function Topbar({ title, subtitle }: TopbarProps) {
               }}
             >
               <span style={{ fontSize: 11, color: '#94A3B8', display: 'flex', alignItems: 'center', gap: 3 }}>
-                <MdVolumeUp size={13} color="#2563EB" />
+                <MdVolumeUp size={13} color="var(--accent, #1565D8)" />
                 {isKh ? 'សំឡេង Alert 🔔' : 'Live Alert 🔔'}
               </span>
               {activeToast.link && (
                 <button
                   onClick={() => handleMarkAsRead(activeToast)}
                   style={{
-                    background: '#1565D8',
+                    background: 'var(--accent, #1565D8)',
                     color: '#ffffff',
                     border: 'none',
                     borderRadius: 6,
@@ -615,7 +615,7 @@ export default function Topbar({ title, subtitle }: TopbarProps) {
                   <button
                     onClick={() => setNotifTab('all')}
                     style={{
-                      background: notifTab === 'all' ? '#1565D8' : 'transparent',
+                      background: notifTab === 'all' ? 'var(--accent, #1565D8)' : 'transparent',
                       color: notifTab === 'all' ? '#ffffff' : '#64748B',
                       border: 'none',
                       borderRadius: 8,
@@ -631,7 +631,7 @@ export default function Topbar({ title, subtitle }: TopbarProps) {
                   <button
                     onClick={() => setNotifTab('unread')}
                     style={{
-                      background: notifTab === 'unread' ? '#1565D8' : 'transparent',
+                      background: notifTab === 'unread' ? 'var(--accent, #1565D8)' : 'transparent',
                       color: notifTab === 'unread' ? '#ffffff' : '#64748B',
                       border: 'none',
                       borderRadius: 8,
@@ -731,7 +731,7 @@ export default function Topbar({ title, subtitle }: TopbarProps) {
                                     width: 7,
                                     height: 7,
                                     borderRadius: '50%',
-                                    background: '#2563EB',
+                                    background: 'var(--accent, #1565D8)',
                                     flexShrink: 0,
                                   }}
                                 />

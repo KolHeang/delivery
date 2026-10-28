@@ -5,9 +5,11 @@ import { useRouter } from 'next/navigation';
 import { isAuthenticated } from '@/lib/auth';
 import Sidebar from '@/components/layout/Sidebar';
 import Topbar from '@/components/layout/Topbar';
-import Badge from '@/components/ui/Badge';
 import api from '@/lib/api';
-import { MdAssignmentTurnedIn, MdRefresh, MdSearch, MdClose } from 'react-icons/md';
+import { 
+  MdAssignmentTurnedIn, MdRefresh, MdSearch, MdClose, 
+  MdPhone, MdLocationOn, MdLocalShipping, MdCheckCircle, MdFilterListOff
+} from 'react-icons/md';
 import { useLanguage } from '@/lib/LanguageContext';
 import SearchableSelect from '@/components/ui/SearchableSelect';
 
@@ -71,6 +73,10 @@ export default function AssignDeliveryPage() {
     if (!isAuthenticated()) { router.push('/'); return; }
     load();
   }, [router, load]);
+
+  // Counts for tabs
+  const unassignedCount = useMemo(() => unassigned.filter(o => o.driverId == null).length, [unassigned]);
+  const assignedCount = useMemo(() => unassigned.filter(o => o.driverId != null).length, [unassigned]);
 
   // Filter drivers by search
   const filteredDrivers = useMemo(() => {
@@ -143,6 +149,14 @@ export default function AssignDeliveryPage() {
     }
   };
 
+  const hasActiveFilters = Boolean(search || filterDate || filterStatus || (assignTab === 'assigned' && filterDriverId));
+  const clearFilters = () => {
+    setSearch('');
+    setFilterDate('');
+    setFilterStatus('');
+    if (assignTab === 'assigned') setFilterDriverId('');
+  };
+
   const handleAssign = async () => {
     if (!selectedDriver || selected.length === 0) return;
     setAssigning(true);
@@ -161,6 +175,8 @@ export default function AssignDeliveryPage() {
     setAssigning(false);
   };
 
+  const currentSelectedDriverObj = drivers.find(d => d.id === selectedDriver);
+
   return (
     <div className="app-layout">
       <Sidebar />
@@ -168,113 +184,146 @@ export default function AssignDeliveryPage() {
         <Topbar title={t('assignTitle')} subtitle={t('assignSubtitle')} />
         <div className="page-content">
           <div className="assign-layout">
-            {/* Orders panel */}
+            
+            {/* ── LEFT PANEL: Orders to Dispatch (Step 1) ── */}
             <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 120px)' }}>
-              <div className="card" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+              <div className="card" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', border: '1.5px solid var(--border)' }}>
 
-                {/* Header */}
-                <div className="card-header" style={{ padding: '16px 24px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <div style={{ width: 40, height: 40, borderRadius: '12px', background: 'var(--accent-light)', color: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>
-                      📦
-                    </div>
+                {/* Panel Header with Step 1 Badge */}
+                <div className="card-header" style={{ padding: '14px 20px', background: 'var(--bg-card)', borderBottom: '1px solid var(--border)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span style={{
+                      fontSize: 11,
+                      fontWeight: 800,
+                      color: 'var(--accent)',
+                      background: 'var(--accent-light)',
+                      padding: '3px 9px',
+                      borderRadius: 6,
+                      letterSpacing: '0.3px',
+                      textTransform: 'uppercase'
+                    }}>
+                      {lang === 'km' ? 'ជំហានទី ១' : 'Step 1'}
+                    </span>
                     <div>
-                      <span className="card-title" style={{ fontSize: 16 }}>
+                      <span className="card-title" style={{ fontSize: 15, fontWeight: 700 }}>
                         {assignTab === 'unassigned'
-                          ? (lang === 'km' ? 'កញ្ចប់អីវ៉ាន់មិនទាន់ចាត់ចែង' : 'Unassigned Parcels')
+                          ? (lang === 'km' ? 'ជ្រើសរើសកញ្ចប់អីវ៉ាន់ដែលត្រូវចាត់ចែង' : 'Select Parcels to Dispatch')
                           : (lang === 'km' ? 'កញ្ចប់អីវ៉ាន់ចាត់ចែងរួច' : 'Assigned Parcels')
                         }
                       </span>
-                      <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2 }}>
-                        {filtered.length} / {unassigned.length} {lang === 'km' ? 'កញ្ចប់' : 'orders'}
+                      <div style={{ fontSize: 12.5, color: 'var(--text-muted)', marginTop: 2 }}>
+                        {filtered.length} {lang === 'km' ? 'កញ្ចប់' : 'parcels'}
                         {selected.length > 0 && (
-                          <span style={{ marginLeft: 8, fontWeight: 600, color: 'var(--accent)' }}>
-                            · {selected.length} {lang === 'km' ? 'បានជ្រើសរើស' : 'selected'}
+                          <span style={{ marginLeft: 8, fontWeight: 700, color: 'var(--accent)' }}>
+                            · {lang === 'km' ? `បានធីកជ្រើសរើស ${selected.length} កញ្ចប់` : `Selected ${selected.length}`}
                           </span>
                         )}
                       </div>
                     </div>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     {selected.length > 0 && (
-                      <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--accent)', background: 'var(--accent-light)', padding: '4px 12px', borderRadius: 999 }}>
-                        {selected.length} {lang === 'km' ? 'បានជ្រើសរើស' : 'Selected'}
-                      </span>
+                      <button
+                        onClick={() => setSelected([])}
+                        className="btn btn-ghost btn-sm"
+                        style={{ fontSize: 12, color: 'var(--danger)', fontWeight: 600, padding: '4px 8px' }}
+                      >
+                        {lang === 'km' ? 'ដោះការជ្រើសរើស' : 'Deselect All'}
+                      </button>
                     )}
-                    <button className="btn btn-outline" onClick={load} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <MdRefresh size={16} /> {lang === 'km' ? 'ផ្ទុកឡើងវិញ' : 'Refresh'}
+                    <button className="btn btn-outline btn-sm" onClick={load} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <MdRefresh size={15} /> {lang === 'km' ? 'ផ្ទុកឡើងវិញ' : 'Refresh'}
                     </button>
                   </div>
                 </div>
 
-                {/* Tabs Bar */}
-                <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', padding: '0 24px', background: 'var(--bg-card)', gap: 24 }}>
+                {/* Modern Pill Tabs */}
+                <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', padding: '8px 16px', background: 'var(--bg-primary)', gap: 10 }}>
                   <button 
                     onClick={() => handleTabChange('unassigned')}
                     style={{ 
-                      padding: '12px 8px', 
-                      fontSize: 14, 
-                      fontWeight: 600, 
-                      color: assignTab === 'unassigned' ? 'var(--accent)' : 'var(--text-muted)', 
-                      borderBottom: assignTab === 'unassigned' ? '2px solid var(--accent)' : '2px solid transparent',
-                      background: 'transparent',
-                      borderTop: 'none',
-                      borderLeft: 'none',
-                      borderRight: 'none',
+                      padding: '7px 14px', 
+                      fontSize: 13, 
+                      fontWeight: assignTab === 'unassigned' ? 700 : 500, 
+                      color: assignTab === 'unassigned' ? 'var(--accent)' : 'var(--text-secondary)', 
+                      borderRadius: 8,
+                      background: assignTab === 'unassigned' ? 'var(--bg-card)' : 'transparent',
+                      border: assignTab === 'unassigned' ? '1.5px solid var(--accent)' : '1.5px solid transparent',
+                      boxShadow: assignTab === 'unassigned' ? '0 1px 3px rgba(0,0,0,0.05)' : 'none',
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
-                      gap: 6,
-                      transition: 'all 0.2s ease'
+                      gap: 8,
+                      transition: 'all 0.15s ease'
                     }}
                   >
-                    <span>🔴</span>
                     <span>{lang === 'km' ? 'មិនទាន់ចាត់ចែង' : 'Unassigned'}</span>
+                    <span style={{
+                      fontSize: 11,
+                      fontWeight: 700,
+                      padding: '1px 7px',
+                      borderRadius: 999,
+                      background: assignTab === 'unassigned' ? 'var(--accent)' : 'var(--border)',
+                      color: assignTab === 'unassigned' ? '#ffffff' : 'var(--text-muted)'
+                    }}>
+                      {unassignedCount}
+                    </span>
                   </button>
+
                   <button 
                     onClick={() => handleTabChange('assigned')}
                     style={{ 
-                      padding: '12px 8px', 
-                      fontSize: 14, 
-                      fontWeight: 600, 
-                      color: assignTab === 'assigned' ? 'var(--accent)' : 'var(--text-muted)', 
-                      borderBottom: assignTab === 'assigned' ? '2px solid var(--accent)' : '2px solid transparent',
-                      background: 'transparent',
-                      borderTop: 'none',
-                      borderLeft: 'none',
-                      borderRight: 'none',
+                      padding: '7px 14px', 
+                      fontSize: 13, 
+                      fontWeight: assignTab === 'assigned' ? 700 : 500, 
+                      color: assignTab === 'assigned' ? 'var(--accent)' : 'var(--text-secondary)', 
+                      borderRadius: 8,
+                      background: assignTab === 'assigned' ? 'var(--bg-card)' : 'transparent',
+                      border: assignTab === 'assigned' ? '1.5px solid var(--accent)' : '1.5px solid transparent',
+                      boxShadow: assignTab === 'assigned' ? '0 1px 3px rgba(0,0,0,0.05)' : 'none',
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
-                      gap: 6,
-                      transition: 'all 0.2s ease'
+                      gap: 8,
+                      transition: 'all 0.15s ease'
                     }}
                   >
-                    <span>🟢</span>
                     <span>{lang === 'km' ? 'ចាត់ចែងរួច' : 'Assigned'}</span>
+                    <span style={{
+                      fontSize: 11,
+                      fontWeight: 700,
+                      padding: '1px 7px',
+                      borderRadius: 999,
+                      background: assignTab === 'assigned' ? 'var(--accent)' : 'var(--border)',
+                      color: assignTab === 'assigned' ? '#ffffff' : 'var(--text-muted)'
+                    }}>
+                      {assignedCount}
+                    </span>
                   </button>
                 </div>
 
-                {/* Search + Filters + Page size bar */}
-                <div style={{ padding: '10px 24px', borderBottom: '1px solid var(--border)', display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center', background: 'var(--bg-card)' }}>
+                {/* Filter & Search Bar */}
+                <div style={{ padding: '8px 16px', borderBottom: '1px solid var(--border)', display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', background: 'var(--bg-card)' }}>
 
                   {/* Search input */}
-                  <div style={{ flex: '1 1 200px', position: 'relative', minWidth: 180 }}>
-                    <MdSearch size={18} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
+                  <div style={{ flex: '1 1 180px', position: 'relative', minWidth: 160 }}>
+                    <MdSearch size={17} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
                     <input
                       type="text"
-                      placeholder={lang === 'km' ? 'ស្វែងរកលេខតាមដាន, ហាង, លេខទូរស័ព្ទ...' : 'Search tracking, merchant, phone...'}
+                      placeholder={lang === 'km' ? 'ស្វែងរកលេខកូដ, ហាង, ទូរស័ព្ទ...' : 'Search code, shop, phone...'}
                       value={search}
                       onChange={e => setSearch(e.target.value)}
                       style={{
                         width: '100%',
-                        paddingLeft: 34,
-                        paddingRight: search ? 32 : 12,
-                        paddingTop: 8,
-                        paddingBottom: 8,
+                        paddingLeft: 32,
+                        paddingRight: search ? 28 : 10,
+                        paddingTop: 6,
+                        paddingBottom: 6,
+                        height: 34,
                         border: '1.5px solid var(--border)',
-                        borderRadius: 10,
-                        fontSize: 13,
+                        borderRadius: 8,
+                        fontSize: 12.5,
                         background: 'var(--bg-primary)',
                         color: 'var(--text-primary)',
                         outline: 'none',
@@ -287,9 +336,9 @@ export default function AssignDeliveryPage() {
                     {search && (
                       <button
                         onClick={() => setSearch('')}
-                        style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', padding: 2 }}
+                        style={{ position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', padding: 2 }}
                       >
-                        <MdClose size={16} />
+                        <MdClose size={14} />
                       </button>
                     )}
                   </div>
@@ -301,22 +350,24 @@ export default function AssignDeliveryPage() {
                       value={filterDate}
                       onChange={e => setFilterDate(e.target.value)}
                       style={{
-                        padding: '7px 10px',
+                        padding: '5px 8px',
+                        height: 34,
                         border: `1.5px solid ${filterDate ? 'var(--accent)' : 'var(--border)'}`,
-                        borderRadius: 10,
-                        fontSize: 13,
+                        borderRadius: 8,
+                        fontSize: 12.5,
                         background: filterDate ? 'var(--accent-light)' : 'var(--bg-primary)',
                         color: filterDate ? 'var(--accent)' : 'var(--text-primary)',
                         outline: 'none',
                         cursor: 'pointer',
                         fontWeight: filterDate ? 600 : 400,
+                        boxSizing: 'border-box',
                       }}
                     />
                     {filterDate && (
                       <button
                         onClick={() => setFilterDate('')}
                         title="Clear date"
-                        style={{ position: 'absolute', right: -8, top: -8, background: 'var(--danger)', border: 'none', borderRadius: '50%', width: 18, height: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#fff', fontSize: 10 }}
+                        style={{ position: 'absolute', right: -6, top: -6, background: 'var(--danger)', border: 'none', borderRadius: '50%', width: 16, height: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#fff', fontSize: 9 }}
                       >
                         ✕
                       </button>
@@ -324,69 +375,98 @@ export default function AssignDeliveryPage() {
                   </div>
 
                   {/* Status Filter */}
-                  <div style={{ flexShrink: 0, minWidth: 150 }}>
+                  <div style={{ flexShrink: 0, minWidth: 130 }}>
                     <select
                       value={filterStatus}
                       onChange={e => setFilterStatus(e.target.value)}
                       style={{
-                        padding: '7px 10px',
+                        padding: '5px 8px',
+                        height: 34,
                         border: `1.5px solid ${filterStatus ? 'var(--accent)' : 'var(--border)'}`,
-                        borderRadius: 10,
-                        fontSize: 13,
+                        borderRadius: 8,
+                        fontSize: 12.5,
                         background: filterStatus ? 'var(--accent-light)' : 'var(--bg-primary)',
                         color: filterStatus ? 'var(--accent)' : 'var(--text-primary)',
                         outline: 'none',
                         cursor: 'pointer',
                         fontWeight: filterStatus ? 600 : 400,
                         width: '100%',
+                        boxSizing: 'border-box',
                       }}
                     >
-                      <option value="">{lang === 'km' ? '⚙️ ស្ថានភាព ទាំងអស់' : '⚙️ All Statuses'}</option>
-                      <option value="pending">{lang === 'km' ? 'រង់ចាំ (Pending)' : 'Pending'}</option>
-                      <option value="in-warehouse">{lang === 'km' ? 'ក្នុងឃ្លាំង (In Warehouse)' : 'In Warehouse'}</option>
-                      <option value="assigned">{lang === 'km' ? 'បានចាត់ចែង (Assigned)' : 'Assigned'}</option>
-                      <option value="failed">{lang === 'km' ? 'មិនជោគជ័យ (Failed)' : 'Failed'}</option>
+                      <option value="">{lang === 'km' ? 'ស្ថានភាព ទាំងអស់' : 'All Status'}</option>
+                      <option value="pending">{lang === 'km' ? 'រង់ចាំ' : 'Pending'}</option>
+                      <option value="in-warehouse">{lang === 'km' ? 'ក្នុងឃ្លាំង' : 'In Warehouse'}</option>
+                      <option value="assigned">{lang === 'km' ? 'បានចាត់ចែង' : 'Assigned'}</option>
+                      <option value="failed">{lang === 'km' ? 'មិនជោគជ័យ' : 'Failed'}</option>
                     </select>
                   </div>
 
-                  {/* Filter by current driver */}
+                  {/* Filter by current driver (assigned tab only) */}
                   {assignTab === 'assigned' && (
-                    <div style={{ flexShrink: 0, minWidth: 160 }}>
+                    <div style={{ flexShrink: 0, minWidth: 140 }}>
                       <SearchableSelect
                         value={filterDriverId}
                         onChange={setFilterDriverId}
                         style={{
-                          borderRadius: 10,
-                          fontSize: 13,
+                          borderRadius: 8,
+                          fontSize: 12.5,
                           background: filterDriverId ? 'var(--accent-light)' : 'var(--bg-primary)',
                           width: '100%',
+                          height: 34,
                         }}
-                        placeholder={lang === 'km' ? '🧑 អ្នកដឹក ទាំងអស់' : '🧑 All Drivers'}
+                        placeholder={lang === 'km' ? 'អ្នកដឹក ទាំងអស់' : 'All Drivers'}
                         options={[
-                          { value: '', label: lang === 'km' ? '🧑 អ្នកដឹក ទាំងអស់' : '🧑 All Drivers' },
+                          { value: '', label: lang === 'km' ? 'អ្នកដឹក ទាំងអស់' : 'All Drivers' },
                           ...drivers.map((d: any) => ({
                             value: String(d.id),
-                            label: (lang === 'km' ? (d.nameKh || d.name) : (d.name || d.nameKh)) + (d.phone ? ` (${d.phone})` : ''),
+                            label: (lang === 'km' ? (d.nameKh || d.name) : (d.name || d.nameKh)),
                           })),
                         ]}
                       />
                     </div>
                   )}
 
+                  {/* Reset all filters button */}
+                  {hasActiveFilters && (
+                    <button
+                      onClick={clearFilters}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 4,
+                        fontSize: 12,
+                        color: 'var(--danger)',
+                        background: 'rgba(239, 68, 68, 0.08)',
+                        border: '1px solid rgba(239, 68, 68, 0.2)',
+                        padding: '5px 10px',
+                        height: 34,
+                        borderRadius: 8,
+                        cursor: 'pointer',
+                        fontWeight: 600,
+                        whiteSpace: 'nowrap',
+                      }}
+                      title="Clear all filters"
+                    >
+                      <MdFilterListOff size={14} />
+                      <span>{lang === 'km' ? 'សម្អាត Filter' : 'Clear'}</span>
+                    </button>
+                  )}
+
                   {/* Page size selector */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-                    <span style={{ fontSize: 12, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>Rows:</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginLeft: 'auto', flexShrink: 0 }}>
+                    <span style={{ fontSize: 11.5, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>Rows:</span>
                     {PAGE_SIZE_OPTIONS.map(size => (
                       <button
                         key={size}
                         onClick={() => setPageSize(size)}
                         style={{
-                          padding: '5px 10px',
-                          borderRadius: 8,
-                          border: `1.5px solid ${pageSize === size ? 'var(--accent)' : 'var(--border)'}`,
+                          padding: '3px 8px',
+                          borderRadius: 6,
+                          border: `1px solid ${pageSize === size ? 'var(--accent)' : 'var(--border)'}`,
                           background: pageSize === size ? 'var(--accent-light)' : 'transparent',
                           color: pageSize === size ? 'var(--accent)' : 'var(--text-secondary)',
-                          fontSize: 12,
+                          fontSize: 11.5,
                           fontWeight: pageSize === size ? 700 : 500,
                           cursor: 'pointer',
                           transition: 'all 0.15s',
@@ -398,97 +478,135 @@ export default function AssignDeliveryPage() {
                   </div>
                 </div>
 
-                {/* Table */}
+                {/* ── Table with Modern Header keeping Brand Color ── */}
                 <div style={{ overflowY: 'auto', flex: 1 }}>
-                  <table>
-                    <thead style={{ position: 'sticky', top: 0, zIndex: 10, background: '#1565D8' }}>
-                      <tr style={{ background: '#1565D8' }}>
-                        <th style={{ width: 40, paddingLeft: 20, background: '#1565D8', border: 'none', verticalAlign: 'middle' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                    <thead style={{ position: 'sticky', top: 0, zIndex: 10, background: 'var(--sidebar-bg, #1565D8)', boxShadow: '0 2px 4px rgba(0,0,0,0.08)' }}>
+                      <tr style={{ background: 'var(--sidebar-bg, #1565D8)' }}>
+                        <th style={{ width: 44, padding: '11px 14px', background: 'var(--sidebar-bg, #1565D8)', border: 'none', textAlign: 'center', verticalAlign: 'middle' }}>
                           <input type="checkbox"
-                            style={{ width: 16, height: 16, cursor: 'pointer' }}
+                            style={{ width: 16, height: 16, cursor: 'pointer', accentColor: '#ffffff' }}
                             checked={allPageSelected}
                             onChange={e => togglePageAll(e.target.checked)}
                           />
                         </th>
-                        <th style={{ background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('trackingCode')}</th>
-                        <th style={{ background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('merchant')}</th>
-                        <th style={{ background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('receiver')}</th>
-                        <th style={{ background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('address')}</th>
-                        <th style={{ background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('cod')}</th>
-                        <th style={{ background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('deliveryFee')}</th>
-                        <th style={{ background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'អ្នកដឹក' : 'Driver'}</th>
+                        <th style={{ background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, padding: '11px 14px', border: 'none', whiteSpace: 'nowrap' }}>{t('trackingCode')}</th>
+                        <th style={{ background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, padding: '11px 14px', border: 'none', whiteSpace: 'nowrap' }}>{t('merchant')}</th>
+                        <th style={{ background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, padding: '11px 14px', border: 'none', whiteSpace: 'nowrap' }}>{t('receiver')}</th>
+                        <th style={{ background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, padding: '11px 14px', border: 'none', whiteSpace: 'nowrap' }}>{t('address')}</th>
+                        <th style={{ background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, padding: '11px 14px', border: 'none', whiteSpace: 'nowrap' }}>{t('cod')}</th>
+                        <th style={{ background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, padding: '11px 14px', border: 'none', whiteSpace: 'nowrap' }}>{t('deliveryFee')}</th>
+                        <th style={{ background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, padding: '11px 14px', border: 'none', whiteSpace: 'nowrap' }}>{lang === 'km' ? 'អ្នកដឹក' : 'Driver'}</th>
                       </tr>
                     </thead>
                     <tbody>
                       {loading ? (
                         <tr>
-                          <td colSpan={8} style={{ padding: '40px 0', textAlign: 'center' }}>
+                          <td colSpan={8} style={{ padding: '60px 0', textAlign: 'center' }}>
                             <div className="loading-wrapper"><div className="spinner" /></div>
                           </td>
                         </tr>
                       ) : filtered.length === 0 ? (
                         <tr>
-                          <td colSpan={8} style={{ padding: '36px 20px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
-                            {t('noDataFound') || 'គ្មានទិន្នន័យ'}
+                          <td colSpan={8} style={{ padding: '60px 20px', textAlign: 'center' }}>
+                            <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+                              <div style={{
+                                width: 56, height: 56, borderRadius: '50%',
+                                background: 'var(--bg-primary)',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                color: 'var(--text-muted)'
+                              }}>
+                                <MdLocalShipping size={30} />
+                              </div>
+                              <div>
+                                <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>
+                                  {lang === 'km' ? 'មិនមានកញ្ចប់អីវ៉ាន់ដែលត្រូវចាត់ចែងឡើយ' : 'No parcels found'}
+                                </div>
+                                <div style={{ fontSize: 12.5, color: 'var(--text-muted)', marginTop: 4 }}>
+                                  {hasActiveFilters
+                                    ? (lang === 'km' ? 'សូមសាកល្បងសម្អាតការស្វែងរក ឬកែប្រែ Filter' : 'Try clearing your search or filters')
+                                    : (lang === 'km' ? 'កញ្ចប់អីវ៉ាន់ដែលបានទទួលចូលឃ្លាំងនឹងបង្ហាញនៅទីនេះ' : 'Parcels received in warehouse will appear here')}
+                                </div>
+                              </div>
+                              {hasActiveFilters ? (
+                                <button className="btn btn-outline btn-sm" onClick={clearFilters} style={{ marginTop: 4 }}>
+                                  {lang === 'km' ? 'សម្អាតការស្វែងរក' : 'Clear Filters'}
+                                </button>
+                              ) : (
+                                <button className="btn btn-outline btn-sm" onClick={load} style={{ marginTop: 4 }}>
+                                  <MdRefresh size={14} /> {lang === 'km' ? 'ផ្ទុកទិន្នន័យឡើងវិញ' : 'Refresh'}
+                                </button>
+                              )}
+                            </div>
                           </td>
                         </tr>
                       ) : (
-                        paginated.map((o: any) => (
-                          <tr key={o.id} onClick={() => toggleOrder(o.id)}
-                            style={{
-                              cursor: 'pointer',
-                              background: selected.includes(o.id) ? 'var(--accent-light)' : '',
-                              borderLeft: selected.includes(o.id) ? '4px solid var(--accent)' : '4px solid transparent',
-                              transition: 'all 0.15s ease'
-                            }}>
-                            <td style={{ paddingLeft: 20 }}>
-                              <input type="checkbox"
-                                style={{ width: 16, height: 16, cursor: 'pointer' }}
-                                checked={selected.includes(o.id)}
-                                onChange={() => toggleOrder(o.id)}
-                                onClick={e => e.stopPropagation()}
-                              />
-                            </td>
-                            <td style={{ fontWeight: 600, fontSize: 13, color: 'var(--text-primary)' }}>
-                              {o.trackingCode}
-                            </td>
-                            <td style={{ fontSize: 13 }}>
-                              {lang === 'km' ? (o.merchant?.nameKh || ((o.merchant?.name && o.merchant.name !== '-' && o.merchant.name !== '—') ? o.merchant.name : '')) : ((o.merchant?.name && o.merchant.name !== '-' && o.merchant.name !== '—') ? o.merchant.name : '')}
-                            </td>
-                            <td style={{ fontSize: 13, fontWeight: 600 }}>
-                              {(o.receiverPhone && o.receiverPhone !== '-' && o.receiverPhone !== '—') ? o.receiverPhone : ''}
-                            </td>
-                            <td style={{ fontSize: 12, color: 'var(--text-primary)', maxWidth: 180 }}>
-                              {(o.receiverAddress && o.receiverAddress !== '-' && o.receiverAddress !== '—') ? o.receiverAddress : ''}
-                            </td>
-                            <td style={{ fontWeight: 700 }}>
-                              {formatCOD(o.cod, o.codCurrency || 'USD')}
-                            </td>
-                            <td style={{ color: 'var(--success)', fontWeight: 600 }}>
-                              ${parseFloat(o.deliveryFee).toFixed(2)}
-                            </td>
-                            <td style={{ fontSize: 13 }}>
-                              {o.driver ? (lang === 'km' ? (o.driver.nameKh || o.driver.name) : o.driver.name) : <span style={{ color: 'var(--text-muted)' }}>—</span>}
-                            </td>
-                          </tr>
-                        ))
+                        paginated.map((o: any) => {
+                          const isRowChecked = selected.includes(o.id);
+                          return (
+                            <tr key={o.id} onClick={() => toggleOrder(o.id)}
+                              style={{
+                                cursor: 'pointer',
+                                background: isRowChecked ? 'var(--accent-light)' : 'transparent',
+                                borderLeft: isRowChecked ? '4px solid var(--accent)' : '4px solid transparent',
+                                borderBottom: '1px solid var(--border)',
+                                transition: 'background 0.15s ease'
+                              }}>
+                              <td style={{ padding: '10px 14px', textAlign: 'center' }}>
+                                <input type="checkbox"
+                                  style={{ width: 16, height: 16, cursor: 'pointer', accentColor: 'var(--accent)' }}
+                                  checked={isRowChecked}
+                                  onChange={() => toggleOrder(o.id)}
+                                  onClick={e => e.stopPropagation()}
+                                />
+                              </td>
+                              <td style={{ fontWeight: 700, fontSize: 13, color: isRowChecked ? 'var(--accent-dark)' : 'var(--text-primary)', whiteSpace: 'nowrap' }}>
+                                {o.trackingCode}
+                              </td>
+                              <td style={{ fontSize: 13 }}>
+                                {lang === 'km' ? (o.merchant?.nameKh || ((o.merchant?.name && o.merchant.name !== '-' && o.merchant.name !== '—') ? o.merchant.name : '')) : ((o.merchant?.name && o.merchant.name !== '-' && o.merchant.name !== '—') ? o.merchant.name : '')}
+                              </td>
+                              <td style={{ fontSize: 13, fontWeight: 600 }}>
+                                {(o.receiverPhone && o.receiverPhone !== '-' && o.receiverPhone !== '—') ? o.receiverPhone : ''}
+                              </td>
+                              <td style={{ fontSize: 12, color: 'var(--text-secondary)', maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={o.receiverAddress}>
+                                {(o.receiverAddress && o.receiverAddress !== '-' && o.receiverAddress !== '—') ? o.receiverAddress : ''}
+                              </td>
+                              <td style={{ fontWeight: 700, fontSize: 13 }}>
+                                {formatCOD(o.cod, o.codCurrency || 'USD')}
+                              </td>
+                              <td style={{ color: 'var(--success)', fontWeight: 600, fontSize: 13 }}>
+                                ${parseFloat(o.deliveryFee).toFixed(2)}
+                              </td>
+                              <td style={{ fontSize: 12.5 }}>
+                                {o.driver ? (
+                                  <span style={{ fontWeight: 600, color: 'var(--accent)' }}>
+                                    {lang === 'km' ? (o.driver.nameKh || o.driver.name) : o.driver.name}
+                                  </span>
+                                ) : (
+                                  <span style={{ color: 'var(--text-muted)' }}>—</span>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })
                       )}
                     </tbody>
                   </table>
                 </div>
 
-                {/* Left Pagination */}
+                {/* Left Pagination Footer */}
                 {!loading && filtered.length > 0 && (
-                  <div style={{ padding: '10px 24px', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-card)', gap: 12, flexWrap: 'wrap' }}>
+                  <div style={{ padding: '8px 16px', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-card)', gap: 12, flexWrap: 'wrap' }}>
                     <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
                       {lang === 'km' ? `បង្ហាញ ${(safePage - 1) * pageSize + 1}–${Math.min(safePage * pageSize, filtered.length)} នៃ ${filtered.length}` : `Showing ${(safePage - 1) * pageSize + 1}–${Math.min(safePage * pageSize, filtered.length)} of ${filtered.length}`}
                     </span>
-                    <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                    <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
                       <button onClick={() => setCurrentPage(1)} disabled={safePage === 1} style={paginationBtnStyle(safePage === 1)}>«</button>
                       <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={safePage === 1} style={paginationBtnStyle(safePage === 1)}>‹</button>
                       {getPageNumbers(safePage, totalPages).map((pg, i) =>
                         pg === '...' ? (
-                          <span key={`e-${i}`} style={{ padding: '0 4px', color: 'var(--text-muted)', fontSize: 13 }}>…</span>
+                          <span key={`e-${i}`} style={{ padding: '0 4px', color: 'var(--text-muted)', fontSize: 12 }}>…</span>
                         ) : (
                           <button key={pg} onClick={() => setCurrentPage(pg as number)} style={{
                             ...paginationBtnStyle(false),
@@ -507,41 +625,59 @@ export default function AssignDeliveryPage() {
               </div>
             </div>
 
-            {/* Driver panel */}
+            {/* ── RIGHT PANEL: Driver Selection (Step 2) ── */}
             <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 120px)' }}>
-              <div className="card" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                {/* Driver header */}
-                <div className="card-header" style={{ padding: '16px 20px', background: 'var(--bg-primary)' }}>
-                  <span className="card-title" style={{ fontSize: 15 }}>🧑‍💼 {lang === 'km' ? 'ជ្រើសរើសអ្នកដឹក' : 'Select Driver'}</span>
+              <div className="card" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', border: '1.5px solid var(--border)' }}>
+                
+                {/* Driver Panel Header with Step 2 Badge */}
+                <div className="card-header" style={{ padding: '14px 18px', background: 'var(--bg-card)', borderBottom: '1px solid var(--border)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{
+                      fontSize: 11,
+                      fontWeight: 800,
+                      color: '#2563eb',
+                      background: '#eff6ff',
+                      padding: '3px 9px',
+                      borderRadius: 6,
+                      letterSpacing: '0.3px',
+                      textTransform: 'uppercase'
+                    }}>
+                      {lang === 'km' ? 'ជំហានទី ២' : 'Step 2'}
+                    </span>
+                    <span className="card-title" style={{ fontSize: 15, fontWeight: 700 }}>
+                      {lang === 'km' ? 'ជ្រើសរើសអ្នកដឹក' : 'Select Driver'}
+                    </span>
+                  </div>
                   {selectedDriver && (
                     <button
                       onClick={() => setSelectedDriver(null)}
-                      style={{ fontSize: 12, color: 'var(--danger)', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 8, padding: '4px 10px', cursor: 'pointer', fontWeight: 600 }}
+                      style={{ fontSize: 12, color: 'var(--danger)', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 6, padding: '3px 8px', cursor: 'pointer', fontWeight: 600 }}
                     >
-                      ✕ {lang === 'km' ? 'សម្អាត' : 'Clear'}
+                      {lang === 'km' ? 'សម្អាត' : 'Clear'}
                     </button>
                   )}
                 </div>
 
-                {/* Driver search */}
-                <div style={{ padding: '10px 16px', borderBottom: '1px solid var(--border)', background: 'var(--bg-card)' }}>
+                {/* Driver Search Input */}
+                <div style={{ padding: '8px 14px', borderBottom: '1px solid var(--border)', background: 'var(--bg-primary)' }}>
                   <div style={{ position: 'relative' }}>
                     <MdSearch size={16} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
                     <input
                       type="text"
-                      placeholder={lang === 'km' ? 'ស្វែងរកឈ្មោះអ្នកដឹក, តំបន់...' : 'Search driver name, zone...'}
+                      placeholder={lang === 'km' ? 'ស្វែងរកឈ្មោះអ្នកដឹក, តំបន់...' : 'Search driver or zone...'}
                       value={driverSearch}
                       onChange={e => setDriverSearch(e.target.value)}
                       style={{
                         width: '100%',
-                        paddingLeft: 32,
-                        paddingRight: driverSearch ? 32 : 12,
-                        paddingTop: 7,
-                        paddingBottom: 7,
+                        paddingLeft: 30,
+                        paddingRight: driverSearch ? 26 : 10,
+                        paddingTop: 6,
+                        paddingBottom: 6,
+                        height: 32,
                         border: '1.5px solid var(--border)',
-                        borderRadius: 10,
-                        fontSize: 13,
-                        background: 'var(--bg-primary)',
+                        borderRadius: 8,
+                        fontSize: 12.5,
+                        background: 'var(--bg-card)',
                         color: 'var(--text-primary)',
                         outline: 'none',
                         boxSizing: 'border-box',
@@ -553,20 +689,16 @@ export default function AssignDeliveryPage() {
                     {driverSearch && (
                       <button
                         onClick={() => setDriverSearch('')}
-                        style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', padding: 2 }}
+                        style={{ position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', padding: 2 }}
                       >
-                        <MdClose size={15} />
+                        <MdClose size={13} />
                       </button>
                     )}
                   </div>
-                  {driverSearch && (
-                    <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 6 }}>
-                      {filteredDrivers.length} {lang === 'km' ? 'អ្នកដឹកត្រូវបានរកឃើញ' : 'drivers found'}
-                    </div>
-                  )}
                 </div>
 
-                <div style={{ flex: 1, overflowY: 'auto', padding: 12 }}>
+                {/* Driver List (Slim, Compact & Clean) */}
+                <div style={{ flex: 1, overflowY: 'auto', padding: '10px 12px' }}>
                   {drivers.length === 0 ? (
                     <div style={{ padding: '36px 16px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
                       {lang === 'km' ? 'មិនមានអ្នកដឹកទំនេរទេ' : 'No available drivers'}
@@ -576,9 +708,12 @@ export default function AssignDeliveryPage() {
                       {lang === 'km' ? 'រកមិនឃើញអ្នកដឹកទេ' : 'No drivers found'}
                     </div>
                   ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                       {filteredDrivers.map((d: any) => {
                         const isSelected = selectedDriver === d.id;
+                        const isAvailable = (d.isActive !== false && d.status !== 'busy');
+                        const driverNameDisplay = lang === 'km' ? (d.nameKh || d.name) : (d.name || d.nameKh);
+
                         return (
                           <div
                             key={d.id}
@@ -587,46 +722,56 @@ export default function AssignDeliveryPage() {
                               display: 'flex',
                               alignItems: 'center',
                               gap: 10,
-                              padding: '10px 12px',
-                              borderRadius: 10,
+                              padding: '8px 12px',
+                              borderRadius: 8,
                               border: `1.5px solid ${isSelected ? 'var(--accent)' : 'var(--border)'}`,
                               background: isSelected ? 'var(--accent-light)' : 'var(--bg-card)',
                               cursor: 'pointer',
                               transition: 'all 0.15s ease',
+                              boxShadow: isSelected ? '0 2px 8px rgba(0,0,0,0.06)' : 'none',
                             }}
                           >
-                            <input
-                              type="radio"
-                              name="selectedDriver"
-                              checked={isSelected}
-                              onChange={() => setSelectedDriver(d.id)}
-                              style={{ width: 16, height: 16, cursor: 'pointer', accentColor: 'var(--accent)', flexShrink: 0 }}
-                            />
+                            {/* Checkmark or Selection circle */}
                             <div style={{
-                              width: 34, height: 34, borderRadius: '50%',
-                              background: isSelected ? 'var(--accent)' : '#e2e8f0',
-                              color: isSelected ? '#fff' : '#64748b',
+                              width: 18, height: 18, borderRadius: '50%',
+                              border: `2px solid ${isSelected ? 'var(--accent)' : 'var(--border)'}`,
+                              background: isSelected ? 'var(--accent)' : 'transparent',
                               display: 'flex', alignItems: 'center', justifyContent: 'center',
-                              fontSize: 14, fontWeight: 700, flexShrink: 0
+                              flexShrink: 0, transition: 'all 0.15s'
                             }}>
-                              {((lang === 'km' && d.nameKh) ? d.nameKh : d.name || 'D').charAt(0).toUpperCase()}
+                              {isSelected && <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#fff' }} />}
                             </div>
+
+                            {/* Driver Avatar */}
+                            <div style={{
+                              width: 32, height: 32, borderRadius: 8,
+                              background: isSelected ? 'var(--accent)' : 'var(--bg-primary)',
+                              color: isSelected ? '#fff' : 'var(--text-secondary)',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              fontSize: 13, fontWeight: 700, flexShrink: 0
+                            }}>
+                              {driverNameDisplay.charAt(0).toUpperCase()}
+                            </div>
+
+                            {/* Name & details */}
                             <div style={{ flex: 1, minWidth: 0 }}>
-                              <div style={{ fontWeight: 600, fontSize: 13, color: isSelected ? 'var(--accent-dark)' : 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                {lang === 'km' ? (d.nameKh || d.name) : (d.name || d.nameKh)}
+                              <div style={{ fontWeight: 700, fontSize: 13, color: isSelected ? 'var(--accent-dark)' : 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                {driverNameDisplay}
                               </div>
-                              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                                {d.phone && <span>📞 {d.phone}</span>}
-                                {d.zone?.name && <span>📍 {d.zone.name}</span>}
+                              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'nowrap', overflow: 'hidden' }}>
+                                {d.phone && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}><MdPhone size={11} /> {d.phone}</span>}
+                                {d.zone?.name && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}><MdLocationOn size={11} /> {d.zone.name}</span>}
                               </div>
                             </div>
+
+                            {/* Availability badge */}
                             <span style={{
-                              fontSize: 11, padding: '2px 8px', borderRadius: 999, fontWeight: 600,
-                              background: (d.isActive !== false && d.status !== 'busy') ? '#dcfce7' : '#fef3c7',
-                              color: (d.isActive !== false && d.status !== 'busy') ? '#16a34a' : '#d97706',
+                              fontSize: 10.5, padding: '2px 7px', borderRadius: 999, fontWeight: 700,
+                              background: isAvailable ? '#dcfce7' : '#fef3c7',
+                              color: isAvailable ? '#16a34a' : '#d97706',
                               flexShrink: 0
                             }}>
-                              {(d.isActive !== false && d.status !== 'busy') ? (lang === 'km' ? 'ទំនេរ' : 'Available') : (lang === 'km' ? 'ជាប់រវល់' : 'Busy')}
+                              {isAvailable ? (lang === 'km' ? 'ទំនេរ' : 'Free') : (lang === 'km' ? 'រវល់' : 'Busy')}
                             </span>
                           </div>
                         );
@@ -635,32 +780,33 @@ export default function AssignDeliveryPage() {
                   )}
                 </div>
 
-                {/* Assignment Action Bottom Bar */}
+                {/* ── BOTTOM ACTION BAR (Step 3: Confirm Assignment) ── */}
                 <div style={{
-                  padding: '16px 20px',
+                  padding: '14px 18px',
                   borderTop: '1px solid var(--border)',
                   background: 'var(--bg-card)',
                   boxShadow: '0 -4px 12px rgba(0,0,0,0.03)'
                 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                     <div>
-                      <div style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 500 }}>
-                        {lang === 'km' ? 'កញ្ចប់បានជ្រើសរើស' : 'Selected Orders'}
+                      <div style={{ fontSize: 11.5, color: 'var(--text-muted)', fontWeight: 600 }}>
+                        {lang === 'km' ? 'កញ្ចប់បានជ្រើសរើស' : 'Selected Parcels'}
                       </div>
-                      <div style={{ fontSize: 20, fontWeight: 800, color: selected.length > 0 ? 'var(--accent)' : 'var(--text-muted)' }}>
-                        {selected.length} {lang === 'km' ? 'កញ្ចប់' : ''}
+                      <div style={{ fontSize: 18, fontWeight: 800, color: selected.length > 0 ? 'var(--accent)' : 'var(--text-muted)', marginTop: 2 }}>
+                        {selected.length} {lang === 'km' ? 'កញ្ចប់' : 'orders'}
                       </div>
                     </div>
                     <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 500 }}>
-                        {lang === 'km' ? 'អ្នកដឹកដែលបានចាត់' : 'Driver Assigned'}
+                      <div style={{ fontSize: 11.5, color: 'var(--text-muted)', fontWeight: 600 }}>
+                        {lang === 'km' ? 'អ្នកដឹកដែលបានចាត់' : 'Selected Driver'}
                       </div>
-                      <div style={{ fontSize: 14, fontWeight: 700, color: selectedDriver ? 'var(--accent)' : 'var(--danger)' }}>
-                        {selectedDriver ? (lang === 'km' ? (drivers.find(d => d.id === selectedDriver)?.nameKh || drivers.find(d => d.id === selectedDriver)?.name) : drivers.find(d => d.id === selectedDriver)?.name) : (lang === 'km' ? 'មិនទាន់ជ្រើស' : 'None selected')}
+                      <div style={{ fontSize: 13, fontWeight: 700, color: currentSelectedDriverObj ? 'var(--accent)' : 'var(--text-muted)', marginTop: 2 }}>
+                        {currentSelectedDriverObj ? (lang === 'km' ? (currentSelectedDriverObj.nameKh || currentSelectedDriverObj.name) : currentSelectedDriverObj.name) : (lang === 'km' ? 'មិនទាន់ជ្រើស' : 'None')}
                       </div>
                     </div>
                   </div>
 
+                  {/* Prominent Action Button */}
                   <button
                     className="btn btn-primary w-full"
                     onClick={handleAssign}
@@ -671,15 +817,28 @@ export default function AssignDeliveryPage() {
                       fontSize: 14,
                       fontWeight: 700,
                       borderRadius: 10,
-                      minHeight: 42,
-                      boxShadow: (selected.length > 0 && selectedDriver) ? '0 8px 16px rgba(59,130,246,0.25)' : 'none'
+                      minHeight: 44,
+                      gap: 8,
+                      boxShadow: (selected.length > 0 && selectedDriver) ? '0 6px 18px rgba(234, 88, 12, 0.35)' : 'none',
+                      transition: 'all 0.2s ease',
                     }}>
                     <MdAssignmentTurnedIn size={18} />
-                    {assigning ? (lang === 'km' ? 'កំពុងចាត់តាំង...' : 'Assigning Orders...') : (lang === 'km' ? `ចាត់តាំងការដឹក (${selected.length})` : t('assignDelivery'))}
+                    {assigning
+                      ? (lang === 'km' ? 'កំពុងចាត់តាំង...' : 'Assigning...')
+                      : (selected.length === 0
+                          ? (lang === 'km' ? 'សូមជ្រើសរើសកញ្ចប់អីវ៉ាន់' : 'Select parcels first')
+                          : (!selectedDriver
+                              ? (lang === 'km' ? 'សូមជ្រើសរើសអ្នកដឹក' : 'Select a driver')
+                              : (lang === 'km' ? `ចាត់តាំងការដឹក (${selected.length} កញ្ចប់)` : `Assign Delivery (${selected.length})`)
+                            )
+                        )
+                    }
                   </button>
                 </div>
+
               </div>
             </div>
+
           </div>
         </div>
       </div>
@@ -703,13 +862,13 @@ function getPageNumbers(current: number, total: number): (number | '...')[] {
 
 function paginationBtnStyle(disabled: boolean): React.CSSProperties {
   return {
-    padding: '5px 10px',
-    minWidth: 32,
-    borderRadius: 8,
+    padding: '4px 8px',
+    minWidth: 28,
+    borderRadius: 6,
     border: '1.5px solid var(--border)',
     background: 'transparent',
     color: disabled ? 'var(--text-muted)' : 'var(--text-secondary)',
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: 500,
     cursor: disabled ? 'not-allowed' : 'pointer',
     opacity: disabled ? 0.4 : 1,

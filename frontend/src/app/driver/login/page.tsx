@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
 import { setAuth, isAuthenticated, getUser } from '@/lib/auth';
 import { useLanguage } from '@/lib/LanguageContext';
+import { applyBrandTheme, initBrandTheme } from '@/lib/theme';
 import {
   MdPhone,
   MdLock,
@@ -42,7 +43,7 @@ const driverLoginTranslations = {
   },
   km: {
     brandName: 'E-Express',
-    tagline: 'Your Delivery Partner',
+    tagline: 'ដៃគូដឹកជញ្ជូនរបស់អ្នក',
     values: 'លឿន • សុវត្ថិភាព • ទុកចិត្តបាន',
     identifierLabel: 'អ៊ីមែល លេខទូរស័ព្ទ ឬកូដអ្នកដឹក',
     identifierPlaceholder: 'បញ្ចូលអ៊ីមែល លេខទូរស័ព្ទ ឬកូដអ្នកដឹក',
@@ -56,10 +57,10 @@ const driverLoginTranslations = {
     passwordMin: 'ពាក្យសម្ងាត់យ៉ាងតិច ៦ ខ្ទង់',
     rememberMe: 'ចងចាំខ្ញុំ',
     forgotPassword: 'ភ្លេចលេខសម្ងាត់?',
-    loginBtn: 'ចូលប្រព័ន្ធ (Login)',
+    loginBtn: 'ចូលប្រព័ន្ធ',
     loggingIn: 'កំពុងចូលប្រព័ន្ធ...',
     or: 'ឬ',
-    useFingerprint: 'គណនីសាកល្បងអ្នកដឹក (Demo)',
+    useFingerprint: 'គណនីសាកល្បងអ្នកដឹក',
     errorMsg: 'ព័ត៌មានគណនី ឬលេខសម្ងាត់មិនត្រឹមត្រូវ',
   }
 };
@@ -78,6 +79,7 @@ export default function DriverLoginPage() {
   const t = driverLoginTranslations[lang as 'en' | 'km'] || driverLoginTranslations.en;
 
   useEffect(() => {
+    initBrandTheme();
     const isAuth = isAuthenticated();
     const user = getUser();
     if (isAuth && user?.role === 'driver') {
@@ -102,13 +104,13 @@ export default function DriverLoginPage() {
     const newErrors: { identifier?: string; password?: string } = {};
     const idVal = form.identifier.trim();
     if (!idVal) {
-      newErrors.identifier = t.identifierRequired;
+      newErrors.identifier = 'identifierRequired';
     }
 
     if (!form.password) {
-      newErrors.password = t.passwordRequired;
+      newErrors.password = 'passwordRequired';
     } else if (form.password.length < 6) {
-      newErrors.password = t.passwordMin;
+      newErrors.password = 'passwordMin';
     }
 
     if (Object.keys(newErrors).length > 0) {
@@ -206,7 +208,7 @@ export default function DriverLoginPage() {
               borderRadius: '14px',
               border: 'none',
               cursor: 'pointer',
-              backgroundColor: lang === 'en' ? '#2563eb' : 'transparent',
+              backgroundColor: lang === 'en' ? 'var(--accent, #2563eb)' : 'transparent',
               color: lang === 'en' ? '#ffffff' : '#64748b',
             }}
           >
@@ -222,7 +224,7 @@ export default function DriverLoginPage() {
               borderRadius: '14px',
               border: 'none',
               cursor: 'pointer',
-              backgroundColor: lang === 'km' ? '#2563eb' : 'transparent',
+              backgroundColor: lang === 'km' ? 'var(--accent, #2563eb)' : 'transparent',
               color: lang === 'km' ? '#ffffff' : '#64748b',
             }}
           >
@@ -289,7 +291,7 @@ export default function DriverLoginPage() {
                   <span style={{ color: '#ef4444' }}>E</span>-Express
                 </div>
                 <div style={{ fontSize: '10px', color: '#64748b', fontWeight: '700', letterSpacing: '0.2px' }}>
-                  Your Delivery Partner
+                  {t.tagline}
                 </div>
               </div>
             </div>
@@ -299,9 +301,9 @@ export default function DriverLoginPage() {
               width: '64px',
               height: '64px',
               borderRadius: '50%',
-              backgroundColor: '#2563eb',
+              backgroundColor: 'var(--accent, #2563eb)',
               border: '3px solid #ffffff',
-              boxShadow: '0 8px 20px rgba(37, 99, 235, 0.25)',
+              boxShadow: '0 8px 20px var(--accent-glow, rgba(37, 99, 235, 0.25))',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -370,7 +372,7 @@ export default function DriverLoginPage() {
               </div>
               {errors.identifier && (
                 <div style={{ fontSize: '11.5px', color: '#ef4444', marginTop: '4px', marginLeft: '6px', fontWeight: '600' }}>
-                  {errors.identifier}
+                  {(t as any)[errors.identifier] || errors.identifier}
                 </div>
               )}
             </div>
@@ -415,7 +417,7 @@ export default function DriverLoginPage() {
               </div>
               {errors.password && (
                 <div style={{ fontSize: '11.5px', color: '#ef4444', marginTop: '4px', marginLeft: '6px', fontWeight: '600' }}>
-                  {errors.password}
+                  {(t as any)[errors.password] || errors.password}
                 </div>
               )}
             </div>
@@ -433,12 +435,12 @@ export default function DriverLoginPage() {
                   type="checkbox"
                   checked={rememberMe}
                   onChange={(e) => setRememberMe(e.target.checked)}
-                  style={{ accentColor: '#2563eb', cursor: 'pointer', width: '15px', height: '15px' }}
+                  style={{ accentColor: 'var(--accent, #2563eb)', cursor: 'pointer', width: '15px', height: '15px' }}
                 />
                 {t.rememberMe}
               </label>
 
-              <span style={{ color: '#2563eb', cursor: 'pointer', fontWeight: '700' }}>
+              <span style={{ color: 'var(--accent, #2563eb)', cursor: 'pointer', fontWeight: '700' }}>
                 {t.forgotPassword}
               </span>
             </div>
@@ -453,12 +455,12 @@ export default function DriverLoginPage() {
                 padding: '13px',
                 borderRadius: '14px',
                 border: 'none',
-                backgroundColor: '#2563eb',
+                backgroundColor: 'var(--accent, #2563eb)',
                 color: '#ffffff',
                 fontSize: '15px',
                 fontWeight: '800',
                 cursor: loading ? 'not-allowed' : 'pointer',
-                boxShadow: '0 6px 20px rgba(37, 99, 235, 0.35)',
+                boxShadow: '0 6px 20px var(--accent-glow, rgba(37, 99, 235, 0.25))',
                 opacity: loading ? 0.8 : 1,
                 transition: 'all 0.15s ease',
               }}
@@ -496,7 +498,7 @@ export default function DriverLoginPage() {
               background: 'none',
               border: 'none',
               cursor: 'pointer',
-              color: '#2563eb',
+              color: 'var(--accent, #2563eb)',
               fontWeight: '700',
               fontSize: '12.5px',
             }}
@@ -505,12 +507,12 @@ export default function DriverLoginPage() {
               width: '46px',
               height: '46px',
               borderRadius: '50%',
-              backgroundColor: '#eff6ff',
-              border: '1.5px solid #bfdbfe',
+              backgroundColor: 'var(--accent-light, #eff6ff)',
+              border: '1.5px solid var(--accent-light, #bfdbfe)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: '#2563eb',
+              color: 'var(--accent, #2563eb)',
             }}>
               <MdFingerprint size={28} />
             </div>

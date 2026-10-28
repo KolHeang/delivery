@@ -484,7 +484,7 @@ export default function AdminLiveFleetMapPage() {
                 gap: 6,
               }}
             >
-              <span>🛵 កំពុងដឹក</span>
+              <span>កំពុងដឹក</span>
               <span style={{ padding: '1px 6px', borderRadius: 6, background: activeTab === 'delivering' ? 'rgba(255,255,255,0.25)' : '#dbeafe', color: activeTab === 'delivering' ? '#ffffff' : '#1e40af', fontSize: 11 }}>
                 {deliveringCount}
               </span>
@@ -506,7 +506,7 @@ export default function AdminLiveFleetMapPage() {
                 gap: 6,
               }}
             >
-              <span>🟢 ទំនេរ</span>
+              <span>ទំនេរ</span>
               <span style={{ padding: '1px 6px', borderRadius: 6, background: activeTab === 'online' ? 'rgba(255,255,255,0.25)' : '#d1fae5', color: activeTab === 'online' ? '#ffffff' : '#065f46', fontSize: 11 }}>
                 {Math.max(0, onlineCount - deliveringCount)}
               </span>
@@ -528,7 +528,7 @@ export default function AdminLiveFleetMapPage() {
                 gap: 6,
               }}
             >
-              <span>⚪ Offline</span>
+              <span>Offline</span>
               <span style={{ padding: '1px 6px', borderRadius: 6, background: activeTab === 'offline' ? 'rgba(255,255,255,0.25)' : '#e2e8f0', color: activeTab === 'offline' ? '#ffffff' : '#64748b', fontSize: 11 }}>
                 {offlineCount}
               </span>
@@ -718,25 +718,25 @@ export default function AdminLiveFleetMapPage() {
                       <div>
                         <span style={{ color: '#64748b', fontSize: 11, fontWeight: 700 }}>ល្បឿនបច្ចុប្បន្ន</span>
                         <div style={{ fontWeight: 900, color: '#0f172a', fontSize: 15, marginTop: 2 }}>
-                          ⚡ {selectedDriver.speed || 0} km/h
+                          {selectedDriver.speed || 0} km/h
                         </div>
                       </div>
                       <div>
                         <span style={{ color: '#64748b', fontSize: 11, fontWeight: 700 }}>ថាមពលថ្ម</span>
                         <div style={{ fontWeight: 900, color: '#10b981', fontSize: 15, marginTop: 2 }}>
-                          🔋 {selectedDriver.battery || 100}%
+                          {selectedDriver.battery || 100}%
                         </div>
                       </div>
                       <div>
                         <span style={{ color: '#64748b', fontSize: 11, fontWeight: 700 }}>កញ្ចប់កំពុងដឹក</span>
                         <div style={{ fontWeight: 900, color: '#2563eb', fontSize: 15, marginTop: 2 }}>
-                          📦 {selectedDriver.activeParcelCodes?.length || 0} កញ្ចប់
+                          {selectedDriver.activeParcelCodes?.length || 0} កញ្ចប់
                         </div>
                       </div>
                       <div>
                         <span style={{ color: '#64748b', fontSize: 11, fontWeight: 700 }}>ទិសដៅ Heading</span>
                         <div style={{ fontWeight: 900, color: '#475569', fontSize: 15, marginTop: 2 }}>
-                          🧭 {selectedDriver.heading || 0}°
+                          {selectedDriver.heading || 0}°
                         </div>
                       </div>
                     </div>
@@ -901,7 +901,7 @@ export default function AdminLiveFleetMapPage() {
                   <div className="custom-scrollbar" style={{ flex: 1, overflowY: 'auto', padding: '12px' }}>
                     {filteredDrivers.length === 0 ? (
                       <div style={{ textAlign: 'center', padding: '40px 10px' }}>
-                        <div style={{ fontSize: 32, marginBottom: 8 }}>🛵</div>
+                        
                         <div style={{ fontSize: 13.5, fontWeight: 800, color: '#334155', marginBottom: 4 }}>
                           {loading ? 'កំពុងទាញយក...' : 'មិនមាន Driver ក្នុងបញ្ជី'}
                         </div>
@@ -992,9 +992,9 @@ export default function AdminLiveFleetMapPage() {
                               </div>
 
                               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 6, paddingTop: 6, borderTop: '1px solid #f8fafc', fontSize: 11, color: '#64748b' }}>
-                                <span>{isOnline ? `⚡ ${d.speed || 0} km/h` : 'ក្រៅបណ្តាញ'}</span>
+                                <span>{isOnline ? `${d.speed || 0} km/h` : 'ក្រៅបណ្តាញ'}</span>
                                 <span style={{ fontWeight: 800, color: d.activeParcelCodes?.length ? '#2563eb' : '#94a3b8' }}>
-                                  📦 {d.activeParcelCodes?.length || 0} កញ្ចប់
+                                  {d.activeParcelCodes?.length || 0} កញ្ចប់
                                 </span>
                               </div>
                             </div>

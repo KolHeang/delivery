@@ -109,7 +109,7 @@ export default function CreateSaasAdminPage() {
           {tr('បង្កើត SaaS Platform Admin ថ្មី', 'Create New SaaS Platform Admin')}
         </h1>
         <p style={{ fontSize: 12.5, color: 'var(--text-muted)', margin: 0 }}>
-          {tr('គណនី Admin សម្រាប់គ្រប់គ្រងប្រព័ន្ធ Master SaaS (តារាង saas_admins ដាច់ដោយឡែក)', 'Platform Admin account for managing Master SaaS delivery infrastructure (dedicated saas_admins table)')}
+          {tr('គណនី Admin សម្រាប់គ្រប់គ្រងប្រព័ន្ធ Master SaaS', 'Platform Admin account for managing Master SaaS delivery infrastructure')}
         </p>
       </div>
 
@@ -208,9 +208,9 @@ export default function CreateSaasAdminPage() {
                     if (errors.role) setErrors((prev) => { const n = { ...prev }; delete n.role; return n; });
                   }}
                 >
-                  <option value="super_admin">{tr('Super Admin (សិទ្ធិពេញលេញលើ SaaS)', 'Super Admin (Full SaaS Access)')}</option>
-                  <option value="finance_admin">{tr('Finance Admin (គ្រប់គ្រងការទូទាត់ & គម្រោង)', 'Finance Admin (Billing & Plans)')}</option>
-                  <option value="support_admin">{tr('Support Admin (ជំនួយការបច្ចេកទេស)', 'Support Admin (Technical Support)')}</option>
+                  <option value="super_admin">{tr('Super Admin — សិទ្ធិពេញលេញលើ SaaS', 'Super Admin — Full SaaS Access')}</option>
+                  <option value="finance_admin">{tr('Finance Admin — គ្រប់គ្រងការទូទាត់ & គម្រោង', 'Finance Admin — Billing & Plans')}</option>
+                  <option value="support_admin">{tr('Support Admin — ជំនួយការបច្ចេកទេស', 'Support Admin — Technical Support')}</option>
                 </select>
                 {errors.role && <div style={{ color: '#ef4444', fontSize: 11.5, marginTop: 4 }}>{errors.role}</div>}
               </div>
@@ -224,8 +224,8 @@ export default function CreateSaasAdminPage() {
                   value={adminForm.isActive ? 'true' : 'false'}
                   onChange={(e) => setAdminForm({ ...adminForm, isActive: e.target.value === 'true' })}
                 >
-                  <option value="true">{tr('● សកម្ម (Active)', '● Active')}</option>
-                  <option value="false">{tr('● ផ្អាកដំណើរការ (Inactive)', '● Inactive')}</option>
+                  <option value="true">{tr('● សកម្ម', '● Active')}</option>
+                  <option value="false">{tr('● ផ្អាកដំណើរការ', '● Inactive')}</option>
                 </select>
               </div>
             </div>

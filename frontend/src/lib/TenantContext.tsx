@@ -2,8 +2,8 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { saasApi } from './saas-api';
-
 import { detectTenantSubdomain, getTenantWorkspaceUrl, getDomainSuffix } from './domain';
+import { applyBrandTheme, initBrandTheme } from './theme';
 
 export interface TenantInfo {
   id: number;
@@ -12,6 +12,7 @@ export interface TenantInfo {
   customDomain?: string;
   status: string;
   logoUrl?: string;
+  primaryColor?: string;
   phone?: string;
   email?: string;
   address?: string;
@@ -76,6 +77,7 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
           companyName: fallbackName,
           subdomain: detectedSubdomain,
           status: 'active',
+          primaryColor: '#2563eb',
         });
 
         setLoading(true);
@@ -84,6 +86,9 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
         const res = await saasApi.resolveDomain(domainToResolve).catch(() => null);
 
         if (res && res.found && res.tenant) {
+          const brandColor = res.tenant.primaryColor || '#2563eb';
+          applyBrandTheme(brandColor);
+
           setSubdomain(res.tenant.slug);
           setIsTenant(true);
           setTenant({
@@ -91,6 +96,7 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
             companyName: res.tenant.name,
             subdomain: res.tenant.slug,
             logoUrl: res.tenant.logo,
+            primaryColor: brandColor,
             phone: res.tenant.phone,
             email: res.tenant.email,
             address: res.tenant.address,
@@ -104,6 +110,7 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
         }
       } else {
         // Root Platform: check if logged-in user belongs to a tenant workspace
+        initBrandTheme();
         let userSubdomain: string | null = null;
         try {
           const raw = localStorage.getItem('user');

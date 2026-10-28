@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { useTenant } from '@/lib/TenantContext';
+import { initBrandTheme, applyBrandTheme } from '@/lib/theme';
 
 export default function DynamicTitle() {
   const pathname = usePathname();
@@ -11,10 +12,11 @@ export default function DynamicTitle() {
   const [orgName, setOrgName] = useState<string>('');
   const [orgLogo, setOrgLogo] = useState<string>('');
 
-  // Listen to organization name & logo updates in localStorage
+  // Listen to organization name, logo, & brand color updates
   useEffect(() => {
     const updateLocalOrg = () => {
       try {
+        initBrandTheme();
         const cached = localStorage.getItem('app-org-settings');
         if (cached) {
           const parsed = JSON.parse(cached);
@@ -24,16 +26,28 @@ export default function DynamicTitle() {
           if (parsed?.logo !== undefined) {
             setOrgLogo(parsed.logo || '');
           }
+          if (parsed?.primaryColor) {
+            applyBrandTheme(parsed.primaryColor);
+          }
         }
       } catch {}
     };
 
+    const handleColorPreview = (e: any) => {
+      const color = e?.detail;
+      if (color) {
+        applyBrandTheme(color);
+      }
+    };
+
     updateLocalOrg();
     window.addEventListener('org-settings-updated', updateLocalOrg);
+    window.addEventListener('brand-color-preview', handleColorPreview);
     window.addEventListener('storage', updateLocalOrg);
 
     return () => {
       window.removeEventListener('org-settings-updated', updateLocalOrg);
+      window.removeEventListener('brand-color-preview', handleColorPreview);
       window.removeEventListener('storage', updateLocalOrg);
     };
   }, []);

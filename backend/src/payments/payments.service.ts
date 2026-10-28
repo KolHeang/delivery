@@ -616,7 +616,7 @@ export class PaymentsService {
       .leftJoinAndSelect('parcel.driver', 'driver')
       .leftJoinAndSelect('parcel.customer', 'customer')
       .where('parcel.status IN (:...statuses)', {
-        statuses: ['delivered', 'failed', 'returned'],
+        statuses: ['delivered', 'failed', 'returned', 'in-transit', 'picked-up', 'pending'],
       })
       .orderBy('parcel.id', 'DESC');
 
@@ -627,7 +627,11 @@ export class PaymentsService {
       qb.andWhere('parcel.merchantId = :merchantId', { merchantId: query.merchantId });
     }
     if (query?.statusFilter && query.statusFilter !== 'all') {
-      qb.andWhere('parcel.merchantPaymentStatus = :pStatus', { pStatus: query.statusFilter });
+      if (query.statusFilter === 'unpaid') {
+        qb.andWhere('(parcel.merchantPaymentStatus = :pStatus OR parcel.merchantPaymentStatus IS NULL)', { pStatus: 'unpaid' });
+      } else {
+        qb.andWhere('parcel.merchantPaymentStatus = :pStatus', { pStatus: query.statusFilter });
+      }
     }
     if (query?.startDate) {
       const start = new Date(query.startDate);
@@ -657,7 +661,7 @@ export class PaymentsService {
       .leftJoinAndSelect('parcel.driver', 'driver')
       .leftJoinAndSelect('parcel.customer', 'customer')
       .where('parcel.status IN (:...statuses)', {
-        statuses: ['delivered', 'failed', 'returned'],
+        statuses: ['delivered', 'failed', 'returned', 'in-transit', 'picked-up', 'pending'],
       })
       .orderBy('parcel.id', 'DESC');
 
@@ -668,7 +672,11 @@ export class PaymentsService {
       qb.andWhere('parcel.driverId = :driverId', { driverId: query.driverId });
     }
     if (query?.statusFilter && query.statusFilter !== 'all') {
-      qb.andWhere('parcel.driverPaymentStatus = :pStatus', { pStatus: query.statusFilter });
+      if (query.statusFilter === 'unpaid') {
+        qb.andWhere('(parcel.driverPaymentStatus = :pStatus OR parcel.driverPaymentStatus IS NULL)', { pStatus: 'unpaid' });
+      } else {
+        qb.andWhere('parcel.driverPaymentStatus = :pStatus', { pStatus: query.statusFilter });
+      }
     }
     if (query?.startDate) {
       const start = new Date(query.startDate);

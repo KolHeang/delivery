@@ -29,6 +29,9 @@ api.interceptors.request.use((config) => {
     if (detectedSubdomain) {
       config.headers['x-tenant-subdomain'] = detectedSubdomain;
     }
+    if (window.location?.host) {
+      config.headers['x-tenant-domain'] = window.location.host;
+    }
   }
   return config;
 });

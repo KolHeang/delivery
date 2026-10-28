@@ -19,14 +19,14 @@ const getLocalDateString = (d: Date = new Date()) => {
 };
 
 const FAILURE_REASONS = [
-  { value: 'អ្នកដឹកខូច App / ទូរស័ព្ទអស់ថ្ម', labelKm: '📱 អ្នកដឹកខូច App / ទូរស័ព្ទអស់ថ្ម', labelEn: '📱 Driver App crashed / phone dead' },
-  { value: 'អ្នកដឹកខូចម៉ូតូ / មានបញ្ហាបច្ចេកទេស', labelKm: '🛵 អ្នកដឹកខូចម៉ូតូ / មានបញ្ហាបច្ចេកទេស', labelEn: '🛵 Driver vehicle issue / breakdown' },
-  { value: 'អតិថិជនមិនលើកទូរស័ព្ទ', labelKm: '📞 អតិថិជនមិនលើកទូរស័ព្ទ', labelEn: '📞 Customer did not answer phone' },
-  { value: 'អតិថិជនសុំពន្យារពេលដឹក', labelKm: '⏱️ អតិថិជនសុំពន្យារពេលដឹក', labelEn: '⏱️ Customer requested reschedule' },
-  { value: 'ទីតាំងមិនត្រឹមត្រូវ / ហៅមិនចូល', labelKm: '📍 ទីតាំងមិនត្រឹមត្រូវ / ហៅមិនចូល', labelEn: '📍 Wrong address / unreachable' },
-  { value: 'អតិថិជនបដិសេធទទួលទំនិញ', labelKm: '🙅 អតិថិជនបដិសេធទទួលទំនិញ', labelEn: '🙅 Customer rejected parcel' },
-  { value: 'ទំនិញខូចខាត / មិនត្រូវតាមកម្ម៉ង់', labelKm: '📦 ទំនិញខូចខាត / មិនត្រូវតាមកម្ម៉ង់', labelEn: '📦 Damaged item / wrong item' },
-  { value: 'ហាងស្នើសុំបោះបង់ការដឹក', labelKm: '🏪 ហាងស្នើសុំបោះបង់ការដឹក', labelEn: '🏪 Merchant requested cancellation' },
+  { value: 'អ្នកដឹកខូច App / ទូរស័ព្ទអស់ថ្ម', labelKm: 'អ្នកដឹកខូច App / ទូរស័ព្ទអស់ថ្ម', labelEn: 'Driver App crashed / phone dead' },
+  { value: 'អ្នកដឹកខូចម៉ូតូ / មានបញ្ហាបច្ចេកទេស', labelKm: 'អ្នកដឹកខូចម៉ូតូ / មានបញ្ហាបច្ចេកទេស', labelEn: 'Driver vehicle issue / breakdown' },
+  { value: 'អតិថិជនមិនលើកទូរស័ព្ទ', labelKm: 'អតិថិជនមិនលើកទូរស័ព្ទ', labelEn: 'Customer did not answer phone' },
+  { value: 'អតិថិជនសុំពន្យារពេលដឹក', labelKm: 'អតិថិជនសុំពន្យារពេលដឹក', labelEn: 'Customer requested reschedule' },
+  { value: 'ទីតាំងមិនត្រឹមត្រូវ / ហៅមិនចូល', labelKm: 'ទីតាំងមិនត្រឹមត្រូវ / ហៅមិនចូល', labelEn: 'Wrong address / unreachable' },
+  { value: 'អតិថិជនបដិសេធទទួលទំនិញ', labelKm: 'អតិថិជនបដិសេធទទួលទំនិញ', labelEn: 'Customer rejected parcel' },
+  { value: 'ទំនិញខូចខាត / មិនត្រូវតាមកម្ម៉ង់', labelKm: 'ទំនិញខូចខាត / មិនត្រូវតាមកម្ម៉ង់', labelEn: 'Damaged item / wrong item' },
+  { value: 'ហាងស្នើសុំបោះបង់ការដឹក', labelKm: 'ហាងស្នើសុំបោះបង់ការដឹក', labelEn: 'Merchant requested cancellation' },
 ];
 
 export default function CompletePackagePage() {
@@ -440,11 +440,7 @@ export default function CompletePackagePage() {
 
             {/* Header with Save in Batch Button */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e5e7eb', paddingBottom: '16px', marginBottom: '16px', flexWrap: 'wrap', gap: 12 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <div style={{ width: 40, height: 40, borderRadius: '12px', background: 'var(--accent-light, #e0f2fe)', color: 'var(--accent, #0284c7)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>
-                  📦
-                </div>
-                <div>
+              <div>
                   <span className="card-title" style={{ fontSize: 16, fontWeight: 'bold' }}>
                     {lang === 'km' ? 'បញ្ជីទំនិញ' : 'Parcels List'}
                   </span>
@@ -452,7 +448,6 @@ export default function CompletePackagePage() {
                     {filteredOrders.length} {lang === 'km' ? 'កញ្ចប់ត្រូវបានរកឃើញ' : 'packages found'}
                   </div>
                 </div>
-              </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
                 {selectedIds.length > 0 && (
@@ -466,7 +461,7 @@ export default function CompletePackagePage() {
                       style={{ fontSize: '11px', padding: '4px 8px', borderRadius: '4px', border: '1px solid #bbf7d0', background: '#dcfce7', color: '#166534', cursor: 'pointer', fontWeight: 600 }}
                       title={lang === 'km' ? 'កំណត់បានដឹកទាំងអស់' : 'Set all delivered'}
                     >
-                      {lang === 'km' ? '✅ ជោគជ័យ' : '✅ Delivered'}
+                      {lang === 'km' ? 'ជោគជ័យ' : 'Delivered'}
                     </button>
                     <button
                       type="button"
@@ -474,7 +469,7 @@ export default function CompletePackagePage() {
                       style={{ fontSize: '11px', padding: '4px 8px', borderRadius: '4px', border: '1px solid #fecaca', background: '#fee2e2', color: '#991b1b', cursor: 'pointer', fontWeight: 600 }}
                       title={lang === 'km' ? 'កំណត់មិនបានសម្រេចទាំងអស់' : 'Set all failed'}
                     >
-                      {lang === 'km' ? '❌ មិនជោគជ័យ' : '❌ Failed'}
+                      {lang === 'km' ? 'មិនជោគជ័យ' : 'Failed'}
                     </button>
                     <button
                       type="button"
@@ -482,7 +477,7 @@ export default function CompletePackagePage() {
                       style={{ fontSize: '11px', padding: '4px 8px', borderRadius: '4px', border: '1px solid #fed7aa', background: '#ffedd5', color: '#9a3412', cursor: 'pointer', fontWeight: 600 }}
                       title={lang === 'km' ? 'កំណត់បង្វិលត្រឡប់ទាំងអស់' : 'Set all returned'}
                     >
-                      {lang === 'km' ? '↩️ បង្វិលត្រឡប់' : '↩️ Returned'}
+                      {lang === 'km' ? 'បង្វិលត្រឡប់' : 'Returned'}
                     </button>
                   </div>
                 )}
@@ -552,32 +547,32 @@ export default function CompletePackagePage() {
             <div className="table-responsive" style={{ overflowX: 'auto', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-card)' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                 <thead>
-                  <tr style={{ background: '#1565D8' }}>
-                    <th style={{ padding: '12px 10px', textAlign: 'center', width: 44, background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>
+                  <tr style={{ background: 'var(--sidebar-bg, #1565D8)' }}>
+                    <th style={{ padding: '12px 10px', textAlign: 'center', width: 44, background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>
                       {lang === 'km' ? 'ល.រ' : 'No.'}
                     </th>
-                    <th style={{ padding: '12px 10px', textAlign: 'left', background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>
+                    <th style={{ padding: '12px 10px', textAlign: 'left', background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>
                       {lang === 'km' ? 'លេខកូដ' : 'Tracking Code'}
                     </th>
-                    <th style={{ padding: '12px 10px', textAlign: 'left', background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>
+                    <th style={{ padding: '12px 10px', textAlign: 'left', background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>
                       {lang === 'km' ? 'ឈ្មោះហាង' : 'Shop/Merchant'}
                     </th>
-                    <th style={{ padding: '12px 10px', textAlign: 'left', background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>
+                    <th style={{ padding: '12px 10px', textAlign: 'left', background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>
                       {lang === 'km' ? 'លេខអ្នកទទួល' : 'Receiver Phone'}
                     </th>
-                    <th style={{ padding: '12px 10px', textAlign: 'left', background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>
+                    <th style={{ padding: '12px 10px', textAlign: 'left', background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>
                       {lang === 'km' ? 'កាលបរិច្ឆេទ' : 'Date'}
                     </th>
-                    <th style={{ padding: '12px 10px', textAlign: 'left', background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>
+                    <th style={{ padding: '12px 10px', textAlign: 'left', background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>
                       {lang === 'km' ? 'ទីតាំង' : 'Location'}
                     </th>
-                    <th style={{ padding: '12px 10px', textAlign: 'right', background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>
+                    <th style={{ padding: '12px 10px', textAlign: 'right', background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>
                       {lang === 'km' ? 'សេវាដឹក' : 'Delivery Fee'}
                     </th>
-                    <th style={{ padding: '12px 10px', textAlign: 'right', background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>
+                    <th style={{ padding: '12px 10px', textAlign: 'right', background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>
                       {lang === 'km' ? 'ប្រាក់ COD' : 'Amount/COD'}
                     </th>
-                    <th style={{ padding: '12px 10px', textAlign: 'center', width: 50, background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>
+                    <th style={{ padding: '12px 10px', textAlign: 'center', width: 50, background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>
                       <input
                         type="checkbox"
                         checked={currentPageItems.length > 0 && currentPageItems.every(item => selectedIds.includes(item.id))}
@@ -586,19 +581,19 @@ export default function CompletePackagePage() {
                         title={lang === 'km' ? 'ជ្រើសរើសទាំងអស់' : 'Select All'}
                       />
                     </th>
-                    <th style={{ padding: '12px 10px', textAlign: 'left', minWidth: 150, background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>
+                    <th style={{ padding: '12px 10px', textAlign: 'left', minWidth: 150, background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>
                       {lang === 'km' ? 'ស្ថានភាព' : 'Status'}
                     </th>
-                    <th style={{ padding: '12px 10px', textAlign: 'center', width: 105, background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>
+                    <th style={{ padding: '12px 10px', textAlign: 'center', width: 105, background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>
                       {lang === 'km' ? 'សាច់ប្រាក់ KHR' : 'Cash KHR'}
                     </th>
-                    <th style={{ padding: '12px 10px', textAlign: 'center', width: 105, background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>
+                    <th style={{ padding: '12px 10px', textAlign: 'center', width: 105, background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>
                       {lang === 'km' ? 'សាច់ប្រាក់ USD' : 'Cash USD'}
                     </th>
-                    <th style={{ padding: '12px 10px', textAlign: 'left', minWidth: 150, background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>
+                    <th style={{ padding: '12px 10px', textAlign: 'left', minWidth: 150, background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>
                       {lang === 'km' ? 'វិធីសាស្ត្រទូទាត់' : 'Payment Method'}
                     </th>
-                    <th style={{ padding: '12px 10px', textAlign: 'left', minWidth: 220, background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>
+                    <th style={{ padding: '12px 10px', textAlign: 'left', minWidth: 220, background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>
                       {lang === 'km' ? 'មូលហេតុ / ចំណាំ' : 'Reason / Notes'}
                     </th>
                   </tr>
@@ -687,20 +682,20 @@ export default function CompletePackagePage() {
                                 outline: 'none'
                               }}
                             >
-                              <option value="assigned">{lang === 'km' ? '📋 បានចាត់ចែង' : '📋 Assigned'}</option>
-                              <option value="in-transit">{lang === 'km' ? '🚚 កំពុងដឹក' : '🚚 In Transit'}</option>
-                              <option value="delivered">{lang === 'km' ? '✅ បានដឹកជោគជ័យ' : '✅ Delivered'}</option>
-                              <option value="failed">{lang === 'km' ? '❌ ដឹកមិនជោគជ័យ' : '❌ Failed / Issue'}</option>
-                              <option value="returned">{lang === 'km' ? '↩️ បង្វិលត្រឡប់' : '↩️ Return to Shop'}</option>
-                              <option value="cancelled">{lang === 'km' ? '🚫 បោះបង់ការដឹក' : '🚫 Cancelled'}</option>
+                              <option value="assigned">{lang === 'km' ? 'បានចាត់ចែង' : 'Assigned'}</option>
+                              <option value="in-transit">{lang === 'km' ? 'កំពុងដឹក' : 'In Transit'}</option>
+                              <option value="delivered">{lang === 'km' ? 'បានដឹកជោគជ័យ' : 'Delivered'}</option>
+                              <option value="failed">{lang === 'km' ? 'ដឹកមិនជោគជ័យ' : 'Failed / Issue'}</option>
+                              <option value="returned">{lang === 'km' ? 'បង្វិលត្រឡប់' : 'Return to Shop'}</option>
+                              <option value="cancelled">{lang === 'km' ? 'បោះបង់ការដឹក' : 'Cancelled'}</option>
                               {currentStatus === 'in-warehouse' && (
-                                <option value="in-warehouse">{lang === 'km' ? '🏢 ក្នុងឃ្លាំង' : '🏢 In Warehouse'}</option>
+                                <option value="in-warehouse">{lang === 'km' ? 'ក្នុងឃ្លាំង' : 'In Warehouse'}</option>
                               )}
                               {currentStatus === 'pending' && (
-                                <option value="pending">{lang === 'km' ? '⏳ រង់ចាំ' : '⏳ Pending'}</option>
+                                <option value="pending">{lang === 'km' ? 'រង់ចាំ' : 'Pending'}</option>
                               )}
                               {currentStatus === 'picked-up' && (
-                                <option value="picked-up">{lang === 'km' ? '📦 បានប្រមូល' : '📦 Picked Up'}</option>
+                                <option value="picked-up">{lang === 'km' ? 'បានប្រមូល' : 'Picked Up'}</option>
                               )}
                             </select>
                           </td>
@@ -763,9 +758,9 @@ export default function CompletePackagePage() {
                                 outline: 'none'
                               }}
                             >
-                              <option value="cash">{lang === 'km' ? '💵 ទទួលសាច់ប្រាក់' : '💵 Cash'}</option>
-                              <option value="bank">{lang === 'km' ? '🏦 ផ្ទេរប្រាក់ / KHQR' : '🏦 Bank Transfer / KHQR'}</option>
-                              <option value="unpaid">{lang === 'km' ? '⏳ ជំពាក់ / មិនទាន់គិត' : '⏳ Unpaid'}</option>
+                              <option value="cash">{lang === 'km' ? 'ទទួលសាច់ប្រាក់' : 'Cash'}</option>
+                              <option value="bank">{lang === 'km' ? 'ផ្ទេរប្រាក់ / KHQR' : 'Bank Transfer / KHQR'}</option>
+                              <option value="unpaid">{lang === 'km' ? 'ជំពាក់ / មិនទាន់គិត' : 'Unpaid'}</option>
                             </select>
                           </td>
                           <td style={{ padding: '6px 8px' }}>
@@ -852,9 +847,9 @@ export default function CompletePackagePage() {
                         padding: '4px 10px',
                         height: '30px',
                         fontSize: '12px',
-                        backgroundColor: currentPage === pageNum ? '#2563eb' : 'transparent',
+                        backgroundColor: currentPage === pageNum ? 'var(--accent, #1565D8)' : 'transparent',
                         borderColor: '#2563eb',
-                        color: currentPage === pageNum ? '#fff' : '#2563eb',
+                        color: currentPage === pageNum ? '#ffffff' : 'var(--accent, #1565D8)',
                         cursor: 'pointer'
                       }}
                     >

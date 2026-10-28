@@ -83,7 +83,13 @@ export default function ReportPage() {
   const router = useRouter();
   const { t, lang } = useLanguage();
 
-  useEffect(() => { if (!isAuthenticated()) router.push('/'); }, [router]);
+  useEffect(() => {
+    if (!isAuthenticated()) {
+      router.push('/');
+    } else {
+      router.replace('/report/operation');
+    }
+  }, [router]);
 
   const visibleOperationReports = OPERATION_REPORTS.filter(r => hasPermission(r.permission) || hasPermission('reports.view'));
   const visibleFinancialReports = FINANCIAL_REPORTS.filter(r => hasPermission(r.permission) || hasPermission('reports.view'));
@@ -94,6 +100,30 @@ export default function ReportPage() {
       <div className="main-content">
         <Topbar title={t('report')} subtitle={lang === 'km' ? 'ជ្រើសរើសរបាយការណ៍' : 'Select a report to view'} />
         <div className="page-content">
+
+          {/* Tab bar */}
+          <div className="no-print" style={{ display: 'flex', gap: 12, marginBottom: 20, borderBottom: '1px solid var(--border)', paddingBottom: 12 }}>
+            <button
+              className="btn btn-primary btn-sm"
+              style={{ padding: '8px 16px', borderRadius: 8, fontSize: 13, fontWeight: 600 }}
+            >
+              {t('reportOverview')}
+            </button>
+            <button
+              onClick={() => router.push('/report/operation')}
+              className="btn btn-outline btn-sm"
+              style={{ padding: '8px 16px', borderRadius: 8, fontSize: 13, fontWeight: 600 }}
+            >
+              {t('operationReports')}
+            </button>
+            <button
+              onClick={() => router.push('/report/financial')}
+              className="btn btn-outline btn-sm"
+              style={{ padding: '8px 16px', borderRadius: 8, fontSize: 13, fontWeight: 600 }}
+            >
+              {t('financialReports')}
+            </button>
+          </div>
 
           <style>{`
             .reports-grid-4 {

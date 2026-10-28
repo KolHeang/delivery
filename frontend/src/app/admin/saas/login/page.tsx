@@ -25,7 +25,20 @@ export default function SaasAdminLoginPage() {
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [errorKey, setErrorKey] = useState('');
+  const [rawError, setRawError] = useState('');
+
+  const getErrorText = (key: string) => {
+    switch (key) {
+      case 'emailRequired': return tr('សូមបំពេញអ៊ីម៉ែល', 'Please enter your email');
+      case 'emailInvalid': return tr('សូមបំពេញអ៊ីម៉ែលត្រឹមត្រូវ', 'Please enter a valid email');
+      case 'passwordRequired': return tr('សូមបំពេញពាក្យសម្ងាត់', 'Please enter your password');
+      case 'passwordMin': return tr('ពាក្យសម្ងាត់ត្រូវមានយ៉ាងហោចណាស់ ៦ តួអក្សរ', 'Password must be at least 6 characters');
+      case 'loginFailed': return tr('បរាជ័យក្នុងការ Login សូមពិនិត្យមើល Email និង Password', 'Login failed, please check your Email and Password');
+      case 'invalidCredentials': return tr('Email ឬ Password មិនត្រឹមត្រូវ', 'Invalid Email or Password');
+      default: return key;
+    }
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,15 +47,15 @@ export default function SaasAdminLoginPage() {
     const newErrors: { email?: string; password?: string } = {};
     const emailVal = email.trim();
     if (!emailVal) {
-      newErrors.email = tr('សូមបំពេញអ៊ីម៉ែល', 'Please enter your email');
+      newErrors.email = 'emailRequired';
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal)) {
-      newErrors.email = tr('សូមបំពេញអ៊ីម៉ែលត្រឹមត្រូវ', 'Please enter a valid email');
+      newErrors.email = 'emailInvalid';
     }
 
     if (!password) {
-      newErrors.password = tr('សូមបំពេញពាក្យសម្ងាត់', 'Please enter your password');
+      newErrors.password = 'passwordRequired';
     } else if (password.length < 6) {
-      newErrors.password = tr('ពាក្យសម្ងាត់ត្រូវមានយ៉ាងហោចណាស់ ៦ តួអក្សរ', 'Password must be at least 6 characters');
+      newErrors.password = 'passwordMin';
     }
 
     if (Object.keys(newErrors).length > 0) {
@@ -51,7 +64,8 @@ export default function SaasAdminLoginPage() {
     }
 
     setErrors({});
-    setError('');
+    setErrorKey('');
+    setRawError('');
     setLoading(true);
 
     try {
@@ -68,10 +82,15 @@ export default function SaasAdminLoginPage() {
         localStorage.setItem('saas_admin', JSON.stringify(res.admin));
         window.location.href = '/admin/saas';
       } else {
-        setError(tr('បរាជ័យក្នុងការ Login សូមពិនិត្យមើល Email និង Password', 'Login failed, please check your Email and Password'));
+        setErrorKey('loginFailed');
       }
     } catch (err: any) {
-      setError(err.response?.data?.message || tr('Email ឬ Password មិនត្រឹមត្រូវ', 'Invalid Email or Password'));
+      const msg = err.response?.data?.message;
+      if (msg) {
+        setRawError(msg);
+      } else {
+        setErrorKey('invalidCredentials');
+      }
     } finally {
       setLoading(false);
     }
@@ -596,7 +615,7 @@ export default function SaasAdminLoginPage() {
         </div>
 
         {/* Error Alert */}
-        {error && (
+        {(errorKey || rawError) && (
           <div
             style={{
               background: '#fef2f2',
@@ -613,7 +632,7 @@ export default function SaasAdminLoginPage() {
             }}
           >
             <span>⚠️</span>
-            <span>{error}</span>
+            <span>{errorKey ? getErrorText(errorKey) : rawError}</span>
           </div>
         )}
 
@@ -680,7 +699,7 @@ export default function SaasAdminLoginPage() {
             </div>
             {errors.email && (
               <div style={{ color: '#dc2626', fontSize: '12.5px', fontWeight: 600, marginTop: '6px', lineHeight: '1.4' }}>
-                {errors.email}
+                {getErrorText(errors.email)}
               </div>
             )}
           </div>
@@ -756,7 +775,7 @@ export default function SaasAdminLoginPage() {
             </div>
             {errors.password && (
               <div style={{ color: '#dc2626', fontSize: '12.5px', fontWeight: 600, marginTop: '6px', lineHeight: '1.4' }}>
-                {errors.password}
+                {getErrorText(errors.password)}
               </div>
             )}
           </div>
@@ -798,7 +817,7 @@ export default function SaasAdminLoginPage() {
             fontWeight: 500,
           }}
         >
-          EBS Express • SaaS Cloud Infrastructure
+          {tr('EBS Express • ហេដ្ឋារចនាសម្ព័ន្ធ SaaS Cloud', 'EBS Express • SaaS Cloud Infrastructure')}
         </div>
       </div>
     </div>

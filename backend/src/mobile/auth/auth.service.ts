@@ -84,6 +84,72 @@ export class AuthService {
     return { expire_date, status };
   }
 
+  
+  private async resolveBrandColor(
+    tenantId?: number | string | null,
+  ): Promise<{ primaryColor: string; tenant: any }> {
+    let primaryColor = '#2563eb';
+    let tenantInfo: any = null;
+
+    if (tenantId) {
+      try {
+        const t = await this.refreshTokenRepository.manager
+          .createQueryBuilder()
+          .select([
+            't.id AS id',
+            't.name AS name',
+            't.slug AS slug',
+            't.logo AS logo',
+            't.primary_color AS "primaryColor"',
+          ])
+          .from('saas_tenants', 't')
+          .where('t.id = :id', { id: tenantId })
+          .getRawOne();
+
+        if (t) {
+          primaryColor = t.primaryColor || '#2563eb';
+          tenantInfo = {
+            id: t.id,
+            name: t.name,
+            slug: t.slug,
+            logo: t.logo,
+            primaryColor,
+          };
+        }
+      } catch {}
+    }
+
+    if (!tenantInfo) {
+      try {
+        const org = await this.refreshTokenRepository.manager
+          .createQueryBuilder()
+          .select([
+            'o.id AS id',
+            'o.name AS name',
+            'o.logo AS logo',
+            'o.primary_color AS "primaryColor"',
+          ])
+          .from('organisations', 'o')
+          .where(tenantId ? 'o.tenant_id = :id' : 'o.tenant_id IS NULL', {
+            id: tenantId,
+          })
+          .getRawOne();
+
+        if (org) {
+          primaryColor = org.primaryColor || '#2563eb';
+          tenantInfo = {
+            id: org.id,
+            name: org.name,
+            logo: org.logo,
+            primaryColor,
+          };
+        }
+      } catch {}
+    }
+
+    return { primaryColor, tenant: tenantInfo };
+  }
+
   async driverLogin(identifier: string, password: string) {
     if (!identifier || !password) {
       throw new UnauthorizedException(
@@ -139,12 +205,16 @@ export class AuthService {
     });
     await this.refreshTokenRepository.save(tokenEntity);
 
+    const { primaryColor, tenant } = await this.resolveBrandColor(user.tenantId);
+
     return {
       access_token,
       refresh_token,
       expire_date,
       expires_at: expire_date,
       status,
+      primaryColor,
+      tenant,
       user: {
         id: user.id,
         code: user.code,
@@ -157,6 +227,8 @@ export class AuthService {
         status,
         zoneId: user.zoneId,
         vehicleId: user.vehicleId,
+        primaryColor,
+        tenant,
         expire_date,
       },
     };
@@ -213,12 +285,16 @@ export class AuthService {
     });
     await this.refreshTokenRepository.save(tokenEntity);
 
+    const { primaryColor, tenant } = await this.resolveBrandColor(user.tenantId);
+
     return {
       access_token,
       refresh_token,
       expire_date,
       expires_at: expire_date,
       status,
+      primaryColor,
+      tenant,
       user: {
         id: user.id,
         name: user.name,
@@ -230,6 +306,8 @@ export class AuthService {
         active: user.active,
         status,
         balance: user.balance,
+        primaryColor,
+        tenant,
         expire_date,
       },
     };

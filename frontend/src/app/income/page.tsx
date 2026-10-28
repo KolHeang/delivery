@@ -54,7 +54,7 @@ export default function IncomeListPage() {
         <div className="page-content">
           <div className="card">
             <div className="card-header">
-              <span className="card-title">💵 {t('revenuesTitle') || 'Revenues & Collections'}</span>
+              <span className="card-title">{t('revenuesTitle') || 'Revenues & Collections'}</span>
               <button className="btn btn-primary btn-sm" onClick={() => router.push('/income/create')}>
                 <FiPlusCircle size={14} /> {t('addIncome') || 'Add Income'}
               </button>

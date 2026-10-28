@@ -20,6 +20,11 @@ export class SaasSeedService implements OnModuleInit {
   ) {}
 
   async onModuleInit() {
+    try {
+      await this.planRepo.query(`
+        ALTER TABLE saas_tenants ADD COLUMN IF NOT EXISTS primary_color VARCHAR(50) DEFAULT '#2563eb';
+      `);
+    } catch {}
     await this.seedPlans();
     await this.seedPartnersAndCoupons();
     await this.seedPaymentOptions();

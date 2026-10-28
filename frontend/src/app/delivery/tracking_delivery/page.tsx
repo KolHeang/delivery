@@ -368,7 +368,7 @@ function TrackingPageContent() {
                 marginBottom: 24,
               }}
             >
-              <div style={{ fontSize: 24, marginBottom: 6 }}>🔍</div>
+              <div style={{ display: "flex", justifyContent: "center", marginBottom: 6 }}><MdSearch size={32} /></div>
               <div>{error}</div>
             </div>
           )}
@@ -413,7 +413,7 @@ function TrackingPageContent() {
                         fontSize: 22,
                       }}
                     >
-                      📦
+                      
                     </div>
                     <div>
                       <div
@@ -476,7 +476,7 @@ function TrackingPageContent() {
                         fontWeight: 500,
                       }}
                     >
-                      🕒 {formatDateTime(order.createdAt)}
+                      {formatDateTime(order.createdAt)}
                     </span>
                   </div>
                 </div>
@@ -932,7 +932,7 @@ function TrackingPageContent() {
                               : order.driver.name}
                           </div>
                           <div style={{ fontSize: 12, color: "#64748b" }}>
-                            📞 {order.driver.phone || "—"}
+                            {order.driver.phone || "—"}
                           </div>
                         </div>
                         {order.driver.phone && (
@@ -1036,7 +1036,7 @@ function TrackingPageContent() {
                   <div
                     style={{ fontSize: 15, fontWeight: 700, color: "#0f172a", marginBottom: 20 }}
                   >
-                    📋 {tLocal.detailedHistory}
+                    {tLocal.detailedHistory}
                   </div>
 
                   <div
@@ -1134,7 +1134,7 @@ function TrackingPageContent() {
                                   )}
                                 </div>
                                 <div style={{ fontSize: 12, color: "#64748b" }}>
-                                  🕒 {formatDateTime(h.createdAt)}
+                                  {formatDateTime(h.createdAt)}
                                 </div>
                               </div>
                               {h.note && (
@@ -1154,7 +1154,7 @@ function TrackingPageContent() {
                                     maxWidth: "90%",
                                   }}
                                 >
-                                  📝 {lang === "km" ? "សម្គាល់៖" : "Remark:"} {h.note}
+                                  {lang === "km" ? "សម្គាល់៖" : "Remark:"} {h.note}
                                 </div>
                               )}
                             </div>

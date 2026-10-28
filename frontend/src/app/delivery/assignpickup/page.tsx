@@ -7,7 +7,7 @@ import Sidebar from '@/components/layout/Sidebar';
 import Topbar from '@/components/layout/Topbar';
 import Badge from '@/components/ui/Badge';
 import api from '@/lib/api';
-import { MdLocalShipping, MdRefresh, MdSearch, MdClose, MdWarehouse } from 'react-icons/md';
+import { MdLocalShipping, MdRefresh, MdSearch, MdClose, MdWarehouse, MdPhone, MdLocationOn } from 'react-icons/md';
 import { useLanguage } from '@/lib/LanguageContext';
 
 const formatCOD = (cod: any, currency: string) => {
@@ -133,11 +133,7 @@ export default function AssignPickupPage() {
 
                 {/* Header */}
                 <div className="card-header" style={{ padding: '16px 24px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <div style={{ width: 40, height: 40, borderRadius: '12px', background: '#fef3c7', color: '#d97706', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>
-                      🏪
-                    </div>
-                    <div>
+                  <div>
                       <span className="card-title" style={{ fontSize: 16 }}>{t('pendingForPickup')}</span>
                       <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2 }}>
                         {filtered.length} / {pendingOrders.length} {lang === 'km' ? 'កញ្ចប់' : 'orders'}
@@ -148,7 +144,6 @@ export default function AssignPickupPage() {
                         )}
                       </div>
                     </div>
-                  </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     {selected.length > 0 && (
                       <span style={{ fontSize: 13, fontWeight: 600, color: '#d97706', background: '#fef3c7', padding: '4px 12px', borderRadius: 999 }}>
@@ -202,21 +197,21 @@ export default function AssignPickupPage() {
                 {/* Table */}
                 <div style={{ overflowY: 'auto', flex: 1 }}>
                   <table>
-                    <thead style={{ position: 'sticky', top: 0, zIndex: 10, background: '#1565D8' }}>
-                      <tr style={{ background: '#1565D8' }}>
-                        <th style={{ width: 40, paddingLeft: 20, background: '#1565D8', border: 'none', verticalAlign: 'middle' }}>
+                    <thead style={{ position: 'sticky', top: 0, zIndex: 10, background: 'var(--sidebar-bg, #1565D8)' }}>
+                      <tr style={{ background: 'var(--sidebar-bg, #1565D8)' }}>
+                        <th style={{ width: 40, paddingLeft: 20, background: 'var(--sidebar-bg, #1565D8)', border: 'none', verticalAlign: 'middle' }}>
                           <input type="checkbox"
                             style={{ width: 16, height: 16, cursor: 'pointer' }}
                             checked={allPageSelected}
                             onChange={e => togglePageAll(e.target.checked)}
                           />
                         </th>
-                        <th style={{ background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('trackingCode')}</th>
-                        <th style={{ background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('merchant')}</th>
-                        <th style={{ background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('receiver')}</th>
-                        <th style={{ background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('address')}</th>
-                        <th style={{ background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('cod')}</th>
-                        <th style={{ background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('deliveryFee')}</th>
+                        <th style={{ background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('trackingCode')}</th>
+                        <th style={{ background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('merchant')}</th>
+                        <th style={{ background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('receiver')}</th>
+                        <th style={{ background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('address')}</th>
+                        <th style={{ background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('cod')}</th>
+                        <th style={{ background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('deliveryFee')}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -301,10 +296,10 @@ export default function AssignPickupPage() {
               <div className="card" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
                 {/* Driver header */}
                 <div className="card-header" style={{ padding: '16px 20px', background: 'var(--bg-primary)' }}>
-                  <span className="card-title" style={{ fontSize: 15 }}>🚗 {lang === 'km' ? 'ជ្រើសរើសអ្នកដឹក' : t('assignPickupDriver')}</span>
+                  <span className="card-title" style={{ fontSize: 15 }}>{lang === 'km' ? 'ជ្រើសរើសអ្នកដឹក' : t('assignPickupDriver')}</span>
                   {selectedDriver && (
                     <button onClick={() => setSelectedDriver(null)} style={{ fontSize: 12, color: 'var(--danger)', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 8, padding: '4px 10px', cursor: 'pointer', fontWeight: 600 }}>
-                      ✕ {lang === 'km' ? 'សម្អាត' : 'Clear'}
+                      {lang === 'km' ? 'សម្អាត' : 'Clear'}
                     </button>
                   )}
                 </div>
@@ -385,8 +380,8 @@ export default function AssignPickupPage() {
                                 {lang === 'km' ? (d.nameKh || d.name) : (d.name || d.nameKh)}
                               </div>
                               <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                                {d.phone && <span>📞 {d.phone}</span>}
-                                {d.zone?.name && <span>📍 {d.zone.name}</span>}
+                                {d.phone && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><MdPhone size={12} /> {d.phone}</span>}
+                                {d.zone?.name && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><MdLocationOn size={12} /> {d.zone.name}</span>}
                               </div>
                             </div>
                             <span style={{

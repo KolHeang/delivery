@@ -145,7 +145,7 @@ export default function ExpenseTypePage() {
                 onClick={() => setAddModalOpen(true)}
                 style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700 }}
               >
-                <FiPlusCircle size={16} /> {t('addCategory') || 'Add Category'}
+                <FiPlusCircle size={16} /> {t('addExpenseCategory')}
               </button>
             </div>
             <div className="card-body" style={{ padding: 0 }}>
@@ -153,7 +153,7 @@ export default function ExpenseTypePage() {
                 <thead>
                   <tr>
                     <th style={{ width: 80 }}>{t('no') || '#'}</th>
-                    <th>{t('categoryName') || 'Category Name'}</th>
+                    <th>{t('expenseCategoryName')}</th>
                     <th>{t('description') || 'Description'}</th>
                     <th style={{ width: 120, textAlign: 'center' }}>{t('actions') || 'Actions'}</th>
                   </tr>
@@ -214,12 +214,12 @@ export default function ExpenseTypePage() {
         <Modal
           open={addModalOpen}
           onClose={() => setAddModalOpen(false)}
-          title={`➕ ${t('addCategory') || 'Add Category'}`}
+          title={t('addExpenseCategory')}
           size="md"
         >
           <form noValidate onSubmit={handleSubmit}>
             <FormField
-              label={t('categoryName') || 'Category Name'}
+              label={t('expenseCategoryName')}
               required
               error={addErrors.name}
             >
@@ -272,12 +272,12 @@ export default function ExpenseTypePage() {
         <Modal
           open={!!editItem}
           onClose={() => setEditItem(null)}
-          title={lang === 'km' ? 'កែសម្រួលក្រុមចំណាយ' : 'Edit Category'}
+          title={lang === 'km' ? 'កែសម្រួលក្រុមចំណាយ' : 'Edit Expense Category'}
           size="md"
         >
           <form noValidate onSubmit={handleUpdate}>
             <FormField
-              label={t('categoryName') || 'Category Name'}
+              label={t('expenseCategoryName')}
               required
               error={editErrors.editName}
             >

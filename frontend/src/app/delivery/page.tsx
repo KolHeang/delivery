@@ -366,7 +366,7 @@ export default function DeliveriesPage() {
           {/* Table */}
           <div className="card">
             <div className="card-header">
-              <span className="card-title">📦 {t('deliveryParcels')}</span>
+              <span className="card-title">{t('deliveryParcels')}</span>
               <div style={{ display: 'flex', gap: 8 }}>
                 <button
                   className="btn btn-outline btn-sm"
@@ -603,7 +603,7 @@ export default function DeliveriesPage() {
                                     cursor: isLong ? 'help' : 'default',
                                   }}
                                 >
-                                  📝 {latestNote}
+                                  {latestNote}
                                 </span>
                               );
                             })()}
@@ -686,13 +686,13 @@ export default function DeliveriesPage() {
           </div>
           {viewModal.note && (
             <div style={{ background: 'var(--bg-primary)', padding: '10px 14px', borderRadius: 'var(--radius)', fontSize: 13, marginBottom: 16 }}>
-              📝 {viewModal.note}
+              {viewModal.note}
             </div>
           )}
           {viewModal.histories && viewModal.histories.length > 0 && (
             <div style={{ marginTop: 20, borderTop: '1px solid var(--border)', paddingTop: 16 }}>
               <h4 style={{ fontWeight: 700, marginBottom: 16, color: 'var(--text-secondary)', fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                📋 {lang === 'km' ? 'ប្រវត្តិស្ថានភាពលម្អិត' : 'Detailed Status History'}
+                {lang === 'km' ? 'ប្រវត្តិស្ថានភាពលម្អិត' : 'Detailed Status History'}
               </h4>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16, paddingLeft: 8 }}>
                 {[...viewModal.histories]
@@ -768,7 +768,7 @@ export default function DeliveriesPage() {
                               fontWeight: 500,
                               maxWidth: '90%'
                             }}>
-                              📝 {lang === 'km' ? 'សម្គាល់៖' : 'Remark:'} {h.note}
+                              {lang === 'km' ? 'សម្គាល់៖' : 'Remark:'} {h.note}
                             </div>
                           )}
                         </div>

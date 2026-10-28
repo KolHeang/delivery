@@ -107,17 +107,12 @@ export default function PickupRequestsPage() {
 
             {/* ── Header ── */}
             <div className="card-header" style={{ padding: '16px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <div style={{ width: 44, height: 44, borderRadius: 14, background: 'linear-gradient(135deg,#d97706,#f59e0b)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, boxShadow: '0 4px 12px rgba(217,119,6,0.3)' }}>
-                  📦
-                </div>
-                <div>
+              <div>
                   <div className="card-title" style={{ fontSize: 16 }}>{t('pickupRequestList')}</div>
                   <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2 }}>
                     {filtered.length} / {requests.length} {t('record')}
                   </div>
                 </div>
-              </div>
               <button className="btn btn-outline" onClick={load} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <MdRefresh size={16} /> Refresh
               </button>
@@ -175,18 +170,18 @@ export default function PickupRequestsPage() {
             {/* ── Table ── */}
             <div style={{ overflowX: 'auto', flex: 1 }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-                <thead style={{ position: 'sticky', top: 0, zIndex: 10, background: '#1565D8' }}>
-                  <tr style={{ background: '#1565D8' }}>
-                    <th style={{ padding: '12px 10px', paddingLeft: 24, background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'ល.រ' : 'No.'}</th>
-                    <th style={{ padding: '12px 10px', background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('merchant')}</th>
-                    <th style={{ padding: '12px 10px', background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('location')}</th>
-                    <th style={{ padding: '12px 10px', background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('pickupDriver')}</th>
-                    <th style={{ padding: '12px 10px', textAlign: 'center', background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('declaredQty')}</th>
-                    <th style={{ padding: '12px 10px', textAlign: 'center', background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('actualQty')}</th>
-                    <th style={{ padding: '12px 10px', textAlign: 'center', background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('completedQty')}</th>
-                    <th style={{ padding: '12px 10px', background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('scheduledAt')}</th>
-                    <th style={{ padding: '12px 10px', textAlign: 'center', background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('status')}</th>
-                    <th style={{ padding: '12px 10px', textAlign: 'center', background: '#1565D8', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('actions')}</th>
+                <thead style={{ position: 'sticky', top: 0, zIndex: 10, background: 'var(--sidebar-bg, #1565D8)' }}>
+                  <tr style={{ background: 'var(--sidebar-bg, #1565D8)' }}>
+                    <th style={{ padding: '12px 10px', paddingLeft: 24, background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'ល.រ' : 'No.'}</th>
+                    <th style={{ padding: '12px 10px', background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('merchant')}</th>
+                    <th style={{ padding: '12px 10px', background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('location')}</th>
+                    <th style={{ padding: '12px 10px', background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('pickupDriver')}</th>
+                    <th style={{ padding: '12px 10px', textAlign: 'center', background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('declaredQty')}</th>
+                    <th style={{ padding: '12px 10px', textAlign: 'center', background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('actualQty')}</th>
+                    <th style={{ padding: '12px 10px', textAlign: 'center', background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('completedQty')}</th>
+                    <th style={{ padding: '12px 10px', background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('scheduledAt')}</th>
+                    <th style={{ padding: '12px 10px', textAlign: 'center', background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('status')}</th>
+                    <th style={{ padding: '12px 10px', textAlign: 'center', background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('actions')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -205,7 +200,7 @@ export default function PickupRequestsPage() {
                       return (
                         <tr key={r.id} style={{ borderBottom: '1px solid #f1f5f9', transition: 'background-color 0.15s' }}>
                           <td style={{ padding: '12px 10px', paddingLeft: 24, border: 'none' }}>
-                            <code style={{ fontSize: 12, background: 'rgba(47,85,165,0.08)', color: '#1565D8', padding: '3px 8px', borderRadius: 6, fontWeight: 700 }}>
+                            <code style={{ fontSize: 12, background: 'rgba(47,85,165,0.08)', color: 'var(--accent, #1565D8)', padding: '3px 8px', borderRadius: 6, fontWeight: 700 }}>
                               #{r.id}
                             </code>
                           </td>
@@ -302,7 +297,7 @@ export default function PickupRequestsPage() {
                           <td style={{ padding: '12px 10px', textAlign: 'center', border: 'none' }}>
                             <button
                               onClick={() => router.push(`/delivery/pickup_requests/${r.id}`)}
-                              style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 14px', borderRadius: 8, border: '1.5px solid #1565D8', background: '#eff6ff', color: '#1565D8', fontSize: 12, fontWeight: 700, cursor: 'pointer', transition: 'all 0.15s', whiteSpace: 'nowrap' }}
+                              style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 14px', borderRadius: 8, border: '1.5px solid #1565D8', background: '#eff6ff', color: 'var(--accent, #1565D8)', fontSize: 12, fontWeight: 700, cursor: 'pointer', transition: 'all 0.15s', whiteSpace: 'nowrap' }}
                               onMouseEnter={e => { (e.currentTarget as any).style.background = '#1565D8'; (e.currentTarget as any).style.color = '#fff'; }}
                               onMouseLeave={e => { (e.currentTarget as any).style.background = '#eff6ff'; (e.currentTarget as any).style.color = '#1565D8'; }}
                             >

@@ -38,11 +38,24 @@ export class HttpExceptionFilter implements ExceptionFilter {
       message = 'Internal server error';
     }
 
-    this.logger.error(
-      `${request.method} ${request.url} → ${httpStatus}: ${JSON.stringify(message)}`,
-    );
+    // Suppress noisy logs for browser background worker probes
+    const isWorkerOrProbe =
+      request.url === '/sw.js' ||
+      request.url === '/service-worker.js' ||
+      request.url === '/favicon.ico';
 
-    // ✅ បន្ថែមបន្ទាត់នេះ
+    if (httpStatus === HttpStatus.NOT_FOUND) {
+      if (!isWorkerOrProbe) {
+        this.logger.warn(
+          `${request.method} ${request.url} → ${httpStatus}: ${JSON.stringify(message)}`,
+        );
+      }
+    } else {
+      this.logger.error(
+        `${request.method} ${request.url} → ${httpStatus}: ${JSON.stringify(message)}`,
+      );
+    }
+
     if (!(exception instanceof HttpException)) {
       this.logger.error('FULL ERROR:', (exception as any)?.stack ?? exception);
     }

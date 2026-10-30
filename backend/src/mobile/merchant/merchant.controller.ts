@@ -825,9 +825,9 @@ export class MerchantController {
   @ApiQuery({
     name: 'status',
     required: false,
-    enum: ['paid', 'unpaid'],
-    description: 'Filter settlements by payout status (paid or unpaid)',
-    example: 'paid',
+    enum: ['all', 'paid', 'pending', 'problem'],
+    description: 'Filter settlements by status: all, paid, pending, problem',
+    example: 'all',
   })
   @ApiQuery({
     name: 'date',
@@ -897,7 +897,7 @@ export class MerchantController {
   })
   getSettlements(
     @Request() req: any,
-    @Query('status') status?: 'paid' | 'unpaid',
+    @Query('status') status?: 'all' | 'paid' | 'pending' | 'problem' | 'unpaid' | string,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
     @Query('date') date?: string,
@@ -1370,6 +1370,42 @@ export class MerchantController {
   }
 
   // ===================== MERCHANT BRANCHES & LOCATIONS =====================
+  @Get('branches/select')
+  @ApiOperation({ summary: 'Get merchant branches for dropdown / select option (Authenticated Merchant)' })
+  @ApiResponse({
+    status: 200,
+    description: 'Lightweight branches list formatted for dropdown/select options (value, label, id, name, etc.)',
+    schema: {
+      example: {
+        status: true,
+        message: 'Successfully',
+        data: [
+          {
+            id: 1,
+            value: 1,
+            label: 'សាខាទួលគោក (Tuol Kork Branch) (012345678)',
+            name: 'សាខាទួលគោក (Tuol Kork Branch)',
+            code: 'TK-01',
+            phone: '012345678',
+            address: 'Street 271, Phnom Penh',
+            isDefault: true,
+            latitude: 11.5448729,
+            longitude: 104.8921668,
+          },
+        ],
+      },
+    },
+  })
+  getBranchesForSelect(@Request() req: any) {
+    return this.merchantService.getBranchesForSelect(req.user.id);
+  }
+
+  @Get('select/branches')
+  @ApiOperation({ summary: 'Alias: Get merchant branches for select option (Authenticated Merchant)' })
+  getBranchesForSelectAlias(@Request() req: any) {
+    return this.merchantService.getBranchesForSelect(req.user.id);
+  }
+
   @Get('branches')
   @ApiOperation({ summary: 'Get merchant branches and saved pickup locations' })
   @ApiResponse({

@@ -118,30 +118,44 @@ export function formatMerchantSettlement(payment: any, parcels: any[] = []) {
     ? new Date(payment.createdAt).toISOString()
     : dateStr;
 
-  const ordersList = parcels.map((p) => ({
-    id: p.trackingCode || `ORD-${p.id}`,
-    trackingCode: p.trackingCode || `ORD-${p.id}`,
-    customerName: p.receiverName || p.customer?.name || 'អតិថិជន',
-    phone: p.receiverPhone || p.customer?.phone || '',
-    address: p.receiverAddress || p.customer?.address || '',
-    amount: parseFloat(p.cod as any) || 0,
-    currency: p.codCurrency || 'USD',
-    status: p.status || 'delivered',
-    statusKh: 'បានដឹកជញ្ជូន',
-    deliveredAt: p.deliveredAt || p.updatedAt || dateStr,
-  }));
+  const ordersList = parcels.map((p) => {
+    let orderStatusKh = 'បានដឹកជញ្ជូន';
+    if (p.status === 'failed') orderStatusKh = 'ដឹកមិនជោគជ័យ';
+    else if (p.status === 'returned') orderStatusKh = 'បានត្រឡប់ទៅហាង';
+    else if (p.status === 'cancelled') orderStatusKh = 'បានបោះបង់';
+    else if (p.status === 'in-transit') orderStatusKh = 'កំពុងដឹកជញ្ជូន';
+    else if (p.status === 'pending') orderStatusKh = 'រង់ចាំដឹក';
+
+    return {
+      id: p.trackingCode || `ORD-${p.id}`,
+      trackingCode: p.trackingCode || `ORD-${p.id}`,
+      customerName: p.receiverName || p.customer?.name || 'អតិថិជន',
+      phone: p.receiverPhone || p.customer?.phone || '',
+      address: p.receiverAddress || p.customer?.address || '',
+      amount: parseFloat(p.cod as any) || 0,
+      currency: p.codCurrency || 'USD',
+      status: p.status || 'delivered',
+      statusKh: orderStatusKh,
+      deliveredAt: p.deliveredAt || p.updatedAt || dateStr,
+    };
+  });
 
   const orderIds: string[] = ordersList.length > 0
     ? ordersList.map((o) => o.trackingCode || o.id)
     : (payment.parcelIds && Array.isArray(payment.parcelIds) ? payment.parcelIds.map(String) : []);
 
+  const settlementStatus = payment.status || 'paid';
+  const statusKh = settlementStatus === 'paid' ? 'បានទូទាត់' :
+                   (settlementStatus === 'pending' || settlementStatus === 'unpaid') ? 'រង់ចាំទូទាត់' :
+                   settlementStatus === 'problem' ? 'មានបញ្ហា' : settlementStatus;
+
   return {
     id: String(rawId),
-    rawId: payment.id,
+    rawId: payment.id || 0,
     reference: String(rawId),
     branchId: branchId,
-    status: 'paid',
-    statusKh: 'បានទូទាត់',
+    status: settlementStatus,
+    statusKh: statusKh,
     orderIds: orderIds,
     totalOrders: orderIds.length,
     total: {
@@ -152,11 +166,11 @@ export function formatMerchantSettlement(payment: any, parcels: any[] = []) {
     totalAmount: rawUsd,
     totalAmountKhr: Math.round(rawKhr),
     date: dateStr,
-    paidAt: paidAtStr,
+    paidAt: (settlementStatus === 'pending' || settlementStatus === 'unpaid' || settlementStatus === 'problem') ? null : paidAtStr,
     paymentDate: dateStr,
     checkedBy: checkedBy,
     note: note,
-    paymentMethod: 'Bank Transfer / Cash',
+    paymentMethod: payment.paymentMethod || ((settlementStatus === 'pending' || settlementStatus === 'unpaid') ? 'Pending' : 'Bank Transfer / Cash'),
     transferRef: String(rawId),
     creator: checkedBy,
     orders: ordersList,

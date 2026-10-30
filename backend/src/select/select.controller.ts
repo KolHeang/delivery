@@ -24,6 +24,14 @@ export class SelectController {
     return this.selectService.getAll(tenantId);
   }
 
+
+  @Get('branches')
+  @ApiOperation({ summary: 'Get branches list for dropdown (by merchantId or authenticated merchant user)' })
+  @ApiQuery({ name: 'merchantId', required: false, type: Number })
+  getBranches(@Req() req: any, @Query('merchantId') merchantId?: string) {
+    const mId = merchantId ? parseInt(merchantId, 10) : (req.user?.role === 'merchant' ? req.user.id : undefined);
+    return this.selectService.getBranches(mId, req.user?.tenantId);
+  }
   @Get('merchants')
   @ApiOperation({ summary: 'Get lightweight merchants list for dropdown' })
   getMerchants(@Req() req: any) {

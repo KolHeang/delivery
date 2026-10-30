@@ -582,7 +582,7 @@ export class MerchantController {
     });
   }
 
-  @Sse('realtime')
+  @Sse('deliveries/realtime')
   @ApiOperation({
     summary: 'Server-Sent Events (SSE) real-time stream for recent deliveries & orders',
     description:
@@ -625,64 +625,7 @@ export class MerchantController {
   })
   @ApiResponse({
     status: 200,
-    description: 'Continuous Server-Sent Events stream for merchant.',
-  })
-  realtime(
-    @Request() req: any,
-    @Query('date') date?: string,
-    @Query('startDate') startDate?: string,
-    @Query('endDate') endDate?: string,
-    @Query('merchantId') merchantId?: string,
-    @Query('branchId') branchId?: string,
-  ): Observable<MessageEvent> {
-    return this.merchantService.getRealtimeDeliveriesStream(req.user.id, {
-      date,
-      startDate,
-      endDate,
-      merchantId: merchantId ? Number(merchantId) : undefined,
-      branchId: branchId ? Number(branchId) : undefined,
-    });
-  }
-
-  @Sse('deliveries/realtime')
-  @ApiOperation({
-    summary: 'Alias for SSE real-time stream for recent deliveries',
-    description: 'Alias of /api/mobile/merchant/realtime',
-  })
-  @ApiQuery({
-    name: 'date',
-    required: false,
-    type: String,
-    description: 'Filter initial stream by specific date (YYYY-MM-DD)',
-    example: '2026-10-28',
-  })
-  @ApiQuery({
-    name: 'startDate',
-    required: false,
-    type: String,
-    description: 'Filter initial stream start date (YYYY-MM-DD)',
-    example: '2026-10-01',
-  })
-  @ApiQuery({
-    name: 'endDate',
-    required: false,
-    type: String,
-    description: 'Filter initial stream end date (YYYY-MM-DD)',
-    example: '2026-10-28',
-  })
-  @ApiQuery({
-    name: 'merchantId',
-    required: false,
-    type: Number,
-    description: 'Filter real-time events by merchant ID (optional)',
-    example: 10,
-  })
-  @ApiQuery({
-    name: 'branchId',
-    required: false,
-    type: Number,
-    description: 'Filter real-time events by branch ID (optional)',
-    example: 1,
+    description: 'Continuous Server-Sent Events stream for merchant deliveries.',
   })
   deliveriesRealtime(
     @Request() req: any,
@@ -747,63 +690,6 @@ export class MerchantController {
     description: 'Continuous Server-Sent Events stream for merchant pickup requests.',
   })
   pickupRequestsRealtime(
-    @Request() req: any,
-    @Query('date') date?: string,
-    @Query('startDate') startDate?: string,
-    @Query('endDate') endDate?: string,
-    @Query('merchantId') merchantId?: string,
-    @Query('branchId') branchId?: string,
-  ): Observable<MessageEvent> {
-    return this.merchantService.getRealtimePickupRequestsStream(req.user.id, {
-      date,
-      startDate,
-      endDate,
-      merchantId: merchantId ? Number(merchantId) : undefined,
-      branchId: branchId ? Number(branchId) : undefined,
-    });
-  }
-
-  @Sse('bookings/realtime')
-  @ApiOperation({
-    summary: 'Alias for SSE real-time stream for pickup requests (bookings)',
-    description: 'Alias of /api/mobile/merchant/pickup-requests/realtime',
-  })
-  @ApiQuery({
-    name: 'date',
-    required: false,
-    type: String,
-    description: 'Filter initial bookings by specific date (YYYY-MM-DD)',
-    example: '2026-10-28',
-  })
-  @ApiQuery({
-    name: 'startDate',
-    required: false,
-    type: String,
-    description: 'Filter initial bookings start date (YYYY-MM-DD)',
-    example: '2026-10-01',
-  })
-  @ApiQuery({
-    name: 'endDate',
-    required: false,
-    type: String,
-    description: 'Filter initial bookings end date (YYYY-MM-DD)',
-    example: '2026-10-28',
-  })
-  @ApiQuery({
-    name: 'merchantId',
-    required: false,
-    type: Number,
-    description: 'Filter pickup request events by merchant ID (optional)',
-    example: 10,
-  })
-  @ApiQuery({
-    name: 'branchId',
-    required: false,
-    type: Number,
-    description: 'Filter pickup request events by branch ID (optional)',
-    example: 1,
-  })
-  bookingsRealtime(
     @Request() req: any,
     @Query('date') date?: string,
     @Query('startDate') startDate?: string,
@@ -886,11 +772,141 @@ export class MerchantController {
         status: true,
         message: 'Successfully',
         data: {
-          data: [],
-          total: 0,
+          data: [
+            {
+              id: 'SETTLE-SHOP-879002',
+              rawId: 12,
+              reference: 'SETTLE-SHOP-879002',
+              branchId: '1',
+              status: 'paid',
+              statusKh: 'បានទូទាត់',
+              orderIds: ['CO221020260075', 'CO221020260060'],
+              totalOrders: 2,
+              total: {
+                usd: 24.5,
+                usdCents: 2450,
+                khr: 98000,
+              },
+              totalAmount: 24.5,
+              totalAmountKhr: 98000,
+              date: '2026-10-28T08:00:00.000Z',
+              paidAt: '2026-10-28T09:30:00.000Z',
+              paymentDate: '2026-10-28T08:00:00.000Z',
+              checkedBy: 'Finance Team',
+              note: 'ទូទាត់ប្រាក់ COD កញ្ចប់ #CO221020260075, #CO221020260060',
+              paymentMethod: 'Bank Transfer / Cash',
+              transferRef: 'SETTLE-SHOP-879002',
+              creator: 'Finance Team',
+              orders: [
+                {
+                  id: 'CO221020260075',
+                  trackingCode: 'CO221020260075',
+                  customerName: 'Little girl',
+                  phone: '08466595',
+                  address: 'Street 271, Toul Tompoung, Phnom Penh',
+                  amount: 20.0,
+                  currency: 'USD',
+                  status: 'delivered',
+                  statusKh: 'បានដឹកជញ្ជូន',
+                  deliveredAt: '2026-10-28T07:15:00.000Z',
+                },
+                {
+                  id: 'CO221020260060',
+                  trackingCode: 'CO221020260060',
+                  customerName: 'E Express Testing',
+                  phone: '0878555545',
+                  address: 'Street 2004, Sen Sok, Phnom Penh',
+                  amount: 4.5,
+                  currency: 'USD',
+                  status: 'delivered',
+                  statusKh: 'បានដឹកជញ្ជូន',
+                  deliveredAt: '2026-10-28T07:45:00.000Z',
+                },
+              ],
+            },
+            {
+              id: 'SETTLE-PENDING-20261028-1',
+              rawId: 0,
+              reference: 'SETTLE-PENDING-20261028-1',
+              branchId: '1',
+              status: 'pending',
+              statusKh: 'រង់ចាំទូទាត់',
+              orderIds: ['CO221020260081'],
+              totalOrders: 1,
+              total: {
+                usd: 15.0,
+                usdCents: 1500,
+                khr: 0,
+              },
+              totalAmount: 15.0,
+              totalAmountKhr: 0,
+              date: '2026-10-28T10:00:00.000Z',
+              paidAt: null,
+              paymentDate: '2026-10-28T10:00:00.000Z',
+              checkedBy: 'Finance Team',
+              note: 'រង់ចាំទូទាត់ប្រាក់ COD ចំនួន 1 កញ្ចប់',
+              paymentMethod: 'Pending',
+              transferRef: 'SETTLE-PENDING-20261028-1',
+              creator: 'Finance Team',
+              orders: [
+                {
+                  id: 'CO221020260081',
+                  trackingCode: 'CO221020260081',
+                  customerName: 'Chan Sothea',
+                  phone: '012345678',
+                  address: 'Street 51, BKK1, Phnom Penh',
+                  amount: 15.0,
+                  currency: 'USD',
+                  status: 'delivered',
+                  statusKh: 'បានដឹកជញ្ជូន',
+                  deliveredAt: '2026-10-28T10:00:00.000Z',
+                },
+              ],
+            },
+            {
+              id: 'SETTLE-PROBLEM-20261028-1',
+              rawId: 0,
+              reference: 'SETTLE-PROBLEM-20261028-1',
+              branchId: '1',
+              status: 'problem',
+              statusKh: 'មានបញ្ហា',
+              orderIds: ['CO221020260099'],
+              totalOrders: 1,
+              total: {
+                usd: 10.0,
+                usdCents: 1000,
+                khr: 0,
+              },
+              totalAmount: 10.0,
+              totalAmountKhr: 0,
+              date: '2026-10-28T11:00:00.000Z',
+              paidAt: null,
+              paymentDate: '2026-10-28T11:00:00.000Z',
+              checkedBy: 'Operation Team',
+              note: 'កញ្ចប់ទំនិញមានបញ្ហា/បង្វិលត្រឡប់ ចំនួន 1 កញ្ចប់',
+              paymentMethod: 'N/A',
+              transferRef: 'SETTLE-PROBLEM-20261028-1',
+              creator: 'Operation Team',
+              orders: [
+                {
+                  id: 'CO221020260099',
+                  trackingCode: 'CO221020260099',
+                  customerName: 'Keo Pich',
+                  phone: '098765432',
+                  address: 'Street 1986, Phnom Penh Thmey',
+                  amount: 10.0,
+                  currency: 'USD',
+                  status: 'failed',
+                  statusKh: 'ដឹកមិនជោគជ័យ',
+                  deliveredAt: '2026-10-28T11:00:00.000Z',
+                },
+              ],
+            },
+          ],
+          total: 3,
           page: 1,
           limit: 10,
-          totalPages: 0,
+          totalPages: 1,
         },
       },
     },
@@ -1400,12 +1416,6 @@ export class MerchantController {
     return this.merchantService.getBranchesForSelect(req.user.id);
   }
 
-  @Get('select/branches')
-  @ApiOperation({ summary: 'Alias: Get merchant branches for select option (Authenticated Merchant)' })
-  getBranchesForSelectAlias(@Request() req: any) {
-    return this.merchantService.getBranchesForSelect(req.user.id);
-  }
-
   @Get('branches')
   @ApiOperation({ summary: 'Get merchant branches and saved pickup locations' })
   @ApiResponse({
@@ -1443,88 +1453,4 @@ export class MerchantController {
     return this.merchantService.getBranchById(req.user.id, id);
   }
 
-  @Post('branches')
-  @ApiOperation({ summary: 'Add a new merchant branch or pickup location' })
-  @ApiResponse({
-    status: 201,
-    description: 'Branch created successfully',
-  })
-  createBranch(@Request() req: any, @Body() dto: CreateMerchantBranchDto) {
-    return this.merchantService.createBranch(req.user.id, dto);
   }
-
-  @Patch('branches/:id')
-  @ApiOperation({ summary: 'Update branch details' })
-  @ApiParam({ name: 'id', type: Number, description: 'Branch ID' })
-  updateBranch(
-    @Request() req: any,
-    @Param('id', ParseIntPipe) id: number,
-    @Body() dto: UpdateMerchantBranchDto,
-  ) {
-    return this.merchantService.updateBranch(req.user.id, id, dto);
-  }
-
-  @Delete('branches/:id')
-  @ApiOperation({ summary: 'Delete a branch' })
-  @ApiParam({ name: 'id', type: Number, description: 'Branch ID' })
-  deleteBranch(@Request() req: any, @Param('id', ParseIntPipe) id: number) {
-    return this.merchantService.deleteBranch(req.user.id, id);
-  }
-
-  @Patch('branches/:id/default')
-  @ApiOperation({ summary: 'Set branch as default pickup location' })
-  @ApiParam({ name: 'id', type: Number, description: 'Branch ID' })
-  setDefaultBranch(@Request() req: any, @Param('id', ParseIntPipe) id: number) {
-    return this.merchantService.setDefaultBranch(req.user.id, id);
-  }
-
-  // ===================== SAVED CONTACTS / CUSTOMERS =====================
-  @Get('contacts')
-  @ApiOperation({ summary: 'Get frequent customer and receiver contacts' })
-  @ApiQuery({ name: 'search', required: false, type: String, description: 'Search by name or phone' })
-  @ApiResponse({
-    status: 200,
-    description: 'List of frequent receiver contacts',
-  })
-  getContacts(@Request() req: any, @Query('search') search?: string) {
-    return this.merchantService.getContacts(req.user.id, search);
-  }
-
-  @Post('contacts')
-  @ApiOperation({ summary: 'Save customer / receiver contact' })
-  @ApiResponse({
-    status: 201,
-    description: 'Contact saved successfully',
-  })
-  createContact(@Request() req: any, @Body() dto: CreateMerchantContactDto) {
-    return this.merchantService.createContact(req.user.id, dto);
-  }
-
-  @Delete('contacts/:id')
-  @ApiOperation({ summary: 'Delete a saved customer contact' })
-  @ApiParam({ name: 'id', type: Number, description: 'Contact ID' })
-  deleteContact(@Request() req: any, @Param('id', ParseIntPipe) id: number) {
-    return this.merchantService.deleteContact(req.user.id, id);
-  }
-
-  // ===================== SUPPORT CHAT =====================
-  @Get('support/messages')
-  @ApiOperation({ summary: 'Get messages for general support inquiry' })
-  @ApiResponse({
-    status: 200,
-    description: 'Support inquiry conversation history and support contact',
-  })
-  getSupportMessages(@Request() req: any) {
-    return this.merchantService.getSupportMessages(req.user.id);
-  }
-
-  @Post('support/messages')
-  @ApiOperation({ summary: 'Send message to support/dispatch operator' })
-  @ApiResponse({
-    status: 201,
-    description: 'Message sent to support successfully',
-  })
-  sendSupportMessage(@Request() req: any, @Body() dto: SendSupportMessageDto) {
-    return this.merchantService.sendSupportMessage(req.user.id, dto);
-  }
-}

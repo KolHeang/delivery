@@ -2399,6 +2399,28 @@ export class DriverService {
 
     const riderCode = `DRV-${String(driver.id).padStart(3, '0')}`;
 
+    // Financial settlements matching mobile UI calculations
+    const exchangeRate = 4000;
+    const incomeKhr = totalDriverFee;
+    const incomeUsd = Math.round((totalDriverFee / exchangeRate) * 100) / 100;
+    const totalCollectedKhr = Math.round(totalCodKhr + totalCodUsd * exchangeRate);
+    const totalCollectedUsd = Math.round((totalCodUsd + totalCodKhr / exchangeRate) * 100) / 100;
+    const codToCompanyKhr = Math.max(0, totalCollectedKhr - totalDriverFee);
+    const codToCompanyUsd = Math.max(0, Math.round((codToCompanyKhr / exchangeRate) * 100) / 100);
+
+    const parcelsList = parcels.map((p) => ({
+      id: p.id,
+      trackingCode: p.trackingCode,
+      receiverName: p.receiverName,
+      receiverPhone: p.receiverPhone,
+      receiverAddress: p.receiverAddress,
+      cod: parseFloat(p.cod as any) || 0,
+      codCurrency: p.codCurrency || 'USD',
+      status: p.status,
+      driverFee: parseFloat((p.driverFee ?? 1000) as any),
+      deliveredAt: p.deliveredAt,
+    }));
+
     return {
       date: formattedDate,
       invoiceStatus: payment ? 'Completed' : (deliveredCount > 0 ? 'Completed' : 'Pending'),
@@ -2419,11 +2441,20 @@ export class DriverService {
         totalCodUsd: Math.round(totalCodUsd * 100) / 100,
         totalCodKhr: Math.round(totalCodKhr),
         totalCod: Math.round(totalCodUsd * 100) / 100,
+        incomeKhr,
+        incomeUsd,
+        codCollectedKhr: totalCollectedKhr,
+        codCollectedUsd: totalCollectedUsd,
+        codSettlementKhr: codToCompanyKhr,
+        codSettlementUsd: codToCompanyUsd,
+        driverFeeDeductionKhr: totalDriverFee,
+        exchangeRate,
         adjustment: adjustment,
         totalAmount: totalAmount,
         currency: 'KHR',
         paymentStatus: payment ? 'Paid' : 'Pending',
       },
+      parcelsList,
     };
   }
 

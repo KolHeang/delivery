@@ -294,7 +294,7 @@ export class DriverController {
     );
   }
 
-  @Post('scan/multiple')
+  @Post(['scan/multiple', 'scan/batch'])
   @ApiOperation({
     summary:
       'Batch scan multiple parcels (continuous / multi QR code scan lookup)',
@@ -308,15 +308,8 @@ export class DriverController {
     return this.driverService.scanMultipleParcels(req.user.id, dto.codes);
   }
 
-  @Post('scan/batch')
-  @ApiOperation({
-    summary: 'Alias for batch scan multiple parcels',
-  })
-  scanBatchParcels(@Request() req: any, @Body() dto: BatchScanParcelsDto) {
-    return this.driverService.scanMultipleParcels(req.user.id, dto.codes);
-  }
 
-  @Post('scan/multiple/claim')
+  @Post(['scan/multiple/claim', 'scan/batch/claim', 'scan/batch-claim'])
   @ApiOperation({
     summary:
       'Driver claims multiple scanned parcels at once (batch claim / warehouse dispatch)',
@@ -329,26 +322,13 @@ export class DriverController {
     return this.driverService.claimMultipleParcels(req.user.id, dto.codes);
   }
 
-  @Post('scan/batch/claim')
-  @ApiOperation({
-    summary: 'Alias for batch claim multiple parcels',
-  })
-  claimBatchParcels(@Request() req: any, @Body() dto: BatchClaimParcelsDto) {
-    return this.driverService.claimMultipleParcels(req.user.id, dto.codes);
-  }
 
-  @Post('scan/batch-claim')
-  @ApiOperation({
-    summary: 'Alias for batch claim multiple parcels',
-  })
-  claimBatchClaimParcels(
-    @Request() req: any,
-    @Body() dto: BatchClaimParcelsDto,
-  ) {
-    return this.driverService.claimMultipleParcels(req.user.id, dto.codes);
-  }
 
-  @Post('scan/multiple/update-status')
+  @Post([
+    'scan/multiple/update-status',
+    'scan/batch/update-status',
+    'scan/batch-update-status',
+  ])
   @ApiOperation({
     summary:
       'Driver batch updates delivery status for multiple scanned parcels (e.g. all in-transit)',
@@ -368,35 +348,7 @@ export class DriverController {
     );
   }
 
-  @Post('scan/batch/update-status')
-  @ApiOperation({
-    summary: 'Alias for batch status update for multiple parcels',
-  })
-  updateBatchParcelsStatus(
-    @Request() req: any,
-    @Body() dto: BatchUpdateParcelStatusDto,
-  ) {
-    return this.driverService.updateMultipleParcelsStatus(
-      req.user.id,
-      dto.codes,
-      dto as any,
-    );
-  }
 
-  @Post('scan/batch-update-status')
-  @ApiOperation({
-    summary: 'Alias for batch status update for multiple parcels',
-  })
-  updateBatchUpdateStatus(
-    @Request() req: any,
-    @Body() dto: BatchUpdateParcelStatusDto,
-  ) {
-    return this.driverService.updateMultipleParcelsStatus(
-      req.user.id,
-      dto.codes,
-      dto as any,
-    );
-  }
 
   @Get('tasks')
   @ApiOperation({
@@ -516,7 +468,7 @@ export class DriverController {
     );
   }
 
-  @Get('tasks/new')
+  @Get(['tasks/new', 'tasks/recent'])
   @ApiOperation({
     summary: 'Get new / recent tasks for driver mobile app (ការងារថ្មីៗ)',
   })
@@ -602,26 +554,6 @@ export class DriverController {
     );
   }
 
-  @Get('tasks/recent')
-  @ApiOperation({
-    summary:
-      'Alias for get new / recent tasks for driver mobile app (ការងារថ្មីៗ)',
-  })
-  getRecentTasks(
-    @Request() req: any,
-    @Query('limit') limit?: number,
-    @Query('page') page?: number,
-    @Query('status') status?: string,
-    @Query('search') search?: string,
-  ) {
-    return this.driverService.getNewTasks(
-      req.user.id,
-      limit,
-      page,
-      status,
-      search,
-    );
-  }
 
   @Sse('tasks/realtime')
   @ApiOperation({
@@ -743,42 +675,6 @@ export class DriverController {
     return this.driverService.getRealtimeTaskStream(req.user.id);
   }
 
-  @Sse('tasks/stream')
-  @ApiOperation({
-    summary: 'Alias for SSE real-time task stream for driver app',
-    description: 'Alias of /tasks/realtime',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Continuous Server-Sent Events stream.',
-    example: {
-      type: 'initial',
-      total: 1,
-      timestamp: '2026-10-20T06:54:00.000Z',
-      tasks: [
-        {
-          id: 105,
-          trackingCode: 'CO201020260051',
-          trackingCodeFormatted: '#CO201020260051',
-          merchantName: 'E Mart Store',
-          receiverName: 'Sokha Mean',
-          receiverPhone: '012345678',
-          receiverAddress: 'ផ្លូវ 271, ភ្នំពេញ',
-          status: 'assigned',
-          statusKh: 'ទទួលយក',
-          cod: 25.0,
-          codCurrency: 'USD',
-          deliveryFee: 1.5,
-          driverFee: 1.0,
-          driverRole: 'delivery_driver',
-          createdAt: '2026-10-20T03:15:00.000Z',
-        },
-      ],
-    },
-  })
-  tasksStream(@Request() req: any): Observable<MessageEvent> {
-    return this.driverService.getRealtimeTaskStream(req.user.id);
-  }
 
   @Get('tasks/status-counts')
   @ApiOperation({
@@ -1032,7 +928,7 @@ export class DriverController {
     return this.driverService.getDashboard(req.user.id, p, start, end);
   }
 
-  @Get('report')
+  @Get(['report', 'reports'])
   @ApiOperation({
     summary:
       'Get detailed driver report with performance, COD, earnings and task history',
@@ -1112,29 +1008,6 @@ export class DriverController {
     );
   }
 
-  @Get('reports')
-  @ApiOperation({
-    summary: 'Alias for driver report endpoint',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Detailed report with financial metrics and parcel records',
-  })
-  getReports(
-    @Request() req: any,
-    @Query('period') period?: string,
-    @Query('startDate') startDate?: string,
-    @Query('endDate') endDate?: string,
-    @Query('status') status?: string,
-  ) {
-    return this.driverService.getReport(
-      req.user.id,
-      period,
-      startDate,
-      endDate,
-      status,
-    );
-  }
 
   @Get('pickup-requests')
   @ApiOperation({ summary: 'Get assigned pickup requests' })
@@ -1199,7 +1072,7 @@ export class DriverController {
     return this.driverService.confirmPickup(req.user.id, id, dto);
   }
 
-  @Get(['settlement-history'])
+  @Get(['settlements', 'settlement-history', 'payments'])
   @ApiOperation({
     summary:
       'Get driver settlement history with filters (All, Paid, Pending, Problem, Date range)',
@@ -1285,7 +1158,7 @@ export class DriverController {
     return this.driverService.getSettlements(req.user.id, query);
   }
 
-  @Get('settlements/:id')
+  @Get(['settlements/:id', 'payments/:id'])
   @ApiOperation({
     summary: 'Get single settlement detail by ID or reference code',
   })
@@ -1321,38 +1194,8 @@ export class DriverController {
     );
   }
 
-  @Patch('settlements/:id/problem')
-  @ApiOperation({
-    summary: 'Report a problem or dispute on a settlement (PATCH)',
-  })
-  patchSettlementProblem(
-    @Request() req: any,
-    @Param('id') id: string,
-    @Body() dto: ReportSettlementProblemDto,
-  ) {
-    return this.driverService.reportSettlementProblem(
-      req.user.id,
-      id,
-      dto.reason,
-      dto.note,
-    );
-  }
 
-  @Get('payments')
-  @ApiOperation({
-    summary: 'Get driver payments and payouts history (alias to settlements)',
-  })
-  getPayments(@Request() req: any, @Query() query: DriverSettlementFilterDto) {
-    return this.driverService.getSettlements(req.user.id, query);
-  }
 
-  @Get('payments/:id')
-  @ApiOperation({
-    summary: 'Get single driver payment detail by ID or reference code',
-  })
-  getPaymentById(@Request() req: any, @Param('id') id: string) {
-    return this.driverService.getSettlementById(req.user.id, id);
-  }
 
   @Get('payments/summary')
   @ApiOperation({
@@ -1386,7 +1229,7 @@ export class DriverController {
     return this.driverService.getPaymentSummary(req.user.id);
   }
 
-  @Get('invoices/daily')
+  @Get(['invoices/daily', 'payments/daily', 'settlements/daily', 'settlement/daily'])
   @ApiOperation({ summary: 'Get daily delivery invoice for rider' })
   @ApiQuery({
     name: 'date',
@@ -1434,23 +1277,6 @@ export class DriverController {
     return this.driverService.getDailyDeliveryInvoice(req.user.id, date);
   }
 
-  @Get('payments/daily')
-  @ApiOperation({ summary: 'Alias for daily delivery invoice for rider' })
-  @ApiQuery({
-    name: 'date',
-    required: false,
-    type: String,
-    description:
-      'Invoice date (YYYY-MM-DD). Defaults to current day if omitted.',
-    example: '2026-10-15',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Alias for daily delivery invoice',
-  })
-  getDailyPayment(@Request() req: any, @Query('date') date?: string) {
-    return this.driverService.getDailyDeliveryInvoice(req.user.id, date);
-  }
 
   // ===================== REASONS (FAILURE & RETURN) =====================
   @Get('reasons')
@@ -1491,7 +1317,7 @@ export class DriverController {
   }
 
   // ===================== PARCEL CHAT =====================
-  @Get('tasks/:id/chat')
+  @Get(['tasks/:id/chat', 'tasks/:id/messages'])
   @ApiOperation({
     summary: 'Get parcel chat messages between rider and merchant',
   })
@@ -1541,26 +1367,8 @@ export class DriverController {
     return this.driverService.getParcelMessages(req.user.id, id);
   }
 
-  @Get('tasks/:id/messages')
-  @ApiOperation({ summary: 'Alias for parcel chat messages' })
-  @ApiParam({
-    name: 'id',
-    type: Number,
-    description: 'Task / Parcel ID',
-    example: 101,
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Alias for parcel chat messages',
-  })
-  getParcelMessages(
-    @Request() req: any,
-    @Param('id', ParseIntPipe) id: number,
-  ) {
-    return this.driverService.getParcelMessages(req.user.id, id);
-  }
 
-  @Post('tasks/:id/chat')
+  @Post(['tasks/:id/chat', 'tasks/:id/messages'])
   @ApiOperation({ summary: 'Send a chat message or photo for a parcel' })
   @ApiParam({
     name: 'id',
@@ -1598,25 +1406,6 @@ export class DriverController {
     return this.driverService.sendParcelMessage(req.user.id, id, dto);
   }
 
-  @Post('tasks/:id/messages')
-  @ApiOperation({ summary: 'Alias for sending parcel chat message' })
-  @ApiParam({
-    name: 'id',
-    type: Number,
-    description: 'Task / Parcel ID',
-    example: 101,
-  })
-  @ApiResponse({
-    status: 201,
-    description: 'Alias for sending parcel chat message',
-  })
-  sendParcelMessage(
-    @Request() req: any,
-    @Param('id', ParseIntPipe) id: number,
-    @Body() dto: SendDriverParcelMessageDto,
-  ) {
-    return this.driverService.sendParcelMessage(req.user.id, id, dto);
-  }
 
   // ===================== DRIVER NOTIFICATIONS =====================
   @Get('notifications')

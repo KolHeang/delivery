@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { SelectController } from './select.controller';
 import { SelectService } from './select.service';
 import { Merchant } from '../merchants/entities/merchant.entity';
+import { MerchantBranch } from '../merchants/entities/merchant-branch.entity';
 import { User } from '../users/entities/users.entity';
 import { Zone } from '../zones/entities/zone.entity';
 import { SubZone } from '../zones/entities/subzone.entity';
@@ -14,6 +15,7 @@ import { Role } from '../roles/entities/role.entity';
   imports: [
     TypeOrmModule.forFeature([
       Merchant,
+      MerchantBranch,
       User,
       Zone,
       SubZone,

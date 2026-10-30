@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, IsNull } from 'typeorm';
 import { Merchant } from '../merchants/entities/merchant.entity';
+import { MerchantBranch } from '../merchants/entities/merchant-branch.entity';
 import { User } from '../users/entities/users.entity';
 import { Zone } from '../zones/entities/zone.entity';
 import { SubZone } from '../zones/entities/subzone.entity';
@@ -14,6 +15,8 @@ export class SelectService {
   constructor(
     @InjectRepository(Merchant)
     private readonly merchantRepo: Repository<Merchant>,
+    @InjectRepository(MerchantBranch)
+    private readonly branchRepo: Repository<MerchantBranch>,
     @InjectRepository(User)
     private readonly userRepo: Repository<User>,
     @InjectRepository(Zone)
@@ -28,6 +31,28 @@ export class SelectService {
     private readonly roleRepo: Repository<Role>,
   ) {}
 
+  
+  async getBranches(merchantId?: number, tenantId?: number) {
+    const qb = this.branchRepo.createQueryBuilder('branch');
+    if (merchantId) {
+      qb.andWhere('branch.merchantId = :merchantId', { merchantId });
+    }
+    if (tenantId) {
+      qb.andWhere('(branch.tenantId = :tenantId OR branch.tenantId IS NULL)', { tenantId });
+    }
+    qb.orderBy('branch.isDefault', 'DESC').addOrderBy('branch.name', 'ASC');
+    const branches = await qb.getMany();
+    return branches.map((b) => ({
+      id: b.id,
+      value: b.id,
+      label: b.name + (b.phone ? ` (${b.phone})` : ''),
+      name: b.name,
+      code: b.code || '',
+      phone: b.phone || '',
+      merchantId: b.merchantId,
+      isDefault: Boolean(b.isDefault),
+    }));
+  }
   async getMerchants(tenantId?: number) {
     const where: any = tenantId
       ? [{ active: true, tenantId }, { active: true, tenantId: IsNull() }]

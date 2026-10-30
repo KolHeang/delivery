@@ -1398,7 +1398,7 @@ export class MerchantService {
   async getSettlements(
     merchantId: number,
     query?: {
-      status?: 'paid' | 'unpaid' | string;
+      status?: 'all' | 'paid' | 'pending' | 'problem' | 'unpaid' | string;
       page?: number;
       limit?: number;
       date?: string;
@@ -1410,51 +1410,203 @@ export class MerchantService {
   ) {
     const targetMerchantId = query?.merchantId ? Number(query.merchantId) : merchantId;
     const page = query?.page ? Math.max(1, Number(query.page)) : 1;
-    const limit = query?.limit ? Math.max(1, Number(query.limit)) : 50;
-
-    const qb = this.merchantPaymentRepo
-      .createQueryBuilder('payment')
-      .leftJoinAndSelect('payment.creator', 'creator')
-      .where('payment.merchantId = :merchantId', { merchantId: targetMerchantId });
+    const limit = query?.limit ? Math.max(1, Number(query.limit)) : 20;
+    const rawStatus = (query?.status || 'all').toLowerCase().trim();
+    const isPaidRequested = rawStatus === 'all' || rawStatus === 'paid';
+    const isPendingRequested = rawStatus === 'all' || rawStatus === 'pending' || rawStatus === 'unpaid';
+    const isProblemRequested = rawStatus === 'all' || rawStatus === 'problem';
 
     const dateFilter = parseDateFilter(query?.date, query?.startDate, query?.endDate);
-    applyDateRangeToQb(qb, 'payment.createdAt', dateFilter, 'stl');
+    const branchId = query?.branchId ? Number(query.branchId) : undefined;
 
-    qb.orderBy('payment.createdAt', 'DESC')
-      .addOrderBy('payment.id', 'DESC')
-      .skip((page - 1) * limit)
-      .take(limit);
+    const allSettlements: any[] = [];
 
-    const [payments, total] = await qb.getManyAndCount();
+    // 1. Fetch PAID settlements from merchantPaymentRepo
+    if (isPaidRequested) {
+      const qb = this.merchantPaymentRepo
+        .createQueryBuilder('payment')
+        .leftJoinAndSelect('payment.creator', 'creator')
+        .where('payment.merchantId = :merchantId', { merchantId: targetMerchantId });
 
-    const allParcelIds = Array.from(
-      new Set(payments.flatMap((p) => p.parcelIds || [])),
-    );
-    let parcelsMap = new Map<number, Parcel>();
-    if (allParcelIds.length > 0) {
-      const parcels = await this.parcelRepo.find({
-        where: { id: In(allParcelIds) },
-        relations: { customer: true, zone: true },
-      });
-      parcelsMap = new Map(parcels.map((p) => [p.id, p]));
+      applyDateRangeToQb(qb, 'payment.createdAt', dateFilter, 'stl');
+      qb.orderBy('payment.createdAt', 'DESC').addOrderBy('payment.id', 'DESC');
+
+      const payments = await qb.getMany();
+
+      const allParcelIds = Array.from(
+        new Set(payments.flatMap((p) => p.parcelIds || [])),
+      );
+      let parcelsMap = new Map<number, Parcel>();
+      if (allParcelIds.length > 0) {
+        const parcels = await this.parcelRepo.find({
+          where: { id: In(allParcelIds) },
+          relations: { customer: true, zone: true },
+        });
+        parcelsMap = new Map(parcels.map((p) => [p.id, p]));
+      }
+
+      for (const payment of payments) {
+        const pList = (payment.parcelIds || [])
+          .map((pid) => parcelsMap.get(pid))
+          .filter((p): p is Parcel => Boolean(p));
+        const formatted = formatMerchantSettlement({ ...payment, status: 'paid' }, pList);
+        if (formatted) {
+          if (!branchId || !formatted.branchId || Number(formatted.branchId) === branchId) {
+            allSettlements.push(formatted);
+          }
+        }
+      }
     }
 
-    let formattedPayments = payments.map((payment) => {
-      const pList = (payment.parcelIds || [])
-        .map((pid) => parcelsMap.get(pid))
-        .filter((p): p is Parcel => Boolean(p));
-      return formatMerchantSettlement(payment, pList);
+    // 2. Fetch PENDING (unpaid delivered) settlements
+    if (isPendingRequested) {
+      const pendingQb = this.parcelRepo
+        .createQueryBuilder('parcel')
+        .leftJoinAndSelect('parcel.customer', 'customer')
+        .leftJoinAndSelect('parcel.zone', 'zone')
+        .where('parcel.merchantId = :merchantId', { merchantId: targetMerchantId })
+        .andWhere("parcel.status = 'delivered'")
+        .andWhere('(parcel.merchantPaymentStatus = :pStatus OR parcel.merchantPaymentStatus IS NULL)', { pStatus: 'unpaid' });
+
+      if (branchId) {
+        pendingQb.andWhere('parcel.branchId = :bId', { bId: branchId });
+      }
+      applyDateRangeToQb(pendingQb, 'parcel.createdAt', dateFilter, 'stl_p');
+      pendingQb.orderBy('parcel.createdAt', 'DESC').addOrderBy('parcel.id', 'DESC');
+
+      const pendingParcels = await pendingQb.getMany();
+
+      // Group delivered unpaid parcels by date & branchId
+      const groups = new Map<string, { date: Date; branchId: number; parcels: Parcel[] }>();
+      for (const p of pendingParcels) {
+        const d = p.deliveredAt ? new Date(p.deliveredAt) : (p.createdAt ? new Date(p.createdAt) : new Date());
+        const dateKey = !isNaN(d.getTime()) ? d.toISOString().split('T')[0] : 'unknown';
+        const bId = p.branchId || 1;
+        const key = `${dateKey}_${bId}`;
+        if (!groups.has(key)) {
+          groups.set(key, { date: d, branchId: bId, parcels: [] });
+        }
+        const existing = groups.get(key); if (existing) existing.parcels.push(p);
+      }
+
+      for (const [, group] of groups.entries()) {
+        const dateStr = group.date.toISOString().split('T')[0].replace(/-/g, '');
+        const ref = `SETTLE-PENDING-${dateStr}${group.branchId > 1 ? `-${group.branchId}` : ''}`;
+
+        let sumUsd = 0;
+        let sumKhr = 0;
+        for (const p of group.parcels) {
+          const cod = parseFloat(p.cod as any) || 0;
+          if (p.codCurrency === 'KHR') {
+            sumKhr += cod;
+          } else {
+            sumUsd += cod;
+          }
+        }
+
+        const pseudoPayment = {
+          id: 0,
+          reference: ref,
+          branchId: String(group.branchId),
+          status: 'pending',
+          statusKh: 'រង់ចាំទូទាត់',
+          amount: sumUsd,
+          amountKHR: sumKhr,
+          date: group.date,
+          createdAt: group.date,
+          note: `រង់ចាំទូទាត់ប្រាក់ COD ចំនួន ${group.parcels.length} កញ្ចប់`,
+          checkedBy: 'Finance Team',
+          paymentMethod: 'Pending',
+          parcelIds: group.parcels.map((p) => p.id),
+        };
+
+        const formatted = formatMerchantSettlement(pseudoPayment, group.parcels);
+        if (formatted) {
+          allSettlements.push(formatted);
+        }
+      }
+    }
+
+    // 3. Fetch PROBLEM settlements (parcels with failed, returned, cancelled)
+    if (isProblemRequested) {
+      const problemQb = this.parcelRepo
+        .createQueryBuilder('parcel')
+        .leftJoinAndSelect('parcel.customer', 'customer')
+        .leftJoinAndSelect('parcel.zone', 'zone')
+        .where('parcel.merchantId = :merchantId', { merchantId: targetMerchantId })
+        .andWhere("parcel.status IN ('failed', 'returned', 'cancelled')");
+
+      if (branchId) {
+        problemQb.andWhere('parcel.branchId = :bId', { bId: branchId });
+      }
+      applyDateRangeToQb(problemQb, 'parcel.createdAt', dateFilter, 'stl_prob');
+      problemQb.orderBy('parcel.createdAt', 'DESC').addOrderBy('parcel.id', 'DESC');
+
+      const problemParcels = await problemQb.getMany();
+
+      // Group problem parcels by date & branchId
+      const groups = new Map<string, { date: Date; branchId: number; parcels: Parcel[] }>();
+      for (const p of problemParcels) {
+        const d = p.updatedAt ? new Date(p.updatedAt) : (p.createdAt ? new Date(p.createdAt) : new Date());
+        const dateKey = !isNaN(d.getTime()) ? d.toISOString().split('T')[0] : 'unknown';
+        const bId = p.branchId || 1;
+        const key = `${dateKey}_${bId}`;
+        if (!groups.has(key)) {
+          groups.set(key, { date: d, branchId: bId, parcels: [] });
+        }
+        const existing = groups.get(key); if (existing) existing.parcels.push(p);
+      }
+
+      for (const [, group] of groups.entries()) {
+        const dateStr = group.date.toISOString().split('T')[0].replace(/-/g, '');
+        const ref = `SETTLE-PROBLEM-${dateStr}${group.branchId > 1 ? `-${group.branchId}` : ''}`;
+
+        let sumUsd = 0;
+        let sumKhr = 0;
+        for (const p of group.parcels) {
+          const cod = parseFloat(p.cod as any) || 0;
+          if (p.codCurrency === 'KHR') {
+            sumKhr += cod;
+          } else {
+            sumUsd += cod;
+          }
+        }
+
+        const pseudoPayment = {
+          id: 0,
+          reference: ref,
+          branchId: String(group.branchId),
+          status: 'problem',
+          statusKh: 'មានបញ្ហា',
+          amount: sumUsd,
+          amountKHR: sumKhr,
+          date: group.date,
+          createdAt: group.date,
+          note: `កញ្ចប់ទំនិញមានបញ្ហា/បង្វិលត្រឡប់ ចំនួន ${group.parcels.length} កញ្ចប់`,
+          checkedBy: 'Operation Team',
+          paymentMethod: 'N/A',
+          parcelIds: group.parcels.map((p) => p.id),
+        };
+
+        const formatted = formatMerchantSettlement(pseudoPayment, group.parcels);
+        if (formatted) {
+          allSettlements.push(formatted);
+        }
+      }
+    }
+
+    // Sort all settlements by date DESC
+    allSettlements.sort((a, b) => {
+      const timeA = a && a.date ? new Date(a.date).getTime() : 0;
+      const timeB = b && b.date ? new Date(b.date).getTime() : 0;
+      return timeB - timeA;
     });
 
-    if (query?.branchId) {
-      const bId = Number(query.branchId);
-      formattedPayments = formattedPayments.filter(
-        (p) => p && (!p.branchId || Number(p.branchId) === bId),
-      );
-    }
+    const total = allSettlements.length;
+    const paged = allSettlements.slice((page - 1) * limit, page * limit);
 
     return {
-      data: formattedPayments,
+      data: paged,
       total,
       page,
       limit,
@@ -1464,8 +1616,11 @@ export class MerchantService {
 
   async getSettlementById(merchantId: number, id: number | string) {
     const isNum = !isNaN(Number(id));
-    const whereConditions: any[] = [{ reference: String(id), merchantId }];
-    if (isNum) {
+    const strId = String(id).trim();
+
+    // 1. Try finding in merchantPaymentRepo by reference or numeric ID
+    const whereConditions: any[] = [{ reference: strId, merchantId }];
+    if (isNum && Number(id) > 0) {
       whereConditions.push({ id: Number(id), merchantId });
     }
 
@@ -1474,19 +1629,143 @@ export class MerchantService {
       relations: { creator: true },
     });
 
-    if (!payment) {
-      throw new NotFoundException(`Payment receipt #${id} not found`);
+    if (payment) {
+      let parcels: Parcel[] = [];
+      if (payment.parcelIds && payment.parcelIds.length > 0) {
+        parcels = await this.parcelRepo.find({
+          where: { id: In(payment.parcelIds) },
+          relations: { customer: true, zone: true },
+        });
+      }
+      return formatMerchantSettlement({ ...payment, status: 'paid' }, parcels);
     }
 
-    let parcels: Parcel[] = [];
-    if (payment.parcelIds && payment.parcelIds.length > 0) {
-      parcels = await this.parcelRepo.find({
-        where: { id: In(payment.parcelIds) },
-        relations: { customer: true, zone: true },
-      });
+    // 2. Check if ID starts with SETTLE-PENDING- or SETTLE-PROBLEM- / SETTLE-ISSUE-
+    if (strId.startsWith('SETTLE-PENDING-')) {
+      const rawDatePart = strId.replace('SETTLE-PENDING-', '').split('-')[0];
+      let dateQuery = '';
+      if (rawDatePart.length === 8) {
+        dateQuery = `${rawDatePart.slice(0, 4)}-${rawDatePart.slice(4, 6)}-${rawDatePart.slice(6, 8)}`;
+      }
+
+      const qb = this.parcelRepo
+        .createQueryBuilder('parcel')
+        .leftJoinAndSelect('parcel.customer', 'customer')
+        .leftJoinAndSelect('parcel.zone', 'zone')
+        .where('parcel.merchantId = :merchantId', { merchantId })
+        .andWhere("parcel.status = 'delivered'")
+        .andWhere('(parcel.merchantPaymentStatus = :pStatus OR parcel.merchantPaymentStatus IS NULL)', { pStatus: 'unpaid' });
+
+      if (dateQuery) {
+        qb.andWhere('DATE(COALESCE(parcel.deliveredAt, parcel.createdAt)) = :dateQuery', { dateQuery });
+      }
+
+      const parcels = await qb.getMany();
+      if (parcels.length > 0) {
+        let sumUsd = 0;
+        let sumKhr = 0;
+        for (const p of parcels) {
+          const cod = parseFloat(p.cod as any) || 0;
+          if (p.codCurrency === 'KHR') sumKhr += cod;
+          else sumUsd += cod;
+        }
+        const pseudoPayment = {
+          id: 0,
+          reference: strId,
+          branchId: String(parcels[0].branchId || '1'),
+          status: 'pending',
+          statusKh: 'រង់ចាំទូទាត់',
+          amount: sumUsd,
+          amountKHR: sumKhr,
+          date: parcels[0].deliveredAt || parcels[0].createdAt || new Date(),
+          createdAt: parcels[0].deliveredAt || parcels[0].createdAt || new Date(),
+          note: `រង់ចាំទូទាត់ប្រាក់ COD ចំនួន ${parcels.length} កញ្ចប់`,
+          checkedBy: 'Finance Team',
+          paymentMethod: 'Pending',
+          parcelIds: parcels.map((p) => p.id),
+        };
+        return formatMerchantSettlement(pseudoPayment, parcels);
+      }
     }
 
-    return formatMerchantSettlement(payment, parcels);
+    if (strId.startsWith('SETTLE-PROBLEM-') || strId.startsWith('SETTLE-ISSUE-')) {
+      const rawDatePart = strId.replace(/SETTLE-(PROBLEM|ISSUE)-/, '').split('-')[0];
+      let dateQuery = '';
+      if (rawDatePart.length === 8) {
+        dateQuery = `${rawDatePart.slice(0, 4)}-${rawDatePart.slice(4, 6)}-${rawDatePart.slice(6, 8)}`;
+      }
+
+      const qb = this.parcelRepo
+        .createQueryBuilder('parcel')
+        .leftJoinAndSelect('parcel.customer', 'customer')
+        .leftJoinAndSelect('parcel.zone', 'zone')
+        .where('parcel.merchantId = :merchantId', { merchantId })
+        .andWhere("parcel.status IN ('failed', 'returned', 'cancelled')");
+
+      if (dateQuery) {
+        qb.andWhere('DATE(COALESCE(parcel.updatedAt, parcel.createdAt)) = :dateQuery', { dateQuery });
+      }
+
+      const parcels = await qb.getMany();
+      if (parcels.length > 0) {
+        let sumUsd = 0;
+        let sumKhr = 0;
+        for (const p of parcels) {
+          const cod = parseFloat(p.cod as any) || 0;
+          if (p.codCurrency === 'KHR') sumKhr += cod;
+          else sumUsd += cod;
+        }
+        const pseudoPayment = {
+          id: 0,
+          reference: strId,
+          branchId: String(parcels[0].branchId || '1'),
+          status: 'problem',
+          statusKh: 'មានបញ្ហា',
+          amount: sumUsd,
+          amountKHR: sumKhr,
+          date: parcels[0].updatedAt || parcels[0].createdAt || new Date(),
+          createdAt: parcels[0].updatedAt || parcels[0].createdAt || new Date(),
+          note: `កញ្ចប់ទំនិញមានបញ្ហា/បង្វិលត្រឡប់ ចំនួន ${parcels.length} កញ្ចប់`,
+          checkedBy: 'Operation Team',
+          paymentMethod: 'N/A',
+          parcelIds: parcels.map((p) => p.id),
+        };
+        return formatMerchantSettlement(pseudoPayment, parcels);
+      }
+    }
+
+    // 3. Fallback: Check if strId matches a parcel trackingCode or parcel id
+    const singleParcel = await this.parcelRepo.findOne({
+      where: [
+        { trackingCode: strId, merchantId },
+        ...(isNum && Number(strId) > 0 ? [{ id: Number(strId), merchantId }] : []),
+      ],
+      relations: { customer: true, zone: true },
+    });
+
+    if (singleParcel) {
+      const isPaid = singleParcel.merchantPaymentStatus === 'paid';
+      const isProb = ['failed', 'returned', 'cancelled'].includes(singleParcel.status);
+      const st = isPaid ? 'paid' : (isProb ? 'problem' : 'pending');
+      const cod = parseFloat(singleParcel.cod as any) || 0;
+      const pseudoPayment = {
+        id: singleParcel.id,
+        reference: singleParcel.trackingCode,
+        branchId: String(singleParcel.branchId || '1'),
+        status: st,
+        amount: singleParcel.codCurrency === 'KHR' ? 0 : cod,
+        amountKHR: singleParcel.codCurrency === 'KHR' ? cod : 0,
+        date: singleParcel.deliveredAt || singleParcel.updatedAt || singleParcel.createdAt || new Date(),
+        createdAt: singleParcel.createdAt || new Date(),
+        note: `ទូទាត់កញ្ចប់ #${singleParcel.trackingCode}`,
+        checkedBy: isPaid ? 'Finance Team' : 'Pending',
+        paymentMethod: isPaid ? 'Bank Transfer' : 'Pending',
+        parcelIds: [singleParcel.id],
+      };
+      return formatMerchantSettlement(pseudoPayment, [singleParcel]);
+    }
+
+    throw new NotFoundException(`Payment receipt #${id} not found`);
   }
 
   // ===================== PARCEL CHAT FOR MERCHANT =====================
@@ -1655,7 +1934,51 @@ export class MerchantService {
       relations: { zone: true },
       order: { isDefault: 'DESC', createdAt: 'DESC' },
     });
-    return branches;
+
+    if (!branches || branches.length === 0) {
+      const merchant = await this.merchantRepo.findOne({ where: { id: merchantId } });
+      if (merchant) {
+        return [
+          {
+            id: 1,
+            value: 1,
+            label: (merchant.nameKh || merchant.name || 'សាខាធំ (Main Branch)') + (merchant.phone ? ` (${merchant.phone})` : ''),
+            name: merchant.nameKh || merchant.name || 'សាខាធំ (Main Branch)',
+            code: 'MAIN',
+            contactName: merchant.name || 'Merchant',
+            phone: merchant.phone || '',
+            address: merchant.address || '',
+            isDefault: true,
+            latitude: merchant.latitude ? Number(merchant.latitude) : null,
+            longitude: merchant.longitude ? Number(merchant.longitude) : null,
+            note: 'Main Branch / Head Office',
+          },
+        ];
+      }
+    }
+
+    return branches.map((b) => ({
+      ...b,
+      value: b.id,
+      label: b.name + (b.phone ? ` (${b.phone})` : ''),
+    }));
+  }
+
+  async getBranchesForSelect(merchantId: number) {
+    const branches = await this.getBranches(merchantId);
+    return branches.map((b: any) => ({
+      id: b.id,
+      value: b.id,
+      label: b.label || (b.name + (b.phone ? ` (${b.phone})` : '')),
+      name: b.name || b.label || `Branch #${b.id}`,
+      code: b.code || '',
+      phone: b.phone || '',
+      address: b.address || '',
+      isDefault: Boolean(b.isDefault),
+      latitude: b.latitude ? Number(b.latitude) : null,
+      longitude: b.longitude ? Number(b.longitude) : null,
+      zoneId: b.zoneId || (b.zone?.id ?? null),
+    }));
   }
 
   async getBranchById(merchantId: number, branchId: number) {

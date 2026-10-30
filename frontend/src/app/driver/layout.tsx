@@ -23,14 +23,14 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
   const tabLabels = {
     en: {
       dashboard: "Home",
-      tasks: "Task",
-      payments: "Payment",
-      profile: "Profile",
+      tasks: "Parcels",
+      payments: "Settlement",
+      profile: "Account",
     },
     km: {
       dashboard: "ទំព័រដើម",
-      tasks: "កិច្ចការ",
-      payments: "ការទូទាត់",
+      tasks: "កញ្ចប់",
+      payments: "ទូទាត់ប្រាក់",
       profile: "គណនី",
     },
   };
@@ -145,13 +145,15 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
                 flex: 1,
               }}
             >
-              <MdHome size={24} />
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+              </svg>
               <span style={{ fontSize: "11px", fontWeight: isHomeActive ? "700" : "500" }}>
                 {labels.dashboard}
               </span>
             </Link>
 
-            {/* 2. Task */}
+            {/* 2. Task / Parcels */}
             <Link
               href="/driver/tasks"
               style={{
@@ -165,13 +167,15 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
                 flex: 1,
               }}
             >
-              <MdCardGiftcard size={23} />
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polygon points="12 2 22 12 12 22 2 12" />
+              </svg>
               <span style={{ fontSize: "11px", fontWeight: isTasksActive ? "700" : "500" }}>
                 {labels.tasks}
               </span>
             </Link>
 
-            {/* 3. Payment */}
+            {/* 3. Payment / Settlement */}
             <Link
               href="/driver/payments"
               style={{
@@ -185,13 +189,16 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
                 flex: 1,
               }}
             >
-              <MdAttachMoney size={24} />
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="3" />
+                <rect x="8.5" y="8.5" width="7" height="7" fill="currentColor" stroke="none" />
+              </svg>
               <span style={{ fontSize: "11px", fontWeight: isPaymentsActive ? "700" : "500" }}>
                 {labels.payments}
               </span>
             </Link>
 
-            {/* 4. Profile */}
+            {/* 4. Profile / Account */}
             <Link
               href="/driver/profile"
               style={{
@@ -205,7 +212,10 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
                 flex: 1,
               }}
             >
-              <MdPerson size={24} />
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="9" />
+                <circle cx="12" cy="12" r="3.5" />
+              </svg>
               <span style={{ fontSize: "11px", fontWeight: isProfileActive ? "700" : "500" }}>
                 {labels.profile}
               </span>

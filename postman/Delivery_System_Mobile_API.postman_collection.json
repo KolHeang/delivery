@@ -1,0 +1,986 @@
+{
+  "info": {
+    "_postman_id": "b3e94a82-3d84-47c0-8a19-9f447a126dc1",
+    "name": "Delivery System - Mobile API (Merchant & Driver)",
+    "description": "Complete Postman collection for Delivery SaaS Mobile API, including Authentication, Merchant endpoints (Deliveries realtime, Pickup requests realtime, Settlements, Dashboard, Parcels, Branches) and Driver endpoints (Tasks, Scans, Settlements, Daily invoices).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Authentication",
+      "item": [
+        {
+          "name": "Merchant Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res.data && res.data.access_token) {",
+                  "    pm.collectionVariables.set('merchant_token', res.data.access_token);",
+                  "    pm.collectionVariables.set('merchant_id', res.data.user ? res.data.user.id : 1);",
+                  "    console.log('Saved merchant_token to variables!');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"identifier\": \"012345678\",\n  \"password\": \"123456\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/mobile/auth/merchant/login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "mobile", "auth", "merchant", "login"]
+            },
+            "description": "Login as merchant with phone or email. Token will automatically be saved into {{merchant_token}} collection variable."
+          }
+        },
+        {
+          "name": "Driver Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res.data && res.data.access_token) {",
+                  "    pm.collectionVariables.set('driver_token', res.data.access_token);",
+                  "    pm.collectionVariables.set('driver_id', res.data.user ? res.data.user.id : 1);",
+                  "    console.log('Saved driver_token to variables!');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"identifier\": \"012345678\",\n  \"password\": \"123456\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/mobile/auth/driver/login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "mobile", "auth", "driver", "login"]
+            },
+            "description": "Login as driver with driver code (e.g. DRV001), phone, or email. Token will automatically be saved into {{driver_token}} variable."
+          }
+        },
+        {
+          "name": "Refresh Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh_token\": \"YOUR_REFRESH_TOKEN_HERE\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/mobile/auth/refresh",
+              "host": ["{{base_url}}"],
+              "path": ["api", "mobile", "auth", "refresh"]
+            }
+          }
+        },
+        {
+          "name": "Register FCM Device Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{merchant_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"fcm_device_token_from_mobile_app_12345\",\n  \"platform\": \"android\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/mobile/auth/device-token",
+              "host": ["{{base_url}}"],
+              "path": ["api", "mobile", "auth", "device-token"]
+            }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{merchant_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/mobile/auth/logout",
+              "host": ["{{base_url}}"],
+              "path": ["api", "mobile", "auth", "logout"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Mobile Merchant",
+      "item": [
+        {
+          "name": "Get Merchant Profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{merchant_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/mobile/merchant/profile",
+              "host": ["{{base_url}}"],
+              "path": ["api", "mobile", "merchant", "profile"]
+            }
+          }
+        },
+        {
+          "name": "Get Merchant Dashboard",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{merchant_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/mobile/merchant/dashboard?date=2026-10-28&branchId=1",
+              "host": ["{{base_url}}"],
+              "path": ["api", "mobile", "merchant", "dashboard"],
+              "query": [
+                {
+                  "key": "date",
+                  "value": "2026-10-28",
+                  "description": "Specific date (YYYY-MM-DD)"
+                },
+                {
+                  "key": "startDate",
+                  "value": "2026-10-01",
+                  "disabled": true
+                },
+                {
+                  "key": "endDate",
+                  "value": "2026-10-28",
+                  "disabled": true
+                },
+                {
+                  "key": "branchId",
+                  "value": "1",
+                  "description": "Filter by branch ID"
+                },
+                {
+                  "key": "merchantId",
+                  "value": "10",
+                  "disabled": true
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Deliveries Realtime (SSE Stream)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{merchant_token}}"
+              },
+              {
+                "key": "Accept",
+                "value": "text/event-stream"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/mobile/merchant/deliveries/realtime?date=2026-10-28&branchId=1",
+              "host": ["{{base_url}}"],
+              "path": ["api", "mobile", "merchant", "deliveries", "realtime"],
+              "query": [
+                {
+                  "key": "date",
+                  "value": "2026-10-28"
+                },
+                {
+                  "key": "branchId",
+                  "value": "1"
+                }
+              ]
+            },
+            "description": "Persistent Server-Sent Events (SSE) real-time stream delivering live completed delivery events for merchant."
+          }
+        },
+        {
+          "name": "Pickup Requests Realtime (SSE Stream)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{merchant_token}}"
+              },
+              {
+                "key": "Accept",
+                "value": "text/event-stream"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/mobile/merchant/pickup-requests/realtime?date=2026-10-28&branchId=1",
+              "host": ["{{base_url}}"],
+              "path": ["api", "mobile", "merchant", "pickup-requests", "realtime"],
+              "query": [
+                {
+                  "key": "date",
+                  "value": "2026-10-28"
+                },
+                {
+                  "key": "branchId",
+                  "value": "1"
+                }
+              ]
+            },
+            "description": "Persistent Server-Sent Events (SSE) real-time stream delivering live pickup request status updates for merchant."
+          }
+        },
+        {
+          "name": "Get Merchant Settlements (Filtered by Status/Date/Branch)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{merchant_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/mobile/merchant/settlements?status=all&page=1&limit=10&date=2026-10-28&branchId=1",
+              "host": ["{{base_url}}"],
+              "path": ["api", "mobile", "merchant", "settlements"],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "all",
+                  "description": "Filter: all | paid | pending | problem"
+                },
+                {
+                  "key": "date",
+                  "value": "2026-10-28",
+                  "description": "Filter by date (YYYY-MM-DD)"
+                },
+                {
+                  "key": "startDate",
+                  "value": "2026-10-01",
+                  "disabled": true
+                },
+                {
+                  "key": "endDate",
+                  "value": "2026-10-28",
+                  "disabled": true
+                },
+                {
+                  "key": "branchId",
+                  "value": "1",
+                  "description": "Filter by branch ID"
+                },
+                {
+                  "key": "merchantId",
+                  "value": "10",
+                  "disabled": true
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "Returns settlements matching status (all, paid, pending, problem), with breakdown of total COD USD, total KHR, and orders array."
+          }
+        },
+        {
+          "name": "Get Settlement Detail by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{merchant_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/mobile/merchant/settlements/SETTLE-SHOP-879002",
+              "host": ["{{base_url}}"],
+              "path": ["api", "mobile", "merchant", "settlements", "SETTLE-SHOP-879002"]
+            }
+          }
+        },
+        {
+          "name": "Get Branches For Select Dropdown",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{merchant_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/mobile/merchant/branches/select",
+              "host": ["{{base_url}}"],
+              "path": ["api", "mobile", "merchant", "branches", "select"]
+            },
+            "description": "Returns lightweight branch list [{ id, name, nameKh, address }] with Bearer token authentication."
+          }
+        },
+        {
+          "name": "Get Delivery Zones",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{merchant_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/mobile/merchant/zones",
+              "host": ["{{base_url}}"],
+              "path": ["api", "mobile", "merchant", "zones"]
+            }
+          }
+        },
+        {
+          "name": "Get Parcels List",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{merchant_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/mobile/merchant/parcels?status=in-transit&page=1&limit=20&search=08466595",
+              "host": ["{{base_url}}"],
+              "path": ["api", "mobile", "merchant", "parcels"],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "in-transit",
+                  "description": "pending | assigned | in-transit | delivered | failed | returned | cancelled"
+                },
+                {
+                  "key": "search",
+                  "value": "08466595",
+                  "description": "Tracking code, phone, or name"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "branchId",
+                  "value": "1",
+                  "disabled": true
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Parcel (Order)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{merchant_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"receiverName\": \"Srey Neang\",\n  \"receiverPhone\": \"012888999\",\n  \"receiverAddress\": \"Street 271, Sangkat Toul Tompoung, Phnom Penh\",\n  \"zoneId\": 1,\n  \"branchId\": 1,\n  \"cod\": 25.00,\n  \"codCurrency\": \"USD\",\n  \"deliveryFee\": 1.50,\n  \"itemDescription\": \"Cosmetics & Skin Care Products\",\n  \"notes\": \"Call customer before delivering\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/mobile/merchant/parcels",
+              "host": ["{{base_url}}"],
+              "path": ["api", "mobile", "merchant", "parcels"]
+            }
+          }
+        },
+        {
+          "name": "Track Parcel by Code",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{merchant_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/mobile/merchant/tracking/CO221020260075",
+              "host": ["{{base_url}}"],
+              "path": ["api", "mobile", "merchant", "tracking", "CO221020260075"]
+            }
+          }
+        },
+        {
+          "name": "Cancel Parcel",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{merchant_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Customer requested cancellation\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/mobile/merchant/parcels/1/cancel",
+              "host": ["{{base_url}}"],
+              "path": ["api", "mobile", "merchant", "parcels", "1", "cancel"]
+            }
+          }
+        },
+        {
+          "name": "Get Pickup Requests",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{merchant_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/mobile/merchant/pickup-requests?branchId=1",
+              "host": ["{{base_url}}"],
+              "path": ["api", "mobile", "merchant", "pickup-requests"],
+              "query": [
+                {
+                  "key": "branchId",
+                  "value": "1"
+                },
+                {
+                  "key": "status",
+                  "value": "pending",
+                  "disabled": true
+                },
+                {
+                  "key": "date",
+                  "value": "2026-10-28",
+                  "disabled": true
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Pickup Request",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{merchant_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"branchId\": 1,\n  \"pickupAddress\": \"House 12, Street 310, BKK1, Phnom Penh\",\n  \"contactPhone\": \"012345678\",\n  \"expectedParcels\": 5,\n  \"pickupDate\": \"2026-10-30\",\n  \"pickupTimeSlot\": \"14:00 - 16:00\",\n  \"notes\": \"Fragile items, please handle with care\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/mobile/merchant/pickup-requests",
+              "host": ["{{base_url}}"],
+              "path": ["api", "mobile", "merchant", "pickup-requests"]
+            }
+          }
+        },
+        {
+          "name": "Get Merchant Notifications",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{merchant_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/mobile/merchant/notifications?page=1&limit=20",
+              "host": ["{{base_url}}"],
+              "path": ["api", "mobile", "merchant", "notifications"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Notifications Unread Count",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{merchant_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/mobile/merchant/notifications/unread-count",
+              "host": ["{{base_url}}"],
+              "path": ["api", "mobile", "merchant", "notifications", "unread-count"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Mobile Driver",
+      "item": [
+        {
+          "name": "Get Driver Profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{driver_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/mobile/driver/profile",
+              "host": ["{{base_url}}"],
+              "path": ["api", "mobile", "driver", "profile"]
+            }
+          }
+        },
+        {
+          "name": "Get Driver Dashboard",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{driver_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/mobile/driver/dashboard?date=2026-10-28",
+              "host": ["{{base_url}}"],
+              "path": ["api", "mobile", "driver", "dashboard"],
+              "query": [
+                {
+                  "key": "date",
+                  "value": "2026-10-28"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Driver Tasks",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{driver_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/mobile/driver/tasks?status=in-transit&page=1&limit=20",
+              "host": ["{{base_url}}"],
+              "path": ["api", "mobile", "driver", "tasks"],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "in-transit",
+                  "description": "assigned | in-transit | delivered | failed | returned"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Task Status Counts",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{driver_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/mobile/driver/tasks/status-counts",
+              "host": ["{{base_url}}"],
+              "path": ["api", "mobile", "driver", "tasks", "status-counts"]
+            }
+          }
+        },
+        {
+          "name": "Update Task Delivery Status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{driver_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"delivered\",\n  \"reason\": \"Delivered directly to recipient\",\n  \"latitude\": 11.5564,\n  \"longitude\": 104.9282,\n  \"signature\": \"base64_or_image_url_here\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/mobile/driver/tasks/1/status",
+              "host": ["{{base_url}}"],
+              "path": ["api", "mobile", "driver", "tasks", "1", "status"]
+            }
+          }
+        },
+        {
+          "name": "Scan QR/Barcode",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{driver_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"CO221020260075\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/mobile/driver/scan",
+              "host": ["{{base_url}}"],
+              "path": ["api", "mobile", "driver", "scan"]
+            }
+          }
+        },
+        {
+          "name": "Scan Claim Parcel",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{driver_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"CO221020260075\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/mobile/driver/scan/claim",
+              "host": ["{{base_url}}"],
+              "path": ["api", "mobile", "driver", "scan", "claim"]
+            }
+          }
+        },
+        {
+          "name": "Get Driver Earnings & Settlements",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{driver_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/mobile/driver/settlements?status=all&page=1&limit=20&date=2026-10-28",
+              "host": ["{{base_url}}"],
+              "path": ["api", "mobile", "driver", "settlements"],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "all",
+                  "description": "all | paid | pending | problem"
+                },
+                {
+                  "key": "date",
+                  "value": "2026-10-28"
+                },
+                {
+                  "key": "startDate",
+                  "value": "2026-10-01",
+                  "disabled": true
+                },
+                {
+                  "key": "endDate",
+                  "value": "2026-10-28",
+                  "disabled": true
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Driver Daily Invoice Summary",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{driver_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/mobile/driver/invoices/daily?date=2026-10-28",
+              "host": ["{{base_url}}"],
+              "path": ["api", "mobile", "driver", "invoices", "daily"],
+              "query": [
+                {
+                  "key": "date",
+                  "value": "2026-10-28"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Driver Assigned Pickup Requests",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{driver_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/mobile/driver/pickup-requests?status=assigned",
+              "host": ["{{base_url}}"],
+              "path": ["api", "mobile", "driver", "pickup-requests"],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "assigned"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Confirm Driver Picked Up Parcels",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{driver_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"actualParcels\": 5,\n  \"notes\": \"All 5 parcels received successfully\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/mobile/driver/pickup-requests/1/pickup",
+              "host": ["{{base_url}}"],
+              "path": ["api", "mobile", "driver", "pickup-requests", "1", "pickup"]
+            }
+          }
+        },
+        {
+          "name": "Get Failed Reasons List",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{driver_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/mobile/driver/reasons",
+              "host": ["{{base_url}}"],
+              "path": ["api", "mobile", "driver", "reasons"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Select Dropdowns (Public/Protected)",
+      "item": [
+        {
+          "name": "Get Branches Select",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/select/branches",
+              "host": ["{{base_url}}"],
+              "path": ["api", "select", "branches"]
+            }
+          }
+        },
+        {
+          "name": "Get Merchants Select",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/select/merchants?branchId=1",
+              "host": ["{{base_url}}"],
+              "path": ["api", "select", "merchants"],
+              "query": [
+                {
+                  "key": "branchId",
+                  "value": "1"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Drivers Select",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/select/drivers?branchId=1",
+              "host": ["{{base_url}}"],
+              "path": ["api", "select", "drivers"],
+              "query": [
+                {
+                  "key": "branchId",
+                  "value": "1"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3001",
+      "type": "string"
+    },
+    {
+      "key": "merchant_token",
+      "value": "PASTE_OR_LOGIN_TO_AUTO_SET",
+      "type": "string"
+    },
+    {
+      "key": "driver_token",
+      "value": "PASTE_OR_LOGIN_TO_AUTO_SET",
+      "type": "string"
+    },
+    {
+      "key": "merchant_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "driver_id",
+      "value": "1",
+      "type": "string"
+    }
+  ]
+}
+

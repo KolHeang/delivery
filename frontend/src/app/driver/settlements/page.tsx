@@ -407,26 +407,24 @@ export default function DriverSettlementHistoryPage() {
                 {item.subtitle || `${item.reference || "ST" + item.id} • ${item.orderCount || 1} Orders`}
               </div>
 
-              {/* Row 3: Dual Currency Amounts */}
-              <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-                <div
-                  style={{
-                    fontSize: "16px",
-                    fontWeight: "800",
-                    color: "#0f172a",
-                    letterSpacing: "-0.2px",
-                  }}
-                >
-                  {item.usdText || `USD ${Number(item.usdAmount || 0).toFixed(2)}`}
+              {/* Row 3: Driver Fee Payout & COD Remittance */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "4px", backgroundColor: "#f8fafc", padding: "8px 12px", borderRadius: "10px", marginTop: "2px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+                  <span style={{ fontSize: "12px", color: "#64748b", fontWeight: "600" }}>
+                    កម្រៃជើងសារ (Driver Fee):
+                  </span>
+                  <span style={{ fontSize: "15px", fontWeight: "800", color: "#16a34a" }}>
+                    {item.driverFeeText || (item.currency === "KHR" ? `${Number(item.amount || 0).toLocaleString()} ៛` : `$${Number(item.amount || 0).toFixed(2)}`)}
+                  </span>
                 </div>
-                <div
-                  style={{
-                    fontSize: "14.5px",
-                    fontWeight: "600",
-                    color: "#334155",
-                  }}
-                >
-                  {item.khrText || `KHR ${Number(item.khrAmount || 0).toLocaleString()}`}
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+                  <span style={{ fontSize: "12px", color: "#64748b", fontWeight: "600" }}>
+                    ប្រាក់ COD ប្រមូលបាន:
+                  </span>
+                  <span style={{ fontSize: "13.5px", fontWeight: "700", color: "#0f172a" }}>
+                    {item.usdText || `USD ${Number(item.usdAmount || 0).toFixed(2)}`}
+                    {Number(item.khrAmount || 0) > 0 && <span style={{ color: "#475569", marginLeft: "4px" }}>/ {item.khrText}</span>}
+                  </span>
                 </div>
               </div>
             </div>

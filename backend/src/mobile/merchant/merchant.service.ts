@@ -74,14 +74,38 @@ function parseDateFilter(
   let endIso: string | undefined;
 
   if (s) {
-    const d = new Date(s.includes('T') ? s : `${s}T00:00:00.000Z`);
+    const trimmed = String(s).trim();
+    let d: Date;
+    if (trimmed.includes('T')) {
+      d = new Date(trimmed);
+    } else {
+      const match = trimmed.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$/);
+      if (match) {
+        d = new Date(parseInt(match[1], 10), parseInt(match[2], 10) - 1, parseInt(match[3], 10), 0, 0, 0, 0);
+      } else {
+        d = new Date(trimmed);
+        d.setHours(0, 0, 0, 0);
+      }
+    }
     if (!isNaN(d.getTime())) {
       startIso = d.toISOString();
     }
   }
 
   if (e) {
-    const d = new Date(e.includes('T') ? e : `${e}T23:59:59.999Z`);
+    const trimmed = String(e).trim();
+    let d: Date;
+    if (trimmed.includes('T')) {
+      d = new Date(trimmed);
+    } else {
+      const match = trimmed.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$/);
+      if (match) {
+        d = new Date(parseInt(match[1], 10), parseInt(match[2], 10) - 1, parseInt(match[3], 10), 23, 59, 59, 999);
+      } else {
+        d = new Date(trimmed);
+        d.setHours(23, 59, 59, 999);
+      }
+    }
     if (!isNaN(d.getTime())) {
       endIso = d.toISOString();
     }
@@ -864,7 +888,7 @@ export class MerchantService {
     if (branchId) {
       totalParcelQb = totalParcelQb.andWhere('parcel.branchId = :branchId', { branchId });
     }
-    applyDateRangeToQb(totalParcelQb, 'parcel.createdAt', dateFilter, 'tp');
+    applyDateRangeToQb(totalParcelQb, 'COALESCE(parcel.deliveredAt, parcel.updatedAt, parcel.createdAt)', dateFilter, 'tp');
     const totalParcel = await totalParcelQb.getCount();
 
     // 2. Status counts
@@ -876,7 +900,7 @@ export class MerchantService {
     if (branchId) {
       statusCountsQb = statusCountsQb.andWhere('parcel.branchId = :branchId', { branchId });
     }
-    applyDateRangeToQb(statusCountsQb, 'parcel.createdAt', dateFilter, 'sc');
+    applyDateRangeToQb(statusCountsQb, 'COALESCE(parcel.deliveredAt, parcel.updatedAt, parcel.createdAt)', dateFilter, 'sc');
     const statusCounts = await statusCountsQb.groupBy('parcel.status').getRawMany();
 
     // 3. Pickup request counts
@@ -906,25 +930,37 @@ export class MerchantService {
       {} as Record<string, number>,
     );
 
+    const rate = parseFloat((merchant.exchangeRate as any) || 4100);
+
     // 4. Settled/paid COD (delivered parcels already paid to merchant)
-    let paidCodQb = this.parcelRepo
+    let paidDeliveredQb = this.parcelRepo
       .createQueryBuilder('parcel')
       .select('SUM(parcel.cod)', 'total')
-      .addSelect('parcel.codCurrency', 'currency')
+      .addSelect("UPPER(COALESCE(parcel.codCurrency, 'USD'))", 'currency')
+      .addSelect('SUM(parcel.deliveryFee)', 'fee')
       .where('parcel.merchantId = :merchantId', { merchantId: targetMerchantId })
       .andWhere('parcel.status = :status', { status: 'delivered' })
       .andWhere('parcel.merchantPaymentStatus = :paid', { paid: 'paid' });
     if (branchId) {
-      paidCodQb = paidCodQb.andWhere('parcel.branchId = :branchId', { branchId });
+      paidDeliveredQb = paidDeliveredQb.andWhere('parcel.branchId = :branchId', { branchId });
     }
-    applyDateRangeToQb(paidCodQb, 'parcel.createdAt', dateFilter, 'pc');
-    const paidCOD = await paidCodQb.groupBy('parcel.codCurrency').getRawMany();
+    applyDateRangeToQb(paidDeliveredQb, 'COALESCE(parcel.deliveredAt, parcel.updatedAt, parcel.createdAt)', dateFilter, 'pc');
+    const paidCOD = await paidDeliveredQb.groupBy("UPPER(COALESCE(parcel.codCurrency, 'USD'))").getRawMany();
 
-    // 5. Unpaid delivered COD (ready for payout)
+    // Also check total paid settlements recorded in merchantPaymentRepo if available
+    let paymentHistoryQb = this.merchantPaymentRepo
+      .createQueryBuilder('payment')
+      .select('SUM(payment.amount)', 'totalUsd')
+      .addSelect('SUM(payment.amountKHR)', 'totalKhr')
+      .where('payment.merchantId = :merchantId', { merchantId: targetMerchantId });
+    applyDateRangeToQb(paymentHistoryQb, 'COALESCE(payment.date, payment.createdAt)', dateFilter, 'ph');
+    const paymentHistory = await paymentHistoryQb.getRawOne();
+
+    // 5. Unpaid delivered COD & fees (ready for payout, matching web /payment/merchant)
     let unpaidCodQb = this.parcelRepo
       .createQueryBuilder('parcel')
       .select('SUM(parcel.cod)', 'total')
-      .addSelect('parcel.codCurrency', 'currency')
+      .addSelect("UPPER(COALESCE(parcel.codCurrency, 'USD'))", 'currency')
       .where('parcel.merchantId = :merchantId', { merchantId: targetMerchantId })
       .andWhere('parcel.status = :status', { status: 'delivered' })
       .andWhere('(parcel.merchantPaymentStatus = :unpaid OR parcel.merchantPaymentStatus IS NULL)', {
@@ -933,14 +969,29 @@ export class MerchantService {
     if (branchId) {
       unpaidCodQb = unpaidCodQb.andWhere('parcel.branchId = :branchId', { branchId });
     }
-    applyDateRangeToQb(unpaidCodQb, 'parcel.createdAt', dateFilter, 'uc');
-    const unpaidDeliveredCOD = await unpaidCodQb.groupBy('parcel.codCurrency').getRawMany();
+    applyDateRangeToQb(unpaidCodQb, 'COALESCE(parcel.deliveredAt, parcel.updatedAt, parcel.createdAt)', dateFilter, 'uc');
+    const unpaidDeliveredCOD = await unpaidCodQb.groupBy("UPPER(COALESCE(parcel.codCurrency, 'USD'))").getRawMany();
 
-    // 6. In-transit COD (not yet delivered)
+    let unpaidFeeQb = this.parcelRepo
+      .createQueryBuilder('parcel')
+      .select('SUM(parcel.deliveryFee)', 'totalFee')
+      .where('parcel.merchantId = :merchantId', { merchantId: targetMerchantId })
+      .andWhere('parcel.status = :status', { status: 'delivered' })
+      .andWhere('(parcel.merchantPaymentStatus = :unpaid OR parcel.merchantPaymentStatus IS NULL)', {
+        unpaid: 'unpaid',
+      });
+    if (branchId) {
+      unpaidFeeQb = unpaidFeeQb.andWhere('parcel.branchId = :branchId', { branchId });
+    }
+    applyDateRangeToQb(unpaidFeeQb, 'COALESCE(parcel.deliveredAt, parcel.updatedAt, parcel.createdAt)', dateFilter, 'ucf');
+    const unpaidFeeRes = await unpaidFeeQb.getRawOne();
+    const unpaidDeliveryFee = parseFloat(unpaidFeeRes?.totalFee || '0') || 0;
+
+    // 6. In-transit COD (active orders not yet delivered)
     let inTransitCodQb = this.parcelRepo
       .createQueryBuilder('parcel')
       .select('SUM(parcel.cod)', 'total')
-      .addSelect('parcel.codCurrency', 'currency')
+      .addSelect("UPPER(COALESCE(parcel.codCurrency, 'USD'))", 'currency')
       .where('parcel.merchantId = :merchantId', { merchantId: targetMerchantId })
       .andWhere('parcel.status NOT IN (:...statuses)', {
         statuses: ['delivered', 'cancelled', 'returned'],
@@ -949,22 +1000,34 @@ export class MerchantService {
       inTransitCodQb = inTransitCodQb.andWhere('parcel.branchId = :branchId', { branchId });
     }
     applyDateRangeToQb(inTransitCodQb, 'parcel.createdAt', dateFilter, 'tc');
-    const inTransitCOD = await inTransitCodQb.groupBy('parcel.codCurrency').getRawMany();
+    const inTransitCOD = await inTransitCodQb.groupBy("UPPER(COALESCE(parcel.codCurrency, 'USD'))").getRawMany();
 
-    const amountCollectedUsd = parseFloat(paidCOD.find((c) => c.currency === 'USD')?.total || '0') || 0;
-    const amountCollectedKhr = parseFloat(paidCOD.find((c) => c.currency === 'KHR')?.total || '0') || 0;
+    // Paid amount calculation
+    const historyPaidUsd = parseFloat(paymentHistory?.totalUsd || '0') || 0;
+    const historyPaidKhr = parseFloat(paymentHistory?.totalKhr || '0') || 0;
+    const paidCodUsd = parseFloat(paidCOD.find((c) => (c.currency || '').toUpperCase() === 'USD')?.total || '0') || 0;
+    const paidCodKhr = parseFloat(paidCOD.find((c) => (c.currency || '').toUpperCase() === 'KHR')?.total || '0') || 0;
+    const totalPaidFeeUsd = paidCOD.reduce((sum, c) => sum + (parseFloat(c.fee || '0') || 0), 0);
+    const netPaidUsd = Math.max(0, paidCodUsd - totalPaidFeeUsd);
+    const remPaidFeeUsd = Math.max(0, totalPaidFeeUsd - paidCodUsd);
+    const netPaidKhr = Math.max(0, paidCodKhr - (remPaidFeeUsd * rate));
 
-    const unpaidUsd = parseFloat(unpaidDeliveredCOD.find((c) => c.currency === 'USD')?.total || '0') || 0;
-    const unpaidKhr = parseFloat(unpaidDeliveredCOD.find((c) => c.currency === 'KHR')?.total || '0') || 0;
+    const amountCollectedUsd = (!branchId && historyPaidUsd > 0) ? historyPaidUsd : netPaidUsd;
+    const amountCollectedKhr = (!branchId && historyPaidKhr > 0) ? historyPaidKhr : netPaidKhr;
 
-    const inTransitUsd = parseFloat(inTransitCOD.find((c) => c.currency === 'USD')?.total || '0') || 0;
-    const inTransitKhr = parseFloat(inTransitCOD.find((c) => c.currency === 'KHR')?.total || '0') || 0;
+    // Unpaid delivered COD & Net Payable calculation (matches web /payment/merchant)
+    const rawUnpaidUsd = parseFloat(unpaidDeliveredCOD.find((c) => (c.currency || '').toUpperCase() === 'USD')?.total || '0') || 0;
+    const rawUnpaidKhr = parseFloat(unpaidDeliveredCOD.find((c) => (c.currency || '').toUpperCase() === 'KHR')?.total || '0') || 0;
 
-    const pendingAmountUsd = unpaidUsd + inTransitUsd;
-    const pendingAmountKhr = unpaidKhr + inTransitKhr;
+    const amountToReceiveUsd = Math.max(0, rawUnpaidUsd - unpaidDeliveryFee);
+    const remainingDeliveryFeeUsd = Math.max(0, unpaidDeliveryFee - rawUnpaidUsd);
+    const amountToReceiveKhr = Math.max(0, rawUnpaidKhr - (remainingDeliveryFeeUsd * rate));
 
-    const amountToReceiveUsd = pendingAmountUsd;
-    const amountToReceiveKhr = pendingAmountKhr;
+    // Pending In-transit Amount
+    const inTransitUsd = parseFloat(inTransitCOD.find((c) => (c.currency || '').toUpperCase() === 'USD')?.total || '0') || 0;
+    const inTransitKhr = parseFloat(inTransitCOD.find((c) => (c.currency || '').toUpperCase() === 'KHR')?.total || '0') || 0;
+    const pendingAmountUsd = inTransitUsd;
+    const pendingAmountKhr = inTransitKhr;
 
     // 7. Recent delivered parcels
     let recentParcelsQb = this.parcelRepo
@@ -976,7 +1039,7 @@ export class MerchantService {
     if (branchId) {
       recentParcelsQb = recentParcelsQb.andWhere('parcel.branchId = :branchId', { branchId });
     }
-    applyDateRangeToQb(recentParcelsQb, 'parcel.createdAt', dateFilter, 'rp');
+    applyDateRangeToQb(recentParcelsQb, 'COALESCE(parcel.deliveredAt, parcel.updatedAt, parcel.createdAt)', dateFilter, 'rp');
     const recentDeliveredParcels = await recentParcelsQb
       .orderBy('parcel.updatedAt', 'DESC')
       .addOrderBy('parcel.createdAt', 'DESC')
@@ -1460,6 +1523,9 @@ export class MerchantService {
 
     // 2. Fetch PENDING (unpaid delivered) settlements
     if (isPendingRequested) {
+      const merchant = await this.merchantRepo.findOne({ where: { id: targetMerchantId } });
+      const rate = parseFloat((merchant?.exchangeRate as any) || 4100);
+
       const pendingQb = this.parcelRepo
         .createQueryBuilder('parcel')
         .leftJoinAndSelect('parcel.customer', 'customer')
@@ -1471,7 +1537,7 @@ export class MerchantService {
       if (branchId) {
         pendingQb.andWhere('parcel.branchId = :bId', { bId: branchId });
       }
-      applyDateRangeToQb(pendingQb, 'parcel.createdAt', dateFilter, 'stl_p');
+      applyDateRangeToQb(pendingQb, 'COALESCE(parcel.deliveredAt, parcel.updatedAt, parcel.createdAt)', dateFilter, 'stl_p');
       pendingQb.orderBy('parcel.createdAt', 'DESC').addOrderBy('parcel.id', 'DESC');
 
       const pendingParcels = await pendingQb.getMany();
@@ -1495,14 +1561,20 @@ export class MerchantService {
 
         let sumUsd = 0;
         let sumKhr = 0;
+        let sumDeliveryFee = 0;
         for (const p of group.parcels) {
           const cod = parseFloat(p.cod as any) || 0;
-          if (p.codCurrency === 'KHR') {
+          if ((p.codCurrency || 'USD').toUpperCase() === 'KHR') {
             sumKhr += cod;
           } else {
             sumUsd += cod;
           }
+          sumDeliveryFee += parseFloat(p.deliveryFee as any || 0);
         }
+
+        const payableUsd = Math.max(0, sumUsd - sumDeliveryFee);
+        const remFee = Math.max(0, sumDeliveryFee - sumUsd);
+        const payableKhr = Math.max(0, sumKhr - (remFee * rate));
 
         const pseudoPayment = {
           id: 0,
@@ -1510,11 +1582,14 @@ export class MerchantService {
           branchId: String(group.branchId),
           status: 'pending',
           statusKh: 'រង់ចាំទូទាត់',
-          amount: sumUsd,
-          amountKHR: sumKhr,
+          amount: Math.round(payableUsd * 100) / 100,
+          amountKHR: Math.round(payableKhr),
+          deliveryFee: Math.round(sumDeliveryFee * 100) / 100,
+          codUSD: Math.round(sumUsd * 100) / 100,
+          codKHR: Math.round(sumKhr),
           date: group.date,
           createdAt: group.date,
-          note: `រង់ចាំទូទាត់ប្រាក់ COD ចំនួន ${group.parcels.length} កញ្ចប់`,
+          note: `រង់ចាំទូទាត់ប្រាក់ COD ចំនួន ${group.parcels.length} កញ្ចប់ (ថ្លៃដឹក: $${sumDeliveryFee.toFixed(2)})`,
           checkedBy: 'Finance Team',
           paymentMethod: 'Pending',
           parcelIds: group.parcels.map((p) => p.id),
@@ -1565,7 +1640,7 @@ export class MerchantService {
         let sumKhr = 0;
         for (const p of group.parcels) {
           const cod = parseFloat(p.cod as any) || 0;
-          if (p.codCurrency === 'KHR') {
+          if ((p.codCurrency || 'USD').toUpperCase() === 'KHR') {
             sumKhr += cod;
           } else {
             sumUsd += cod;
@@ -1578,8 +1653,11 @@ export class MerchantService {
           branchId: String(group.branchId),
           status: 'problem',
           statusKh: 'មានបញ្ហា',
-          amount: sumUsd,
-          amountKHR: sumKhr,
+          amount: Math.round(sumUsd * 100) / 100,
+          amountKHR: Math.round(sumKhr),
+          deliveryFee: 0,
+          codUSD: Math.round(sumUsd * 100) / 100,
+          codKHR: Math.round(sumKhr),
           date: group.date,
           createdAt: group.date,
           note: `កញ្ចប់ទំនិញមានបញ្ហា/បង្វិលត្រឡប់ ចំនួន ${group.parcels.length} កញ្ចប់`,
@@ -1642,7 +1720,9 @@ export class MerchantService {
 
     // 2. Check if ID starts with SETTLE-PENDING- or SETTLE-PROBLEM- / SETTLE-ISSUE-
     if (strId.startsWith('SETTLE-PENDING-')) {
-      const rawDatePart = strId.replace('SETTLE-PENDING-', '').split('-')[0];
+      const parts = strId.replace('SETTLE-PENDING-', '').split('-');
+      const rawDatePart = parts[0];
+      const branchPart = parts[1] ? Number(parts[1]) : undefined;
       let dateQuery = '';
       if (rawDatePart.length === 8) {
         dateQuery = `${rawDatePart.slice(0, 4)}-${rawDatePart.slice(4, 6)}-${rawDatePart.slice(6, 8)}`;
@@ -1656,30 +1736,50 @@ export class MerchantService {
         .andWhere("parcel.status = 'delivered'")
         .andWhere('(parcel.merchantPaymentStatus = :pStatus OR parcel.merchantPaymentStatus IS NULL)', { pStatus: 'unpaid' });
 
+      if (branchPart) {
+        qb.andWhere('parcel.branchId = :branchPart', { branchPart });
+      }
+
       if (dateQuery) {
         qb.andWhere('DATE(COALESCE(parcel.deliveredAt, parcel.createdAt)) = :dateQuery', { dateQuery });
       }
 
       const parcels = await qb.getMany();
       if (parcels.length > 0) {
+        const merchant = await this.merchantRepo.findOne({ where: { id: merchantId } });
+        const rate = parseFloat((merchant?.exchangeRate as any) || 4100);
+
         let sumUsd = 0;
         let sumKhr = 0;
+        let sumDeliveryFee = 0;
         for (const p of parcels) {
           const cod = parseFloat(p.cod as any) || 0;
-          if (p.codCurrency === 'KHR') sumKhr += cod;
-          else sumUsd += cod;
+          if ((p.codCurrency || 'USD').toUpperCase() === 'KHR') {
+            sumKhr += cod;
+          } else {
+            sumUsd += cod;
+          }
+          sumDeliveryFee += parseFloat((p.deliveryFee as any) || 0);
         }
+
+        const payableUsd = Math.max(0, sumUsd - sumDeliveryFee);
+        const remFee = Math.max(0, sumDeliveryFee - sumUsd);
+        const payableKhr = Math.max(0, sumKhr - (remFee * rate));
+
         const pseudoPayment = {
           id: 0,
           reference: strId,
-          branchId: String(parcels[0].branchId || '1'),
+          branchId: String(branchPart || parcels[0].branchId || '1'),
           status: 'pending',
           statusKh: 'រង់ចាំទូទាត់',
-          amount: sumUsd,
-          amountKHR: sumKhr,
+          amount: Math.round(payableUsd * 100) / 100,
+          amountKHR: Math.round(payableKhr),
+          deliveryFee: Math.round(sumDeliveryFee * 100) / 100,
+          codUSD: Math.round(sumUsd * 100) / 100,
+          codKHR: Math.round(sumKhr),
           date: parcels[0].deliveredAt || parcels[0].createdAt || new Date(),
           createdAt: parcels[0].deliveredAt || parcels[0].createdAt || new Date(),
-          note: `រង់ចាំទូទាត់ប្រាក់ COD ចំនួន ${parcels.length} កញ្ចប់`,
+          note: `រង់ចាំទូទាត់ប្រាក់ COD ចំនួន ${parcels.length} កញ្ចប់ (ថ្លៃដឹក: $${sumDeliveryFee.toFixed(2)})`,
           checkedBy: 'Finance Team',
           paymentMethod: 'Pending',
           parcelIds: parcels.map((p) => p.id),
@@ -1689,7 +1789,9 @@ export class MerchantService {
     }
 
     if (strId.startsWith('SETTLE-PROBLEM-') || strId.startsWith('SETTLE-ISSUE-')) {
-      const rawDatePart = strId.replace(/SETTLE-(PROBLEM|ISSUE)-/, '').split('-')[0];
+      const parts = strId.replace(/SETTLE-(PROBLEM|ISSUE)-/, '').split('-');
+      const rawDatePart = parts[0];
+      const branchPart = parts[1] ? Number(parts[1]) : undefined;
       let dateQuery = '';
       if (rawDatePart.length === 8) {
         dateQuery = `${rawDatePart.slice(0, 4)}-${rawDatePart.slice(4, 6)}-${rawDatePart.slice(6, 8)}`;
@@ -1702,6 +1804,10 @@ export class MerchantService {
         .where('parcel.merchantId = :merchantId', { merchantId })
         .andWhere("parcel.status IN ('failed', 'returned', 'cancelled')");
 
+      if (branchPart) {
+        qb.andWhere('parcel.branchId = :branchPart', { branchPart });
+      }
+
       if (dateQuery) {
         qb.andWhere('DATE(COALESCE(parcel.updatedAt, parcel.createdAt)) = :dateQuery', { dateQuery });
       }
@@ -1712,17 +1818,23 @@ export class MerchantService {
         let sumKhr = 0;
         for (const p of parcels) {
           const cod = parseFloat(p.cod as any) || 0;
-          if (p.codCurrency === 'KHR') sumKhr += cod;
-          else sumUsd += cod;
+          if ((p.codCurrency || 'USD').toUpperCase() === 'KHR') {
+            sumKhr += cod;
+          } else {
+            sumUsd += cod;
+          }
         }
         const pseudoPayment = {
           id: 0,
           reference: strId,
-          branchId: String(parcels[0].branchId || '1'),
+          branchId: String(branchPart || parcels[0].branchId || '1'),
           status: 'problem',
           statusKh: 'មានបញ្ហា',
-          amount: sumUsd,
-          amountKHR: sumKhr,
+          amount: Math.round(sumUsd * 100) / 100,
+          amountKHR: Math.round(sumKhr),
+          deliveryFee: 0,
+          codUSD: Math.round(sumUsd * 100) / 100,
+          codKHR: Math.round(sumKhr),
           date: parcels[0].updatedAt || parcels[0].createdAt || new Date(),
           createdAt: parcels[0].updatedAt || parcels[0].createdAt || new Date(),
           note: `កញ្ចប់ទំនិញមានបញ្ហា/បង្វិលត្រឡប់ ចំនួន ${parcels.length} កញ្ចប់`,

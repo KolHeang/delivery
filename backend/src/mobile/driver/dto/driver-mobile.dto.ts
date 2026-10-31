@@ -222,6 +222,16 @@ export class DriverSettlementFilterDto {
   @IsString()
   status?: string;
 
+  @ApiProperty({ example: 'today', required: false, enum: ['today', 'yesterday', 'week', 'month', 'year', 'all', 'custom'], description: 'Preset period filter' })
+  @IsOptional()
+  @IsString()
+  period?: string;
+
+  @ApiProperty({ example: '2026-10-15', required: false, description: 'Single date filter (YYYY-MM-DD)' })
+  @IsOptional()
+  @IsString()
+  date?: string;
+
   @ApiProperty({ example: '2026-10-01', required: false, description: 'Start date filter (YYYY-MM-DD)' })
   @IsOptional()
   @IsString()
@@ -241,6 +251,11 @@ export class DriverSettlementFilterDto {
   @IsOptional()
   @IsString()
   month?: string;
+
+  @ApiProperty({ example: 'all', required: false, enum: ['all', 'USD', 'KHR'], description: 'Currency filter: all, USD, KHR' })
+  @IsOptional()
+  @IsString()
+  currency?: string;
 
   @ApiProperty({ example: 'ST8002', required: false, description: 'Search by reference or note' })
   @IsOptional()

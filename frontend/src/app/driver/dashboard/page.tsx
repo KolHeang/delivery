@@ -83,8 +83,10 @@ export default function DriverDashboardPage() {
   const amountToCollectUSD = Number(data?.amountToCollect?.usd ?? data?.amountToCollectUSD ?? (typeof data?.amountToCollect === 'number' ? data?.amountToCollect : 0)) || 0.0;
   const amountToCollectKHR = Number(data?.amountToCollect?.khr ?? data?.amountToCollectKHR) || 0;
 
-  const amountCollectedUSD = Number(data?.amountCollected?.usd ?? data?.amountCollectedUSD ?? data?.wallets?.find((w: any) => w.currency === "USD")?.balance) || 0.0;
-  const amountCollectedKHR = Number(data?.amountCollected?.khr ?? data?.amountCollectedKHR ?? data?.wallets?.find((w: any) => w.currency === "KHR")?.balance) || 0;
+  const amountCollectedUSD = Number(data?.amountCollected?.usd ?? data?.amountCollectedUSD) || 0.0;
+  const amountCollectedKHR = Number(data?.amountCollected?.khr ?? data?.amountCollectedKHR) || 0;
+  const codToRemitUSD = Number(data?.codToRemit?.usd ?? data?.codPendingUSD ?? data?.wallets?.find((w: any) => w.currency === "USD")?.balance) || 0.0;
+  const codToRemitKHR = Number(data?.codToRemit?.khr ?? data?.codPendingKHR ?? data?.wallets?.find((w: any) => w.currency === "KHR")?.balance) || 0;
 
   const displayName = driver?.name || driver?.nameKh || "Rider";
 
@@ -334,6 +336,11 @@ export default function DriverDashboardPage() {
                   {amountCollectedKHR > 0 && <span style={{ fontSize: "11px", color: "#166534", fontWeight: "700" }}>/ {amountCollectedKHR.toLocaleString()} ៛</span>}
                 </div>
                 <div style={{ fontSize: "10.5px", fontWeight: "700", color: "#64748b" }}>{lang === "km" ? "ប្រមូលបាន" : "Amount Collected"}</div>
+                {(codToRemitUSD > 0 || codToRemitKHR > 0) && (
+                  <div style={{ fontSize: "10px", color: "#d97706", fontWeight: "700", marginTop: "2px" }}>
+                    {lang === "km" ? `នៅជំពាក់: $${codToRemitUSD.toFixed(2)}${codToRemitKHR > 0 ? ` / ${codToRemitKHR.toLocaleString()} ៛` : ""}` : `To Remit: $${codToRemitUSD.toFixed(2)}`}
+                  </div>
+                )}
               </div>
             </div>
           </div>

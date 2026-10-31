@@ -45,13 +45,31 @@ export default function MerchantSettlementPage() {
   const [dashboardData, setDashboardData] = useState<any>(null);
   const [settlements, setSettlements] = useState<any[]>([]);
 
-  const loadData = async () => {
+  const loadData = async (filterKey = dateFilter) => {
     setLoading(true);
+    let startDate = "";
+    let endDate = "";
+    const now = new Date();
+    if (filterKey === "month") {
+      const start = new Date(now.getFullYear(), now.getMonth(), 1);
+      startDate = start.toISOString().split("T")[0];
+      endDate = now.toISOString().split("T")[0];
+    } else if (filterKey === "week") {
+      const start = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      startDate = start.toISOString().split("T")[0];
+      endDate = now.toISOString().split("T")[0];
+    }
+
+    const queryParams = new URLSearchParams();
+    if (startDate) queryParams.append("startDate", startDate);
+    if (endDate) queryParams.append("endDate", endDate);
+    const queryString = queryParams.toString() ? `?${queryParams.toString()}` : "";
+
     try {
       const [profRes, settRes, dashRes] = await Promise.all([
         api.get("/mobile/merchant/profile").catch(() => null),
-        api.get("/mobile/merchant/settlements").catch(() => null),
-        api.get("/mobile/merchant/dashboard").catch(() => null),
+        api.get(`/mobile/merchant/settlements${queryString}`).catch(() => null),
+        api.get(`/mobile/merchant/dashboard${queryString}`).catch(() => null),
       ]);
       if (profRes?.data) setProfile(profRes.data);
       if (dashRes?.data) setDashboardData(dashRes.data);
@@ -93,8 +111,8 @@ export default function MerchantSettlementPage() {
       router.push("/merchant/login");
       return;
     }
-    loadData();
-  }, [router]);
+    loadData(dateFilter);
+  }, [router, dateFilter]);
 
   const user = getUser() as any;
   const storeName = profile?.name || profile?.nameKh || user?.name || (lang === "km" ? "ហាង" : "Store");

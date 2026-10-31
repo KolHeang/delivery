@@ -169,9 +169,9 @@ export function formatDriverTask(parcel: any, driverId?: number): FormattedDrive
     badgeColor,
     badgeBg,
     cod: Number(parcel.cod || 0),
-    codCurrency: parcel.codCurrency || 'USD',
+    codCurrency: (parcel.codCurrency || 'USD').toUpperCase(),
     deliveryFee: Number(parcel.deliveryFee || 0),
-    driverFee: Number(parcel.driverFee || 0),
+    driverFee: Number(parcel.driverFee !== undefined && parcel.driverFee !== null ? parcel.driverFee : 1000),
     driverRole: isDeliveryDriver
       ? 'delivery_driver'
       : isPickupDriver

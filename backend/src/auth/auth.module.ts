@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Global, Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { ConfigModule, ConfigService } from '@nestjs/config';
@@ -11,7 +11,9 @@ import { User } from '../users/entities/users.entity';
 import { RefreshToken } from './entities/refresh-token.entity';
 import { DeviceToken } from './entities/device-token.entity';
 import { PermissionsGuard } from './permissions.guard';
+import { RolesGuard } from './roles.guard';
 
+@Global()
 @Module({
   imports: [
     PassportModule,
@@ -32,7 +34,7 @@ import { PermissionsGuard } from './permissions.guard';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, PermissionsGuard],
-  exports: [AuthService, PermissionsGuard],
+  providers: [AuthService, JwtStrategy, PermissionsGuard, RolesGuard],
+  exports: [AuthService, PermissionsGuard, RolesGuard],
 })
 export class AuthModule {}

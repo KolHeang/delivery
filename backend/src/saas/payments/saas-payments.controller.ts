@@ -18,6 +18,8 @@ import {
 } from '@nestjs/swagger';
 import { SaasPaymentsService } from './saas-payments.service';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
+import { RolesGuard } from '../../auth/roles.guard';
+import { Roles } from '../../auth/roles.decorator';
 import {
   CheckoutPayDto,
   CreatePaymentOptionDto,
@@ -29,7 +31,8 @@ import {
 export class SaasPaymentsController {
   constructor(private readonly paymentsService: SaasPaymentsService) {}
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('super_admin', 'superadmin', 'finance_admin', 'support_admin')
   @ApiBearerAuth()
   @Get()
   @ApiOperation({ summary: 'Get all SaaS subscription payments' })
@@ -45,7 +48,8 @@ export class SaasPaymentsController {
     return this.paymentsService.getPaymentOptions(onlyActive);
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('super_admin', 'superadmin', 'finance_admin')
   @ApiBearerAuth()
   @Post('options')
   @ApiOperation({ summary: 'Create a new payment option (Admin SAAS)' })
@@ -53,7 +57,8 @@ export class SaasPaymentsController {
     return this.paymentsService.createPaymentOption(body);
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('super_admin', 'superadmin', 'finance_admin')
   @ApiBearerAuth()
   @Put('options/:id')
   @ApiOperation({ summary: 'Update a payment option (Admin SAAS)' })
@@ -64,7 +69,8 @@ export class SaasPaymentsController {
     return this.paymentsService.updatePaymentOption(+id, body);
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('super_admin', 'superadmin', 'finance_admin')
   @ApiBearerAuth()
   @Delete('options/:id')
   @ApiOperation({ summary: 'Delete a payment option (Admin SAAS)' })
@@ -82,7 +88,8 @@ export class SaasPaymentsController {
   }
 
   // ── Admin SAAS Approval / Rejection ──
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('super_admin', 'superadmin', 'finance_admin')
   @ApiBearerAuth()
   @Post(':id/approve')
   @ApiOperation({ summary: 'Approve offline payment and activate subscription (Admin SAAS)' })
@@ -91,7 +98,8 @@ export class SaasPaymentsController {
     return this.paymentsService.approvePayment(+id, adminUser);
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('super_admin', 'superadmin', 'finance_admin')
   @ApiBearerAuth()
   @Post(':id/reject')
   @ApiOperation({ summary: 'Reject offline payment (Admin SAAS)' })
@@ -102,7 +110,8 @@ export class SaasPaymentsController {
     return this.paymentsService.rejectPayment(+id, reason);
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('super_admin', 'superadmin', 'finance_admin', 'support_admin')
   @ApiBearerAuth()
   @Get(':id')
   @ApiOperation({ summary: 'Get SaaS payment details by ID' })

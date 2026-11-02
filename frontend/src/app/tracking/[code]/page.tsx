@@ -357,10 +357,10 @@ export default function CustomerTrackingPage() {
             </p>
             <Link
               href="/tracking"
+              className="btn btn-primary"
               style={{
                 padding: '10px 24px',
                 borderRadius: 10,
-                background: '#1565D8',
                 color: '#ffffff',
                 textDecoration: 'none',
                 fontWeight: 700,
@@ -600,14 +600,14 @@ export default function CustomerTrackingPage() {
                   <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: 10 }}>
                     <div style={{ fontSize: 11.5, color: '#64748b' }}>ហាងផ្ញើ (Sender):</div>
                     <div style={{ fontSize: 13.5, fontWeight: 800, color: '#0f172a' }}>
-                      {trackingData?.parcel?.senderName} ({trackingData?.parcel?.senderPhone || '-'})
+                      {trackingData?.parcel?.senderName}{trackingData?.parcel?.senderPhone ? ` (${trackingData.parcel.senderPhone})` : ''}
                     </div>
                   </div>
 
                   <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: 10 }}>
                     <div style={{ fontSize: 11.5, color: '#64748b' }}>អ្នកទទួល (Receiver):</div>
                     <div style={{ fontSize: 13.5, fontWeight: 800, color: '#0f172a' }}>
-                      {trackingData?.parcel?.receiverName} ({trackingData?.parcel?.receiverPhone})
+                      {trackingData?.parcel?.receiverName ? `${trackingData.parcel.receiverName}${trackingData?.parcel?.receiverPhone ? ` (${trackingData.parcel.receiverPhone})` : ''}` : (trackingData?.parcel?.receiverPhone || '')}
                     </div>
                     <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>
                       📍 {trackingData?.parcel?.receiverAddress}

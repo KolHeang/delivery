@@ -19,6 +19,8 @@ import {
 } from '@nestjs/swagger';
 import { PartnersService } from './partners.service';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
+import { RolesGuard } from '../../auth/roles.guard';
+import { Roles } from '../../auth/roles.decorator';
 import { CreatePartnerDto, UpdatePartnerDto } from './dto/partner.dto';
 
 @ApiTags('SaaS - Partners')
@@ -26,6 +28,9 @@ import { CreatePartnerDto, UpdatePartnerDto } from './dto/partner.dto';
 export class PartnersController {
   constructor(private readonly partnersService: PartnersService) {}
 
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('web_admin')
+  @ApiBearerAuth()
   @Get('my-stats')
   @ApiOperation({ summary: 'Get current partner dashboard statistics' })
   async getMyStats(@Request() req: any) {
@@ -47,7 +52,8 @@ export class PartnersController {
     return { isPartner: true, ...stats };
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('super_admin', 'superadmin', 'finance_admin', 'support_admin')
   @ApiBearerAuth()
   @Get(':id/stats')
   @ApiOperation({ summary: 'Get affiliate statistics by partner ID' })
@@ -74,6 +80,9 @@ export class PartnersController {
     };
   }
 
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('super_admin', 'superadmin', 'finance_admin', 'support_admin')
+  @ApiBearerAuth()
   @Get()
   @ApiOperation({ summary: 'Get all affiliate partners' })
   @ApiQuery({ name: 'page', required: false, type: Number, description: 'Page number' })
@@ -91,6 +100,9 @@ export class PartnersController {
     });
   }
 
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('super_admin', 'superadmin', 'finance_admin', 'support_admin')
+  @ApiBearerAuth()
   @Get(':id')
   @ApiOperation({ summary: 'Get partner details by ID' })
   @ApiParam({ name: 'id', description: 'Partner ID' })
@@ -98,12 +110,18 @@ export class PartnersController {
     return this.partnersService.findById(+id);
   }
 
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('super_admin', 'superadmin', 'finance_admin')
+  @ApiBearerAuth()
   @Post()
   @ApiOperation({ summary: 'Register a new affiliate partner' })
   async create(@Body() body: CreatePartnerDto) {
     return this.partnersService.create(body as any);
   }
 
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('super_admin', 'superadmin', 'finance_admin')
+  @ApiBearerAuth()
   @Put(':id')
   @ApiOperation({ summary: 'Update an affiliate partner' })
   @ApiParam({ name: 'id', description: 'Partner ID' })
@@ -111,6 +129,9 @@ export class PartnersController {
     return this.partnersService.update(+id, body as any);
   }
 
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('super_admin', 'superadmin')
+  @ApiBearerAuth()
   @Delete(':id')
   @ApiOperation({ summary: 'Delete an affiliate partner' })
   @ApiParam({ name: 'id', description: 'Partner ID' })

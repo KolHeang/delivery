@@ -107,6 +107,7 @@ export default function TrackingSearchPage() {
             />
             <button
               type="submit"
+              className="btn btn-primary"
               style={{
                 position: 'absolute',
                 right: 6,
@@ -114,8 +115,6 @@ export default function TrackingSearchPage() {
                 bottom: 6,
                 padding: '0 20px',
                 borderRadius: 12,
-                border: 'none',
-                background: '#2563eb',
                 color: '#ffffff',
                 fontSize: 14,
                 fontWeight: 800,

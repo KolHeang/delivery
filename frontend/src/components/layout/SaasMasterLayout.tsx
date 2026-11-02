@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useLanguage } from '@/lib/LanguageContext';
 import { FlagKm, FlagEn } from '@/components/ui/Flags';
 import { SaasCloudIcon } from '@/components/ui/SaasCloudIcon';
+import { SidebarToggleIcon, useSidebarCollapsed } from '@/components/ui/SidebarToggleIcon';
 import { getUser, clearAuth } from '@/lib/auth';
 import {
   MdDashboard,
@@ -18,6 +19,7 @@ import {
   MdAttachMoney,
   MdLogout,
   MdKeyboardArrowDown,
+  MdMenu,
 } from 'react-icons/md';
 
 export interface SaasMasterLayoutProps {
@@ -28,6 +30,7 @@ export interface SaasMasterLayoutProps {
 export function SaasMasterLayout({ activeTab, children }: SaasMasterLayoutProps) {
   const router = useRouter();
   const { lang, setLang } = useLanguage();
+  const { isCollapsed, toggleCollapsed, isMobileOpen, toggleMobile, closeMobile } = useSidebarCollapsed();
   const tr = (km: string, en: string) => (lang === 'km' ? km : en);
 
   const [user, setUser] = useState<any>(null);
@@ -68,10 +71,12 @@ export function SaasMasterLayout({ activeTab, children }: SaasMasterLayoutProps)
       }}
     >
       {/* 1. DEDICATED SAAS MASTER SIDEBAR */}
+      {isMobileOpen && <div className="sidebar-mobile-backdrop" onClick={closeMobile} />}
       <aside
+        className={`saas-sidebar ${isMobileOpen ? 'mobile-open' : ''}`}
         style={{
-          width: 260,
-          minWidth: 260,
+          width: 'var(--sidebar-width, 260px)',
+          minWidth: 'var(--sidebar-width, 260px)',
           background: 'var(--sidebar-bg, #1565D8)',
           color: '#ffffff',
           display: 'flex',
@@ -83,15 +88,18 @@ export function SaasMasterLayout({ activeTab, children }: SaasMasterLayoutProps)
           height: '100vh',
           zIndex: 100,
           boxShadow: '4px 0 20px rgba(0,0,0,0.1)',
+          transition: 'width 0.2s ease, min-width 0.2s ease',
+          overflow: 'hidden',
         }}
       >
         {/* Brand Header */}
         <div
           style={{
             height: 64,
-            padding: '0 20px',
+            padding: isCollapsed ? '0 8px' : '0 20px',
             display: 'flex',
             alignItems: 'center',
+            justifyContent: isCollapsed ? 'center' : 'flex-start',
             gap: 12,
             borderBottom: '1px solid rgba(255,255,255,0.12)',
             boxSizing: 'border-box',
@@ -114,21 +122,25 @@ export function SaasMasterLayout({ activeTab, children }: SaasMasterLayoutProps)
           >
             <SaasCloudIcon size={34} />
           </div>
-          <div>
-            <div style={{ fontSize: 15, fontWeight: 900, color: '#ffffff', letterSpacing: '-0.2px', lineHeight: 1.2 }}>
-              EBS Master SaaS
+          {!isCollapsed && (
+            <div style={{ minWidth: 0, overflow: 'hidden' }}>
+              <div style={{ fontSize: 15, fontWeight: 900, color: '#ffffff', letterSpacing: '-0.2px', lineHeight: 1.2, whiteSpace: 'nowrap' }}>
+                EBS Master SaaS
+              </div>
+              <div style={{ fontSize: 10.5, color: '#93c5fd', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px', whiteSpace: 'nowrap' }}>
+                ● {tr('ផ្ទាំងគ្រប់គ្រង SUPER ADMIN', 'SUPER ADMIN PORTAL')}
+              </div>
             </div>
-            <div style={{ fontSize: 10.5, color: '#93c5fd', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-              ● {tr('ផ្ទាំងគ្រប់គ្រង SUPER ADMIN', 'SUPER ADMIN PORTAL')}
-            </div>
-          </div>
+          )}
         </div>
 
         {/* Navigation List */}
-        <div style={{ padding: '16px 12px', display: 'flex', flexDirection: 'column', gap: 6, flex: 1, overflowY: 'auto' }}>
-          <div style={{ fontSize: 11, fontWeight: 800, color: '#93c5fd', padding: '8px 12px', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
-            {tr('ម៉ឺនុយមេ', 'Main Menu')}
-          </div>
+        <div style={{ padding: isCollapsed ? '16px 8px' : '16px 12px', display: 'flex', flexDirection: 'column', gap: 6, flex: 1, overflowY: 'auto' }}>
+          {!isCollapsed && (
+            <div style={{ fontSize: 11, fontWeight: 800, color: '#93c5fd', padding: '8px 12px', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
+              {tr('ម៉ឺនុយមេ', 'Main Menu')}
+            </div>
+          )}
 
           {navItems.map((item) => {
             const isActive = activeTab === item.key;
@@ -137,12 +149,15 @@ export function SaasMasterLayout({ activeTab, children }: SaasMasterLayoutProps)
               <Link
                 key={item.key}
                 href={item.href}
+                onClick={closeMobile}
+                title={isCollapsed ? item.label : undefined}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
+                  justifyContent: isCollapsed ? 'center' : 'flex-start',
                   gap: 12,
                   width: '100%',
-                  padding: '11px 16px',
+                  padding: isCollapsed ? '11px 0' : '11px 16px',
                   borderRadius: 10,
                   border: 'none',
                   background: isActive ? 'rgba(255, 255, 255, 0.18)' : 'transparent',
@@ -154,25 +169,68 @@ export function SaasMasterLayout({ activeTab, children }: SaasMasterLayoutProps)
                   textDecoration: 'none',
                   boxSizing: 'border-box',
                   transition: 'all 0.15s',
-                  borderLeft: isActive ? '4px solid #ffffff' : '4px solid transparent',
+                  borderLeft: isCollapsed ? 'none' : (isActive ? '4px solid #ffffff' : '4px solid transparent'),
                 }}
               >
                 <Icon size={20} color={isActive ? '#ffffff' : '#bfdbfe'} />
-                <span>{item.label}</span>
+                {!isCollapsed && <span>{item.label}</span>}
               </Link>
             );
           })}
+        </div>
+
+        {/* Sidebar Collapse / Expand Footer */}
+        <div
+          className="sidebar-collapse-footer"
+          style={{
+            borderTop: '1px solid rgba(255, 255, 255, 0.14)',
+            padding: '10px 8px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
+          }}
+        >
+          <button
+            type="button"
+            onClick={toggleCollapsed}
+            title={isCollapsed ? tr('ពង្រីកម៉ឺនុយ', 'Expand sidebar') : tr('បង្រួមម៉ឺនុយ', 'Collapse sidebar')}
+            aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: 10,
+              border: 'none',
+              background: 'transparent',
+              color: '#ffffff',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              transition: 'background 0.15s ease',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.14)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'transparent';
+            }}
+          >
+            <SidebarToggleIcon collapsed={isCollapsed} size={22} />
+          </button>
         </div>
       </aside>
 
       {/* 2. MAIN CONTENT AREA WITH UNIFIED TOPBAR */}
       <div
+        className="saas-main"
         style={{
           flex: 1,
-          marginLeft: 260,
+          marginLeft: 'var(--sidebar-width, 260px)',
           minWidth: 0,
-          width: 'calc(100vw - 260px)',
-          maxWidth: 'calc(100vw - 260px)',
+          width: 'calc(100vw - var(--sidebar-width, 260px))',
+          maxWidth: 'calc(100vw - var(--sidebar-width, 260px))',
+          transition: 'margin-left 0.2s ease, width 0.2s ease, max-width 0.2s ease',
           display: 'flex',
           flexDirection: 'column',
           height: '100vh',
@@ -187,9 +245,9 @@ export function SaasMasterLayout({ activeTab, children }: SaasMasterLayoutProps)
             minHeight: 64,
             background: 'var(--sidebar-bg, #1565D8)',
             borderBottom: '1px solid rgba(255, 255, 255, 0.12)',
-            padding: '0 28px',
+            padding: '0 20px',
             display: 'flex',
-            justifyContent: 'flex-end',
+            justifyContent: 'space-between',
             alignItems: 'center',
             flexShrink: 0,
             zIndex: 80,
@@ -198,6 +256,17 @@ export function SaasMasterLayout({ activeTab, children }: SaasMasterLayoutProps)
             boxSizing: 'border-box',
           }}
         >
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <button
+              type="button"
+              className="mobile-menu-btn"
+              onClick={toggleMobile}
+              title={tr('បើកម៉ឺនុយ', 'Open menu')}
+              aria-label="Open menu"
+            >
+              <MdMenu size={22} />
+            </button>
+          </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
             {/* Language Switcher */}
             <button

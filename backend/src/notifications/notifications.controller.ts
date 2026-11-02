@@ -24,9 +24,14 @@ import { Observable } from 'rxjs';
 import { NotificationsService } from './notifications.service';
 import { CreateNotificationDto, QueryNotificationDto } from './dto/notification.dto';
 import { getEffectiveTenantId } from '../common/tenant.util';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { RolesGuard } from '../auth/roles.guard';
+import { Roles } from '../auth/roles.decorator';
 
 @ApiTags('Web Notifications')
 @ApiBearerAuth()
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles('web_admin')
 @Controller('notifications')
 export class NotificationsController {
   constructor(private readonly notificationsService: NotificationsService) {}

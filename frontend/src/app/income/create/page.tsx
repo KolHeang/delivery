@@ -8,6 +8,7 @@ import Topbar from '@/components/layout/Topbar';
 import api from '@/lib/api';
 import { useLanguage } from '@/lib/LanguageContext';
 import FormField from '@/components/ui/FormField';
+import { MdArrowBack, MdSave } from 'react-icons/md';
 
 export default function AddIncomePage() {
   const router = useRouter();
@@ -102,13 +103,23 @@ export default function AddIncomePage() {
         <Topbar title={t('addIncome') || 'Add Income'} subtitle={t('addIncomeSubtitle') || 'Record a new company revenue entry'} />
         <div className="page-content">
           <div className="card">
-            <div className="card-header"><span className="card-title">{t('incomeDetails') || 'Income Details'}</span></div>
-            <div className="card-body">
+            <div className="card-header" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 20px' }}>
+              <button
+                type="button"
+                onClick={() => router.push('/income')}
+                className="btn btn-ghost btn-icon btn-sm"
+                title={lang === 'km' ? 'ត្រឡប់ក្រោយ' : 'Back'}
+              >
+                <MdArrowBack size={18} />
+              </button>
+              <span className="card-title" style={{ fontSize: 16, fontWeight: 700 }}>{t('incomeDetails') || 'Income Details'}</span>
+            </div>
+            <div className="card-body" style={{ padding: '20px 24px' }}>
               <form noValidate onSubmit={handleSubmit}>
                 <FormField label={t('descOrSource') || 'Description / Source'} required error={errors.description}>
                   <input
                     type="text"
-                    className={`form-control ${errors.description ? 'is-invalid' : ''}`}
+                    className="form-control"
                     placeholder={t('placeholderDescIncome') || 'e.g. Delivery fees week 24, Sponsor payment'}
                     value={form.description}
                     onChange={e => handleFieldChange('description', e.target.value)}
@@ -117,13 +128,13 @@ export default function AddIncomePage() {
 
                 <FormField label={t('incomeCategory') || 'Income Category / Type'} required error={errors.typeId}>
                   <select
-                    className={`form-control ${errors.typeId ? 'is-invalid' : ''}`}
+                    className="form-control"
                     value={form.typeId}
                     onChange={e => handleFieldChange('typeId', e.target.value)}
                   >
                     <option value="">{lang === 'km' ? '-- ជ្រើសរើសប្រភេទចំណូល --' : '-- Select Income Category --'}</option>
-                    {types.map(t => (
-                      <option key={t.id} value={t.id}>{t.name}</option>
+                    {types.map(tp => (
+                      <option key={tp.id} value={tp.id}>{tp.name}</option>
                     ))}
                   </select>
                 </FormField>
@@ -134,7 +145,7 @@ export default function AddIncomePage() {
                       type="number"
                       step="0.01"
                       min="0"
-                      className={`form-control ${errors.amount ? 'is-invalid' : ''}`}
+                      className="form-control"
                       placeholder="0.00"
                       value={form.amount}
                       onChange={e => handleFieldChange('amount', e.target.value)}
@@ -143,18 +154,17 @@ export default function AddIncomePage() {
                   <FormField label={t('dateLabel') || 'Date'} required error={errors.date}>
                     <input
                       type="date"
-                      className={`form-control ${errors.date ? 'is-invalid' : ''}`}
+                      className="form-control"
                       value={form.date}
                       onChange={e => handleFieldChange('date', e.target.value)}
                     />
                   </FormField>
                 </div>
 
-                <div style={{ marginTop: 20, display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
+                <div style={{ marginTop: 24, paddingTop: 18, borderTop: '1px solid var(--border)', display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
                   <button
                     type="button"
                     className="btn btn-cancel"
-                    style={{ background: '#dc2626', color: '#ffffff', border: '1px solid #dc2626', fontWeight: 700 }}
                     onClick={() => router.push('/income')}
                   >
                     {t('cancel') || 'បោះបង់'}
@@ -162,10 +172,10 @@ export default function AddIncomePage() {
                   <button
                     type="submit"
                     className="btn btn-primary"
-                    style={{ background: '#2563eb', color: '#ffffff', border: '1px solid #2563eb', fontWeight: 700 }}
                     disabled={saving}
                   >
-                    {saving ? t('saving') || 'Saving...' : t('addIncome') || 'Add Income'}
+                    <MdSave size={17} />
+                    {saving ? t('saving') || 'Saving...' : t('save') || 'រក្សាទុក'}
                   </button>
                 </div>
               </form>

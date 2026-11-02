@@ -8,15 +8,25 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
+import { randomInt } from 'crypto';
 import { User } from '../../users/entities/users.entity';
 import { Merchant } from '../../merchants/entities/merchant.entity';
 import { RefreshToken } from '../../auth/entities/refresh-token.entity';
 import { DeviceToken } from '../../auth/entities/device-token.entity';
 import { SaveDeviceTokenDto } from './dto/save-device-token.dto';
 
+interface OtpRecord {
+  otp: string;
+  expiresAt: number;
+  attempts: number;
+  accountType: 'driver' | 'merchant';
+  accountId: number;
+}
+
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
+  private readonly otpStore = new Map<string, OtpRecord>();
 
   constructor(
     @InjectRepository(User) private readonly userRepo: Repository<User>,
@@ -84,7 +94,6 @@ export class AuthService {
     return { expire_date, status };
   }
 
-  
   private async resolveBrandColor(
     tenantId?: number | string | null,
   ): Promise<{ primaryColor: string; tenant: any }> {
@@ -462,20 +471,53 @@ export class AuthService {
   }
 
   async forgotPassword(identifier: string) {
-    if (!identifier) {
+    if (!identifier || typeof identifier !== 'string') {
       throw new BadRequestException(
-        'សូមបញ្ចូលលេខទូរស័ព្ទ/អ៊ីមែល និងពាក្យសម្ងាត់',
+        'សូមបញ្ចូលលេខទូរស័ព្ទ ឬអ៊ីមែលរបស់អ្នក',
       );
     }
     const cleanId = identifier.trim();
+    const key = cleanId.toLowerCase();
 
-    // Check if account exists without leaking internal user data in the response
-    await this.userRepo
+    // Only allow OTP generation for mobile Driver or Merchant accounts (never Web Admin accounts)
+    const driver = await this.userRepo
       .createQueryBuilder('user')
+      .leftJoin('user.roleRelation', 'roleRelation')
       .where('(user.phone = :id OR LOWER(user.email) = LOWER(:id))', {
         id: cleanId,
       })
+      .andWhere('(user.isDriver = true OR roleRelation.name = :driverRole)', {
+        driverRole: 'driver',
+      })
       .getOne();
+
+    const merchant = !driver
+      ? await this.merchantRepo
+          .createQueryBuilder('merchant')
+          .where('LOWER(merchant.email) = LOWER(:id) OR merchant.phone = :id', {
+            id: cleanId,
+          })
+          .getOne()
+      : null;
+
+    const generatedOtp = randomInt(100000, 1000000).toString();
+    if (driver) {
+      this.otpStore.set(key, {
+        otp: generatedOtp,
+        expiresAt: Date.now() + 5 * 60 * 1000,
+        attempts: 0,
+        accountType: 'driver',
+        accountId: driver.id,
+      });
+    } else if (merchant) {
+      this.otpStore.set(key, {
+        otp: generatedOtp,
+        expiresAt: Date.now() + 5 * 60 * 1000,
+        attempts: 0,
+        accountType: 'merchant',
+        accountId: merchant.id,
+      });
+    }
 
     const isProd = process.env.NODE_ENV === 'production';
 
@@ -484,7 +526,7 @@ export class AuthService {
       message:
         'ប្រសិនបើតួលេខទូរស័ព្ទត្រឹមត្រូវ ប្រព័ន្ធនឹងផ្ញើសារកូដផ្ទៀងផ្ទាត់ (OTP)',
       phone: cleanId,
-      ...(isProd ? {} : { devOtp: '123456' }),
+      ...(!isProd && (driver || merchant) ? { devOtp: generatedOtp } : {}),
     };
   }
 
@@ -497,27 +539,40 @@ export class AuthService {
     if (newPass.length < 6) {
       throw new BadRequestException('លេខសម្ងាត់ត្រូវមានយ៉ាងតិច ៦ តួអក្សរ');
     }
-    if (otp !== '123456') {
+
+    const cleanId = identifier.trim();
+    const key = cleanId.toLowerCase();
+    const record = this.otpStore.get(key);
+
+    if (!record || record.expiresAt < Date.now()) {
+      this.otpStore.delete(key);
+      throw new BadRequestException(
+        'លេខកូដ OTP មិនត្រឹមត្រូវ ឬបានផុតកំណត់ហើយ',
+      );
+    }
+
+    record.attempts += 1;
+    if (record.attempts > 5) {
+      this.otpStore.delete(key);
+      throw new BadRequestException(
+        'អ្នកបានបញ្ចូលលេខកូដ OTP ខុសច្រើនដងពេក សូមស្នើសុំកូដថ្មីម្តងទៀត',
+      );
+    }
+
+    if (record.otp !== String(otp).trim()) {
       throw new BadRequestException('លេខកូដ OTP មិនត្រឹមត្រូវឡើយ');
     }
 
-    const cleanId = identifier.trim();
-    const user = await this.userRepo
-      .createQueryBuilder('user')
-      .where('(user.phone = :id OR LOWER(user.email) = LOWER(:id))', {
-        id: cleanId,
-      })
-      .getOne();
-
-    if (!user) {
-      throw new BadRequestException('រកមិនឃើញគណនីរបស់អ្នកប្រើប្រាស់ឡើយ');
-    }
-
+    this.otpStore.delete(key);
     const hashed = await bcrypt.hash(newPass, 10);
-    await this.userRepo.update(user.id, { password: hashed });
 
-    // Invalidate all existing sessions after password change
-    await this.refreshTokenRepository.delete({ userId: user.id });
+    if (record.accountType === 'merchant') {
+      await this.merchantRepo.update(record.accountId, { password: hashed });
+      await this.refreshTokenRepository.delete({ merchantId: record.accountId });
+    } else {
+      await this.userRepo.update(record.accountId, { password: hashed });
+      await this.refreshTokenRepository.delete({ userId: record.accountId });
+    }
 
     return {
       success: true,

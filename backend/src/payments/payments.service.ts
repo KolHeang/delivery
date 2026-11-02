@@ -596,6 +596,7 @@ export class PaymentsService {
         slug: tenant.slug,
         logo: tenant.logo,
         logoUrl: tenant.logo,
+        primaryColor: tenant.primaryColor,
         phone: tenant.phone,
         address: tenant.address,
       } : null,

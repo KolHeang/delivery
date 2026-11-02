@@ -181,20 +181,14 @@ export default function PartnerDashboardPage() {
                   }}
                 />
                 <button
+                  type="button"
+                  className={copied ? 'btn btn-success' : 'btn btn-primary'}
                   onClick={handleCopy}
                   style={{
-                    background: copied ? '#10b981' : '#0f172a',
-                    color: '#fff',
-                    border: 'none',
                     borderRadius: 10,
                     padding: '10px 16px',
                     fontSize: 13,
                     fontWeight: 800,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 6,
-                    transition: 'all 0.2s',
                     flexShrink: 0,
                   }}
                 >
@@ -406,17 +400,14 @@ export default function PartnerDashboardPage() {
           </div>
 
           <button
+            type="button"
+            className="btn btn-primary"
             onClick={() => alert('សំណើបើកប្រាក់ត្រូវបានបញ្ជូនទៅកាន់ Admin ត្រួតពិនិត្យ!')}
             style={{
               padding: '11px 22px',
-              borderRadius: 12,
-              border: 'none',
-              background: '#0f172a',
-              color: '#fff',
+              borderRadius: 10,
               fontWeight: 800,
               fontSize: 13.5,
-              cursor: 'pointer',
-              boxShadow: '0 4px 12px rgba(15,23,42,0.15)',
             }}
           >
             ស្នើសុំដកប្រាក់ (Request Payout)
@@ -486,7 +477,7 @@ export default function PartnerDashboardPage() {
                       </span>
                     </td>
                     <td style={{ padding: '16px', color: '#64748b', fontFamily: 'monospace' }}>
-                      {c.payoutReference || '-'}
+                      {c.payoutReference || ''}
                     </td>
                   </tr>
                 ))}

@@ -2,21 +2,17 @@ import { Controller, Get, UseGuards, Query, Request } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiQuery } from '@nestjs/swagger';
 import { DashboardService } from './dashboard.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { RolesGuard } from '../auth/roles.guard';
+import { Roles } from '../auth/roles.decorator';
+import { getEffectiveTenantId } from '../common/tenant.util';
 
 @ApiTags('Dashboard')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles('web_admin')
 @Controller('dashboard')
 export class DashboardController {
   constructor(private readonly dashboardService: DashboardService) {}
-
-  private getEffectiveTenantId(req: any): number | undefined {
-    return req?.user?.tenantId
-      ? +req.user.tenantId
-      : req?.headers?.['x-tenant-id']
-      ? +req.headers['x-tenant-id']
-      : undefined;
-  }
 
   @Get('stats')
   @ApiOperation({ summary: 'Get overview dashboard stats' })
@@ -30,7 +26,7 @@ export class DashboardController {
     return this.dashboardService.getStats(
       startDate,
       endDate,
-      this.getEffectiveTenantId(req),
+      getEffectiveTenantId(req),
     );
   }
 
@@ -46,7 +42,7 @@ export class DashboardController {
     return this.dashboardService.getChartData(
       startDate,
       endDate,
-      this.getEffectiveTenantId(req),
+      getEffectiveTenantId(req),
     );
   }
 
@@ -62,7 +58,7 @@ export class DashboardController {
     return this.dashboardService.getRecentOrders(
       startDate,
       endDate,
-      this.getEffectiveTenantId(req),
+      getEffectiveTenantId(req),
     );
   }
 
@@ -78,7 +74,7 @@ export class DashboardController {
     return this.dashboardService.getTopDrivers(
       startDate,
       endDate,
-      this.getEffectiveTenantId(req),
+      getEffectiveTenantId(req),
     );
   }
 }

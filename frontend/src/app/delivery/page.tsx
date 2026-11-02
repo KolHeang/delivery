@@ -657,7 +657,7 @@ export default function DeliveriesPage() {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
             <div>
               <h4 style={{ fontWeight: 700, marginBottom: 12, color: 'var(--text-secondary)', fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Sender</h4>
-              <p style={{ fontWeight: 600 }}>{viewModal.merchant?.name || '—'}</p>
+              <p style={{ fontWeight: 600 }}>{viewModal.merchant?.name || ''}</p>
             </div>
             <div>
               <h4 style={{ fontWeight: 700, marginBottom: 12, color: 'var(--text-secondary)', fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Receiver</h4>

@@ -1,12 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { isAuthenticated } from '@/lib/auth';
 import Sidebar from '@/components/layout/Sidebar';
 import Topbar from '@/components/layout/Topbar';
 import api from '@/lib/api';
 import { useLanguage } from '@/lib/LanguageContext';
+import { MdArrowBack, MdSave } from 'react-icons/md';
 
 const emptyForm = {
   code: '',
@@ -44,6 +45,7 @@ export default function CreateStaffPage() {
   const [saving, setSaving] = useState(false);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string>('');
+  const photoInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!isAuthenticated()) {
@@ -188,39 +190,77 @@ export default function CreateStaffPage() {
         <Topbar title={t('addStaff')} subtitle="បង្កើតគណនីបុគ្គលិក ឬអ្នកដឹកជញ្ជូនថ្មី" />
         <div className="page-content">
           <div className="card">
-            <div className="card-header">
-              <span className="card-title">👤 {t('addStaff')}</span>
+            <div className="card-header" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 20px' }}>
+              <button
+                type="button"
+                onClick={() => router.push('/user')}
+                className="btn btn-ghost btn-icon btn-sm"
+                title={lang === 'km' ? 'ត្រឡប់ក្រោយ' : 'Back'}
+              >
+                <MdArrowBack size={18} />
+              </button>
+              <span className="card-title" style={{ fontSize: 16, fontWeight: 700 }}>{t('addStaff')}</span>
             </div>
             <div className="card-body" style={{ padding: '24px 28px' }}>
               <form onSubmit={(e) => { e.preventDefault(); save(); }} noValidate>
                 {/* Photo Upload Header */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 20, marginBottom: 24, paddingBottom: 20, borderBottom: '1px solid var(--border)' }}>
-                  <div style={{
-                    width: 76,
-                    height: 76,
-                    borderRadius: '50%',
-                    border: '2px dashed var(--accent, #2563eb)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    overflow: 'hidden',
-                    background: 'var(--bg-primary, #f8fafc)',
-                    flexShrink: 0
-                  }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 22, paddingBottom: 18, borderBottom: '1px solid var(--border)' }}>
+                  <input
+                    ref={photoInputRef}
+                    type="file"
+                    accept="image/*"
+                    style={{ display: 'none' }}
+                    onChange={handlePhotoChange}
+                  />
+                  <div
+                    onClick={() => photoInputRef.current?.click()}
+                    style={{
+                      width: 64,
+                      height: 64,
+                      borderRadius: '50%',
+                      border: '1px solid var(--border)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      overflow: 'hidden',
+                      background: 'var(--bg-primary, #f8fafc)',
+                      cursor: 'pointer',
+                      flexShrink: 0,
+                    }}
+                  >
                     {photoPreview ? (
                       <img src={photoPreview} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     ) : (
-                      <span style={{ fontSize: 32, color: 'var(--text-muted)' }}>👤</span>
+                      <span style={{ fontSize: 28, color: 'var(--text-muted)' }}>👤</span>
                     )}
                   </div>
                   <div>
-                    <label className="form-label" style={{ fontWeight: 600, marginBottom: 6 }}>{t('profilePhoto') || 'រូបថតគណនី'}</label>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handlePhotoChange}
-                      style={{ fontSize: 13 }}
-                    />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <button
+                        type="button"
+                        onClick={() => photoInputRef.current?.click()}
+                        className="btn btn-outline btn-sm"
+                        style={{ fontSize: 12, padding: '4px 12px' }}
+                      >
+                        {photoPreview
+                          ? (lang === 'km' ? 'ប្តូររូបថត' : 'Change Photo')
+                          : (lang === 'km' ? 'ដាក់រូបថតគណនី' : 'Upload Photo')}
+                      </button>
+                      {photoPreview && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPhotoFile(null);
+                            setPhotoPreview('');
+                            if (photoInputRef.current) photoInputRef.current.value = '';
+                          }}
+                          className="btn btn-ghost btn-sm"
+                          style={{ color: 'var(--danger)', fontSize: 12 }}
+                        >
+                          {lang === 'km' ? 'លុប' : 'Remove'}
+                        </button>
+                      )}
+                    </div>
                     <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
                       {lang === 'km' ? 'គាំទ្រទម្រង់ JPG, PNG (រូបភាពទំហំសមរម្យ)' : 'Supports JPG, PNG images'}
                     </div>
@@ -552,11 +592,10 @@ export default function CreateStaffPage() {
                 )}
 
                 {/* Form Buttons */}
-                <div style={{ marginTop: 32, paddingTop: 20, borderTop: '1px solid var(--border)', display: 'flex', gap: 14, justifyContent: 'flex-end' }}>
+                <div style={{ marginTop: 24, paddingTop: 18, borderTop: '1px solid var(--border)', display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
                   <button
                     type="button"
                     className="btn btn-cancel"
-                    style={{ background: '#ef4444', color: '#ffffff', border: 'none', fontWeight: 700, padding: '10px 24px', borderRadius: 8, cursor: 'pointer' }}
                     onClick={() => router.push('/user')}
                   >
                     {t('cancel') || 'បោះបង់'}
@@ -564,9 +603,9 @@ export default function CreateStaffPage() {
                   <button
                     type="submit"
                     className="btn btn-primary"
-                    style={{ background: '#2563eb', color: '#ffffff', border: 'none', fontWeight: 700, padding: '10px 28px', borderRadius: 8, cursor: 'pointer' }}
                     disabled={saving}
                   >
+                    <MdSave size={17} />
                     {saving ? (t('saving') || 'កំពុងរក្សា...') : (t('save') || 'រក្សាទុក')}
                   </button>
                 </div>

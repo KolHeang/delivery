@@ -274,7 +274,7 @@ export default function ProfilePage() {
                   <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '16px' }}>
                     <button
                       type="button"
-                      className="btn btn-outline"
+                      className="btn btn-cancel"
                       onClick={() => router.push('/dashboard')}
                       disabled={saving}
                     >

@@ -36,6 +36,25 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+const sanitizeDashPlaceholders = (val: any): any => {
+  if (typeof val === 'string') {
+    return /^[-—–]{1,3}$/.test(val.trim()) ? '' : val;
+  }
+  if (Array.isArray(val)) {
+    for (let i = 0; i < val.length; i++) {
+      val[i] = sanitizeDashPlaceholders(val[i]);
+    }
+    return val;
+  }
+  if (val && typeof val === 'object' && Object.prototype.toString.call(val) === '[object Object]') {
+    for (const key of Object.keys(val)) {
+      val[key] = sanitizeDashPlaceholders(val[key]);
+    }
+    return val;
+  }
+  return val;
+};
+
 // Redirect to login on 401 (except for SaaS Master admin portal)
 api.interceptors.response.use(
   (response) => {
@@ -48,6 +67,7 @@ api.interceptors.response.use(
     ) {
       response.data = response.data.data;
     }
+    response.data = sanitizeDashPlaceholders(response.data);
     return response;
   },
   (error) => {
@@ -55,15 +75,12 @@ api.interceptors.response.use(
       const pathname = window.location.pathname;
       const isAuthPage =
         pathname === '/auth' ||
-        pathname === '/driver/login' ||
-        pathname === '/merchant/login' ||
         pathname === '/admin/saas/login' ||
         pathname === '/' ||
         pathname.startsWith('/report_payment_customer');
       const isLoginRequest =
         error.config?.url?.includes('/auth/login') ||
-        error.config?.url?.includes('/saas/admins/login') ||
-        error.config?.url?.includes('/mobile/auth/');
+        error.config?.url?.includes('/saas/admins/login');
 
       if (!isAuthPage && !isLoginRequest) {
         localStorage.removeItem('access_token');

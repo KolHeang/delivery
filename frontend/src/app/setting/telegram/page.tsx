@@ -222,7 +222,7 @@ export default function TelegramSettingsPage() {
                             {merchantName}
                           </td>
                           <td style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
-                            {cfg.channelTitle || '—'}
+                            {cfg.channelTitle || ''}
                           </td>
                           <td style={{ fontFamily: 'monospace', fontSize: 13, fontWeight: 600 }}>
                             {cfg.chatId}

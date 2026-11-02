@@ -15,14 +15,14 @@ import {
 
 /* ────────────────────────────────── helpers ── */
 function formatDate(d?: string | null) {
-  if (!d) return '—';
+  if (!d) return '';
   return new Date(d).toLocaleString('en-GB', {
     day: '2-digit', month: 'short', year: 'numeric',
     hour: '2-digit', minute: '2-digit',
   });
 }
 function formatCOD(cod: any, currency = 'USD') {
-  if (!cod || +cod === 0) return '—';
+  if (!cod || +cod === 0) return '';
   return currency === 'KHR'
     ? `${parseInt(cod).toLocaleString()} ៛`
     : `$${parseFloat(cod).toFixed(2)}`;
@@ -178,7 +178,7 @@ export default function PickupRequestDetailPage() {
     setSubmitting(true);
     try {
       await api.post(`/parcels/pickup-requests/${id}/parcels`, {
-        receiverName:    form.receiverName.trim() || '-',
+        receiverName:    form.receiverName.trim(),
         receiverPhone:   form.receiverPhone.trim(),
         receiverAddress: form.receiverAddress.trim(),
         zoneId:          Number(form.zoneId),
@@ -254,7 +254,7 @@ export default function PickupRequestDetailPage() {
       const zoneId = row.zoneId ? Number(row.zoneId) : defaultZoneId;
       try {
         await api.post(`/parcels/pickup-requests/${id}/parcels`, {
-          receiverName:    '-',
+          receiverName:    '',
           receiverPhone:   row.receiverPhone.trim(),
           receiverAddress: row.receiverAddress.trim(),
           zoneId,
@@ -341,14 +341,16 @@ export default function PickupRequestDetailPage() {
                 <MdRefresh size={16} /> Refresh
               </button>
               <button
+                type="button"
+                className="btn btn-primary"
                 onClick={() => setShowAssign(true)}
-                style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 10, border: '1.5px solid #2563eb', background: '#dbeafe', color: '#2563eb', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}
               >
                 <MdDirectionsBike size={16} /> {t('assignDriverTitle')}
               </button>
               <button
+                type="button"
+                className="btn btn-outline"
                 onClick={handlePrint}
-                style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 10, border: '1.5px solid #16a34a', background: '#dcfce7', color: '#16a34a', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}
               >
                 <MdPrint size={16} /> {t('printWaybill')}
               </button>
@@ -377,10 +379,10 @@ export default function PickupRequestDetailPage() {
                     <InfoRow label="Request ID" value={`#${request.id}`} />
                     <InfoRow label={t('status')} value={<StatusBadge status={request.status} />} />
                     <InfoRow label={t('merchant')} value={<><span style={{ fontWeight: 700 }}>{request.merchant?.name}</span>{request.merchant?.nameKh && <span style={{ fontSize: 12, color: 'var(--text-muted)', marginLeft: 6 }}>({request.merchant.nameKh})</span>}</>} />
-                    <InfoRow label={t('location')} value={request.pickupAddress || '—'} />
+                    <InfoRow label={t('location')} value={request.pickupAddress || ''} />
                     <InfoRow label={t('scheduledAt')} value={formatDate(request.pickupTime)} />
                     <InfoRow label={t('pickedUpAt')} value={formatDate(request.pickedUpAt)} />
-                    <InfoRow label={t('note')} value={request.note || '—'} />
+                    <InfoRow label={t('note')} value={request.note || ''} />
                     {request.driverNote && <InfoRow label="Driver Note" value={<span style={{ color: '#16a34a' }}>{request.driverNote}</span>} />}
                   </div>
 
@@ -533,9 +535,9 @@ export default function PickupRequestDetailPage() {
                                   {p.trackingCode}
                                 </code>
                               </td>
-                              <td style={{ fontWeight: 600, fontSize: 13 }}>{p.receiverName || '—'}</td>
+                              <td style={{ fontWeight: 600, fontSize: 13 }}>{p.receiverName || ''}</td>
                               <td style={{ fontWeight: 600, fontSize: 13 }}>{p.receiverPhone}</td>
-                              <td style={{ fontSize: 12 }}>{p.zone?.name || '—'}</td>
+                              <td style={{ fontSize: 12 }}>{p.zone?.name || ''}</td>
                               <td style={{ fontWeight: 700, fontSize: 13 }}>{formatCOD(p.cod, p.codCurrency)}</td>
                               <td style={{ color: 'var(--success)', fontWeight: 700, fontSize: 13 }}>${parseFloat(p.deliveryFee || 0).toFixed(2)}</td>
                               <td>
@@ -644,7 +646,7 @@ export default function PickupRequestDetailPage() {
                         <FormField label={t('note')}>
                           <input type="text" value={form.note} onChange={e => setForm(f => ({ ...f, note: e.target.value }))} placeholder="Optional note" style={inputStyle} />
                         </FormField>
-                        <button type="submit" disabled={submitting} style={{ marginTop: 4, padding: '12px', borderRadius: 10, border: 'none', background: submitting ? 'var(--border)' : 'linear-gradient(135deg,#1e3a8a,#2563eb)', color: '#fff', fontWeight: 700, fontSize: 14, cursor: submitting ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, boxShadow: submitting ? 'none' : '0 4px 14px rgba(30,58,138,0.3)', transition: 'all 0.2s' }}>
+                        <button type="submit" className="btn btn-primary w-full" disabled={submitting} style={{ marginTop: 4, padding: '12px', borderRadius: 10, fontWeight: 700, fontSize: 14 }}>
                           <MdAdd size={18} />{submitting ? 'Adding...' : t('addParcel')}
                         </button>
                       </form>
@@ -808,20 +810,20 @@ export default function PickupRequestDetailPage() {
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 16 }}>
                         <div style={{ flex: 1 }} />
                         <button
+                          type="button"
+                          className="btn btn-outline"
                           onClick={addBatchRow}
-                          style={{ padding: '9px 28px', borderRadius: 8, border: 'none', background: '#1e3a8a', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6, transition: 'background 0.15s' }}
-                          onMouseEnter={e => (e.currentTarget.style.background = '#1e40af')}
-                          onMouseLeave={e => (e.currentTarget.style.background = '#1e3a8a')}
+                          style={{ padding: '9px 24px', borderRadius: 8, fontWeight: 600, fontSize: 13 }}
                         >
                           <MdAdd size={16} /> Add New
                         </button>
                         <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end' }}>
                           <button
+                            type="button"
+                            className="btn btn-primary"
                             onClick={handleBatchSubmit}
                             disabled={batchSubmitting}
-                            style={{ padding: '9px 32px', borderRadius: 8, border: 'none', background: batchSubmitting ? '#94a3b8' : '#1e3a8a', color: '#fff', fontWeight: 700, fontSize: 13, cursor: batchSubmitting ? 'not-allowed' : 'pointer', transition: 'background 0.15s', boxShadow: batchSubmitting ? 'none' : '0 2px 8px rgba(30,58,138,0.25)' }}
-                            onMouseEnter={e => { if (!batchSubmitting) e.currentTarget.style.background = '#1e40af'; }}
-                            onMouseLeave={e => { if (!batchSubmitting) e.currentTarget.style.background = '#1e3a8a'; }}
+                            style={{ padding: '9px 32px', borderRadius: 8, fontWeight: 700, fontSize: 13 }}
                           >
                             {batchSubmitting ? 'Saving...' : 'Save'}
                           </button>
@@ -879,9 +881,11 @@ export default function PickupRequestDetailPage() {
             </div>
 
             <button
+              type="button"
+              className="btn btn-primary w-full"
               onClick={handleAssignDriver}
               disabled={!assignDriverId || assigning}
-              style={{ marginTop: 20, width: '100%', padding: '13px', borderRadius: 10, border: 'none', background: (!assignDriverId || assigning) ? 'var(--border)' : '#2563eb', color: '#fff', fontWeight: 700, fontSize: 14, cursor: (!assignDriverId || assigning) ? 'not-allowed' : 'pointer', transition: 'all 0.2s', boxShadow: (!assignDriverId || assigning) ? 'none' : '0 4px 14px rgba(37,99,235,0.35)' }}
+              style={{ marginTop: 20, width: '100%', padding: '13px', borderRadius: 10, fontWeight: 700, fontSize: 14 }}
             >
               {assigning ? 'Assigning...' : t('assignDriver')}
             </button>
@@ -905,9 +909,9 @@ export default function PickupRequestDetailPage() {
                 </div>
                 <div style={{ fontSize: 12, lineHeight: 1.7 }}>
                   <div><b>From:</b> {request?.merchant?.name}</div>
-                  <div><b>To:</b> {p.receiverName || '—'} · {p.receiverPhone}</div>
+                  <div><b>To:</b> {[p.receiverName, p.receiverPhone].filter(Boolean).join(' · ')}</div>
                   <div><b>Address:</b> {p.receiverAddress}</div>
-                  <div><b>Zone:</b> {p.zone?.name || '—'}</div>
+                  <div><b>Zone:</b> {p.zone?.name || ''}</div>
                   <div><b>COD:</b> {formatCOD(p.cod, p.codCurrency)}</div>
                   <div><b>Fee:</b> ${parseFloat(p.deliveryFee || 0).toFixed(2)}</div>
                   {p.note && <div><b>Note:</b> {p.note}</div>}

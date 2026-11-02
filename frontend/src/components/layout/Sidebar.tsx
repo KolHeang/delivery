@@ -9,6 +9,7 @@ import { useTenant } from '@/lib/TenantContext';
 import api from '@/lib/api';
 import { saasApi } from '@/lib/saas-api';
 import { applyBrandTheme, initBrandTheme } from '@/lib/theme';
+import { SidebarToggleIcon, useSidebarCollapsed } from '@/components/ui/SidebarToggleIcon';
 import {
   MdDashboard, MdStorefront, MdPeople, MdLocalShipping,
   MdAccountBalanceWallet, MdReceipt, MdSettings,
@@ -19,6 +20,7 @@ import {
 export default function Sidebar() {
   const pathname = usePathname();
   const { t, lang } = useLanguage();
+  const { isCollapsed, toggleCollapsed, setCollapsed, isMobileOpen, closeMobile } = useSidebarCollapsed();
   const [user, setUser] = useState<any>(null);
   const [mounted, setMounted] = useState(false);
 
@@ -236,6 +238,11 @@ export default function Sidebar() {
   }, [pathname]);
 
   const toggleGroup = (key: string) => {
+    if (isCollapsed) {
+      setCollapsed(false);
+      setOpenGroups(prev => ({ ...prev, [key]: true }));
+      return;
+    }
     setOpenGroups(prev => ({ ...prev, [key]: !prev[key] }));
   };
 
@@ -306,21 +313,39 @@ export default function Sidebar() {
 
   const currentLogo = tenant?.logoUrl || orgLogo;
 
+  useEffect(() => {
+    closeMobile();
+  }, [pathname, closeMobile]);
+
   return (
-    <aside
-      className="sidebar"
-      style={{
-        width: 260,
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        height: '100vh',
-        zIndex: 100,
-        background: 'var(--sidebar-bg, #1565D8)',
-      }}
-    >
+    <>
+      {isMobileOpen && <div className="sidebar-mobile-backdrop" onClick={closeMobile} />}
+      <aside
+        className={`sidebar ${isMobileOpen ? 'mobile-open' : ''}`}
+        style={{
+          width: 'var(--sidebar-width, 260px)',
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          height: '100vh',
+          zIndex: 100,
+          background: 'var(--sidebar-bg, #1565D8)',
+          transition: 'width 0.2s ease',
+        }}
+      >
       {/* Brand Logo */}
-      <div className="sidebar-logo" style={{ height: 76, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: 12, padding: '0 16px', borderBottom: '1px solid rgba(255,255,255,0.12)' }}>
+      <div
+        className="sidebar-logo"
+        style={{
+          height: 76,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: isCollapsed ? 'center' : 'flex-start',
+          gap: 12,
+          padding: isCollapsed ? '0 8px' : '0 16px',
+          borderBottom: '1px solid rgba(255,255,255,0.12)',
+        }}
+      >
         {currentLogo ? (
           <img
             src={currentLogo}
@@ -347,36 +372,38 @@ export default function Sidebar() {
             📦
           </div>
         )}
-        <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', minWidth: 0, overflow: 'hidden' }}>
-          <span style={{
-            fontSize: 16,
-            fontWeight: 800,
-            color: '#fff',
-            letterSpacing: '0.5px',
-            lineHeight: 1.2,
-            whiteSpace: 'nowrap',
-            textOverflow: 'ellipsis',
-            overflow: 'hidden',
-            textTransform: activeCompanyName ? 'capitalize' : 'none'
-          }}>
-            {activeCompanyName || (
-              <>EBS<span style={{ color: '#93c5fd' }}>Express</span></>
-            )}
-          </span>
-          <span style={{
-            fontSize: 12,
-            color: '#ffffff',
-            fontWeight: 700,
-            marginTop: 2,
-            letterSpacing: '0.2px',
-            whiteSpace: 'nowrap',
-            textOverflow: 'ellipsis',
-            overflow: 'hidden',
-            textShadow: '0 1px 2px rgba(0,0,0,0.15)'
-          }}>
-            {lang === 'km' ? 'ប្រព័ន្ធដឹកជញ្ជូន' : 'Delivery System'}
-          </span>
-        </div>
+        {!isCollapsed && (
+          <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', minWidth: 0, overflow: 'hidden' }}>
+            <span style={{
+              fontSize: 16,
+              fontWeight: 800,
+              color: '#fff',
+              letterSpacing: '0.5px',
+              lineHeight: 1.2,
+              whiteSpace: 'nowrap',
+              textOverflow: 'ellipsis',
+              overflow: 'hidden',
+              textTransform: activeCompanyName ? 'capitalize' : 'none'
+            }}>
+              {activeCompanyName || (
+                <>EBS<span style={{ color: '#93c5fd' }}>Express</span></>
+              )}
+            </span>
+            <span style={{
+              fontSize: 12,
+              color: '#ffffff',
+              fontWeight: 700,
+              marginTop: 2,
+              letterSpacing: '0.2px',
+              whiteSpace: 'nowrap',
+              textOverflow: 'ellipsis',
+              overflow: 'hidden',
+              textShadow: '0 1px 2px rgba(0,0,0,0.15)'
+            }}>
+              {lang === 'km' ? 'ប្រព័ន្ធដឹកជញ្ជូន' : 'Delivery System'}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Navigation list */}
@@ -385,11 +412,18 @@ export default function Sidebar() {
         {(!subscription?.plan?.features || subscription.plan.features.dashboard !== false) && (
           <Link
             href="/dashboard"
+            title={isCollapsed ? t('dashboard') : undefined}
             className={`sidebar-item ${pathname === '/dashboard' ? 'active' : ''}`}
-            style={{ marginBottom: 4, color: '#ffffff', fontWeight: pathname === '/dashboard' ? 700 : 600 }}
+            style={{
+              marginBottom: 4,
+              color: '#ffffff',
+              fontWeight: pathname === '/dashboard' ? 700 : 600,
+              justifyContent: isCollapsed ? 'center' : 'flex-start',
+              padding: isCollapsed ? '10px 0' : undefined,
+            }}
           >
             <span className="sidebar-item-icon" style={{ color: '#ffffff' }}><MdDashboard size={19} /></span>
-            <span style={{ color: '#ffffff' }}>{t('dashboard')}</span>
+            {!isCollapsed && <span style={{ color: '#ffffff' }}>{t('dashboard')}</span>}
           </Link>
         )}
 
@@ -410,11 +444,18 @@ export default function Sidebar() {
                 <Link
                   key={group.key}
                   href={group.href}
+                  title={isCollapsed ? group.label : undefined}
                   className={`sidebar-item ${isActive ? 'active' : ''}`}
-                  style={{ marginBottom: 8, color: '#ffffff', fontWeight: isActive ? 700 : 600 }}
+                  style={{
+                    marginBottom: 8,
+                    color: '#ffffff',
+                    fontWeight: isActive ? 700 : 600,
+                    justifyContent: isCollapsed ? 'center' : 'flex-start',
+                    padding: isCollapsed ? '10px 0' : undefined,
+                  }}
                 >
                   <span className="sidebar-item-icon" style={{ color: '#ffffff' }}><Icon size={19} /></span>
-                  <span style={{ color: '#ffffff' }}>{group.label}</span>
+                  {!isCollapsed && <span style={{ color: '#ffffff' }}>{group.label}</span>}
                 </Link>
               );
             }
@@ -437,9 +478,11 @@ export default function Sidebar() {
                 {/* Group Header */}
                 <button
                   onClick={() => toggleGroup(group.key)}
+                  title={isCollapsed ? group.label : undefined}
                   className="sidebar-item"
                   style={{
-                    justifyContent: 'space-between',
+                    justifyContent: isCollapsed ? 'center' : 'space-between',
+                    padding: isCollapsed ? '10px 0' : undefined,
                     background: isGroupActive ? 'rgba(255, 255, 255, 0.14)' : 'transparent',
                     color: '#ffffff',
                     fontWeight: 600,
@@ -447,13 +490,13 @@ export default function Sidebar() {
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <span className="sidebar-item-icon" style={{ color: '#ffffff' }}><Icon size={19} /></span>
-                    <span style={{ color: '#ffffff', fontWeight: 600 }}>{group.label}</span>
+                    {!isCollapsed && <span style={{ color: '#ffffff', fontWeight: 600 }}>{group.label}</span>}
                   </div>
-                  {isOpen ? <MdKeyboardArrowUp size={18} color="#ffffff" /> : <MdKeyboardArrowDown size={18} color="#ffffff" />}
+                  {!isCollapsed && (isOpen ? <MdKeyboardArrowUp size={18} color="#ffffff" /> : <MdKeyboardArrowDown size={18} color="#ffffff" />)}
                 </button>
 
                 {/* Group Sub-items */}
-                {isOpen && (
+                {!isCollapsed && isOpen && (
                   <div style={{
                     paddingLeft: 16,
                     marginLeft: 20,
@@ -618,6 +661,48 @@ export default function Sidebar() {
             );
           })}
       </div>
-    </aside>
+
+      {/* Sidebar Collapse / Expand Footer */}
+      <div
+        className="sidebar-collapse-footer"
+        style={{
+          borderTop: '1px solid rgba(255, 255, 255, 0.14)',
+          padding: '10px 8px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          flexShrink: 0,
+        }}
+      >
+        <button
+          type="button"
+          onClick={toggleCollapsed}
+          title={isCollapsed ? (lang === 'km' ? 'ពង្រីកម៉ឺនុយ' : 'Expand sidebar') : (lang === 'km' ? 'បង្រួមម៉ឺនុយ' : 'Collapse sidebar')}
+          aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          style={{
+            width: 40,
+            height: 40,
+            borderRadius: 10,
+            border: 'none',
+            background: 'transparent',
+            color: '#ffffff',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            transition: 'background 0.15s ease',
+          }}
+          onMouseEnter={e => {
+            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.14)';
+          }}
+          onMouseLeave={e => {
+            e.currentTarget.style.background = 'transparent';
+          }}
+        >
+          <SidebarToggleIcon collapsed={isCollapsed} size={22} />
+        </button>
+      </div>
+      </aside>
+    </>
   );
 }

@@ -9,13 +9,8 @@ import Topbar from '@/components/layout/Topbar';
 import { MdSearch, MdFilterAlt, MdClose, MdRefresh } from 'react-icons/md';
 import { useLanguage } from '@/lib/LanguageContext';
 import DateInput, { getLocalDateString } from '@/components/ui/DateInput';
-
-const getLocalFirstDayOfMonthString = () => {
-  const d = new Date();
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  return `${year}-${month}-01`;
-};
+import Pagination from '@/components/ui/Pagination';
+import { TableSkeleton } from '@/components/ui/Skeleton';
 
 interface ShopSummary {
   id: number;
@@ -34,17 +29,19 @@ interface ShopSummary {
 
 export default function ShopSummaryPage() {
   const router = useRouter();
-  const { t, lang } = useLanguage();
+  const { lang } = useLanguage();
 
   const [data, setData] = useState<ShopSummary[]>([]);
   const [loading, setLoading] = useState(false);
   const [merchants, setMerchants] = useState<any[]>([]);
 
-  // Filters
+  // Filters & Pagination
   const [startDate, setStartDate] = useState(() => getLocalDateString());
   const [endDate, setEndDate] = useState(() => getLocalDateString());
   const [merchantId, setMerchantId] = useState('');
   const [search, setSearch] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -69,7 +66,17 @@ export default function ShopSummaryPage() {
     !search || row.name?.toLowerCase().includes(search.toLowerCase())
   );
 
-  const clearFilters = () => { setStartDate(getLocalDateString()); setEndDate(getLocalDateString()); setMerchantId(''); setSearch(''); };
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, startDate, endDate, merchantId]);
+
+  const clearFilters = () => {
+    setStartDate(getLocalDateString());
+    setEndDate(getLocalDateString());
+    setMerchantId('');
+    setSearch('');
+    setCurrentPage(1);
+  };
   const hasFilter = startDate !== getLocalDateString() || endDate !== getLocalDateString() || merchantId || search;
 
   const totalDelivered = filtered.reduce((a, r) => a + r.delivered, 0);
@@ -78,6 +85,9 @@ export default function ShopSummaryPage() {
   const totalCodUSD = filtered.reduce((a, r) => a + r.codUSD, 0);
   const totalCodKHR = filtered.reduce((a, r) => a + r.codKHR, 0);
   const totalFee = filtered.reduce((a, r) => a + r.fee, 0);
+
+  const totalEntries = filtered.length;
+  const currentPageItems = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   return (
     <div className="app-layout">
@@ -92,7 +102,7 @@ export default function ShopSummaryPage() {
               <MdFilterAlt size={18} style={{ color: 'var(--accent)' }} />
               <span style={{ fontWeight: 700, fontSize: 14 }}>{lang === 'km' ? 'តម្រង' : 'Filter'}</span>
               {hasFilter && (
-                <button onClick={clearFilters} style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--danger)', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 8, padding: '4px 10px', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
+                <button type="button" className="btn btn-outline btn-sm" onClick={clearFilters} style={{ marginLeft: 'auto', fontSize: 12, padding: '4px 10px', minHeight: 30 }}>
                   <MdClose size={14} /> {lang === 'km' ? 'សម្អាតទាំងអស់' : 'Clear All'}
                 </button>
               )}
@@ -168,7 +178,7 @@ export default function ShopSummaryPage() {
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
                   <tr style={{ background: 'var(--sidebar-bg, #1565D8)' }}>
-                    <th style={{ padding: '12px 10px', textAlign: 'center', background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'ល.រ' : 'No.'}</th>
+                    <th style={{ width: 60, padding: '12px 10px', textAlign: 'center', background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'ល.រ' : 'No.'}</th>
                     <th style={{ padding: '12px 10px', textAlign: 'left', background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'ឈ្មោះហាង' : 'Shop Name'}</th>
                     <th style={{ padding: '12px 10px', textAlign: 'center', background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'ដឹកជញ្ជូនរួច' : 'Delivered'}</th>
                     <th style={{ padding: '12px 10px', textAlign: 'center', background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'បរាជ័យ' : 'Failed'}</th>
@@ -180,8 +190,8 @@ export default function ShopSummaryPage() {
                 </thead>
                 <tbody>
                   {loading ? (
-                    <tr><td colSpan={8} style={{ textAlign: 'center', padding: '40px 0', border: 'none' }}><div className="spinner" style={{ margin: '0 auto' }} /></td></tr>
-                  ) : filtered.length === 0 ? (
+                    <TableSkeleton columns={8} rows={5} />
+                  ) : currentPageItems.length === 0 ? (
                     <tr>
                       <td colSpan={8} style={{ padding: '36px 20px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13, border: 'none' }}>
                         {lang === 'km' ? 'គ្មានទិន្នន័យ' : 'No data'}
@@ -189,12 +199,12 @@ export default function ShopSummaryPage() {
                     </tr>
                   ) : (
                     <>
-                      {filtered.map((row, index) => {
+                      {currentPageItems.map((row, index) => {
                         const mObj = merchants.find(m => m.id === row.id);
                         const displayName = lang === 'km' && mObj?.nameKh ? mObj.nameKh : row.name;
                         return (
                           <tr key={row.id} style={{ borderBottom: '1px solid #f1f5f9', background: '#ffffff' }}>
-                            <td style={{ padding: '12px 10px', color: 'var(--text-muted)', fontSize: 12, textAlign: 'center', border: 'none' }}>{index + 1}</td>
+                            <td style={{ padding: '12px 10px', color: 'var(--text-muted)', fontSize: 12, textAlign: 'center', border: 'none' }}>{(currentPage - 1) * pageSize + index + 1}</td>
                             <td style={{ padding: '12px 10px', fontWeight: 600, border: 'none' }}>{displayName}</td>
                             <td style={{ padding: '12px 10px', textAlign: 'center', border: 'none' }}>
                               <span style={{ background: 'var(--success)', color: 'white', padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600 }}>{row.delivered} {lang === 'km' ? 'កញ្ចប់' : 'parcels'}</span>
@@ -225,6 +235,17 @@ export default function ShopSummaryPage() {
                 </tbody>
               </table>
             </div>
+
+            {!loading && totalEntries > 0 && (
+              <Pagination
+                currentPage={currentPage}
+                totalItems={totalEntries}
+                pageSize={pageSize}
+                onPageChange={setCurrentPage}
+                onPageSizeChange={(sz) => { setPageSize(sz); setCurrentPage(1); }}
+                pageSizeOptions={[10, 25, 50, 100]}
+              />
+            )}
           </div>
         </div>
       </div>

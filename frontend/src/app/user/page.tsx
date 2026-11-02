@@ -134,7 +134,7 @@ export default function StaffPage() {
               <table>
                 <thead>
                   <tr>
-                    <th>{t('colNo') || 'ល.រ'}</th>
+                    <th style={{ width: 60, textAlign: 'center' }}>{t('colNo') || 'ល.រ'}</th>
                     <th>{t('code') || 'កូដ'}</th>
                     <th>{t('name') || 'ឈ្មោះ'}</th>
                     <th>{t('phone') || 'ទូរស័ព្ទ'}</th>
@@ -145,7 +145,7 @@ export default function StaffPage() {
                     <th>{t('joinDate') || 'កាលបរិច្ឆេទចូល'}</th>
                     <th>{t('salary') || 'ប្រាក់ខែ'}</th>
                     <th>{t('status') || 'ស្ថានភាព'}</th>
-                    <th>{t('actions') || 'សកម្មភាព'}</th>
+                    <th style={{ width: 100, textAlign: 'center' }}>{t('actions') || 'សកម្មភាព'}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -166,7 +166,7 @@ export default function StaffPage() {
 
                       return (
                         <tr key={d.id}>
-                          <td style={{ color: 'var(--text-muted)', fontSize: 12 }}>
+                          <td style={{ color: 'var(--text-muted)', fontSize: 12, textAlign: 'center' }}>
                             {(currentPage - 1) * pageSize + idx + 1}
                           </td>
                           <td>
@@ -227,8 +227,8 @@ export default function StaffPage() {
                               {d.isActive !== false ? (t('active') || 'សកម្ម') : (t('inactive') || 'អសកម្ម')}
                             </span>
                           </td>
-                          <td>
-                            <div style={{ display: 'flex', gap: 4 }}>
+                          <td style={{ textAlign: 'center' }}>
+                            <div style={{ display: 'inline-flex', gap: 4, justifyContent: 'center' }}>
                               <button className="btn btn-ghost btn-icon btn-sm" onClick={() => openEdit(d)} title="កែប្រែ">
                                 <FaRegEdit size={14} />
                               </button>

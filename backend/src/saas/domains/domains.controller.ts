@@ -13,6 +13,8 @@ import {
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiQuery, ApiParam } from '@nestjs/swagger';
 import { SaasService } from '../saas.service';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
+import { RolesGuard } from '../../auth/roles.guard';
+import { Roles } from '../../auth/roles.decorator';
 import { AddDomainDto } from './dto/domain.dto';
 
 @ApiTags('SaaS - Domains')
@@ -27,7 +29,8 @@ export class DomainsController {
     return this.saasService.resolveDomain(domain);
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('super_admin', 'superadmin', 'support_admin')
   @ApiBearerAuth()
   @Get()
   @ApiOperation({ summary: 'List tenant domains' })
@@ -36,7 +39,8 @@ export class DomainsController {
     return this.saasService.getDomains(tenantId ? +tenantId : undefined);
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('super_admin', 'superadmin', 'support_admin')
   @ApiBearerAuth()
   @Post()
   @ApiOperation({ summary: 'Add a new custom domain or subdomain alias' })
@@ -44,7 +48,8 @@ export class DomainsController {
     return this.saasService.addDomain(body.tenantId, body);
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('super_admin', 'superadmin', 'support_admin')
   @ApiBearerAuth()
   @Patch(':id/primary')
   @ApiOperation({ summary: 'Set domain as primary for tenant' })
@@ -53,7 +58,8 @@ export class DomainsController {
     return this.saasService.setPrimaryDomain(id);
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('super_admin', 'superadmin', 'support_admin')
   @ApiBearerAuth()
   @Patch(':id/verify')
   @ApiOperation({ summary: 'Verify domain DNS and SSL' })
@@ -62,7 +68,8 @@ export class DomainsController {
     return this.saasService.verifyDomain(id);
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('super_admin', 'superadmin')
   @ApiBearerAuth()
   @Delete(':id')
   @ApiOperation({ summary: 'Delete a domain' })

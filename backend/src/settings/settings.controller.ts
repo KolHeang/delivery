@@ -30,6 +30,20 @@ import { LogActivity } from '../activity-logs/activity.decorator';
 import { MinioService } from '../minio/minio.service';
 import { createMulterOptions } from '../config/multer';
 import { CreateCurrencyDto, UpdateCurrencyDto } from './dto/currency.dto';
+import { getEffectiveTenantId } from '../common/tenant.util';
+
+function getEffectiveTenantSubdomain(req: any): string | undefined {
+  if (req?.user?.tenantId) {
+    return req?.user?.tenantSubdomain;
+  }
+  if (
+    req?.user?.isSaasAdmin ||
+    ['super_admin', 'superadmin'].includes(req?.user?.role)
+  ) {
+    return (req?.headers?.['x-tenant-subdomain'] as string) || req?.user?.tenantSubdomain;
+  }
+  return req?.user?.tenantSubdomain;
+}
 
 @ApiTags('Settings')
 @ApiBearerAuth()
@@ -45,8 +59,8 @@ export class SettingsController {
   @ApiOperation({ summary: 'Get organisation settings' })
   @RequirePermissions('settings.organisation', 'settings.manage')
   getOrganisation(@Req() req: any) {
-    const tenantId = req.headers['x-tenant-id'] ? +req.headers['x-tenant-id'] : (req.user?.tenantId ? +req.user.tenantId : undefined);
-    const tenantSubdomain = (req.headers['x-tenant-subdomain'] as string) || req.user?.tenantSubdomain;
+    const tenantId = getEffectiveTenantId(req);
+    const tenantSubdomain = getEffectiveTenantSubdomain(req);
     return this.settingsService.getOrganisation(tenantId, tenantSubdomain);
   }
 
@@ -55,8 +69,8 @@ export class SettingsController {
   @Post('organisation')
   @LogActivity({ action: 'UPDATE_ORGANISATION_SETTINGS', entityName: 'OrganisationSetting', description: 'Updated company/organisation settings' })
   updateOrganisation(@Body() body: any, @Req() req: any) {
-    const tenantId = req.headers['x-tenant-id'] ? +req.headers['x-tenant-id'] : (req.user?.tenantId ? +req.user.tenantId : undefined);
-    const tenantSubdomain = (req.headers['x-tenant-subdomain'] as string) || req.user?.tenantSubdomain;
+    const tenantId = getEffectiveTenantId(req);
+    const tenantSubdomain = getEffectiveTenantSubdomain(req);
     return this.settingsService.updateOrganisation(body, tenantId, tenantSubdomain);
   }
 
@@ -83,8 +97,8 @@ export class SettingsController {
   @ApiOperation({ summary: 'Get general application settings' })
   @RequirePermissions('settings.general', 'settings.manage')
   getGeneral(@Req() req: any) {
-    const tenantId = req.headers['x-tenant-id'] ? +req.headers['x-tenant-id'] : (req.user?.tenantId ? +req.user.tenantId : undefined);
-    const tenantSubdomain = (req.headers['x-tenant-subdomain'] as string) || req.user?.tenantSubdomain;
+    const tenantId = getEffectiveTenantId(req);
+    const tenantSubdomain = getEffectiveTenantSubdomain(req);
     return this.settingsService.getGeneralSettings(tenantId, tenantSubdomain);
   }
 
@@ -93,8 +107,8 @@ export class SettingsController {
   @Post('general')
   @LogActivity({ action: 'UPDATE_GENERAL_SETTING', entityName: 'GeneralSetting', description: 'Updated general application settings' })
   updateGeneral(@Body() body: { key: string; value: string }, @Req() req: any) {
-    const tenantId = req.headers['x-tenant-id'] ? +req.headers['x-tenant-id'] : (req.user?.tenantId ? +req.user.tenantId : undefined);
-    const tenantSubdomain = (req.headers['x-tenant-subdomain'] as string) || req.user?.tenantSubdomain;
+    const tenantId = getEffectiveTenantId(req);
+    const tenantSubdomain = getEffectiveTenantSubdomain(req);
     return this.settingsService.updateGeneralSetting(body.key, body.value, tenantId, tenantSubdomain);
   }
 
@@ -107,10 +121,8 @@ export class SettingsController {
     @Query('activeOnly') activeOnly?: string,
     @Req() req?: any,
   ) {
-    const tenantId = req.headers['x-tenant-id']
-      ? +req.headers['x-tenant-id']
-      : (req.user?.tenantId ? +req.user.tenantId : undefined);
-    const tenantSubdomain = (req.headers['x-tenant-subdomain'] as string) || req.user?.tenantSubdomain;
+    const tenantId = getEffectiveTenantId(req);
+    const tenantSubdomain = getEffectiveTenantSubdomain(req);
     return this.settingsService.getCurrencies(activeOnly === 'true' || activeOnly === '1', tenantId, tenantSubdomain);
   }
 
@@ -126,10 +138,8 @@ export class SettingsController {
   @RequirePermissions('settings.general', 'settings.manage')
   @LogActivity({ action: 'SYNC_CURRENCIES_INTERNET', entityName: 'Currency', description: 'Synced currency exchange rates from internet' })
   syncCurrenciesFromInternet(@Req() req: any) {
-    const tenantId = req.headers['x-tenant-id']
-      ? +req.headers['x-tenant-id']
-      : (req.user?.tenantId ? +req.user.tenantId : undefined);
-    const tenantSubdomain = (req.headers['x-tenant-subdomain'] as string) || req.user?.tenantSubdomain;
+    const tenantId = getEffectiveTenantId(req);
+    const tenantSubdomain = getEffectiveTenantSubdomain(req);
     return this.settingsService.syncRatesFromInternet(tenantId, tenantSubdomain);
   }
 
@@ -138,10 +148,8 @@ export class SettingsController {
   @RequirePermissions('settings.general', 'settings.manage')
   @LogActivity({ action: 'CREATE_CURRENCY', entityName: 'Currency', description: 'Created currency' })
   createCurrency(@Body() dto: CreateCurrencyDto, @Req() req: any) {
-    const tenantId = req.headers['x-tenant-id']
-      ? +req.headers['x-tenant-id']
-      : (req.user?.tenantId ? +req.user.tenantId : undefined);
-    const tenantSubdomain = (req.headers['x-tenant-subdomain'] as string) || req.user?.tenantSubdomain;
+    const tenantId = getEffectiveTenantId(req);
+    const tenantSubdomain = getEffectiveTenantSubdomain(req);
     return this.settingsService.createCurrency(dto, tenantId, tenantSubdomain);
   }
 
@@ -151,10 +159,8 @@ export class SettingsController {
   @RequirePermissions('settings.general', 'settings.manage')
   @LogActivity({ action: 'UPDATE_CURRENCY', entityName: 'Currency', description: 'Updated currency' })
   updateCurrency(@Param('id') id: string, @Body() dto: UpdateCurrencyDto, @Req() req: any) {
-    const tenantId = req.headers['x-tenant-id']
-      ? +req.headers['x-tenant-id']
-      : (req.user?.tenantId ? +req.user.tenantId : undefined);
-    const tenantSubdomain = (req.headers['x-tenant-subdomain'] as string) || req.user?.tenantSubdomain;
+    const tenantId = getEffectiveTenantId(req);
+    const tenantSubdomain = getEffectiveTenantSubdomain(req);
     return this.settingsService.updateCurrency(+id, dto, tenantId, tenantSubdomain);
   }
 
@@ -164,10 +170,8 @@ export class SettingsController {
   @RequirePermissions('settings.general', 'settings.manage')
   @LogActivity({ action: 'SET_BASE_CURRENCY', entityName: 'Currency', description: 'Set currency as base' })
   setBaseCurrency(@Param('id') id: string, @Req() req: any) {
-    const tenantId = req.headers['x-tenant-id']
-      ? +req.headers['x-tenant-id']
-      : (req.user?.tenantId ? +req.user.tenantId : undefined);
-    const tenantSubdomain = (req.headers['x-tenant-subdomain'] as string) || req.user?.tenantSubdomain;
+    const tenantId = getEffectiveTenantId(req);
+    const tenantSubdomain = getEffectiveTenantSubdomain(req);
     return this.settingsService.setBaseCurrency(+id, tenantId, tenantSubdomain);
   }
 
@@ -185,8 +189,8 @@ export class SettingsController {
   @ApiOperation({ summary: 'Get current and all Firebase configurations' })
   @RequirePermissions('settings.general', 'settings.manage')
   async getFirebase(@Req() req: any) {
-    const tenantId = req.headers['x-tenant-id'] ? +req.headers['x-tenant-id'] : (req.user?.tenantId ? +req.user.tenantId : undefined);
-    const tenantSubdomain = (req.headers['x-tenant-subdomain'] as string) || req.user?.tenantSubdomain;
+    const tenantId = getEffectiveTenantId(req);
+    const tenantSubdomain = getEffectiveTenantSubdomain(req);
     const current = await this.settingsService.getFirebaseConfig(tenantId, tenantSubdomain);
     const list = await this.settingsService.getAllFirebaseConfigs(tenantId);
     return { current, list };
@@ -196,7 +200,7 @@ export class SettingsController {
   @ApiOperation({ summary: 'List all Firebase configs' })
   @RequirePermissions('settings.general', 'settings.manage')
   getAllFirebase(@Req() req: any) {
-    const tenantId = req.headers['x-tenant-id'] ? +req.headers['x-tenant-id'] : (req.user?.tenantId ? +req.user.tenantId : undefined);
+    const tenantId = getEffectiveTenantId(req);
     return this.settingsService.getAllFirebaseConfigs(tenantId);
   }
 
@@ -210,9 +214,7 @@ export class SettingsController {
     @Query('status') status?: string,
     @Req() req?: any,
   ) {
-    const tenantId = req.headers['x-tenant-id']
-      ? +req.headers['x-tenant-id']
-      : (req.user?.tenantId ? +req.user.tenantId : undefined);
+    const tenantId = getEffectiveTenantId(req);
     return this.settingsService.getFirebaseLogs(
       limit ? parseInt(limit, 10) : 100,
       status,
@@ -234,9 +236,7 @@ export class SettingsController {
     @Body() body: { targetToken?: string; title?: string; body?: string },
     @Req() req?: any,
   ) {
-    const tenantId = req.headers['x-tenant-id']
-      ? +req.headers['x-tenant-id']
-      : (req.user?.tenantId ? +req.user.tenantId : undefined);
+    const tenantId = getEffectiveTenantId(req);
     return this.settingsService.testFirebase({
       targetToken: body?.targetToken,
       title: body?.title,
@@ -249,9 +249,7 @@ export class SettingsController {
   @ApiOperation({ summary: 'Clear Firebase notification logs' })
   @RequirePermissions('settings.general', 'settings.manage')
   clearFirebaseLogs(@Req() req?: any) {
-    const tenantId = req.headers['x-tenant-id']
-      ? +req.headers['x-tenant-id']
-      : (req.user?.tenantId ? +req.user.tenantId : undefined);
+    const tenantId = getEffectiveTenantId(req);
     return this.settingsService.clearFirebaseLogs(tenantId);
   }
 
@@ -268,7 +266,13 @@ export class SettingsController {
   @RequirePermissions('settings.general', 'settings.manage')
   @LogActivity({ action: 'CREATE_FIREBASE_CONFIG', entityName: 'FirebaseCredential', description: 'Created Firebase credentials' })
   createFirebase(@Req() req: any, @Body() body: any) {
-    const tenantId = body.tenantId || (req.headers['x-tenant-id'] ? +req.headers['x-tenant-id'] : (req.user?.tenantId ? +req.user.tenantId : undefined));
+    const isSuperAdmin =
+      req?.user?.isSaasAdmin ||
+      ['super_admin', 'superadmin'].includes(req?.user?.role);
+    const tenantId =
+      isSuperAdmin && body.tenantId
+        ? +body.tenantId
+        : getEffectiveTenantId(req);
     return this.settingsService.createFirebaseConfig({ ...body, tenantId });
   }
 
@@ -294,7 +298,13 @@ export class SettingsController {
   @ApiOperation({ summary: 'Delete all Firebase credentials' })
   @RequirePermissions('settings.general', 'settings.manage')
   @LogActivity({ action: 'DELETE_ALL_FIREBASE_CONFIGS', entityName: 'FirebaseCredential', description: 'Deleted all Firebase credentials' })
-  deleteFirebase() {
+  deleteFirebase(@Req() req: any) {
+    const isSuperAdmin =
+      req?.user?.isSaasAdmin ||
+      ['super_admin', 'superadmin'].includes(req?.user?.role);
+    if (!isSuperAdmin) {
+      throw new BadRequestException('Only SaaS Super Admin can clear all platform Firebase configs');
+    }
     return this.settingsService.deleteFirebaseConfig();
   }
 

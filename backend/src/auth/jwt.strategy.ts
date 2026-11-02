@@ -1,4 +1,5 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { DataSource } from 'typeorm';
@@ -17,11 +18,14 @@ interface JwtPayload {
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
-  constructor(private readonly dataSource: DataSource) {
+  constructor(private readonly dataSource: DataSource, config: ConfigService) {
     super({
-      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+      jwtFromRequest: ExtractJwt.fromExtractors([
+        ExtractJwt.fromAuthHeaderAsBearerToken(),
+        ExtractJwt.fromUrlQueryParameter('token'),
+      ]),
       ignoreExpiration: false,
-      secretOrKey: process.env.JWT_SECRET ?? 'delivery_jwt_secret_2024_!@#$',
+      secretOrKey: config.get<string>('JWT_SECRET', 'delivery_jwt_secret_2024_!@#$'),
       passReqToCallback: true,
     });
   }
@@ -53,7 +57,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       ['super_admin', 'superadmin', 'finance_admin', 'support_admin'].includes(payload.role)
     ) {
       const saasAdmin = await this.dataSource.getRepository(SaasAdmin).findOne({
-        where: [{ id: payload.sub }, { email: payload.email }],
+        where: payload.email
+          ? { id: payload.sub, email: payload.email }
+          : { id: payload.sub },
       });
       if (saasAdmin && saasAdmin.isActive) {
         return {
@@ -77,32 +83,41 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       },
     });
 
-    if (user && user.isActive) {
+    if (user) {
+      if (!user.isActive) {
+        throw new UnauthorizedException('User account is inactive');
+      }
       const permissions = user.roleRelation?.permissions?.map((p) => p.name) || [];
+      const resolvedRole =
+        payload.role === 'driver' && user.isDriver ? 'driver' : user.role;
       return {
         id: user.id,
         email: user.email,
-        role: user.role,
+        role: resolvedRole,
         roleName: user.roleRelation?.name,
+        isDriver: user.isDriver,
+        isStaff: user.isStaff,
         permissions,
         tenantId: user.tenantId ?? payload.tenantId ?? headerTenantId ?? null,
       };
     }
 
-    // Fallback check in SaasAdmin table
-    const saasAdminFallback = await this.dataSource.getRepository(SaasAdmin).findOne({
-      where: [{ id: payload.sub }, { email: payload.email }],
-    });
-    if (saasAdminFallback && saasAdminFallback.isActive) {
-      return {
-        id: saasAdminFallback.id,
-        email: saasAdminFallback.email,
-        role: saasAdminFallback.role,
-        name: saasAdminFallback.name,
-        isSaasAdmin: true,
-        permissions: ['*'],
-        tenantId: headerTenantId ?? null,
-      };
+    // Fallback check in SaasAdmin table (strictly matching both ID and email)
+    if (payload.email) {
+      const saasAdminFallback = await this.dataSource.getRepository(SaasAdmin).findOne({
+        where: { id: payload.sub, email: payload.email },
+      });
+      if (saasAdminFallback && saasAdminFallback.isActive) {
+        return {
+          id: saasAdminFallback.id,
+          email: saasAdminFallback.email,
+          role: saasAdminFallback.role,
+          name: saasAdminFallback.name,
+          isSaasAdmin: true,
+          permissions: ['*'],
+          tenantId: headerTenantId ?? null,
+        };
+      }
     }
 
     throw new UnauthorizedException('User not found or inactive');

@@ -12,12 +12,18 @@ import {
   ApiOperation,
   ApiQuery,
   ApiParam,
+  ApiBearerAuth,
 } from '@nestjs/swagger';
 import { CommissionsService } from './commissions.service';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
+import { RolesGuard } from '../../auth/roles.guard';
+import { Roles } from '../../auth/roles.decorator';
 import { UpdateCommissionStatusDto } from './dto/commission.dto';
 
 @ApiTags('SaaS - Commissions')
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles('super_admin', 'superadmin', 'finance_admin')
 @Controller('saas/commissions')
 export class CommissionsController {
   constructor(private readonly commissionsService: CommissionsService) {}

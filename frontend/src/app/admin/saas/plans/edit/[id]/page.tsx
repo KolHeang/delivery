@@ -831,10 +831,10 @@ export default function EditPlanPage() {
               href="/admin/saas/plans"
               className="btn btn-cancel"
               style={{
-                background: '#ffffff',
-                color: '#64748b',
-                border: '1px solid #cbd5e1',
-                fontWeight: 600,
+                background: '#dc2626',
+                color: '#ffffff',
+                border: '1px solid #dc2626',
+                fontWeight: 700,
                 fontSize: 13,
                 padding: '9px 20px',
                 borderRadius: 8,

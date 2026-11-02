@@ -14,9 +14,12 @@ import {
   ApiOperation,
   ApiQuery,
   ApiParam,
+  ApiBearerAuth,
 } from '@nestjs/swagger';
 import { CouponsService } from './coupons.service';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
+import { RolesGuard } from '../../auth/roles.guard';
+import { Roles } from '../../auth/roles.decorator';
 import { CreateCouponDto, UpdateCouponDto, ValidateCouponDto } from './dto/coupon.dto';
 
 @ApiTags('SaaS - Coupons')
@@ -32,6 +35,9 @@ export class CouponsController {
     return this.couponsService.validateCoupon(body.code, body.subtotal);
   }
 
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('super_admin', 'superadmin', 'finance_admin')
+  @ApiBearerAuth()
   @Get()
   @ApiOperation({ summary: 'Get all coupons with pagination and search' })
   @ApiQuery({ name: 'page', required: false, type: Number, description: 'Page number' })
@@ -49,6 +55,9 @@ export class CouponsController {
     });
   }
 
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('super_admin', 'superadmin', 'finance_admin')
+  @ApiBearerAuth()
   @Get(':id')
   @ApiOperation({ summary: 'Get coupon by ID' })
   @ApiParam({ name: 'id', description: 'Coupon ID' })
@@ -56,12 +65,18 @@ export class CouponsController {
     return this.couponsService.findById(+id);
   }
 
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('super_admin', 'superadmin', 'finance_admin')
+  @ApiBearerAuth()
   @Post()
   @ApiOperation({ summary: 'Create a new coupon' })
   async create(@Body() body: CreateCouponDto) {
     return this.couponsService.create(body as any);
   }
 
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('super_admin', 'superadmin', 'finance_admin')
+  @ApiBearerAuth()
   @Put(':id')
   @ApiOperation({ summary: 'Update an existing coupon' })
   @ApiParam({ name: 'id', description: 'Coupon ID' })
@@ -69,6 +84,9 @@ export class CouponsController {
     return this.couponsService.update(+id, body as any);
   }
 
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('super_admin', 'superadmin', 'finance_admin')
+  @ApiBearerAuth()
   @Delete(':id')
   @ApiOperation({ summary: 'Delete a coupon' })
   @ApiParam({ name: 'id', description: 'Coupon ID' })

@@ -12,6 +12,7 @@ import { FaRegEdit, FaTrashAlt } from 'react-icons/fa';
 import { FiPlusCircle } from 'react-icons/fi';
 import { useLanguage } from '@/lib/LanguageContext';
 import Pagination from '@/components/ui/Pagination';
+import { TableSkeleton } from '@/components/ui/Skeleton';
 import { formatDate } from '@/lib/date-utils';
 
 
@@ -106,11 +107,7 @@ export default function CustomersPage() {
                 </thead>
                 <tbody>
                   {loading ? (
-                    <tr>
-                      <td colSpan={7} style={{ padding: '40px 0', textAlign: 'center' }}>
-                        <div className="loading-wrapper"><div className="spinner" /></div>
-                      </td>
-                    </tr>
+                    <TableSkeleton columns={7} rows={6} />
                   ) : filtered.length === 0 ? (
                     <tr>
                       <td colSpan={7} style={{ padding: '36px 20px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
@@ -123,8 +120,8 @@ export default function CustomersPage() {
                         <td style={{ color: 'var(--text-muted)', fontSize: 12, textAlign: 'center' }}>{(currentPage - 1) * pageSize + i + 1}</td>
                         <td style={{ fontWeight: 600 }}>{c.name}</td>
                         <td style={{ fontSize: 12 }}>{c.phone}</td>
-                        <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>{c.email || '—'}</td>
-                        <td style={{ fontSize: 12, maxWidth: 200 }}>{c.address || '—'}</td>
+                        <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>{c.email || ''}</td>
+                        <td style={{ fontSize: 12, maxWidth: 200 }}>{c.address || ''}</td>
                         <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>{formatDate(c.createdAt)}</td>
                         <td>
                           <div style={{ display: 'flex', gap: 4, justifyContent: 'center' }}>

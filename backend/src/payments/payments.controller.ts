@@ -29,7 +29,7 @@ import {
 @ApiBearerAuth()
 @Controller('payments')
 export class PaymentsController {
-  constructor(private readonly paymentsService: PaymentsService) { }
+  constructor(private readonly paymentsService: PaymentsService) {}
 
   // Driver Payments
   @UseGuards(JwtAuthGuard, PermissionsGuard)
@@ -55,10 +55,6 @@ export class PaymentsController {
     );
   }
 
-  @UseGuards(JwtAuthGuard, PermissionsGuard)
-  @RequirePermissions('payments.read')
-  @ApiOperation({ summary: 'Get all driver payouts' })
-  
   @UseGuards(JwtAuthGuard, PermissionsGuard)
   @RequirePermissions('payments.read')
   @ApiOperation({ summary: 'Get parcels for merchant settlement' })
@@ -99,6 +95,9 @@ export class PaymentsController {
     });
   }
 
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @RequirePermissions('payments.read')
+  @ApiOperation({ summary: 'Get all driver payouts' })
   @Get(['driver', 'staff'])
   findAllDriver(@Request() req: any) {
     return this.paymentsService.findAllDriverPayments(getEffectiveTenantId(req));

@@ -13,6 +13,8 @@ import {
 import { ApiTags, ApiOperation, ApiQuery, ApiParam, ApiBearerAuth } from '@nestjs/swagger';
 import { SubscriptionsService } from './subscriptions.service';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
+import { RolesGuard } from '../../auth/roles.guard';
+import { Roles } from '../../auth/roles.decorator';
 import { BillingCycle } from './subscription.entity';
 
 @ApiTags('SaaS - Subscriptions')
@@ -20,7 +22,8 @@ import { BillingCycle } from './subscription.entity';
 export class SubscriptionsController {
   constructor(private readonly subService: SubscriptionsService) {}
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('web_admin')
   @ApiBearerAuth()
   @Get('me')
   @ApiOperation({ summary: 'Get current user subscription' })
@@ -59,7 +62,8 @@ export class SubscriptionsController {
     return this.subService.registerAndCheckout(body);
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('web_admin')
   @ApiBearerAuth()
   @Post('checkout')
   @ApiOperation({ summary: 'Checkout or upgrade subscription plan' })
@@ -78,7 +82,8 @@ export class SubscriptionsController {
     return this.subService.checkout(req.user.id, body);
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('web_admin')
   @ApiBearerAuth()
   @Post('cancel')
   @ApiOperation({ summary: 'Cancel current user subscription' })
@@ -86,6 +91,9 @@ export class SubscriptionsController {
     return this.subService.cancel(req.user.id);
   }
 
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('super_admin', 'superadmin', 'finance_admin', 'support_admin')
+  @ApiBearerAuth()
   @Get()
   @ApiOperation({ summary: 'Get all subscriptions' })
   @ApiQuery({ name: 'page', required: false, type: Number })
@@ -106,6 +114,9 @@ export class SubscriptionsController {
     });
   }
 
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('super_admin', 'superadmin', 'finance_admin')
+  @ApiBearerAuth()
   @Put(':id/status')
   @ApiOperation({ summary: 'Update subscription status' })
   @ApiParam({ name: 'id', type: Number, description: 'Subscription ID' })
@@ -116,6 +127,9 @@ export class SubscriptionsController {
     return this.subService.updateStatus(+id, body.status, body.currentPeriodEnd);
   }
 
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('super_admin', 'superadmin', 'finance_admin')
+  @ApiBearerAuth()
   @Patch(':id/status')
   @ApiOperation({ summary: 'Patch subscription status' })
   @ApiParam({ name: 'id', type: Number, description: 'Subscription ID' })

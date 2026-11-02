@@ -13,6 +13,8 @@ import {
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiQuery, ApiParam } from '@nestjs/swagger';
 import { SaasService } from './saas.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { RolesGuard } from '../auth/roles.guard';
+import { Roles } from '../auth/roles.decorator';
 
 @ApiTags('SaaS Control Plane')
 @Controller('saas')
@@ -26,7 +28,8 @@ export class SaasController {
     return this.saasService.getPlans();
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('super_admin', 'superadmin')
   @ApiBearerAuth()
   @Post('plans')
   @ApiOperation({ summary: 'Create a new subscription plan' })
@@ -42,7 +45,8 @@ export class SaasController {
     return this.saasService.getTenantBySlug(slug);
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('super_admin', 'superadmin', 'finance_admin', 'support_admin')
   @ApiBearerAuth()
   @Get('tenants')
   @ApiOperation({ summary: 'List all tenant companies (Platform Admin)' })
@@ -50,7 +54,8 @@ export class SaasController {
     return this.saasService.getTenants();
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('super_admin', 'superadmin', 'finance_admin', 'support_admin')
   @ApiBearerAuth()
   @Get('tenants/:id')
   @ApiOperation({ summary: 'Get tenant details by ID' })
@@ -65,7 +70,8 @@ export class SaasController {
     return this.saasService.registerTenant(body);
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('super_admin', 'superadmin')
   @ApiBearerAuth()
   @Post('tenants')
   @ApiOperation({ summary: 'Create new tenant (Platform Admin)' })
@@ -73,7 +79,8 @@ export class SaasController {
     return this.saasService.createTenant(body);
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('super_admin', 'superadmin', 'support_admin')
   @ApiBearerAuth()
   @Patch('tenants/:id')
   @ApiOperation({ summary: 'Update tenant information' })
@@ -82,7 +89,8 @@ export class SaasController {
     return this.saasService.updateTenant(id, body);
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('super_admin', 'superadmin')
   @ApiBearerAuth()
   @Delete('tenants/:id')
   @ApiOperation({ summary: 'Suspend / Soft-delete tenant' })
@@ -91,7 +99,8 @@ export class SaasController {
     return this.saasService.deleteTenant(id);
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('super_admin', 'superadmin')
   @ApiBearerAuth()
   @Patch('tenants/:id/reactivate')
   @ApiOperation({ summary: 'Reactivate suspended tenant' })
@@ -101,7 +110,8 @@ export class SaasController {
   }
 
   // ── Subscriptions & Invoices ──
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('super_admin', 'superadmin', 'finance_admin', 'support_admin')
   @ApiBearerAuth()
   @Get('subscriptions')
   @ApiOperation({ summary: 'Get platform subscriptions' })
@@ -110,7 +120,8 @@ export class SaasController {
     return this.saasService.getSubscriptions(tenantId ? +tenantId : undefined);
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('super_admin', 'superadmin', 'finance_admin', 'support_admin')
   @ApiBearerAuth()
   @Get('invoices')
   @ApiOperation({ summary: 'Get SaaS platform invoices' })
@@ -128,7 +139,8 @@ export class SaasController {
     return this.saasService.resolveDomain(domain);
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('super_admin', 'superadmin', 'support_admin')
   @ApiBearerAuth()
   @Get('domains')
   @ApiOperation({ summary: 'List tenant domains' })
@@ -137,7 +149,8 @@ export class SaasController {
     return this.saasService.getDomains(tenantId ? +tenantId : undefined);
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('super_admin', 'superadmin', 'support_admin')
   @ApiBearerAuth()
   @Post('domains')
   @ApiOperation({ summary: 'Add a new custom domain or subdomain alias' })
@@ -145,7 +158,8 @@ export class SaasController {
     return this.saasService.addDomain(body.tenantId, body);
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('super_admin', 'superadmin', 'support_admin')
   @ApiBearerAuth()
   @Patch('domains/:id/primary')
   @ApiOperation({ summary: 'Set domain as primary for tenant' })
@@ -154,7 +168,8 @@ export class SaasController {
     return this.saasService.setPrimaryDomain(id);
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('super_admin', 'superadmin', 'support_admin')
   @ApiBearerAuth()
   @Patch('domains/:id/verify')
   @ApiOperation({ summary: 'Verify domain DNS and SSL' })
@@ -163,7 +178,8 @@ export class SaasController {
     return this.saasService.verifyDomain(id);
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('super_admin', 'superadmin')
   @ApiBearerAuth()
   @Delete('domains/:id')
   @ApiOperation({ summary: 'Delete a domain' })

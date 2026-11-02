@@ -1,7 +1,9 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { formatDateToDDMMYYYY } from '@/components/ui/DateInput';
+import { useTenant } from '@/lib/TenantContext';
+import { useLanguage } from '@/lib/LanguageContext';
 
 interface ReportHeaderProps {
   title: string;
@@ -10,66 +12,122 @@ interface ReportHeaderProps {
 }
 
 export default function ReportHeader({ title, startDate, endDate }: ReportHeaderProps) {
+  const { tenant, isTenant } = useTenant();
+  const { lang } = useLanguage();
+  const [orgInfo, setOrgInfo] = useState<{ name: string; logo: string; phone: string; address: string }>({
+    name: '',
+    logo: '',
+    phone: '',
+    address: '',
+  });
+
+  useEffect(() => {
+    try {
+      const cacheKey = tenant?.subdomain ? `app-org-settings-${tenant.subdomain}` : 'app-org-settings';
+      const cached = localStorage.getItem(cacheKey) || localStorage.getItem('app-org-settings');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        setOrgInfo({
+          name: parsed?.name || '',
+          logo: parsed?.logo || '',
+          phone: parsed?.phone || '',
+          address: parsed?.address || '',
+        });
+      }
+    } catch {}
+  }, [tenant?.subdomain]);
+
+  const companyName =
+    (isTenant && tenant?.companyName && (!orgInfo.name || orgInfo.name === 'EBS Digital Solutions'))
+      ? tenant.companyName
+      : orgInfo.name || tenant?.companyName || 'Delivery Express';
+  const companyLogo = tenant?.logoUrl || orgInfo.logo;
+  const companyPhone = orgInfo.phone || tenant?.phone || '';
+  const companyAddress = orgInfo.address || tenant?.address || '';
+
   return (
-    <div className="print-only" style={{
-      marginBottom: 20,
-      paddingBottom: 12,
-      borderBottom: '2px solid #000',
-      fontFamily: 'Kantumruy Pro, Inter, sans-serif',
-      WebkitPrintColorAdjust: 'exact',
-      printColorAdjust: 'exact'
-    }}>
-      {/* Top Row: Logo (Left) and Centered Title (Center) */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', width: '100%' }}>
-        {/* Left: Branded Logo */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1.2 }}>
-          <div style={{
-            width: 38, height: 38, borderRadius: 10,
-            background: 'linear-gradient(135deg, #2563eb, #6366f1)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: '#fff', fontSize: 18, boxShadow: '0 4px 10px rgba(37,99,235,0.2)',
-            flexShrink: 0,
-            WebkitPrintColorAdjust: 'exact',
-            printColorAdjust: 'exact'
-          }}>
-            📦
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <span style={{ fontSize: 16, fontWeight: 800, color: '#1e3a8a', letterSpacing: '0.3px', lineHeight: 1.1, WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
-              EBS<span style={{ color: '#2563eb' }}>Express</span>
+    <div
+      className="print-only"
+      style={{
+        marginBottom: 16,
+        paddingBottom: 12,
+        borderBottom: '2px solid #0f172a',
+        fontFamily: "'Kantumruy Pro', 'Inter', sans-serif",
+        WebkitPrintColorAdjust: 'exact',
+        printColorAdjust: 'exact',
+      }}
+    >
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, width: '100%' }}>
+        {/* Left: Branded Logo & Company Info */}
+        <div style={{ flex: 1, fontSize: 10.5, lineHeight: 1.55, color: '#0f172a' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+            {companyLogo ? (
+              <img
+                src={companyLogo}
+                alt={companyName}
+                style={{ width: 32, height: 32, borderRadius: 6, objectFit: 'contain' }}
+              />
+            ) : (
+              <div
+                style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: 8,
+                  background: '#1e3a8a',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#ffffff',
+                  fontSize: 15,
+                  fontWeight: 800,
+                  flexShrink: 0,
+                }}
+              >
+                {companyName.charAt(0).toUpperCase()}
+              </div>
+            )}
+            <span style={{ fontSize: 15, fontWeight: 800, color: '#1e3a8a', lineHeight: 1.2 }}>
+              {companyName}
             </span>
-            <span style={{ fontSize: 9, color: '#4b5563', fontWeight: 600, letterSpacing: '0.1px' }}>
-              Delivery System
-            </span>
           </div>
+          {companyAddress && (
+            <div>
+              <strong>{lang === 'km' ? 'អាសយដ្ឋាន៖' : 'Address:'}</strong> {companyAddress}
+            </div>
+          )}
+          {companyPhone && (
+            <div>
+              <strong>{lang === 'km' ? 'ទូរស័ព្ទ៖' : 'Phone:'}</strong> {companyPhone}
+            </div>
+          )}
         </div>
 
-        {/* Center: Title (Centered) */}
-        <div style={{ textAlign: 'center', flex: 1.6, paddingTop: 6 }}>
-          <h1 style={{ fontSize: 16, fontWeight: 'bold', margin: 0, color: '#000' }}>
-            EBS Express
-          </h1>
-          <h2 style={{ fontSize: 13, fontWeight: 'bold', margin: '4px 0 0', color: '#000' }}>
+        {/* Center: Report Title */}
+        <div style={{ flex: 1.4, textAlign: 'center', alignSelf: 'center' }}>
+          <h1 style={{ fontSize: 17, fontWeight: 800, margin: 0, color: '#0f172a', lineHeight: 1.35 }}>
             {title}
-          </h2>
-        </div>
-
-        {/* Right: Balance spacer */}
-        <div style={{ flex: 1.2 }} />
-      </div>
-
-      {/* Bottom Row: Branch and Date (Left Aligned) */}
-      <div style={{ marginTop: 15, fontSize: 11, lineHeight: '1.6', textAlign: 'left' }}>
-        <div>
-          <strong>សាខា៖</strong> <span style={{ fontStyle: 'italic' }}>ការិយាល័យកណ្តាល</span>
-        </div>
-        <div>
-          <strong>កាលបរិច្ឆេទ៖</strong>{' '}
-          <span style={{ fontStyle: 'italic' }}>
+          </h1>
+          <div style={{ fontSize: 10.5, color: '#475569', marginTop: 4, fontWeight: 600 }}>
             {startDate && endDate
-              ? `ថ្ងៃទី ${formatDateToDDMMYYYY(startDate)} ដល់ ${formatDateToDDMMYYYY(endDate)}`
-              : `ថ្ងៃទី ${formatDateToDDMMYYYY(new Date().toISOString())}`}
-          </span>
+              ? lang === 'km'
+                ? `ចាប់ពីថ្ងៃទី ${formatDateToDDMMYYYY(startDate)} ដល់ ${formatDateToDDMMYYYY(endDate)}`
+                : `Period: ${formatDateToDDMMYYYY(startDate)} - ${formatDateToDDMMYYYY(endDate)}`
+              : lang === 'km'
+                ? `កាលបរិច្ឆេទ៖ ${formatDateToDDMMYYYY(new Date().toISOString())}`
+                : `Date: ${formatDateToDDMMYYYY(new Date().toISOString())}`}
+          </div>
+        </div>
+
+        {/* Right: Print Metadata */}
+        <div style={{ flex: 1, textAlign: 'right', fontSize: 10.5, lineHeight: 1.55, color: '#334155' }}>
+          <div>
+            <strong>{lang === 'km' ? 'សាខា៖' : 'Branch:'}</strong>{' '}
+            <span>{lang === 'km' ? 'ការិយាល័យកណ្តាល' : 'Head Office'}</span>
+          </div>
+          <div>
+            <strong>{lang === 'km' ? 'ថ្ងៃបោះពុម្ព៖' : 'Printed:'}</strong>{' '}
+            <span>{formatDateToDDMMYYYY(new Date().toISOString())}</span>
+          </div>
         </div>
       </div>
     </div>

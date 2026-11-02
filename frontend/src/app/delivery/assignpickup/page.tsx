@@ -9,6 +9,8 @@ import Badge from '@/components/ui/Badge';
 import api from '@/lib/api';
 import { MdLocalShipping, MdRefresh, MdSearch, MdClose, MdWarehouse, MdPhone, MdLocationOn } from 'react-icons/md';
 import { useLanguage } from '@/lib/LanguageContext';
+import Pagination from '@/components/ui/Pagination';
+import { TableSkeleton } from '@/components/ui/Skeleton';
 
 const formatCOD = (cod: any, currency: string) => {
   if (currency === 'KHR') return `${parseInt(cod).toLocaleString()} ៛`;
@@ -185,9 +187,9 @@ export default function AssignPickupPage() {
                     {PAGE_SIZE_OPTIONS.map(size => (
                       <button key={size} onClick={() => setPageSize(size)} style={{
                         padding: '5px 10px', borderRadius: 8,
-                        border: `1.5px solid ${pageSize === size ? '#d97706' : 'var(--border)'}`,
-                        background: pageSize === size ? '#fef3c7' : 'transparent',
-                        color: pageSize === size ? '#d97706' : 'var(--text-secondary)',
+                        border: `1.5px solid ${pageSize === size ? 'var(--accent)' : 'var(--border)'}`,
+                        background: pageSize === size ? 'var(--accent-light)' : 'transparent',
+                        color: pageSize === size ? 'var(--accent)' : 'var(--text-secondary)',
                         fontSize: 12, fontWeight: pageSize === size ? 700 : 500, cursor: 'pointer', transition: 'all 0.15s',
                       }}>{size}</button>
                     ))}
@@ -216,11 +218,7 @@ export default function AssignPickupPage() {
                     </thead>
                     <tbody>
                       {loading ? (
-                        <tr>
-                          <td colSpan={7} style={{ padding: '40px 0', textAlign: 'center' }}>
-                            <div className="loading-wrapper"><div className="spinner" /></div>
-                          </td>
-                        </tr>
+                        <TableSkeleton columns={7} rows={6} />
                       ) : filtered.length === 0 ? (
                         <tr>
                           <td colSpan={7} style={{ padding: '36px 20px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
@@ -263,30 +261,14 @@ export default function AssignPickupPage() {
 
                 {/* Left Pagination */}
                 {!loading && filtered.length > 0 && (
-                  <div style={{ padding: '10px 24px', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-card)', gap: 12, flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                      {lang === 'km' ? `បង្ហាញ ${(safePage - 1) * pageSize + 1}–${Math.min(safePage * pageSize, filtered.length)} នៃ ${filtered.length}` : `Showing ${(safePage - 1) * pageSize + 1}–${Math.min(safePage * pageSize, filtered.length)} of ${filtered.length}`}
-                    </span>
-                    <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                      <button onClick={() => setCurrentPage(1)} disabled={safePage === 1} style={paginationBtnStyle(safePage === 1)}>«</button>
-                      <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={safePage === 1} style={paginationBtnStyle(safePage === 1)}>‹</button>
-                      {getPageNumbers(safePage, totalPages).map((pg, i) =>
-                        pg === '...' ? (
-                          <span key={`e-${i}`} style={{ padding: '0 4px', color: 'var(--text-muted)', fontSize: 13 }}>…</span>
-                        ) : (
-                          <button key={pg} onClick={() => setCurrentPage(pg as number)} style={{
-                            ...paginationBtnStyle(false),
-                            background: safePage === pg ? '#d97706' : 'transparent',
-                            color: safePage === pg ? '#fff' : 'var(--text-secondary)',
-                            borderColor: safePage === pg ? '#d97706' : 'var(--border)',
-                            fontWeight: safePage === pg ? 700 : 500,
-                          }}>{pg}</button>
-                        )
-                      )}
-                      <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={safePage === totalPages} style={paginationBtnStyle(safePage === totalPages)}>›</button>
-                      <button onClick={() => setCurrentPage(totalPages)} disabled={safePage === totalPages} style={paginationBtnStyle(safePage === totalPages)}>»</button>
-                    </div>
-                  </div>
+                  <Pagination
+                    currentPage={safePage}
+                    totalItems={filtered.length}
+                    pageSize={pageSize}
+                    onPageChange={setCurrentPage}
+                    onPageSizeChange={(sz) => { setPageSize(sz); setCurrentPage(1); }}
+                    pageSizeOptions={PAGE_SIZE_OPTIONS}
+                  />
                 )}
               </div>
             </div>
@@ -414,24 +396,21 @@ export default function AssignPickupPage() {
                       <div style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 500 }}>
                         {lang === 'km' ? 'អ្នកដឹកដែលបានចាត់' : 'Pickup Driver'}
                       </div>
-                      <div style={{ fontSize: 14, fontWeight: 700, color: selectedDriver ? '#d97706' : 'var(--danger)' }}>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: selectedDriver ? 'var(--accent)' : 'var(--danger)' }}>
                         {selectedDriver ? (lang === 'km' ? (drivers.find(d => d.id === selectedDriver)?.nameKh || drivers.find(d => d.id === selectedDriver)?.name) : drivers.find(d => d.id === selectedDriver)?.name) : (lang === 'km' ? 'មិនទាន់ជ្រើស' : 'None selected')}
                       </div>
                     </div>
                   </div>
 
                   <button
-                    className="btn w-full"
+                    className="btn btn-primary w-full"
                     onClick={handleAssignPickup}
                     disabled={assigning || selected.length === 0 || !selectedDriver}
                     style={{
                       justifyContent: 'center', padding: '12px', fontSize: 14, fontWeight: 700, borderRadius: 10,
                       minHeight: 42,
-                      background: (selected.length > 0 && selectedDriver) ? '#d97706' : 'var(--border)',
-                      color: (selected.length > 0 && selectedDriver) ? '#fff' : 'var(--text-muted)',
-                      border: 'none', cursor: (selected.length > 0 && selectedDriver) ? 'pointer' : 'not-allowed',
                       gap: 8, display: 'flex', alignItems: 'center',
-                      boxShadow: (selected.length > 0 && selectedDriver) ? '0 8px 16px rgba(217,119,6,0.25)' : 'none',
+                      boxShadow: (selected.length > 0 && selectedDriver) ? '0 6px 18px var(--accent-glow, rgba(21, 101, 216, 0.28))' : 'none',
                       transition: 'all 0.2s',
                     }}>
                     <MdWarehouse size={18} />
@@ -447,26 +426,3 @@ export default function AssignPickupPage() {
   );
 }
 
-function getPageNumbers(current: number, total: number): (number | '...')[] {
-  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
-  const pages: (number | '...')[] = [];
-  if (current <= 4) {
-    pages.push(1, 2, 3, 4, 5, '...', total);
-  } else if (current >= total - 3) {
-    pages.push(1, '...', total - 4, total - 3, total - 2, total - 1, total);
-  } else {
-    pages.push(1, '...', current - 1, current, current + 1, '...', total);
-  }
-  return pages;
-}
-
-function paginationBtnStyle(disabled: boolean): React.CSSProperties {
-  return {
-    padding: '5px 10px', minWidth: 32, borderRadius: 8,
-    border: '1.5px solid var(--border)', background: 'transparent',
-    color: disabled ? 'var(--text-muted)' : 'var(--text-secondary)',
-    fontSize: 13, fontWeight: 500,
-    cursor: disabled ? 'not-allowed' : 'pointer',
-    opacity: disabled ? 0.4 : 1, transition: 'all 0.15s',
-  };
-}

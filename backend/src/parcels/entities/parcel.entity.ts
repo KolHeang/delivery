@@ -54,7 +54,7 @@ export class Parcel {
   @Column({ default: 'pending' })
   status: ParcelStatus;
 
-  @Column({ name: 'receiver_name' })
+  @Column({ name: 'receiver_name', default: '' })
   receiverName: string;
 
   @Column({ name: 'receiver_phone' })

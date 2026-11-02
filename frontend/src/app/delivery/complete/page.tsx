@@ -20,6 +20,8 @@ import {
 import { useLanguage } from '@/lib/LanguageContext';
 import DateInput, { formatDateToDDMMYYYY } from '@/components/ui/DateInput';
 import SearchableSelect from '@/components/ui/SearchableSelect';
+import Pagination from '@/components/ui/Pagination';
+import { TableSkeleton } from '@/components/ui/Skeleton';
 
 const getLocalDateString = (d: Date = new Date()) => {
   const year = d.getFullYear();
@@ -418,15 +420,6 @@ export default function CompletePackagePage() {
     return `${parseFloat(cod || 0).toFixed(2)} USD`;
   };
 
-  if (loading) return (
-    <div className="app-layout">
-      <Sidebar />
-      <div className="main-content">
-        <div className="loading-wrapper"><div className="spinner" /></div>
-      </div>
-    </div>
-  );
-
   return (
     <div className="app-layout">
       <Sidebar />
@@ -545,6 +538,7 @@ export default function CompletePackagePage() {
               <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                 <button
                   type="button"
+                  className="btn btn-primary"
                   onClick={handleFilterClick}
                   style={{
                     height: '38px',
@@ -552,15 +546,10 @@ export default function CompletePackagePage() {
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: '8px',
-                    fontWeight: 600,
+                    fontWeight: 700,
                     fontSize: '13px',
                     borderRadius: '8px',
-                    backgroundColor: 'var(--sidebar-bg, #1565D8)',
-                    color: '#ffffff',
-                    border: 'none',
                     cursor: 'pointer',
-                    boxShadow: '0 2px 4px rgba(21, 101, 216, 0.2)',
-                    transition: 'all 0.15s ease'
                   }}
                 >
                   <MdFilterList size={18} />
@@ -570,6 +559,7 @@ export default function CompletePackagePage() {
                 {(filterDate || filterMerchant || filterBranch || filterDriver || filterStatus || appliedFilters.date || appliedFilters.merchantId || appliedFilters.branchId || appliedFilters.driverId || appliedFilters.status) && (
                   <button
                     type="button"
+                    className="btn btn-outline"
                     onClick={handleResetFilters}
                     style={{
                       height: '38px',
@@ -577,12 +567,9 @@ export default function CompletePackagePage() {
                       display: 'inline-flex',
                       alignItems: 'center',
                       gap: '6px',
-                      fontWeight: 500,
+                      fontWeight: 600,
                       fontSize: '13px',
                       borderRadius: '8px',
-                      backgroundColor: 'transparent',
-                      color: 'var(--text-secondary, #64748b)',
-                      border: '1px solid var(--border, #e2e8f0)',
                       cursor: 'pointer'
                     }}
                     title={lang === 'km' ? 'សម្អាត Filter' : 'Reset Filters'}
@@ -876,7 +863,9 @@ export default function CompletePackagePage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {currentPageItems.length === 0 ? (
+                  {loading ? (
+                    <TableSkeleton columns={14} rows={6} />
+                  ) : currentPageItems.length === 0 ? (
                     <tr>
                       <td colSpan={14} style={{ textAlign: 'center', padding: '48px 20px', color: 'var(--text-muted, #94a3b8)', fontSize: '13px' }}>
                         <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
@@ -936,11 +925,11 @@ export default function CompletePackagePage() {
                           </td>
                           {/* Col 4: Shop Name */}
                           <td style={{ padding: '10px 12px', fontSize: '13px', fontWeight: 500, color: 'var(--text-primary, #1e293b)' }}>
-                            {lang === 'km' && o.merchant?.nameKh ? o.merchant.nameKh : ((o.merchant?.name && o.merchant.name !== '-' && o.merchant.name !== '—') ? o.merchant.name : '—')}
+                            {lang === 'km' && o.merchant?.nameKh ? o.merchant.nameKh : ((o.merchant?.name && o.merchant.name !== '-' && o.merchant.name !== '—') ? o.merchant.name : '')}
                           </td>
                           {/* Col 5: Receiver Phone */}
                           <td style={{ padding: '10px 12px', fontSize: '13px', fontWeight: 500, color: 'var(--text-primary, #1e293b)' }}>
-                            {(o.receiverPhone && o.receiverPhone !== '-' && o.receiverPhone !== '—') ? o.receiverPhone : '—'}
+                            {(o.receiverPhone && o.receiverPhone !== '-' && o.receiverPhone !== '—') ? o.receiverPhone : ''}
                           </td>
                           {/* Col 6: Date */}
                           <td style={{ padding: '10px 12px', fontSize: '12.5px', color: 'var(--text-secondary, #64748b)', whiteSpace: 'nowrap' }}>
@@ -948,7 +937,7 @@ export default function CompletePackagePage() {
                           </td>
                           {/* Col 7: Location */}
                           <td style={{ padding: '10px 12px', fontSize: '12.5px', color: 'var(--text-secondary, #64748b)', maxWidth: '170px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={o.receiverAddress || ''}>
-                            {(o.receiverAddress && o.receiverAddress !== '-' && o.receiverAddress !== '—') ? o.receiverAddress : '—'}
+                            {(o.receiverAddress && o.receiverAddress !== '-' && o.receiverAddress !== '—') ? o.receiverAddress : ''}
                           </td>
                           {/* Col 8: Delivery Fee */}
                           <td style={{ padding: '10px 12px', textAlign: 'right', fontSize: '13px', fontWeight: 600, color: 'var(--text-primary, #1e293b)' }}>
@@ -1147,74 +1136,17 @@ export default function CompletePackagePage() {
               </table>
             </div>
 
-            {/* ── Modern Pagination Controls ── */}
-            {totalPages > 0 && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px', flexWrap: 'wrap', gap: '16px' }}>
-                <div style={{ fontSize: '13px', color: 'var(--text-secondary, #64748b)' }}>
-                  {lang === 'km' 
-                    ? `បង្ហាញ ${startEntry} ដល់ ${endEntry} នៃ ${totalEntries} កញ្ចប់សរុប` 
-                    : `Showing ${startEntry} to ${endEntry} of ${totalEntries} entries`}
-                </div>
-                <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                  <button
-                    type="button"
-                    disabled={currentPage === 1}
-                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                    style={{
-                      padding: '4px 12px',
-                      height: '32px',
-                      fontSize: '12.5px',
-                      fontWeight: 500,
-                      borderRadius: '6px',
-                      border: '1px solid var(--border, #cbd5e1)',
-                      backgroundColor: 'transparent',
-                      color: currentPage === 1 ? '#94a3b8' : 'var(--text-primary, #1e293b)',
-                      cursor: currentPage === 1 ? 'not-allowed' : 'pointer'
-                    }}
-                  >
-                    {lang === 'km' ? 'ថយក្រោយ' : 'Previous'}
-                  </button>
-                  {Array.from({ length: totalPages }, (_, idx) => idx + 1).map(pageNum => (
-                    <button
-                      key={pageNum}
-                      type="button"
-                      onClick={() => setCurrentPage(pageNum)}
-                      style={{
-                        padding: '4px 10px',
-                        height: '32px',
-                        minWidth: '32px',
-                        fontSize: '12.5px',
-                        fontWeight: 600,
-                        borderRadius: '6px',
-                        border: '1px solid',
-                        borderColor: currentPage === pageNum ? 'var(--sidebar-bg, #1565D8)' : 'var(--border, #cbd5e1)',
-                        backgroundColor: currentPage === pageNum ? 'var(--sidebar-bg, #1565D8)' : 'transparent',
-                        color: currentPage === pageNum ? '#ffffff' : 'var(--text-primary, #1e293b)',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      {pageNum}
-                    </button>
-                  ))}
-                  <button
-                    type="button"
-                    disabled={currentPage === totalPages || totalPages === 0}
-                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                    style={{
-                      padding: '4px 12px',
-                      height: '32px',
-                      fontSize: '12.5px',
-                      fontWeight: 500,
-                      borderRadius: '6px',
-                      border: '1px solid var(--border, #cbd5e1)',
-                      backgroundColor: 'transparent',
-                      color: currentPage === totalPages || totalPages === 0 ? '#94a3b8' : 'var(--text-primary, #1e293b)',
-                      cursor: currentPage === totalPages || totalPages === 0 ? 'not-allowed' : 'pointer'
-                    }}
-                  >
-                    {lang === 'km' ? 'បន្ទាប់' : 'Next'}
-                  </button>
-                </div>
+            {/* ── Standardized Pagination Controls ── */}
+            {!loading && totalEntries > 0 && (
+              <div style={{ margin: '16px -20px -20px -20px' }}>
+                <Pagination
+                  currentPage={currentPage}
+                  totalItems={totalEntries}
+                  pageSize={pageSize}
+                  onPageChange={setCurrentPage}
+                  onPageSizeChange={(sz) => { setPageSize(sz); setCurrentPage(1); }}
+                  pageSizeOptions={[10, 25, 50, 100]}
+                />
               </div>
             )}
 

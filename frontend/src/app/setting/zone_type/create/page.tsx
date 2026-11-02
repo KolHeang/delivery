@@ -8,6 +8,7 @@ import Topbar from '@/components/layout/Topbar';
 import api from '@/lib/api';
 import { useLanguage } from '@/lib/LanguageContext';
 import FormField from '@/components/ui/FormField';
+import { MdArrowBack, MdSave } from 'react-icons/md';
 
 export default function CreateZonePage() {
   const router = useRouter();
@@ -23,7 +24,7 @@ export default function CreateZonePage() {
   const f = (k: string) => (e: any) => {
     setForm(p => ({
       ...p,
-      [k]: e.target.value
+      [k]: e.target.value,
     }));
     if (errors[k]) {
       setErrors(prev => {
@@ -48,7 +49,7 @@ export default function CreateZonePage() {
         name: form.name.trim(),
         price: form.price ? parseFloat(form.price) : 0,
         branch: form.branch,
-        active: form.active
+        active: form.active,
       };
       await api.post('/zones', payload);
       router.push('/setting/zone_type');
@@ -62,13 +63,23 @@ export default function CreateZonePage() {
     <div className="app-layout">
       <Sidebar />
       <div className="main-content">
-        <Topbar title={t('addZone') || 'Add Zone'} subtitle="Create a new delivery zone" />
+        <Topbar title={t('addZone') || 'Add Zone'} subtitle={lang === 'km' ? 'បង្កើតតំបន់ដឹកជញ្ជូនថ្មី' : 'Create a new delivery zone'} />
         <div className="page-content">
           <div className="card">
-            <div className="card-header"><span className="card-title">📖 {t('addZone') || 'Add Zone'}</span></div>
-            <div className="card-body">
+            <div className="card-header" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 20px' }}>
+              <button
+                type="button"
+                onClick={() => router.push('/setting/zone_type')}
+                className="btn btn-ghost btn-icon btn-sm"
+                title={lang === 'km' ? 'ត្រឡប់ក្រោយ' : 'Back'}
+              >
+                <MdArrowBack size={18} />
+              </button>
+              <span className="card-title" style={{ fontSize: 16, fontWeight: 700 }}>{t('addZone') || 'Add Zone'}</span>
+            </div>
+            <div className="card-body" style={{ padding: '20px 24px' }}>
               <form onSubmit={handleSubmit} noValidate>
-                <div className="form-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+                <div className="form-row">
                   <FormField label={lang === 'km' ? 'ឈ្មោះតំបន់' : 'Zone Name'} required error={errors.name}>
                     <input
                       className="form-control"
@@ -90,20 +101,16 @@ export default function CreateZonePage() {
                   </FormField>
                 </div>
 
-                <div style={{ marginTop: 24, display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
+                <div style={{ marginTop: 24, paddingTop: 18, borderTop: '1px solid var(--border)', display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
                   <button type="button" className="btn btn-cancel" onClick={() => router.push('/setting/zone_type')}>
                     {lang === 'km' ? 'បោះបង់' : 'Cancel'}
                   </button>
-                  <button 
-                    type="submit" 
-                    className="btn btn-primary" 
+                  <button
+                    type="submit"
+                    className="btn btn-primary"
                     disabled={saving}
-                    style={{
-                      padding: '8px 24px',
-                      fontWeight: 'bold',
-                      borderRadius: 6,
-                    }}
                   >
+                    <MdSave size={17} />
                     {saving ? (lang === 'km' ? 'កំពុងរក្សា...' : 'Saving...') : (lang === 'km' ? 'រក្សាទុក' : 'Save')}
                   </button>
                 </div>

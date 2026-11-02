@@ -9,44 +9,39 @@ import {
   UseGuards,
   Request,
   ParseIntPipe,
-  Sse,
-  MessageEvent,
 } from '@nestjs/common';
-import { Observable } from 'rxjs';
 import {
   ApiTags,
   ApiBearerAuth,
   ApiOperation,
-  ApiBody,
   ApiQuery,
   ApiParam,
   ApiResponse,
 } from '@nestjs/swagger';
 import { DriverService } from './driver.service';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
+import { RolesGuard } from '../../auth/roles.guard';
+import { Roles } from '../../auth/roles.decorator';
 import { UpdateParcelStatusDto } from '../../parcels/dto/parcel.dto';
 import { ConfirmPickupDto } from '../../parcels/dto/pickup-request.dto';
 import {
   UpdateDriverProfileDto,
   ChangeDriverPasswordDto,
-  UpdateDriverStatusDto,
   ScanParcelDto,
   ScanUpdateParcelStatusDto,
   SendDriverParcelMessageDto,
   BatchScanParcelsDto,
   BatchClaimParcelsDto,
   BatchUpdateParcelStatusDto,
-  DriverSettlementFilterDto,
-  CreateDriverSettlementRequestDto,
-  ReportSettlementProblemDto,
 } from './dto/driver-mobile.dto';
 
 @ApiTags('Mobile Driver')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles('driver')
 @Controller('mobile/driver')
 export class DriverController {
-  constructor(private readonly driverService: DriverService) {}
+  constructor(private readonly driverService: DriverService) { }
 
   @Get('profile')
   @ApiOperation({ summary: 'Get driver profile' })
@@ -147,68 +142,6 @@ export class DriverController {
     );
   }
 
-  @Patch('status')
-  @ApiOperation({ summary: 'Update driver online/offline availability status' })
-  @ApiResponse({
-    status: 200,
-    description: 'Driver availability updated',
-    schema: {
-      example: {
-        status: true,
-        message: 'Successfully',
-        data: {
-          id: 1,
-          code: 'DRV001',
-          name: 'Sok Dara',
-          isActive: true,
-        },
-      },
-    },
-  })
-  updateDriverStatus(@Request() req: any, @Body() dto: UpdateDriverStatusDto) {
-    return this.driverService.updateDriverStatus(req.user.id, dto.status);
-  }
-
-  @Get('scan/:code')
-  @ApiOperation({
-    summary: 'Scan QR code / tracking code to look up parcel details',
-  })
-  @ApiParam({
-    name: 'code',
-    type: String,
-    description: 'Tracking or QR code',
-    example: 'CO151020260001',
-  })
-  @ApiResponse({
-    status: 200,
-    description:
-      'Scanned parcel details with driver role and actionable buttons',
-    schema: {
-      example: {
-        status: true,
-        message: 'Successfully',
-        data: {
-          id: 101,
-          trackingCode: 'CO151020260001',
-          receiverName: 'Chan Vanna',
-          receiverPhone: '098765432',
-          receiverAddress: 'Street 271, Phnom Penh',
-          cod: 25.5,
-          codCurrency: 'USD',
-          deliveryFee: 1.5,
-          status: 'assigned',
-          note: 'Fragile delivery',
-          driverRole: 'delivery_driver',
-          availableActions: ['deliver', 'failed', 'in-transit'],
-          merchant: { id: 5, name: 'Shop ABC', phone: '012345678' },
-        },
-      },
-    },
-  })
-  scanParcelByCode(@Request() req: any, @Param('code') code: string) {
-    return this.driverService.scanParcel(req.user.id, code);
-  }
-
   @Post('scan')
   @ApiOperation({
     summary: 'Scan QR code / barcode payload to look up parcel details',
@@ -294,7 +227,7 @@ export class DriverController {
     );
   }
 
-  @Post(['scan/multiple', 'scan/batch'])
+  @Post('scan/multiple')
   @ApiOperation({
     summary:
       'Batch scan multiple parcels (continuous / multi QR code scan lookup)',
@@ -308,8 +241,7 @@ export class DriverController {
     return this.driverService.scanMultipleParcels(req.user.id, dto.codes);
   }
 
-
-  @Post(['scan/multiple/claim', 'scan/batch/claim', 'scan/batch-claim'])
+  @Post('scan/multiple/claim')
   @ApiOperation({
     summary:
       'Driver claims multiple scanned parcels at once (batch claim / warehouse dispatch)',
@@ -322,13 +254,7 @@ export class DriverController {
     return this.driverService.claimMultipleParcels(req.user.id, dto.codes);
   }
 
-
-
-  @Post([
-    'scan/multiple/update-status',
-    'scan/batch/update-status',
-    'scan/batch-update-status',
-  ])
+  @Post('scan/multiple/update-status')
   @ApiOperation({
     summary:
       'Driver batch updates delivery status for multiple scanned parcels (e.g. all in-transit)',
@@ -870,7 +796,7 @@ export class DriverController {
     });
   }
 
-  @Get(['report', 'reports'])
+  @Get('report')
   @ApiOperation({
     summary:
       'Get detailed driver report with performance, COD, earnings and task history',
@@ -1049,182 +975,6 @@ export class DriverController {
     return this.driverService.confirmPickup(req.user.id, id, dto);
   }
 
-  @Get(['settlements', 'settlement-history', 'payments'])
-  @ApiOperation({
-    summary:
-      'Get driver settlement history with filters (All, Paid, Pending, Problem, Date range)',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Driver settlement history matching mobile UI',
-    schema: {
-      example: {
-        status: true,
-        message: 'Successfully',
-        data: [
-          {
-            id: 2,
-            reference: 'ST8002',
-            date: '2026-10-13',
-            formattedDate: 'Oct 13, 2026',
-            status: 'Paid',
-            orderCount: 1,
-            ordersText: '1 Orders',
-            subtitle: 'ST8002 • 1 Orders',
-            usdAmount: 0.0,
-            khrAmount: 77000,
-            usdText: 'USD 0.00',
-            khrText: 'KHR 77,000',
-          },
-          {
-            id: 3,
-            reference: 'ST8003',
-            date: '2026-10-12',
-            formattedDate: 'Oct 12, 2026',
-            status: 'Paid',
-            orderCount: 1,
-            ordersText: '1 Orders',
-            subtitle: 'ST8003 • 1 Orders',
-            usdAmount: 31.0,
-            khrAmount: 0,
-            usdText: 'USD 31.00',
-            khrText: 'KHR 0',
-          },
-          {
-            id: 4,
-            reference: 'ST8004',
-            date: '2026-10-11',
-            formattedDate: 'Oct 11, 2026',
-            status: 'Paid',
-            orderCount: 1,
-            ordersText: '1 Orders',
-            subtitle: 'ST8004 • 1 Orders',
-            usdAmount: 0.0,
-            khrAmount: 91000,
-            usdText: 'USD 0.00',
-            khrText: 'KHR 91,000',
-          },
-          {
-            id: 6,
-            reference: 'ST8006',
-            date: '2026-10-09',
-            formattedDate: 'Oct 9, 2026',
-            status: 'Pending',
-            orderCount: 1,
-            ordersText: '1 Orders',
-            subtitle: 'ST8006 • 1 Orders',
-            usdAmount: 0.0,
-            khrAmount: 0,
-            usdText: 'USD 0.00',
-            khrText: 'KHR 0',
-          },
-        ],
-        summary: {
-          allCount: 4,
-          paidCount: 3,
-          pendingCount: 1,
-          problemCount: 0,
-        },
-      },
-    },
-  })
-  getSettlements(
-    @Request() req: any,
-    @Query() query: DriverSettlementFilterDto,
-  ) {
-    return this.driverService.getSettlements(req.user.id, query);
-  }
-
-  @Get(['settlements/:id', 'payments/:id'])
-  @ApiOperation({
-    summary: 'Get single settlement detail by ID or reference code',
-  })
-  @ApiParam({
-    name: 'id',
-    description: 'Settlement record ID (e.g. 2) or reference (e.g. ST8002)',
-  })
-  getSettlementById(@Request() req: any, @Param('id') id: string) {
-    return this.driverService.getSettlementById(req.user.id, id);
-  }
-
-  @Get(['payments/summary', 'settlements/summary'])
-  @ApiOperation({
-    summary:
-      'Get driver payment and COD remittance financial summary with period filters',
-  })
-  @ApiQuery({
-    name: 'period',
-    required: false,
-    enum: ['today', 'yesterday', 'week', 'month', 'year', 'all', 'custom'],
-    description: 'Filter summary by timeframe preset',
-    example: 'today',
-  })
-  @ApiQuery({
-    name: 'date',
-    required: false,
-    type: String,
-    description: 'Specific date (YYYY-MM-DD)',
-    example: '2026-10-15',
-  })
-  @ApiQuery({
-    name: 'startDate',
-    required: false,
-    type: String,
-    description: 'Range start date (YYYY-MM-DD)',
-    example: '2026-10-01',
-  })
-  @ApiQuery({
-    name: 'endDate',
-    required: false,
-    type: String,
-    description: 'Range end date (YYYY-MM-DD)',
-    example: '2026-10-15',
-  })
-  @ApiQuery({
-    name: 'month',
-    required: false,
-    type: String,
-    description: 'Month (YYYY-MM)',
-    example: '2026-10',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Driver financial payment and remittance summary',
-    schema: {
-      example: {
-        status: true,
-        message: 'Successfully',
-        data: {
-          period: 'today',
-          totalDeliveries: 10,
-          totalDeliveryFee: 15.0,
-          totalCodUsd: 120.0,
-          totalCodKhr: 50000,
-          pendingRemittanceUsd: 120.0,
-          pendingRemittanceKhr: 50000,
-          paidRemittanceUsd: 0,
-          paidRemittanceKhr: 0,
-        },
-      },
-    },
-  })
-  getPaymentSummary(
-    @Request() req: any,
-    @Query('period') period?: string,
-    @Query('date') date?: string,
-    @Query('startDate') startDate?: string,
-    @Query('endDate') endDate?: string,
-    @Query('month') month?: string,
-  ) {
-    return this.driverService.getPaymentSummary(req.user.id, {
-      period,
-      date,
-      startDate,
-      endDate,
-      month,
-    });
-  }
-
   @Get('invoices/daily')
   @ApiOperation({ summary: 'Get daily delivery invoice for rider with filters' })
   @ApiQuery({
@@ -1336,47 +1086,8 @@ export class DriverController {
     });
   }
 
-
-  // ===================== REASONS (FAILURE & RETURN) =====================
-  @Get('reasons')
-  @ApiOperation({
-    summary: 'Get delivery failure and return reasons for mobile app',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Delivery failure and return reasons for mobile dropdowns',
-    schema: {
-      example: {
-        status: true,
-        message: 'Successfully',
-        data: {
-          failureReasons: [
-            'Customer not at home',
-            'Wrong address',
-            'Customer refused',
-            'Phone unreachable',
-            'Item damaged / broken',
-            'Customer requested to reschedule',
-            'Other',
-          ],
-          returnReasons: [
-            'Customer rejected',
-            'Wrong or damaged item',
-            'Unable to contact customer',
-            'Delivery address unreachable',
-            'Merchant requested recall',
-            'Other',
-          ],
-        },
-      },
-    },
-  })
-  getReasons() {
-    return this.driverService.getReasons();
-  }
-
   // ===================== PARCEL CHAT =====================
-  @Get(['tasks/:id/chat', 'tasks/:id/messages'])
+  @Get('tasks/:id/chat')
   @ApiOperation({
     summary: 'Get parcel chat messages between rider and merchant',
   })
@@ -1427,7 +1138,7 @@ export class DriverController {
   }
 
 
-  @Post(['tasks/:id/chat', 'tasks/:id/messages'])
+  @Post('tasks/:id/chat')
   @ApiOperation({ summary: 'Send a chat message or photo for a parcel' })
   @ApiParam({
     name: 'id',

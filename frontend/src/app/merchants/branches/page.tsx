@@ -11,6 +11,7 @@ import { FaRegEdit, FaTrashAlt } from 'react-icons/fa';
 import { FiPlusCircle } from 'react-icons/fi';
 import { useLanguage } from '@/lib/LanguageContext';
 import Pagination from '@/components/ui/Pagination';
+import { TableSkeleton } from '@/components/ui/Skeleton';
 
 export default function BranchesPage() {
   const router = useRouter();
@@ -173,7 +174,7 @@ export default function BranchesPage() {
               <table>
                 <thead>
                   <tr>
-                    <th style={{ width: 45 }}>{lang === 'km' ? 'ល.រ' : 'No.'}</th>
+                    <th style={{ width: 60, textAlign: 'center' }}>{lang === 'km' ? 'ល.រ' : 'No.'}</th>
                     <th style={{ width: 60, textAlign: 'center' }}>Default</th>
                     <th>{lang === 'km' ? 'ហាងមេ' : 'Merchant'}</th>
                     <th>{lang === 'km' ? 'ឈ្មោះសាខា' : 'Branch Name'}</th>
@@ -181,16 +182,12 @@ export default function BranchesPage() {
                     <th>{lang === 'km' ? 'អ្នកចាត់ការ' : 'Contact Person'}</th>
                     <th>{lang === 'km' ? 'លេខទូរស័ព្ទ' : 'Phone'}</th>
                     <th>{lang === 'km' ? 'អាសយដ្ឋានសាខា' : 'Address'}</th>
-                    <th style={{ width: 90, textAlign: 'right' }}>{lang === 'km' ? 'សកម្មភាព' : 'Actions'}</th>
+                    <th style={{ width: 100, textAlign: 'center' }}>{lang === 'km' ? 'សកម្មភាព' : 'Actions'}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {loading ? (
-                    <tr>
-                      <td colSpan={9} style={{ padding: '40px 0', textAlign: 'center' }}>
-                        <div className="loading-wrapper"><div className="spinner" /></div>
-                      </td>
-                    </tr>
+                    <TableSkeleton columns={9} rows={6} hasThumbnail />
                   ) : branches.length === 0 ? (
                     <tr>
                       <td colSpan={9} style={{ padding: '36px 20px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
@@ -200,7 +197,7 @@ export default function BranchesPage() {
                   ) : (
                     branches.map((b: any, index) => (
                       <tr key={b.id} style={{ background: b.isDefault ? '#f0fdf4' : undefined }}>
-                        <td style={{ color: 'var(--text-muted)', fontSize: 12 }}>
+                        <td style={{ color: 'var(--text-muted)', fontSize: 12, textAlign: 'center' }}>
                           {(currentPage - 1) * pageSize + index + 1}
                         </td>
                         <td style={{ textAlign: 'center' }}>
@@ -236,7 +233,7 @@ export default function BranchesPage() {
                               )}
                             </div>
                             <div>
-                              <div style={{ fontWeight: 600, fontSize: 13 }}>{b.merchant?.name || '-'}</div>
+                              <div style={{ fontWeight: 600, fontSize: 13 }}>{b.merchant?.name || ''}</div>
                               {b.merchant?.nameKh && (
                                 <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{b.merchant.nameKh}</div>
                               )}
@@ -262,20 +259,20 @@ export default function BranchesPage() {
                               {b.code}
                             </span>
                           ) : (
-                            '-'
+                            ''
                           )}
                         </td>
                         <td>
-                          <div style={{ fontWeight: 500, color: '#0f172a' }}>{b.contactName || '-'}</div>
+                          <div style={{ fontWeight: 500, color: '#0f172a' }}>{b.contactName || ''}</div>
                         </td>
                         <td>
-                          <div style={{ fontWeight: 500, color: '#2563eb' }}>{b.phone || '-'}</div>
+                          <div style={{ fontWeight: 500, color: '#2563eb' }}>{b.phone || ''}</div>
                         </td>
                         <td style={{ fontSize: 12, maxWidth: 260 }}>
-                          {b.address || '-'}
+                          {b.address || ''}
                         </td>
-                        <td style={{ textAlign: 'right' }}>
-                          <div style={{ display: 'inline-flex', gap: 4 }}>
+                        <td style={{ textAlign: 'center' }}>
+                          <div style={{ display: 'inline-flex', gap: 4, justifyContent: 'center' }}>
                             {hasPermission('branches.update, merchants.update') && (
                               <button
                                 title={lang === 'km' ? 'កែប្រែ' : 'Edit'}

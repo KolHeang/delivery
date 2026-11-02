@@ -8,9 +8,9 @@ import Topbar from '@/components/layout/Topbar';
 import api from '@/lib/api';
 import { useLanguage } from '@/lib/LanguageContext';
 import FormField from '@/components/ui/FormField';
+import { MdArrowBack, MdSave } from 'react-icons/md';
 
 const TYPES = ['motorbike', 'car', 'van', 'truck', 'tuk-tuk'];
-const TYPE_ICONS: Record<string, string> = { motorbike: '🏍️', car: '🚗', van: '🚐', truck: '🚚', 'tuk-tuk': '🛺' };
 
 export default function CreateVehiclePage() {
   const router = useRouter();
@@ -62,11 +62,21 @@ export default function CreateVehiclePage() {
     <div className="app-layout">
       <Sidebar />
       <div className="main-content">
-        <Topbar title={t('addVehicle')} subtitle="បន្ថែម និងចុះបញ្ជីយានយន្តថ្មី" />
+        <Topbar title={t('addVehicle')} subtitle={lang === 'km' ? 'បន្ថែម និងចុះបញ្ជីយានយន្តថ្មី' : 'Register a new fleet vehicle'} />
         <div className="page-content">
           <div className="card">
-            <div className="card-header"><span className="card-title">{t('addVehicle')}</span></div>
-            <div className="card-body">
+            <div className="card-header" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 20px' }}>
+              <button
+                type="button"
+                onClick={() => router.push('/vehicles')}
+                className="btn btn-ghost btn-icon btn-sm"
+                title={lang === 'km' ? 'ត្រឡប់ក្រោយ' : 'Back'}
+              >
+                <MdArrowBack size={18} />
+              </button>
+              <span className="card-title" style={{ fontSize: 16, fontWeight: 700 }}>{t('addVehicle')}</span>
+            </div>
+            <div className="card-body" style={{ padding: '20px 24px' }}>
               <form noValidate onSubmit={handleSubmit}>
                 <div className="form-row">
                   <FormField label={t('plateNumber')} required error={errors.plate}>
@@ -74,7 +84,7 @@ export default function CreateVehiclePage() {
                   </FormField>
                   <FormField label={t('vehicleType')} required>
                     <select className="form-control" value={form.type} onChange={f('type')}>
-                      {TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                      {TYPES.map(tp => <option key={tp} value={tp}>{tp}</option>)}
                     </select>
                   </FormField>
                 </div>
@@ -88,22 +98,21 @@ export default function CreateVehiclePage() {
                 </div>
                 <div className="form-row">
                   <FormField label={t('year')}>
-                    <input type="number" min="2000" max="2030" className="form-control" value={form.year} onChange={f('year')} />
+                    <input type="number" min="2000" max="2035" className="form-control" value={form.year} onChange={f('year')} />
                   </FormField>
                   <FormField label={t('status')}>
                     <select className="form-control" value={form.status} onChange={f('status')}>
-                      <option value="active">Active</option>
-                      <option value="maintenance">Maintenance</option>
-                      <option value="inactive">Inactive</option>
+                      <option value="active">{lang === 'km' ? 'សកម្ម (Active)' : 'Active'}</option>
+                      <option value="maintenance">{lang === 'km' ? 'កំពុងជួសជុល (Maintenance)' : 'Maintenance'}</option>
+                      <option value="inactive">{lang === 'km' ? 'អសកម្ម (Inactive)' : 'Inactive'}</option>
                     </select>
                   </FormField>
                 </div>
-                
-                <div style={{ marginTop: 20, display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
+
+                <div style={{ marginTop: 24, paddingTop: 18, borderTop: '1px solid var(--border)', display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
                   <button
                     type="button"
                     className="btn btn-cancel"
-                    style={{ background: '#dc2626', color: '#ffffff', border: '1px solid #dc2626', fontWeight: 700 }}
                     onClick={() => router.push('/vehicles')}
                   >
                     {t('cancel')}
@@ -111,9 +120,9 @@ export default function CreateVehiclePage() {
                   <button
                     type="submit"
                     className="btn btn-primary"
-                    style={{ background: '#2563eb', color: '#ffffff', border: '1px solid #2563eb', fontWeight: 700 }}
                     disabled={saving}
                   >
+                    <MdSave size={17} />
                     {saving ? t('saving') : t('save')}
                   </button>
                 </div>

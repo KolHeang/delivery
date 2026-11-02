@@ -610,7 +610,7 @@ export default function EditShopPage() {
                 <div style={{ display: "flex", gap: 12, justifyContent: "flex-end", paddingTop: 14, borderTop: "1px solid #e2e8f0" }}>
                   <button
                     type="button"
-                    className="btn btn-secondary"
+                    className="btn btn-cancel"
                     onClick={() => router.push("/merchants")}
                     disabled={saving}
                   >

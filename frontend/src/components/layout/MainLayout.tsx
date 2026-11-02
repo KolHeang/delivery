@@ -16,7 +16,7 @@ export default function MainLayout({ children, title = '', subtitle }: MainLayou
       <Sidebar />
       <div className="main-content">
         <Topbar title={title} subtitle={subtitle} />
-        <div className="page-content" style={{ padding: '28px 32px', minHeight: 'calc(100vh - 60px)' }}>
+        <div className="page-content" style={{ minHeight: 'calc(100vh - 76px)' }}>
           {children}
         </div>
       </div>

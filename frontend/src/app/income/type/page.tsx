@@ -8,6 +8,7 @@ import Topbar from '@/components/layout/Topbar';
 import api from '@/lib/api';
 import Modal from '@/components/ui/Modal';
 import Pagination from '@/components/ui/Pagination';
+import { TableSkeleton } from '@/components/ui/Skeleton';
 import { FaRegEdit, FaTrashAlt } from 'react-icons/fa';
 import { FiPlusCircle } from 'react-icons/fi';
 import { useLanguage } from '@/lib/LanguageContext';
@@ -122,15 +123,6 @@ export default function IncomeTypePage() {
   const startIndex = (currentPage - 1) * pageSize;
   const paginatedTypes = types.slice(startIndex, startIndex + pageSize);
 
-  if (loading) return (
-    <div className="app-layout">
-      <Sidebar />
-      <div className="main-content">
-        <div className="loading-wrapper"><div className="spinner" /></div>
-      </div>
-    </div>
-  );
-
   return (
     <div className="app-layout">
       <Sidebar />
@@ -152,14 +144,16 @@ export default function IncomeTypePage() {
               <table className="table">
                 <thead>
                   <tr>
-                    <th style={{ width: 80 }}>{t('no') || '#'}</th>
+                    <th style={{ width: 60, textAlign: 'center' }}>{t('colNo') || (lang === 'km' ? 'ល.រ' : 'No.')}</th>
                     <th>{t('incomeCategoryName')}</th>
                     <th>{t('description') || 'Description'}</th>
                     <th style={{ width: 120, textAlign: 'center' }}>{t('actions') || 'Actions'}</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {paginatedTypes.length === 0 ? (
+                  {loading ? (
+                    <TableSkeleton columns={4} rows={5} />
+                  ) : paginatedTypes.length === 0 ? (
                     <tr>
                       <td colSpan={4} style={{ textAlign: 'center', padding: '32px', color: 'var(--text-muted)' }}>
                         {t('noCategoriesFound') || 'No income categories found. Click "Add Category" to create one.'}
@@ -168,9 +162,9 @@ export default function IncomeTypePage() {
                   ) : (
                     paginatedTypes.map((tItem, idx) => (
                       <tr key={tItem.id}>
-                        <td>{startIndex + idx + 1}</td>
+                        <td style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: 12 }}>{startIndex + idx + 1}</td>
                         <td style={{ fontWeight: 600, color: 'var(--accent)' }}>{tItem.name}</td>
-                        <td>{tItem.description || '-'}</td>
+                        <td>{tItem.description || ''}</td>
                         <td style={{ textAlign: 'center' }}>
                           <div style={{ display: 'inline-flex', gap: 6 }}>
                             <button
@@ -196,7 +190,7 @@ export default function IncomeTypePage() {
                 </tbody>
               </table>
             </div>
-            {totalItems > 0 && (
+            {!loading && totalItems > 0 && (
               <Pagination
                 currentPage={currentPage}
                 totalItems={totalItems}

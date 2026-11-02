@@ -12,10 +12,11 @@ import { ApiProperty, PartialType } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
 
 export class CreateParcelDto {
-  @ApiProperty({ example: 'Chan Vanna', description: 'Receiver customer name' })
-  @IsNotEmpty()
+  @ApiProperty({ example: 'Chan Vanna', required: false, description: 'Receiver customer name' })
+  @IsOptional()
+  @Transform(({ value }) => (value === undefined || value === null || /^[-—–]{1,3}$/.test(String(value).trim())) ? '' : String(value))
   @IsString()
-  receiverName: string;
+  receiverName?: string;
 
   @ApiProperty({ example: '098765432', description: 'Receiver phone number' })
   @IsNotEmpty()

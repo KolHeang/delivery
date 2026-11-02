@@ -7,14 +7,13 @@ import Sidebar from '@/components/layout/Sidebar';
 import Topbar from '@/components/layout/Topbar';
 import api from '@/lib/api';
 import { useLanguage } from '@/lib/LanguageContext';
-
 import FormField from '@/components/ui/FormField';
+import { MdArrowBack, MdSave } from 'react-icons/md';
 
 export default function CreateCustomerPage() {
   const router = useRouter();
   const { lang, t } = useLanguage();
   const [saving, setSaving] = useState(false);
-  //const [errors, setErrors] = useState<Record<string, string>>({});
   const [form, setForm] = useState({ name: '', phone: '', email: '', address: '' });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -37,13 +36,13 @@ export default function CreateCustomerPage() {
     e.preventDefault();
     const errs: Record<string, string> = {};
     if (!form.name.trim()) {
-      errs.name = 'សូមបំពេញឈ្មោះអតិថិជន';
+      errs.name = lang === 'km' ? 'សូមបំពេញឈ្មោះអតិថិជន' : 'Customer name is required';
     }
     if (!form.phone.trim()) {
-      errs.phone = 'សូមបំពេញលេខទូរស័ព្ទ';
+      errs.phone = lang === 'km' ? 'សូមបំពេញលេខទូរស័ព្ទ' : 'Phone number is required';
     }
     if (form.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
-      errs.email = 'សូមបំពេញអ៊ីម៉ែលត្រឹមត្រូវ';
+      errs.email = lang === 'km' ? 'សូមបំពេញអ៊ីម៉ែលត្រឹមត្រូវ' : 'Please enter a valid email';
     }
 
     if (Object.keys(errs).length > 0) {
@@ -66,58 +65,64 @@ export default function CreateCustomerPage() {
     <div className="app-layout">
       <Sidebar />
       <div className="main-content">
-        <Topbar title={t('addCustomer')} subtitle="បង្កើត និងកត់ត្រាព័ត៌មានអតិថិជនថ្មី" />
+        <Topbar title={t('addCustomer')} subtitle={lang === 'km' ? 'បង្កើត និងកត់ត្រាព័ត៌មានអតិថិជនថ្មី' : 'Add a new customer record'} />
         <div className="page-content">
           <div className="card">
-            <div className="card-header"><span className="card-title">{t('addCustomer')}</span></div>
-            <div className="card-body">
+            <div className="card-header" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 20px' }}>
+              <button
+                type="button"
+                onClick={() => router.push('/customers')}
+                className="btn btn-ghost btn-icon btn-sm"
+                title={lang === 'km' ? 'ត្រឡប់ក្រោយ' : 'Back'}
+              >
+                <MdArrowBack size={18} />
+              </button>
+              <span className="card-title" style={{ fontSize: 16, fontWeight: 700 }}>{t('addCustomer')}</span>
+            </div>
+            <div className="card-body" style={{ padding: '20px 24px' }}>
               <form onSubmit={handleSubmit} noValidate>
-                <div className="form-group">
-                  <label className="form-label">{t('name')} <span style={{ color: '#ef4444' }}>*</span></label>
-                  <input
-                    className={`form-control ${errors.name ? 'is-invalid' : ''}`}
-                    value={form.name}
-                    onChange={f('name')}
-                    placeholder="e.g. Sok Dara"
-                  />
-                  {errors.name && <div className="form-error-text">{errors.name}</div>}
+                <div className="form-row">
+                  <FormField label={t('name')} required error={errors.name}>
+                    <input
+                      className="form-control"
+                      value={form.name}
+                      onChange={f('name')}
+                      placeholder="e.g. Sok Dara"
+                    />
+                  </FormField>
+                  <FormField label={t('phone')} required error={errors.phone}>
+                    <input
+                      className="form-control"
+                      value={form.phone}
+                      onChange={f('phone')}
+                      placeholder="e.g. 012-345-678"
+                    />
+                  </FormField>
                 </div>
-                <div className="form-group">
-                  <label className="form-label">{t('phone')} <span style={{ color: '#ef4444' }}>*</span></label>
-                  <input
-                    className={`form-control ${errors.phone ? 'is-invalid' : ''}`}
-                    value={form.phone}
-                    onChange={f('phone')}
-                    placeholder="e.g. 012-345-678"
-                  />
-                  {errors.phone && <div className="form-error-text">{errors.phone}</div>}
+                <div className="form-row">
+                  <FormField label={t('email')} error={errors.email}>
+                    <input
+                      type="email"
+                      className="form-control"
+                      value={form.email}
+                      onChange={f('email')}
+                      placeholder="e.g. customer@example.com"
+                    />
+                  </FormField>
+                  <FormField label={t('address')}>
+                    <input
+                      className="form-control"
+                      value={form.address}
+                      onChange={f('address')}
+                      placeholder="Street, Sangkat, Khan, Province"
+                    />
+                  </FormField>
                 </div>
-                <div className="form-group">
-                  <label className="form-label">{t('email')}</label>
-                  <input
-                    type="email"
-                    className={`form-control ${errors.email ? 'is-invalid' : ''}`}
-                    value={form.email}
-                    onChange={f('email')}
-                    placeholder="e.g. customer@example.com"
-                  />
-                  {errors.email && <div className="form-error-text">{errors.email}</div>}
-                </div>
-                <div className="form-group">
-                  <label className="form-label">{t('address')}</label>
-                  <input
-                    className="form-control"
-                    value={form.address}
-                    onChange={f('address')}
-                    placeholder="Street, Sangkat, Khan, Province"
-                  />
-                </div>
-                
-                <div style={{ marginTop: 20, display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
+
+                <div style={{ marginTop: 24, paddingTop: 18, borderTop: '1px solid var(--border)', display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
                   <button
                     type="button"
                     className="btn btn-cancel"
-                    style={{ background: '#dc2626', color: '#ffffff', border: '1px solid #dc2626', fontWeight: 700 }}
                     onClick={() => router.push('/customers')}
                   >
                     {t('cancel')}
@@ -125,9 +130,9 @@ export default function CreateCustomerPage() {
                   <button
                     type="submit"
                     className="btn btn-primary"
-                    style={{ background: '#2563eb', color: '#ffffff', border: '1px solid #2563eb', fontWeight: 700 }}
                     disabled={saving}
                   >
+                    <MdSave size={17} />
                     {saving ? t('saving') : t('save')}
                   </button>
                 </div>

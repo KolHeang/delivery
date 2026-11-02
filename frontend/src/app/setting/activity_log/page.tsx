@@ -111,7 +111,7 @@ export default function ActivityLogsPage() {
 
   // Format timestamp helper
   const formatTimestamp = (dateStr: string) => {
-    if (!dateStr) return '—';
+    if (!dateStr) return '';
     const date = new Date(dateStr);
     return date.toLocaleString('en-US', {
       year: 'numeric',
@@ -283,16 +283,16 @@ export default function ActivityLogsPage() {
                               </span>
                             </td>
                             <td style={{ fontWeight: 500, fontSize: 12.5 }}>
-                              {log.entityName || '—'}
+                              {log.entityName || ''}
                             </td>
                             <td style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent)' }}>
-                              {log.entityId ? `#${log.entityId}` : '—'}
+                              {log.entityId ? `#${log.entityId}` : ''}
                             </td>
                             <td style={{ fontSize: 12.5, maxWidth: '250px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={log.description}>
-                              {log.description || '—'}
+                              {log.description || ''}
                             </td>
                             <td style={{ fontSize: 11.5, color: 'var(--text-muted)', fontFamily: 'monospace' }}>
-                              {log.ipAddress || '—'}
+                              {log.ipAddress || ''}
                             </td>
                             <td style={{ textAlign: 'center' }}>
                               <button 
@@ -402,7 +402,7 @@ export default function ActivityLogsPage() {
                 <div>
                   <strong style={{ fontSize: 12, color: 'var(--text-muted)' }}>{isKh ? 'គោលដៅ' : 'Target Entity'}</strong>
                   <div style={{ marginTop: 4, fontSize: 13.5, fontWeight: 500 }}>
-                    {selectedLog.entityName || '—'} {selectedLog.entityId ? `#${selectedLog.entityId}` : ''}
+                    {selectedLog.entityName || ''} {selectedLog.entityId ? `#${selectedLog.entityId}` : ''}
                   </div>
                 </div>
               </div>
@@ -411,7 +411,7 @@ export default function ActivityLogsPage() {
               <div>
                 <strong style={{ fontSize: 12, color: 'var(--text-muted)' }}>{isKh ? 'ការពិពណ៌នា' : 'Description'}</strong>
                 <div style={{ marginTop: 4, fontSize: 13.5, background: '#f1f3f4', padding: '8px 12px', borderRadius: 4, lineHeight: 1.4 }}>
-                  {selectedLog.description || '—'}
+                  {selectedLog.description || ''}
                 </div>
               </div>
 
@@ -419,12 +419,12 @@ export default function ActivityLogsPage() {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 16 }}>
                 <div>
                   <strong style={{ fontSize: 12, color: 'var(--text-muted)' }}>IP Address</strong>
-                  <div style={{ marginTop: 4, fontSize: 13, fontFamily: 'monospace' }}>{selectedLog.ipAddress || '—'}</div>
+                  <div style={{ marginTop: 4, fontSize: 13, fontFamily: 'monospace' }}>{selectedLog.ipAddress || ''}</div>
                 </div>
                 <div>
                   <strong style={{ fontSize: 12, color: 'var(--text-muted)' }}>User Agent</strong>
                   <div style={{ marginTop: 4, fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.3, wordBreak: 'break-all' }}>
-                    {selectedLog.userAgent || '—'}
+                    {selectedLog.userAgent || ''}
                   </div>
                 </div>
               </div>

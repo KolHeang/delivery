@@ -26,7 +26,7 @@ export default function BatchEntryPage() {
   const [deliveryFee, setDeliveryFee] = useState('1.25');
 
   const [rows, setRows] = useState<any[]>([
-    { receiverName: '-', receiverAddress: '', receiverPhone: '', deliveryFee: '1.25', codUSD: '0', codKHR: '0', pickupId: '', driverId: '', note: '' }
+    { receiverName: '', receiverAddress: '', receiverPhone: '', deliveryFee: '1.25', codUSD: '0', codKHR: '0', pickupId: '', driverId: '', note: '' }
   ]);
 
   useEffect(() => {
@@ -91,7 +91,7 @@ export default function BatchEntryPage() {
   const addRow = () => {
     setRows(prev => [
       ...prev,
-      { receiverName: '-', receiverAddress: '', receiverPhone: '', deliveryFee: deliveryFee || '1.25', codUSD: '0', codKHR: '0', pickupId: '', driverId: '', note: '' }
+      { receiverName: '', receiverAddress: '', receiverPhone: '', deliveryFee: deliveryFee || '1.25', codUSD: '0', codKHR: '0', pickupId: '', driverId: '', note: '' }
     ]);
   };
 

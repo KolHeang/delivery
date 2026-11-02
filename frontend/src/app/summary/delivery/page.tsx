@@ -9,6 +9,8 @@ import Topbar from '@/components/layout/Topbar';
 import { MdSearch, MdFilterAlt, MdClose, MdRefresh } from 'react-icons/md';
 import { useLanguage } from '@/lib/LanguageContext';
 import DateInput, { getLocalDateString } from '@/components/ui/DateInput';
+import Pagination from '@/components/ui/Pagination';
+import { TableSkeleton } from '@/components/ui/Skeleton';
 
 const getLocalFirstDayOfMonthString = () => {
   const d = new Date();
@@ -101,7 +103,7 @@ export default function DeliverySummaryPage() {
               <MdFilterAlt size={18} style={{ color: 'var(--accent)' }} />
               <span style={{ fontWeight: 700, fontSize: 14 }}>{lang === 'km' ? 'តម្រង' : 'Filter'}</span>
               {hasFilter && (
-                <button onClick={clearFilters} style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--danger)', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 8, padding: '4px 10px', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
+                <button type="button" className="btn btn-outline btn-sm" onClick={clearFilters} style={{ marginLeft: 'auto', fontSize: 12, padding: '4px 10px', minHeight: 30 }}>
                   <MdClose size={14} /> {lang === 'km' ? 'សម្អាតទាំងអស់' : 'Clear All'}
                 </button>
               )}
@@ -169,25 +171,6 @@ export default function DeliverySummaryPage() {
               </div>
             </div>
 
-            {/* Datatable Controls */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 20px', borderBottom: '1px solid #e5e7eb', gap: '16px', flexWrap: 'wrap' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', color: '#4b5563' }}>
-                <span>{lang === 'km' ? 'បង្ហាញ' : 'Show'}</span>
-                <select
-                  className="form-control"
-                  value={pageSize}
-                  onChange={e => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
-                  style={{ width: '70px', height: '34px', padding: '4px 8px', borderRadius: '4px', border: '1px solid #d1d5db', backgroundColor: '#fff' }}
-                >
-                  <option value="10">10</option>
-                  <option value="25">25</option>
-                  <option value="50">50</option>
-                  <option value="100">100</option>
-                </select>
-                <span>{lang === 'km' ? 'ជួរ' : 'entries'}</span>
-              </div>
-            </div>
-
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
@@ -204,7 +187,7 @@ export default function DeliverySummaryPage() {
                 </thead>
                 <tbody>
                   {loading ? (
-                    <tr><td colSpan={8} style={{ textAlign: 'center', padding: '40px 0', border: 'none' }}><div className="spinner" style={{ margin: '0 auto' }} /></td></tr>
+                    <TableSkeleton columns={8} rows={5} />
                   ) : currentPageItems.length === 0 ? (
                     <tr>
                       <td colSpan={8} style={{ padding: '36px 20px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13, border: 'none' }}>
@@ -247,50 +230,15 @@ export default function DeliverySummaryPage() {
             </div>
 
             {/* Pagination Controls */}
-            {totalPages > 0 && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', borderTop: '1px solid #e5e7eb', flexWrap: 'wrap', gap: '16px' }}>
-                <div style={{ fontSize: '14px', color: '#6b7280' }}>
-                  {lang === 'km' 
-                    ? `បង្ហាញពីជួរទី ${startEntry} ដល់ ${endEntry} នៃទិន្នន័យសរុប ${totalEntries} ជួរ` 
-                    : `Showing ${startEntry} to ${endEntry} of ${totalEntries} entries`}
-                </div>
-                <div style={{ display: 'flex', gap: '4px' }}>
-                  <button
-                    className="btn btn-outline btn-sm"
-                    disabled={currentPage === 1}
-                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                    style={{ padding: '4px 10px', height: '30px', fontSize: '12px', cursor: 'pointer' }}
-                  >
-                    {lang === 'km' ? 'មុន' : 'Previous'}
-                  </button>
-                  {Array.from({ length: totalPages }, (_, idx) => idx + 1).map(pageNum => (
-                    <button
-                      key={pageNum}
-                      className={`btn btn-sm ${currentPage === pageNum ? 'btn-primary' : 'btn-outline'}`}
-                      onClick={() => setCurrentPage(pageNum)}
-                      style={{
-                        padding: '4px 10px',
-                        height: '30px',
-                        fontSize: '12px',
-                        backgroundColor: currentPage === pageNum ? 'var(--accent, #1565D8)' : 'transparent',
-                        borderColor: '#2563eb',
-                        color: currentPage === pageNum ? '#ffffff' : 'var(--accent, #1565D8)',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      {pageNum}
-                    </button>
-                  ))}
-                  <button
-                    className="btn btn-outline btn-sm"
-                    disabled={currentPage === totalPages || totalPages === 0}
-                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                    style={{ padding: '4px 10px', height: '30px', fontSize: '12px', cursor: 'pointer' }}
-                  >
-                    {lang === 'km' ? 'បន្ទាប់' : 'Next'}
-                  </button>
-                </div>
-              </div>
+            {!loading && totalEntries > 0 && (
+              <Pagination
+                currentPage={currentPage}
+                totalItems={totalEntries}
+                pageSize={pageSize}
+                onPageChange={setCurrentPage}
+                onPageSizeChange={(sz) => { setPageSize(sz); setCurrentPage(1); }}
+                pageSizeOptions={[10, 25, 50, 100]}
+              />
             )}
           </div>
         </div>

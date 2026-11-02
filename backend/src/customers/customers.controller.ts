@@ -16,10 +16,13 @@ import { ApiTags, ApiBearerAuth, ApiOperation, ApiQuery, ApiParam } from '@nestj
 import { CustomersService } from './customers.service';
 import { CreateCustomerDto, UpdateCustomerDto } from './dto/customer.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { RolesGuard } from '../auth/roles.guard';
+import { Roles } from '../auth/roles.decorator';
 
 @ApiTags('Customers')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles('web_admin')
 @Controller('customers')
 export class CustomersController {
   constructor(private readonly customersService: CustomersService) {}

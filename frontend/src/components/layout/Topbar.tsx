@@ -21,9 +21,11 @@ import {
   MdOpenInNew,
   MdClose,
   MdVolumeUp,
+  MdMenu,
 } from 'react-icons/md';
 import { FlagKm, FlagEn } from '@/components/ui/Flags';
 import Badge from '@/components/ui/Badge';
+import { useSidebarCollapsed } from '@/components/ui/SidebarToggleIcon';
 
 interface TopbarProps {
   title: string;
@@ -49,6 +51,7 @@ export interface WebNotification {
 export default function Topbar({ title, subtitle }: TopbarProps) {
   const router = useRouter();
   const { lang, setLang, t } = useLanguage();
+  const { toggleMobile } = useSidebarCollapsed();
   const isKh = lang === 'km';
 
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -180,31 +183,36 @@ export default function Topbar({ title, subtitle }: TopbarProps) {
 
     const baseUrl =
       process.env.NEXT_PUBLIC_API_URL || 'https://new-delivery-api.rithyboth.work/api';
-    const sseUrl = `${baseUrl.replace(/\/$/, '')}/notifications/realtime`;
+    const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
+    const sseUrl = token
+      ? `${baseUrl.replace(/\/$/, '')}/notifications/realtime?token=${encodeURIComponent(token)}`
+      : null;
 
     let eventSource: EventSource | null = null;
-    try {
-      eventSource = new EventSource(sseUrl);
+    if (sseUrl) {
+      try {
+        eventSource = new EventSource(sseUrl);
 
-      eventSource.onmessage = (event) => {
-        try {
-          const payload = JSON.parse(event.data);
-          if (payload?.type === 'notification' && payload?.notification) {
-            const newNotif: WebNotification = payload.notification;
-            setNotifications((prev) => [newNotif, ...prev.filter((n) => n.id !== newNotif.id)]);
-            setUnreadCount((prev) => prev + 1);
-            triggerAlert(newNotif);
+        eventSource.onmessage = (event) => {
+          try {
+            const payload = JSON.parse(event.data);
+            if (payload?.type === 'notification' && payload?.notification) {
+              const newNotif: WebNotification = payload.notification;
+              setNotifications((prev) => [newNotif, ...prev.filter((n) => n.id !== newNotif.id)]);
+              setUnreadCount((prev) => prev + 1);
+              triggerAlert(newNotif);
+            }
+          } catch {
+            // heartbeat ping or parsing error
           }
-        } catch {
-          // heartbeat ping or parsing error
-        }
-      };
+        };
 
-      eventSource.onerror = () => {
-        // Fallback to polling if SSE drops
-      };
-    } catch {
-      // EventSource not supported
+        eventSource.onerror = () => {
+          // Fallback to polling if SSE drops
+        };
+      } catch {
+        // EventSource not supported
+      }
     }
 
     // Polling unread count every 30 seconds
@@ -288,25 +296,6 @@ export default function Topbar({ title, subtitle }: TopbarProps) {
     } catch (e) {
       console.warn('Failed to mark all read', e);
     }
-  };
-
-  const handleTestAlert = () => {
-    const demoAlert: WebNotification = {
-      id: Date.now(),
-      title: 'New Delivery Order #DEMO8899',
-      titleKh: 'ការកុម្ម៉ង់ដឹកជញ្ជូនថ្មី #DEMO8899',
-      body: 'Customer placed order: 2 parcels ($45.00 COD). Rider assigned!',
-      bodyKh: 'អតិថិជនបានកុម្ម៉ង់ដឹក៖ ២ កញ្ចប់ (ប្រាក់ COD: $45.00)។ បានចាត់អ្នកដឹក!',
-      type: 'order',
-      targetType: 'parcel',
-      targetId: 'DEMO8899',
-      link: '/delivery',
-      isRead: false,
-      createdAt: new Date().toISOString(),
-    };
-    triggerAlert(demoAlert);
-    setNotifications((prev) => [demoAlert, ...prev]);
-    setUnreadCount((prev) => prev + 1);
   };
 
   const handleLogout = () => {
@@ -493,7 +482,17 @@ export default function Topbar({ title, subtitle }: TopbarProps) {
           2. MASTER BLUE TOPBAR
           ============================================================ */}
       <header className="topbar">
-        <div />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <button
+            type="button"
+            className="mobile-menu-btn"
+            onClick={toggleMobile}
+            title={isKh ? 'បើកម៉ឺនុយ' : 'Open menu'}
+            aria-label="Open menu"
+          >
+            <MdMenu size={22} />
+          </button>
+        </div>
         <div className="topbar-actions">
           {/* Notification Bell Button & Interactive Dropdown */}
           <div className="profile-dropdown-container" ref={notifContainerRef} style={{ position: 'relative' }}>
@@ -558,27 +557,6 @@ export default function Topbar({ title, subtitle }: TopbarProps) {
                   </div>
 
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <button
-                      onClick={handleTestAlert}
-                      title="Test Audio Chime & Popup Alert"
-                      style={{
-                        background: 'rgba(37, 99, 235, 0.08)',
-                        border: '1px solid rgba(37, 99, 235, 0.2)',
-                        borderRadius: 6,
-                        color: '#2563EB',
-                        fontSize: 11,
-                        fontWeight: 700,
-                        cursor: 'pointer',
-                        padding: '2px 8px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 4,
-                      }}
-                    >
-                      <MdVolumeUp size={13} />
-                      {isKh ? 'តេស្ត Alert' : 'Test Alert'}
-                    </button>
-
                     {unreadCount > 0 && (
                       <button
                         onClick={handleMarkAllAsRead}

@@ -134,9 +134,9 @@ function TrackingPageContent() {
   };
 
   const formatDateTime = (dateStr: string | null) => {
-    if (!dateStr) return "—";
+    if (!dateStr) return "";
     const d = new Date(dateStr);
-    if (isNaN(d.getTime())) return "—";
+    if (isNaN(d.getTime())) return "";
     return d.toLocaleString(lang === "km" ? "kh-KH" : "en-US", {
       month: "short",
       day: "numeric",
@@ -932,7 +932,7 @@ function TrackingPageContent() {
                               : order.driver.name}
                           </div>
                           <div style={{ fontSize: 12, color: "#64748b" }}>
-                            {order.driver.phone || "—"}
+                            {order.driver.phone || ""}
                           </div>
                         </div>
                         {order.driver.phone && (

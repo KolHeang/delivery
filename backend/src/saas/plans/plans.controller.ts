@@ -9,9 +9,11 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiQuery, ApiParam } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiQuery, ApiParam, ApiBearerAuth } from '@nestjs/swagger';
 import { PlansService } from './plans.service';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
+import { RolesGuard } from '../../auth/roles.guard';
+import { Roles } from '../../auth/roles.decorator';
 import { Plan } from './plan.entity';
 
 @ApiTags('SaaS - Plans')
@@ -49,12 +51,18 @@ export class PlansController {
     return this.plansService.findById(+id);
   }
 
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('super_admin', 'superadmin')
+  @ApiBearerAuth()
   @Post()
   @ApiOperation({ summary: 'Create subscription plan' })
   async create(@Body() body: Partial<Plan>) {
     return this.plansService.create(body);
   }
 
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('super_admin', 'superadmin')
+  @ApiBearerAuth()
   @Put(':id')
   @ApiOperation({ summary: 'Update subscription plan' })
   @ApiParam({ name: 'id', type: Number, description: 'Plan ID' })
@@ -62,6 +70,9 @@ export class PlansController {
     return this.plansService.update(+id, body);
   }
 
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('super_admin', 'superadmin')
+  @ApiBearerAuth()
   @Delete(':id')
   @ApiOperation({ summary: 'Delete subscription plan' })
   @ApiParam({ name: 'id', type: Number, description: 'Plan ID' })

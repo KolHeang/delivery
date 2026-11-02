@@ -159,7 +159,7 @@ export default function RolesListPage() {
                             </div>
                           </td>
                           <td style={{ fontSize: 13, color: '#475569' }}>
-                            {d.description || '—'}
+                            {d.description || ''}
                           </td>
                           <td>
                             <span style={{

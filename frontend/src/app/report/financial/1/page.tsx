@@ -36,8 +36,8 @@ export default function Frpt1Page() {
       const data = res.data;
       setSummary({ totalIncome: data.totalIncome || 0, totalExpense: data.totalExpense || 0, netProfit: data.netProfit || 0 });
       setRows((data.transactions || []).map((tx: any) => ({
-        id: tx.id, date: tx.date, description: tx.description || '—',
-        category: tx.category || '—', type: tx.type, amount: tx.amount || 0,
+        id: tx.id, date: tx.date, description: tx.description || '',
+        category: tx.category || '', type: tx.type, amount: tx.amount || 0,
       })));
     } catch { setRows([]); }
     setLoading(false);
@@ -140,10 +140,10 @@ export default function Frpt1Page() {
                           <td style={{ fontWeight: 600, fontSize: 13 }}>{r.category}</td>
                           <td style={{ fontSize: 13 }}>{r.description}</td>
                           <td style={{ textAlign: 'right', fontWeight: 700, color: r.type === 'income' ? 'var(--success)' : 'var(--text-muted)' }}>
-                            {r.type === 'income' ? `+$${r.amount.toFixed(2)}` : '—'}
+                            {r.type === 'income' ? `+$${r.amount.toFixed(2)}` : ''}
                           </td>
                           <td style={{ textAlign: 'right', fontWeight: 700, color: r.type === 'expense' ? 'var(--danger)' : 'var(--text-muted)' }}>
-                            {r.type === 'expense' ? `-$${r.amount.toFixed(2)}` : '—'}
+                            {r.type === 'expense' ? `-$${r.amount.toFixed(2)}` : ''}
                           </td>
                         </tr>
                       ))

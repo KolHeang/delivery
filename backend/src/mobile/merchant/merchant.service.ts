@@ -37,12 +37,6 @@ import {
   formatMerchantPickupRequest,
   formatMerchantSettlement,
 } from './utils/delivery-formatter.util';
-import {
-  CreateMerchantBranchDto,
-  UpdateMerchantBranchDto,
-  CreateMerchantContactDto,
-  SendSupportMessageDto,
-} from './dto/merchant-mobile.dto';
 
 
 export interface MobileMerchantFilterOptions {
@@ -150,11 +144,34 @@ export class MerchantService {
   async getProfile(merchantId: number) {
     const merchant = await this.merchantRepo.findOne({
       where: { id: merchantId },
+      select: {
+        id: true,
+        name: true,
+        nameKh: true,
+        contact: true,
+        phone: true,
+        email: true,
+        photo: true,
+        telegram: true,
+        note: true,
+        address: true,
+        latitude: true,
+        longitude: true,
+        balance: true,
+        active: true,
+        pricingTier: true,
+        deliveryFee: true,
+        exchangeRate: true,
+        tenantId: true,
+        zoneId: true,
+        qrLinkKhr: true,
+        qrLinkUsd: true,
+        createdAt: true,
+      },
       relations: { zone: true },
     });
     if (!merchant) throw new NotFoundException('Merchant not found');
-    const { password, ...safeMerchant } = merchant as any;
-    return safeMerchant;
+    return merchant;
   }
 
   async updateProfile(merchantId: number, dto: { name?: string; phone?: string; email?: string; photo?: string; address?: string }) {
@@ -206,14 +223,37 @@ export class MerchantService {
       branchId?: number;
     },
   ) {
-    const targetMerchantId = options?.merchantId ? Number(options.merchantId) : merchantId;
+    const targetMerchantId = merchantId;
     const qb = this.parcelRepo
       .createQueryBuilder('parcel')
-      .leftJoinAndSelect('parcel.customer', 'customer')
-      .leftJoinAndSelect('parcel.driver', 'driver')
-      .leftJoinAndSelect('parcel.pickupDriver', 'pickupDriver')
-      .leftJoinAndSelect('parcel.branch', 'branch')
-      .leftJoinAndSelect('parcel.zone', 'zone')
+      .select([
+        'parcel.id',
+        'parcel.trackingCode',
+        'parcel.status',
+        'parcel.receiverName',
+        'parcel.receiverPhone',
+        'parcel.receiverAddress',
+        'parcel.cod',
+        'parcel.codCurrency',
+        'parcel.deliveryFee',
+        'parcel.note',
+        'parcel.weight',
+        'parcel.size',
+        'parcel.createdAt',
+        'parcel.deliveredAt',
+        'parcel.branchId',
+        'parcel.merchantId',
+      ])
+      .leftJoin('parcel.customer', 'customer')
+      .addSelect(['customer.id', 'customer.name', 'customer.phone'])
+      .leftJoin('parcel.driver', 'driver')
+      .addSelect(['driver.id', 'driver.name', 'driver.nameKh', 'driver.phone', 'driver.photo'])
+      .leftJoin('parcel.pickupDriver', 'pickupDriver')
+      .addSelect(['pickupDriver.id', 'pickupDriver.name', 'pickupDriver.phone'])
+      .leftJoin('parcel.branch', 'branch')
+      .addSelect(['branch.id', 'branch.name'])
+      .leftJoin('parcel.zone', 'zone')
+      .addSelect(['zone.id', 'zone.name'])
       .where('parcel.merchantId = :merchantId', { merchantId: targetMerchantId });
 
     if (options?.branchId) {
@@ -258,56 +298,130 @@ export class MerchantService {
   }
 
   async getParcelById(merchantId: number, parcelId: number) {
-    const parcel = await this.parcelRepo.findOne({
-      where: { id: parcelId, merchantId },
-      relations: {
-        customer: true,
-        driver: true,
-        pickupDriver: true,
-        zone: true,
-        events: true,
-      },
-      order: {
-        events: {
-          createdAt: 'ASC',
-        },
-      },
-    });
+    const parcel = await this.parcelRepo
+      .createQueryBuilder('parcel')
+      .select([
+        'parcel.id',
+        'parcel.trackingCode',
+        'parcel.status',
+        'parcel.receiverName',
+        'parcel.receiverPhone',
+        'parcel.receiverAddress',
+        'parcel.cod',
+        'parcel.codCurrency',
+        'parcel.deliveryFee',
+        'parcel.note',
+        'parcel.weight',
+        'parcel.size',
+        'parcel.deliveredAt',
+        'parcel.proofPhotos',
+        'parcel.signatureUrl',
+        'parcel.failedPhoto',
+        'parcel.returnPhoto',
+        'parcel.createdAt',
+        'parcel.updatedAt',
+        'parcel.merchantId',
+        'parcel.branchId',
+      ])
+      .leftJoin('parcel.customer', 'customer')
+      .addSelect(['customer.id', 'customer.name', 'customer.phone', 'customer.address'])
+      .leftJoin('parcel.driver', 'driver')
+      .addSelect(['driver.id', 'driver.name', 'driver.nameKh', 'driver.phone', 'driver.photo'])
+      .leftJoin('parcel.pickupDriver', 'pickupDriver')
+      .addSelect(['pickupDriver.id', 'pickupDriver.name', 'pickupDriver.phone'])
+      .leftJoin('parcel.zone', 'zone')
+      .addSelect(['zone.id', 'zone.name'])
+      .leftJoin('parcel.events', 'events')
+      .addSelect(['events.id', 'events.status', 'events.note', 'events.createdAt'])
+      .where('parcel.id = :parcelId', { parcelId })
+      .andWhere('parcel.merchantId = :merchantId', { merchantId })
+      .getOne();
 
     if (!parcel) {
       throw new NotFoundException(`រកមិនឃើញកញ្ចប់ឥវ៉ាន់ #${parcelId} ឡើយ`);
+    }
+
+    if (parcel.events && parcel.events.length > 0) {
+      parcel.events.sort(
+        (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+      );
     }
 
     return parcel;
   }
 
   async getParcelTracking(merchantId: number, codeOrId: string | number) {
-    let qb = this.parcelRepo
+    const strParam = String(codeOrId).trim();
+    const isExplicitId = typeof codeOrId === 'number';
+    const isNumericString = /^\d+$/.test(strParam) && Number(strParam) > 0 && Number(strParam) < 2147483647;
+
+    const qb = this.parcelRepo
       .createQueryBuilder('parcel')
-      .leftJoinAndSelect('parcel.customer', 'customer')
-      .leftJoinAndSelect('parcel.driver', 'driver')
-      .leftJoinAndSelect('parcel.pickupDriver', 'pickupDriver')
-      .leftJoinAndSelect('parcel.zone', 'zone')
-      .leftJoinAndSelect('parcel.merchant', 'merchant')
-      .leftJoinAndSelect('parcel.events', 'events')
+      .select([
+        'parcel.id',
+        'parcel.trackingCode',
+        'parcel.status',
+        'parcel.receiverName',
+        'parcel.receiverPhone',
+        'parcel.receiverAddress',
+        'parcel.cod',
+        'parcel.codCurrency',
+        'parcel.deliveryFee',
+        'parcel.note',
+        'parcel.weight',
+        'parcel.size',
+        'parcel.createdAt',
+        'parcel.updatedAt',
+        'parcel.merchantId',
+        'parcel.customerId',
+        'parcel.driverId',
+        'parcel.pickupDriverId',
+        'parcel.zoneId',
+      ])
+      .leftJoin('parcel.customer', 'customer')
+      .addSelect(['customer.id', 'customer.name', 'customer.phone', 'customer.address'])
+      .leftJoin('parcel.driver', 'driver')
+      .addSelect(['driver.id', 'driver.name', 'driver.nameKh', 'driver.phone', 'driver.photo'])
+      .leftJoin('parcel.pickupDriver', 'pickupDriver')
+      .addSelect(['pickupDriver.id', 'pickupDriver.name', 'pickupDriver.phone'])
+      .leftJoin('parcel.zone', 'zone')
+      .addSelect(['zone.id', 'zone.name'])
+      .leftJoin('parcel.merchant', 'merchant')
+      .addSelect(['merchant.id', 'merchant.name', 'merchant.nameKh', 'merchant.phone', 'merchant.address', 'merchant.latitude', 'merchant.longitude'])
+      .leftJoin('parcel.events', 'events')
+      .addSelect(['events.id', 'events.status', 'events.note', 'events.createdAt'])
       .where('parcel.merchantId = :merchantId', { merchantId });
 
-    const strParam = String(codeOrId).trim();
-    if (/^\d+$/.test(strParam)) {
-      qb = qb.andWhere('(parcel.id = :idNum OR LOWER(parcel.trackingCode) = LOWER(:codeStr))', {
+    if (isExplicitId) {
+      // 1. Direct Primary Key index seek (< 1ms)
+      qb.andWhere('parcel.id = :idNum', { idNum: codeOrId });
+    } else if (isNumericString && !strParam.startsWith('0')) {
+      // 2. Either primary key ID or exact tracking code without functional LOWER() to utilize B-Tree index
+      qb.andWhere('(parcel.id = :idNum OR parcel.trackingCode = :codeStr)', {
         idNum: Number(strParam),
         codeStr: strParam,
       });
     } else {
-      qb = qb.andWhere('LOWER(parcel.trackingCode) = LOWER(:codeStr)', {
+      // 3. Exact tracking code or uppercase tracking code — uses the unique B-Tree index on tracking_code
+      const upper = strParam.toUpperCase();
+      qb.andWhere('(parcel.trackingCode = :codeStr OR parcel.trackingCode = :upper)', {
         codeStr: strParam,
+        upper,
       });
     }
 
-    const parcel = await qb.orderBy('events.createdAt', 'ASC').getOne();
+    // Direct getOne() without cross-table orderBy subquery (which forces TypeORM to run expensive DISTINCT pagination SQL)
+    const parcel = await qb.getOne();
     if (!parcel) {
       throw new NotFoundException(
         `រកមិនឃើញកញ្ចប់ឥវ៉ាន់តាមលេខកូដ "${strParam}" ឬមិនមែនជារបស់ហាងអ្នកឡើយ (Parcel not found or not owned by your shop)`,
+      );
+    }
+
+    // Sort events in memory (0.001ms)
+    if (parcel.events && parcel.events.length > 0) {
+      parcel.events.sort(
+        (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
       );
     }
 
@@ -777,10 +891,21 @@ export class MerchantService {
   }
 
   async getZones(merchantId: number) {
-    const merchant = await this.merchantRepo.findOne({ where: { id: merchantId } });
+    const merchant = await this.merchantRepo.findOne({
+      where: { id: merchantId },
+      select: { id: true, tenantId: true },
+    });
     const tenantId = merchant?.tenantId;
 
     const qb = this.zoneRepo.createQueryBuilder('zone')
+      .select([
+        'zone.id',
+        'zone.name',
+        'zone.code',
+        'zone.price',
+        'zone.description',
+        'zone.active',
+      ])
       .where('zone.active = :active', { active: true });
 
     if (tenantId) {
@@ -848,7 +973,7 @@ export class MerchantService {
       branchId?: number;
     },
   ) {
-    const targetMerchantId = options?.merchantId ? Number(options.merchantId) : merchantId;
+    const targetMerchantId = merchantId;
     const branchId = options?.branchId ? Number(options.branchId) : undefined;
     const dateFilter = parseDateFilter(options?.date, options?.startDate, options?.endDate);
 
@@ -969,8 +1094,25 @@ export class MerchantService {
     // 7. Recent delivered parcels
     let recentParcelsQb = this.parcelRepo
       .createQueryBuilder('parcel')
-      .leftJoinAndSelect('parcel.driver', 'driver')
-      .leftJoinAndSelect('parcel.branch', 'branch')
+      .select([
+        'parcel.id',
+        'parcel.trackingCode',
+        'parcel.status',
+        'parcel.receiverName',
+        'parcel.receiverPhone',
+        'parcel.receiverAddress',
+        'parcel.cod',
+        'parcel.codCurrency',
+        'parcel.deliveryFee',
+        'parcel.deliveredAt',
+        'parcel.createdAt',
+        'parcel.updatedAt',
+        'parcel.branchId',
+      ])
+      .leftJoin('parcel.driver', 'driver')
+      .addSelect(['driver.id', 'driver.name', 'driver.nameKh', 'driver.phone', 'driver.photo'])
+      .leftJoin('parcel.branch', 'branch')
+      .addSelect(['branch.id', 'branch.name'])
       .where('parcel.merchantId = :merchantId', { merchantId: targetMerchantId })
       .andWhere('parcel.status = :status', { status: 'delivered' });
     if (branchId) {
@@ -989,8 +1131,24 @@ export class MerchantService {
     // 8. Active pickup requests
     let activePickupQb = this.pickupRequestRepo
       .createQueryBuilder('pr')
-      .leftJoinAndSelect('pr.pickupDriver', 'pickupDriver')
-      .leftJoinAndSelect('pr.branch', 'branch')
+      .select([
+        'pr.id',
+        'pr.status',
+        'pr.declaredQuantity',
+        'pr.actualQuantity',
+        'pr.pickupAddress',
+        'pr.pickupTime',
+        'pr.photo',
+        'pr.note',
+        'pr.createdAt',
+        'pr.updatedAt',
+        'pr.branchId',
+        'pr.pickupDriverId',
+      ])
+      .leftJoin('pr.pickupDriver', 'pickupDriver')
+      .addSelect(['pickupDriver.id', 'pickupDriver.name', 'pickupDriver.phone', 'pickupDriver.photo'])
+      .leftJoin('pr.branch', 'branch')
+      .addSelect(['branch.id', 'branch.name', 'branch.address', 'branch.phone', 'branch.latitude', 'branch.longitude'])
       .where('pr.merchantId = :merchantId', { merchantId: targetMerchantId });
     if (branchId) {
       activePickupQb = activePickupQb.andWhere('pr.branchId = :branchId', { branchId });
@@ -1007,7 +1165,18 @@ export class MerchantService {
     // 9. Recent payments (settlements)
     let recentPaymentsQb = this.merchantPaymentRepo
       .createQueryBuilder('mp')
-      .leftJoinAndSelect('mp.creator', 'creator')
+      .select([
+        'mp.id',
+        'mp.reference',
+        'mp.amount',
+        'mp.amountKHR',
+        'mp.date',
+        'mp.createdAt',
+        'mp.note',
+        'mp.parcelIds',
+      ])
+      .leftJoin('mp.creator', 'creator')
+      .addSelect(['creator.id', 'creator.name'])
       .where('mp.merchantId = :merchantId', { merchantId: targetMerchantId });
     applyDateRangeToQb(recentPaymentsQb, 'mp.createdAt', dateFilter, 'py');
     const recentPayments = await recentPaymentsQb
@@ -1023,6 +1192,25 @@ export class MerchantService {
     if (allParcelIds.length > 0) {
       const parcels = await this.parcelRepo.find({
         where: { id: In(allParcelIds) },
+        select: {
+          id: true,
+          trackingCode: true,
+          receiverName: true,
+          receiverPhone: true,
+          receiverAddress: true,
+          cod: true,
+          codCurrency: true,
+          status: true,
+          branchId: true,
+          deliveredAt: true,
+          updatedAt: true,
+          customer: {
+            id: true,
+            name: true,
+            phone: true,
+            address: true,
+          },
+        },
         relations: { customer: true },
       });
       parcelsMap = new Map(parcels.map((p) => [p.id, p]));
@@ -1110,14 +1298,31 @@ export class MerchantService {
       branchId?: number;
     },
   ): Observable<MessageEvent> {
-    const targetMerchantId = options?.merchantId ? Number(options.merchantId) : merchantId;
+    const targetMerchantId = merchantId;
     const branchId = options?.branchId ? Number(options.branchId) : undefined;
     const dateFilter = parseDateFilter(options?.date, options?.startDate, options?.endDate);
 
     let initialQb = this.parcelRepo
       .createQueryBuilder('parcel')
-      .leftJoinAndSelect('parcel.driver', 'driver')
-      .leftJoinAndSelect('parcel.branch', 'branch')
+      .select([
+        'parcel.id',
+        'parcel.trackingCode',
+        'parcel.status',
+        'parcel.receiverName',
+        'parcel.receiverPhone',
+        'parcel.receiverAddress',
+        'parcel.cod',
+        'parcel.codCurrency',
+        'parcel.deliveryFee',
+        'parcel.deliveredAt',
+        'parcel.createdAt',
+        'parcel.updatedAt',
+        'parcel.branchId',
+      ])
+      .leftJoin('parcel.driver', 'driver')
+      .addSelect(['driver.id', 'driver.name', 'driver.nameKh', 'driver.phone', 'driver.photo'])
+      .leftJoin('parcel.branch', 'branch')
+      .addSelect(['branch.id', 'branch.name'])
       .where('parcel.merchantId = :merchantId', { merchantId: targetMerchantId })
       .andWhere('parcel.status = :status', { status: 'delivered' });
     if (branchId) {
@@ -1217,14 +1422,30 @@ export class MerchantService {
       branchId?: number;
     },
   ): Observable<MessageEvent> {
-    const targetMerchantId = options?.merchantId ? Number(options.merchantId) : merchantId;
+    const targetMerchantId = merchantId;
     const branchId = options?.branchId ? Number(options.branchId) : undefined;
     const dateFilter = parseDateFilter(options?.date, options?.startDate, options?.endDate);
 
     let initialQb = this.pickupRequestRepo
       .createQueryBuilder('pr')
-      .leftJoinAndSelect('pr.pickupDriver', 'pickupDriver')
-      .leftJoinAndSelect('pr.branch', 'branch')
+      .select([
+        'pr.id',
+        'pr.status',
+        'pr.declaredQuantity',
+        'pr.actualQuantity',
+        'pr.pickupAddress',
+        'pr.pickupTime',
+        'pr.photo',
+        'pr.note',
+        'pr.createdAt',
+        'pr.updatedAt',
+        'pr.branchId',
+        'pr.pickupDriverId',
+      ])
+      .leftJoin('pr.pickupDriver', 'pickupDriver')
+      .addSelect(['pickupDriver.id', 'pickupDriver.name', 'pickupDriver.phone', 'pickupDriver.photo'])
+      .leftJoin('pr.branch', 'branch')
+      .addSelect(['branch.id', 'branch.name', 'branch.address', 'branch.phone', 'branch.latitude', 'branch.longitude'])
       .where('pr.merchantId = :merchantId', { merchantId: targetMerchantId });
     if (branchId) {
       initialQb = initialQb.andWhere('pr.branchId = :branchId', { branchId });
@@ -1362,11 +1583,28 @@ export class MerchantService {
       status?: string;
     },
   ) {
-    const targetMerchantId = options?.merchantId ? Number(options.merchantId) : merchantId;
+    const targetMerchantId = merchantId;
     const qb = this.pickupRequestRepo
       .createQueryBuilder('pr')
-      .leftJoinAndSelect('pr.pickupDriver', 'pickupDriver')
-      .leftJoinAndSelect('pr.branch', 'branch')
+      .select([
+        'pr.id',
+        'pr.status',
+        'pr.declaredQuantity',
+        'pr.actualQuantity',
+        'pr.pickupAddress',
+        'pr.pickupTime',
+        'pr.photo',
+        'pr.note',
+        'pr.createdAt',
+        'pr.updatedAt',
+        'pr.branchId',
+        'pr.merchantId',
+        'pr.pickupDriverId',
+      ])
+      .leftJoin('pr.pickupDriver', 'pickupDriver')
+      .addSelect(['pickupDriver.id', 'pickupDriver.name', 'pickupDriver.phone', 'pickupDriver.photo'])
+      .leftJoin('pr.branch', 'branch')
+      .addSelect(['branch.id', 'branch.name', 'branch.address', 'branch.phone', 'branch.latitude', 'branch.longitude'])
       .where('pr.merchantId = :merchantId', { merchantId: targetMerchantId });
 
     if (options?.branchId) {
@@ -1387,10 +1625,44 @@ export class MerchantService {
   }
 
   async getPickupRequest(merchantId: number, id: number) {
-    const request = await this.pickupRequestRepo.findOne({
-      where: { id, merchantId },
-      relations: { pickupDriver: true, parcels: true, branch: true },
-    });
+    const request = await this.pickupRequestRepo
+      .createQueryBuilder('pr')
+      .select([
+        'pr.id',
+        'pr.status',
+        'pr.declaredQuantity',
+        'pr.actualQuantity',
+        'pr.pickupAddress',
+        'pr.pickupTime',
+        'pr.photo',
+        'pr.note',
+        'pr.createdAt',
+        'pr.updatedAt',
+        'pr.branchId',
+        'pr.merchantId',
+        'pr.pickupDriverId',
+      ])
+      .leftJoin('pr.pickupDriver', 'pickupDriver')
+      .addSelect(['pickupDriver.id', 'pickupDriver.name', 'pickupDriver.phone', 'pickupDriver.photo'])
+      .leftJoin('pr.branch', 'branch')
+      .addSelect(['branch.id', 'branch.name', 'branch.address', 'branch.phone', 'branch.latitude', 'branch.longitude'])
+      .leftJoin('pr.parcels', 'parcels')
+      .addSelect([
+        'parcels.id',
+        'parcels.trackingCode',
+        'parcels.status',
+        'parcels.receiverName',
+        'parcels.receiverPhone',
+        'parcels.receiverAddress',
+        'parcels.cod',
+        'parcels.codCurrency',
+        'parcels.deliveryFee',
+        'parcels.createdAt',
+      ])
+      .where('pr.id = :id', { id })
+      .andWhere('pr.merchantId = :merchantId', { merchantId })
+      .getOne();
+
     if (!request) throw new NotFoundException(`Pickup request #${id} not found`);
     return formatMerchantPickupRequest(request);
   }
@@ -1408,7 +1680,7 @@ export class MerchantService {
       branchId?: number;
     },
   ) {
-    const targetMerchantId = query?.merchantId ? Number(query.merchantId) : merchantId;
+    const targetMerchantId = merchantId;
     const page = query?.page ? Math.max(1, Number(query.page)) : 1;
     const limit = query?.limit ? Math.max(1, Number(query.limit)) : 20;
     const rawStatus = (query?.status || 'all').toLowerCase().trim();
@@ -1425,7 +1697,18 @@ export class MerchantService {
     if (isPaidRequested) {
       const qb = this.merchantPaymentRepo
         .createQueryBuilder('payment')
-        .leftJoinAndSelect('payment.creator', 'creator')
+        .select([
+          'payment.id',
+          'payment.reference',
+          'payment.amount',
+          'payment.amountKHR',
+          'payment.date',
+          'payment.createdAt',
+          'payment.note',
+          'payment.parcelIds',
+        ])
+        .leftJoin('payment.creator', 'creator')
+        .addSelect(['creator.id', 'creator.name'])
         .where('payment.merchantId = :merchantId', { merchantId: targetMerchantId });
 
       applyDateRangeToQb(qb, 'payment.createdAt', dateFilter, 'stl');
@@ -1440,7 +1723,26 @@ export class MerchantService {
       if (allParcelIds.length > 0) {
         const parcels = await this.parcelRepo.find({
           where: { id: In(allParcelIds) },
-          relations: { customer: true, zone: true },
+          select: {
+            id: true,
+            trackingCode: true,
+            receiverName: true,
+            receiverPhone: true,
+            receiverAddress: true,
+            cod: true,
+            codCurrency: true,
+            status: true,
+            branchId: true,
+            deliveredAt: true,
+            updatedAt: true,
+            customer: {
+              id: true,
+              name: true,
+              phone: true,
+              address: true,
+            },
+          },
+          relations: { customer: true },
         });
         parcelsMap = new Map(parcels.map((p) => [p.id, p]));
       }
@@ -1462,8 +1764,21 @@ export class MerchantService {
     if (isPendingRequested) {
       const pendingQb = this.parcelRepo
         .createQueryBuilder('parcel')
-        .leftJoinAndSelect('parcel.customer', 'customer')
-        .leftJoinAndSelect('parcel.zone', 'zone')
+        .select([
+          'parcel.id',
+          'parcel.trackingCode',
+          'parcel.status',
+          'parcel.receiverName',
+          'parcel.receiverPhone',
+          'parcel.receiverAddress',
+          'parcel.cod',
+          'parcel.codCurrency',
+          'parcel.createdAt',
+          'parcel.deliveredAt',
+          'parcel.branchId',
+        ])
+        .leftJoin('parcel.customer', 'customer')
+        .addSelect(['customer.id', 'customer.name', 'customer.phone', 'customer.address'])
         .where('parcel.merchantId = :merchantId', { merchantId: targetMerchantId })
         .andWhere("parcel.status = 'delivered'")
         .andWhere('(parcel.merchantPaymentStatus = :pStatus OR parcel.merchantPaymentStatus IS NULL)', { pStatus: 'unpaid' });
@@ -1531,8 +1846,21 @@ export class MerchantService {
     if (isProblemRequested) {
       const problemQb = this.parcelRepo
         .createQueryBuilder('parcel')
-        .leftJoinAndSelect('parcel.customer', 'customer')
-        .leftJoinAndSelect('parcel.zone', 'zone')
+        .select([
+          'parcel.id',
+          'parcel.trackingCode',
+          'parcel.status',
+          'parcel.receiverName',
+          'parcel.receiverPhone',
+          'parcel.receiverAddress',
+          'parcel.cod',
+          'parcel.codCurrency',
+          'parcel.createdAt',
+          'parcel.updatedAt',
+          'parcel.branchId',
+        ])
+        .leftJoin('parcel.customer', 'customer')
+        .addSelect(['customer.id', 'customer.name', 'customer.phone', 'customer.address'])
         .where('parcel.merchantId = :merchantId', { merchantId: targetMerchantId })
         .andWhere("parcel.status IN ('failed', 'returned', 'cancelled')");
 
@@ -1626,6 +1954,20 @@ export class MerchantService {
 
     const payment = await this.merchantPaymentRepo.findOne({
       where: whereConditions,
+      select: {
+        id: true,
+        reference: true,
+        amount: true,
+        amountKHR: true,
+        date: true,
+        createdAt: true,
+        note: true,
+        parcelIds: true,
+        creator: {
+          id: true,
+          name: true,
+        },
+      },
       relations: { creator: true },
     });
 
@@ -1634,7 +1976,26 @@ export class MerchantService {
       if (payment.parcelIds && payment.parcelIds.length > 0) {
         parcels = await this.parcelRepo.find({
           where: { id: In(payment.parcelIds) },
-          relations: { customer: true, zone: true },
+          select: {
+            id: true,
+            trackingCode: true,
+            receiverName: true,
+            receiverPhone: true,
+            receiverAddress: true,
+            cod: true,
+            codCurrency: true,
+            status: true,
+            branchId: true,
+            deliveredAt: true,
+            updatedAt: true,
+            customer: {
+              id: true,
+              name: true,
+              phone: true,
+              address: true,
+            },
+          },
+          relations: { customer: true },
         });
       }
       return formatMerchantSettlement({ ...payment, status: 'paid' }, parcels);
@@ -1650,8 +2011,21 @@ export class MerchantService {
 
       const qb = this.parcelRepo
         .createQueryBuilder('parcel')
-        .leftJoinAndSelect('parcel.customer', 'customer')
-        .leftJoinAndSelect('parcel.zone', 'zone')
+        .select([
+          'parcel.id',
+          'parcel.trackingCode',
+          'parcel.status',
+          'parcel.receiverName',
+          'parcel.receiverPhone',
+          'parcel.receiverAddress',
+          'parcel.cod',
+          'parcel.codCurrency',
+          'parcel.createdAt',
+          'parcel.deliveredAt',
+          'parcel.branchId',
+        ])
+        .leftJoin('parcel.customer', 'customer')
+        .addSelect(['customer.id', 'customer.name', 'customer.phone', 'customer.address'])
         .where('parcel.merchantId = :merchantId', { merchantId })
         .andWhere("parcel.status = 'delivered'")
         .andWhere('(parcel.merchantPaymentStatus = :pStatus OR parcel.merchantPaymentStatus IS NULL)', { pStatus: 'unpaid' });
@@ -1697,8 +2071,21 @@ export class MerchantService {
 
       const qb = this.parcelRepo
         .createQueryBuilder('parcel')
-        .leftJoinAndSelect('parcel.customer', 'customer')
-        .leftJoinAndSelect('parcel.zone', 'zone')
+        .select([
+          'parcel.id',
+          'parcel.trackingCode',
+          'parcel.status',
+          'parcel.receiverName',
+          'parcel.receiverPhone',
+          'parcel.receiverAddress',
+          'parcel.cod',
+          'parcel.codCurrency',
+          'parcel.createdAt',
+          'parcel.updatedAt',
+          'parcel.branchId',
+        ])
+        .leftJoin('parcel.customer', 'customer')
+        .addSelect(['customer.id', 'customer.name', 'customer.phone', 'customer.address'])
         .where('parcel.merchantId = :merchantId', { merchantId })
         .andWhere("parcel.status IN ('failed', 'returned', 'cancelled')");
 
@@ -1740,7 +2127,28 @@ export class MerchantService {
         { trackingCode: strId, merchantId },
         ...(isNum && Number(strId) > 0 ? [{ id: Number(strId), merchantId }] : []),
       ],
-      relations: { customer: true, zone: true },
+      select: {
+        id: true,
+        trackingCode: true,
+        status: true,
+        cod: true,
+        codCurrency: true,
+        merchantPaymentStatus: true,
+        branchId: true,
+        receiverName: true,
+        receiverPhone: true,
+        receiverAddress: true,
+        deliveredAt: true,
+        updatedAt: true,
+        createdAt: true,
+        customer: {
+          id: true,
+          name: true,
+          phone: true,
+          address: true,
+        },
+      },
+      relations: { customer: true },
     });
 
     if (singleParcel) {
@@ -1772,6 +2180,20 @@ export class MerchantService {
   async getParcelMessages(merchantId: number, parcelId: number) {
     const parcel = await this.parcelRepo.findOne({
       where: { id: parcelId, merchantId },
+      select: {
+        id: true,
+        trackingCode: true,
+        status: true,
+        driverId: true,
+        tenantId: true,
+        driver: {
+          id: true,
+          name: true,
+          nameKh: true,
+          phone: true,
+          photo: true,
+        },
+      },
       relations: { driver: true },
     });
     if (!parcel) {
@@ -1828,7 +2250,12 @@ export class MerchantService {
 
     const parcel = await this.parcelRepo.findOne({
       where: { id: parcelId, merchantId },
-      relations: { driver: true },
+      select: {
+        id: true,
+        trackingCode: true,
+        driverId: true,
+        tenantId: true,
+      },
     });
     if (!parcel) {
       throw new NotFoundException(
@@ -1838,6 +2265,7 @@ export class MerchantService {
 
     const merchant = await this.merchantRepo.findOne({
       where: { id: merchantId },
+      select: { id: true, name: true, nameKh: true, photo: true },
     });
     if (!merchant) throw new NotFoundException('Merchant not found');
 
@@ -1875,11 +2303,20 @@ export class MerchantService {
 
   // ===================== MERCHANT NOTIFICATIONS =====================
   async getNotifications(merchantId: number, page: number = 1, limit: number = 20) {
-    const p = Math.max(1, page || 1);
-    const l = Math.max(1, Math.min(100, limit || 20));
+    const p = Math.max(1, Number(page) || 1);
+    const l = Math.max(1, Math.min(100, Number(limit) || 20));
 
     const [items, total] = await this.notificationRepo.findAndCount({
       where: { merchantId },
+      select: {
+        id: true,
+        title: true,
+        body: true,
+        type: true,
+        data: true,
+        isRead: true,
+        createdAt: true,
+      },
       order: { createdAt: 'DESC' },
       skip: (p - 1) * l,
       take: l,
@@ -1931,6 +2368,24 @@ export class MerchantService {
   async getBranches(merchantId: number) {
     const branches = await this.branchRepo.find({
       where: { merchantId },
+      select: {
+        id: true,
+        name: true,
+        code: true,
+        contactName: true,
+        phone: true,
+        address: true,
+        isDefault: true,
+        latitude: true,
+        longitude: true,
+        note: true,
+        zoneId: true,
+        createdAt: true,
+        zone: {
+          id: true,
+          name: true,
+        },
+      },
       relations: { zone: true },
       order: { isDefault: 'DESC', createdAt: 'DESC' },
     });
@@ -1984,54 +2439,28 @@ export class MerchantService {
   async getBranchById(merchantId: number, branchId: number) {
     const branch = await this.branchRepo.findOne({
       where: { id: branchId, merchantId },
+      select: {
+        id: true,
+        name: true,
+        code: true,
+        contactName: true,
+        phone: true,
+        address: true,
+        isDefault: true,
+        latitude: true,
+        longitude: true,
+        note: true,
+        zoneId: true,
+        createdAt: true,
+        zone: {
+          id: true,
+          name: true,
+        },
+      },
       relations: { zone: true },
     });
     if (!branch) throw new NotFoundException('Branch not found');
     return branch;
-  }
-
-  async createBranch(merchantId: number, dto: CreateMerchantBranchDto) {
-    const merchant = await this.merchantRepo.findOne({ where: { id: merchantId } });
-    if (!merchant) throw new NotFoundException('Merchant not found');
-
-    if (dto.isDefault) {
-      await this.branchRepo.update({ merchantId }, { isDefault: false });
-    }
-
-    const branch = this.branchRepo.create({
-      ...dto,
-      merchantId,
-      tenantId: merchant.tenantId,
-    });
-    return this.branchRepo.save(branch);
-  }
-
-  async updateBranch(merchantId: number, branchId: number, dto: UpdateMerchantBranchDto) {
-    const branch = await this.branchRepo.findOne({ where: { id: branchId, merchantId } });
-    if (!branch) throw new NotFoundException('Branch not found');
-
-    if (dto.isDefault) {
-      await this.branchRepo.update({ merchantId }, { isDefault: false });
-    }
-
-    Object.assign(branch, dto);
-    return this.branchRepo.save(branch);
-  }
-
-  async deleteBranch(merchantId: number, branchId: number) {
-    const branch = await this.branchRepo.findOne({ where: { id: branchId, merchantId } });
-    if (!branch) throw new NotFoundException('Branch not found');
-    await this.branchRepo.delete(branchId);
-    return { success: true, message: 'Branch deleted successfully' };
-  }
-
-  async setDefaultBranch(merchantId: number, branchId: number) {
-    const branch = await this.branchRepo.findOne({ where: { id: branchId, merchantId } });
-    if (!branch) throw new NotFoundException('Branch not found');
-
-    await this.branchRepo.update({ merchantId }, { isDefault: false });
-    await this.branchRepo.update(branchId, { isDefault: true });
-    return { success: true, message: 'Branch set as default successfully' };
   }
 
   // ===================== BRANDING & ORGANISATION =====================
@@ -2040,8 +2469,7 @@ export class MerchantService {
     let org: Organisation | null = null;
     if (merchant?.tenantId) {
       org = await this.orgRepo.findOne({ where: { tenantId: merchant.tenantId } });
-    }
-    if (!org) {
+    } else {
       org = await this.orgRepo.findOne({ order: { id: 'ASC' } });
     }
 
@@ -2056,92 +2484,6 @@ export class MerchantService {
       address: org?.address || 'Phnom Penh, Cambodia',
       currency: 'USD',
       supportTelegram: '@express_support',
-    };
-  }
-
-  // ===================== SAVED CONTACTS / CUSTOMERS =====================
-  async getContacts(merchantId: number, search?: string) {
-    const merchant = await this.merchantRepo.findOne({ where: { id: merchantId } });
-    const qb = this.customerRepo.createQueryBuilder('c');
-    if (merchant?.tenantId) {
-      qb.where('c.tenantId = :tid', { tid: merchant.tenantId });
-    }
-    if (search) {
-      qb.andWhere('(c.name ILIKE :s OR c.phone ILIKE :s)', { s: `%${search}%` });
-    }
-    qb.orderBy('c.createdAt', 'DESC').limit(50);
-    return qb.getMany();
-  }
-
-  async createContact(merchantId: number, dto: CreateMerchantContactDto) {
-    const merchant = await this.merchantRepo.findOne({ where: { id: merchantId } });
-    let customer = await this.customerRepo.findOne({
-      where: { phone: dto.phone, tenantId: merchant?.tenantId || undefined },
-    });
-    if (customer) {
-      Object.assign(customer, dto);
-      return this.customerRepo.save(customer);
-    }
-    customer = this.customerRepo.create({
-      ...dto,
-      tenantId: merchant?.tenantId,
-    });
-    return this.customerRepo.save(customer);
-  }
-
-  async deleteContact(merchantId: number, contactId: number) {
-    await this.customerRepo.delete(contactId);
-    return { success: true };
-  }
-
-  // ===================== SUPPORT CHAT =====================
-  private static supportMessagesStore = new Map<number, any[]>();
-
-  async getSupportMessages(merchantId: number) {
-    const merchant = await this.merchantRepo.findOne({ where: { id: merchantId } });
-    let list = MerchantService.supportMessagesStore.get(merchantId);
-    if (!list || list.length === 0) {
-      list = [
-        {
-          id: 1,
-          senderType: 'admin',
-          senderName: 'Customer Support',
-          message: `សួស្តី ${merchant?.name || 'ម្ចាស់ហាង'}! តើមានអ្វីដែលពួកយើងអាចជួយបានទេថ្ងៃនេះ? (Hello! How can we help you today?)`,
-          attachmentUrl: null,
-          createdAt: new Date().toISOString(),
-        },
-      ];
-      MerchantService.supportMessagesStore.set(merchantId, list);
-    }
-    return {
-      supportContact: {
-        name: 'Delivery Operations & Dispatch',
-        phone: '+855 78 000 000',
-        telegram: '@express_support',
-      },
-      messages: list,
-    };
-  }
-
-  async sendSupportMessage(merchantId: number, dto: SendSupportMessageDto) {
-    const merchant = await this.merchantRepo.findOne({ where: { id: merchantId } });
-    let list = MerchantService.supportMessagesStore.get(merchantId);
-    if (!list) list = [];
-
-    const newMsg = {
-      id: list.length + 1,
-      senderType: 'merchant',
-      senderName: merchant?.name || 'Merchant',
-      message: dto.message,
-      attachmentUrl: dto.attachmentUrl || null,
-      createdAt: new Date().toISOString(),
-    };
-    list.push(newMsg);
-    MerchantService.supportMessagesStore.set(merchantId, list);
-
-    return {
-      success: true,
-      data: newMsg,
     };
   }
 }

@@ -205,9 +205,9 @@ export default function TenantDetailPage() {
   };
 
   const formatDate = (dateStr: any) => {
-    if (!dateStr) return '-';
+    if (!dateStr) return '';
     const d = new Date(dateStr);
-    if (isNaN(d.getTime())) return '-';
+    if (isNaN(d.getTime())) return '';
     const day = String(d.getDate()).padStart(2, '0');
     const month = String(d.getMonth() + 1).padStart(2, '0');
     const year = d.getFullYear();
@@ -225,7 +225,7 @@ export default function TenantDetailPage() {
   };
 
   const workspaceUrl = getWorkspaceUrl(subdomain);
-  const adminEmail = adminUser.email || tenant?.email || (subdomain ? `admin@${subdomain}.com` : '-');
+  const adminEmail = adminUser.email || tenant?.email || (subdomain ? `admin@${subdomain}.com` : '');
 
   const daysRemaining = activeSub?.currentPeriodEnd
     ? Math.ceil((new Date(activeSub.currentPeriodEnd).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
@@ -412,20 +412,8 @@ export default function TenantDetailPage() {
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
               <Link
                 href="/admin/saas/tenants"
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 6,
-                  color: '#2563eb',
-                  textDecoration: 'none',
-                  fontSize: 13,
-                  fontWeight: 700,
-                  padding: '4px 10px',
-                  borderRadius: 8,
-                  background: 'rgba(37, 99, 235, 0.08)',
-                  border: '1px solid rgba(37, 99, 235, 0.15)',
-                  transition: 'all 0.15s',
-                }}
+                className="btn btn-outline btn-sm"
+                style={{ padding: '4px 10px', minHeight: 30, fontSize: 12.5 }}
               >
                 <FiArrowLeft size={14} />
                 <span>{tr('ត្រឡប់ក្រោយ', 'Back')}</span>
@@ -573,22 +561,9 @@ export default function TenantDetailPage() {
 
                   <button
                     type="button"
+                    className="btn btn-primary btn-sm"
                     onClick={handleOpenCreateInvoice}
-                    style={{
-                      padding: '8px 15px',
-                      borderRadius: 8,
-                      background: '#2563eb',
-                      border: 'none',
-                      color: '#ffffff',
-                      fontSize: 12.5,
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 6,
-                      boxShadow: '0 2px 6px rgba(37, 99, 235, 0.25)',
-                      transition: 'all 0.15s',
-                    }}
+                    style={{ padding: '8px 15px', fontSize: 12.5 }}
                   >
                     <FiPlusCircle size={15} />
                     <span>{tr('ចេញវិក្កយបត្រ', 'Issue Invoice')}</span>
@@ -670,7 +645,7 @@ export default function TenantDetailPage() {
                         {daysRemaining > 0 ? formatRemainingDuration(daysRemaining, lang) : tr('ផុតកំណត់', 'Expired')}
                       </span>
                     ) : (
-                      <span style={{ fontSize: 12, color: '#64748b' }}>-</span>
+                      <span style={{ fontSize: 12, color: '#64748b' }}></span>
                     )}
                   </div>
                 </div>
@@ -881,21 +856,9 @@ export default function TenantDetailPage() {
 
                       <button
                         type="button"
+                        className="btn btn-primary btn-sm"
                         onClick={handleOpenCreateInvoice}
-                        style={{
-                          padding: '7px 14px',
-                          borderRadius: 8,
-                          border: 'none',
-                          background: '#2563eb',
-                          color: '#ffffff',
-                          fontSize: 12,
-                          fontWeight: 700,
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 6,
-                          boxShadow: '0 2px 6px rgba(37, 99, 235, 0.25)',
-                        }}
+                        style={{ padding: '7px 14px', minHeight: 34, fontSize: 12 }}
                       >
                         <FiPlusCircle size={14} />
                         <span>{tr('ចេញវិក្កយបត្រថ្មី', 'Issue Invoice')}</span>
@@ -1170,7 +1133,7 @@ export default function TenantDetailPage() {
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                           <span style={{ color: '#64748b' }}>{tr('លេខទូរស័ព្ទ', 'Phone')}</span>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                            <strong style={{ color: '#0f172a' }}>{tenant.phone || '-'}</strong>
+                            <strong style={{ color: '#0f172a' }}>{tenant.phone || ''}</strong>
                             {tenant.phone && (
                               <button
                                 type="button"
@@ -1185,7 +1148,7 @@ export default function TenantDetailPage() {
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                           <span style={{ color: '#64748b' }}>{tr('អ៊ីមែល', 'Email')}</span>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                            <span style={{ color: '#0f172a', fontWeight: 600 }}>{tenant.email || '-'}</span>
+                            <span style={{ color: '#0f172a', fontWeight: 600 }}>{tenant.email || ''}</span>
                             {tenant.email && (
                               <button
                                 type="button"
@@ -1199,7 +1162,7 @@ export default function TenantDetailPage() {
                         </div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                           <span style={{ color: '#64748b' }}>{tr('អាសយដ្ឋាន', 'Address')}</span>
-                          <span style={{ color: '#334155', maxWidth: 220, textAlign: 'right' }}>{tenant.address || '-'}</span>
+                          <span style={{ color: '#334155', maxWidth: 220, textAlign: 'right' }}>{tenant.address || ''}</span>
                         </div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                           <span style={{ color: '#64748b' }}>{tr('កាលបរិច្ឆេទបង្កើត', 'Created Date')}</span>
@@ -1253,7 +1216,7 @@ export default function TenantDetailPage() {
 
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                           <span style={{ color: '#64748b' }}>{tr('លេខទូរស័ព្ទ Login', 'Phone')}</span>
-                          <strong style={{ color: '#0f172a' }}>{adminUser.phone || tenant.phone || '-'}</strong>
+                          <strong style={{ color: '#0f172a' }}>{adminUser.phone || tenant.phone || ''}</strong>
                         </div>
 
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -1310,19 +1273,12 @@ export default function TenantDetailPage() {
 
                       <button
                         type="button"
+                        className="btn btn-primary btn-sm"
                         onClick={handleOpenRenewModal}
                         style={{
                           padding: '7px 14px',
-                          borderRadius: 8,
-                          border: 'none',
-                          background: '#2563eb',
-                          color: '#ffffff',
+                          minHeight: 34,
                           fontSize: 12,
-                          fontWeight: 700,
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 6,
                           boxShadow: '0 2px 6px rgba(37, 99, 235, 0.25)',
                         }}
                       >
@@ -1552,15 +1508,17 @@ export default function TenantDetailPage() {
                 <button
                   type="button"
                   onClick={() => setShowRenewModal(false)}
-                  style={{ flex: 1, padding: '9px', borderRadius: 8, border: '1px solid #e2e8f0', background: '#fff', color: '#64748b', fontWeight: 600, fontSize: 12.5, cursor: 'pointer' }}
+                  className="btn btn-cancel"
+                  style={{ flex: 1, padding: '9px', borderRadius: 8, border: '1px solid #dc2626', background: '#dc2626', color: '#ffffff', fontWeight: 700, fontSize: 12.5, cursor: 'pointer' }}
                 >
                   {tr('បោះបង់', 'Cancel')}
                 </button>
                 <button
                   type="button"
+                  className="btn btn-primary"
                   disabled={renewing}
                   onClick={handleConfirmRenew}
-                  style={{ flex: 2, padding: '9px', borderRadius: 8, border: 'none', background: '#2563eb', color: '#fff', fontWeight: 700, fontSize: 12.5, cursor: renewing ? 'not-allowed' : 'pointer' }}
+                  style={{ flex: 2, padding: '9px', borderRadius: 8, fontWeight: 700, fontSize: 12.5 }}
                 >
                   {renewing ? tr('កំពុងបន្ត...', 'Extending...') : tr('បញ្ជាក់ការបន្ត', 'Confirm Renewal')}
                 </button>
@@ -1673,14 +1631,16 @@ export default function TenantDetailPage() {
                 <button
                   type="button"
                   onClick={() => setShowCreateInvoiceModal(false)}
-                  style={{ flex: 1, padding: '9px', borderRadius: 8, border: '1px solid #e2e8f0', background: '#fff', color: '#64748b', fontWeight: 600, fontSize: 12.5, cursor: 'pointer' }}
+                  className="btn btn-cancel"
+                  style={{ flex: 1, padding: '9px', borderRadius: 8, border: '1px solid #dc2626', background: '#dc2626', color: '#ffffff', fontWeight: 700, fontSize: 12.5, cursor: 'pointer' }}
                 >
                   {tr('បោះបង់', 'Cancel')}
                 </button>
                 <button
                   type="submit"
+                  className="btn btn-primary"
                   disabled={creatingInvoice}
-                  style={{ flex: 2, padding: '9px', borderRadius: 8, border: 'none', background: '#2563eb', color: '#fff', fontWeight: 700, fontSize: 12.5, cursor: creatingInvoice ? 'not-allowed' : 'pointer' }}
+                  style={{ flex: 2, padding: '9px', borderRadius: 8, fontWeight: 700, fontSize: 12.5 }}
                 >
                   {creatingInvoice ? tr('កំពុងបង្កើត...', 'Creating...') : tr('ចេញវិក្កយបត្រ', 'Issue Invoice')}
                 </button>

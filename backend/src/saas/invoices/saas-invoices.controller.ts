@@ -19,6 +19,8 @@ import {
 } from '@nestjs/swagger';
 import { SaasInvoicesService } from './saas-invoices.service';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
+import { RolesGuard } from '../../auth/roles.guard';
+import { Roles } from '../../auth/roles.decorator';
 import { CreateSaasInvoiceDto, UpdateSaasInvoiceStatusDto } from './dto/saas-invoice.dto';
 
 @ApiTags('SaaS - Invoices')
@@ -26,13 +28,17 @@ import { CreateSaasInvoiceDto, UpdateSaasInvoiceStatusDto } from './dto/saas-inv
 export class SaasInvoicesController {
   constructor(private readonly invoicesService: SaasInvoicesService) {}
 
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('super_admin', 'superadmin', 'finance_admin')
+  @ApiBearerAuth()
   @Post()
   @ApiOperation({ summary: 'Create a new SaaS invoice' })
   async createInvoice(@Body() data: CreateSaasInvoiceDto) {
     return this.invoicesService.create(data as any);
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('web_admin')
   @ApiBearerAuth()
   @Get('my')
   @ApiOperation({ summary: 'Get current user invoices' })
@@ -40,6 +46,9 @@ export class SaasInvoicesController {
     return this.invoicesService.findByUserId(req.user.id);
   }
 
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('super_admin', 'superadmin', 'finance_admin', 'support_admin')
+  @ApiBearerAuth()
   @Get()
   @ApiOperation({ summary: 'Get all SaaS invoices with filtering and pagination' })
   @ApiQuery({ name: 'page', required: false, type: Number, description: 'Page number' })
@@ -60,6 +69,9 @@ export class SaasInvoicesController {
     });
   }
 
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('super_admin', 'superadmin', 'finance_admin', 'support_admin')
+  @ApiBearerAuth()
   @Get(':idOrNumber')
   @ApiOperation({ summary: 'Get SaaS invoice by ID or invoice number' })
   @ApiParam({ name: 'idOrNumber', description: 'Invoice ID (number) or Invoice Number (e.g. INV-2026-00001)' })
@@ -70,6 +82,9 @@ export class SaasInvoicesController {
     return this.invoicesService.findByInvoiceNumber(idOrNumber);
   }
 
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('super_admin', 'superadmin', 'finance_admin')
+  @ApiBearerAuth()
   @Put(':id/status')
   @ApiOperation({ summary: 'Update SaaS invoice status (PUT)' })
   @ApiParam({ name: 'id', description: 'Invoice ID' })
@@ -80,6 +95,9 @@ export class SaasInvoicesController {
     return this.invoicesService.updateStatus(+id, body.status);
   }
 
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('super_admin', 'superadmin', 'finance_admin')
+  @ApiBearerAuth()
   @Patch(':id/status')
   @ApiOperation({ summary: 'Update SaaS invoice status (PATCH)' })
   @ApiParam({ name: 'id', description: 'Invoice ID' })

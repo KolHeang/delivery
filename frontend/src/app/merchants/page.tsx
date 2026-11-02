@@ -127,7 +127,7 @@ export default function ShopsPage() {
               <table>
                 <thead>
                   <tr>
-                    <th>{t('colNo') || 'ល.រ'}</th>
+                    <th style={{ width: 60, textAlign: 'center' }}>{t('colNo') || 'ល.រ'}</th>
                     <th>{t('name') || 'ឈ្មោះ'}</th>
                     <th>{t('phone') || 'ទូរស័ព្ទ'}</th>
                     <th>Telegram</th>
@@ -135,7 +135,7 @@ export default function ShopsPage() {
                     <th>{t('deliveryFee') || 'សេវាដឹក'}</th>
                     <th>{t('branch') || 'សាខា'}</th>
                     <th>{t('status') || 'ស្ថានភាព'}</th>
-                    <th>{t('actions') || 'សកម្មភាព'}</th>
+                    <th style={{ width: 110, textAlign: 'center' }}>{t('actions') || 'សកម្មភាព'}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -159,7 +159,7 @@ export default function ShopsPage() {
 
                       return (
                         <tr key={m.id}>
-                          <td style={{ color: 'var(--text-muted)', fontSize: 12 }}>
+                          <td style={{ color: 'var(--text-muted)', fontSize: 12, textAlign: 'center' }}>
                             {(currentPage - 1) * pageSize + i + 1}
                           </td>
                           <td>
@@ -278,8 +278,8 @@ export default function ShopsPage() {
                           <td>
                             <Badge status={m.active ? 'active' : 'inactive'} />
                           </td>
-                          <td>
-                            <div style={{ display: 'flex', gap: 4 }}>
+                          <td style={{ textAlign: 'center' }}>
+                            <div style={{ display: 'inline-flex', gap: 4, justifyContent: 'center' }}>
                               <button
                                 title={lang === 'km' ? 'គ្រប់គ្រងសាខា' : 'Manage Branches'}
                                 className="btn btn-ghost btn-icon btn-sm"

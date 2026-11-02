@@ -434,6 +434,7 @@ export class ParcelsService {
       dto.trackingCode = await this.generateNextTrackingCode();
     }
     if (dto.weight === undefined || dto.weight === null) dto.weight = 0;
+    if (!dto.receiverName || /^[-—–]{1,3}$/.test(dto.receiverName.trim())) dto.receiverName = '';
     if (!dto.size) dto.size = 'small';
     if (dto.cod === undefined || dto.cod === null) dto.cod = 0;
     if (dto.deliveryFee === undefined || dto.deliveryFee === null || Number(dto.deliveryFee) === 0) {

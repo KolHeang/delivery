@@ -43,21 +43,21 @@ export const printInvoicePdf = (inv: any) => {
   const isPaid = inv.status === 'paid';
 
   const formatIsoDate = (dStr?: string | Date | null) => {
-    if (!dStr) return '-';
+    if (!dStr) return '';
     try {
       const d = new Date(dStr);
-      if (isNaN(d.getTime())) return '-';
+      if (isNaN(d.getTime())) return '';
       const day = String(d.getDate()).padStart(2, '0');
       const month = String(d.getMonth() + 1).padStart(2, '0');
       const year = d.getFullYear();
       return `${day}-${month}-${year}`;
     } catch {
-      return '-';
+      return '';
     }
   };
 
   const issueDate = formatIsoDate(inv.createdAt || new Date());
-  const dueDate = inv.dueDate ? formatIsoDate(inv.dueDate) : '-';
+  const dueDate = inv.dueDate ? formatIsoDate(inv.dueDate) : '';
   const paidDate = inv.paidAt ? formatIsoDate(inv.paidAt) : issueDate;
   const userEmail = inv.user?.email || inv.subscription?.user?.email || `admin@${cleanSlug}.com`;
   const userPhone = inv.user?.phone || inv.subscription?.user?.phone || '';

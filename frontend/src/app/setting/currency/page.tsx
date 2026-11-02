@@ -824,7 +824,7 @@ export default function CurrencySettingsPage() {
                     <div style={{ marginTop: 20, display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
                       <button
                         type="button"
-                        className="btn btn-secondary btn-sm"
+                        className="btn btn-cancel btn-sm"
                         onClick={() => setShowAddModal(false)}
                       >
                         {lang === 'km' ? 'បោះបង់' : 'Cancel'}
@@ -921,7 +921,7 @@ export default function CurrencySettingsPage() {
                 <div style={{ marginTop: 20, display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
                   <button
                     type="button"
-                    className="btn btn-secondary btn-sm"
+                    className="btn btn-cancel btn-sm"
                     onClick={() => setEditingItem(null)}
                   >
                     {lang === 'km' ? 'បោះបង់' : 'Cancel'}

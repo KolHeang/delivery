@@ -7,13 +7,15 @@ import Sidebar from '@/components/layout/Sidebar';
 import Topbar from '@/components/layout/Topbar';
 import api from '@/lib/api';
 import { useLanguage } from '@/lib/LanguageContext';
+import FormField from '@/components/ui/FormField';
+import { MdArrowBack, MdSave } from 'react-icons/md';
 
 const SIZE_OPTIONS = ['small', 'medium', 'large'];
 
 export default function EditOrderPage() {
   const router = useRouter();
   const params = useParams();
-  const { t } = useLanguage();
+  const { lang, t } = useLanguage();
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -36,7 +38,7 @@ export default function EditOrderPage() {
           api.get('/select/zones'),
           api.get('/select/merchants'),
           api.get('/select/customers'),
-          api.get(`/parcels/${params.id}`)
+          api.get(`/parcels/${params.id}`),
         ]);
         setZones(Array.isArray(zRes.data) ? zRes.data : (zRes.data?.result || []));
         setMerchants(Array.isArray(mRes.data) ? mRes.data : (mRes.data?.result || []));
@@ -44,11 +46,19 @@ export default function EditOrderPage() {
 
         const o = oRes.data;
         setForm({
-          receiverName: o.receiverName || '', receiverPhone: o.receiverPhone || '',
-          receiverAddress: o.receiverAddress || '', weight: o.weight || '', size: o.size || 'M',
-          cod: o.cod || 0, codCurrency: o.codCurrency || 'USD', deliveryFee: o.deliveryFee || 0, note: o.note || '',
-          merchantId: o.merchantId || '', customerId: o.customerId || '',
-          driverId: o.driverId || '', zoneId: o.zoneId || ''
+          receiverName: o.receiverName || '',
+          receiverPhone: o.receiverPhone || '',
+          receiverAddress: o.receiverAddress || '',
+          weight: o.weight || '',
+          size: o.size || 'M',
+          cod: o.cod || 0,
+          codCurrency: o.codCurrency || 'USD',
+          deliveryFee: o.deliveryFee || 0,
+          note: o.note || '',
+          merchantId: o.merchantId || '',
+          customerId: o.customerId || '',
+          driverId: o.driverId || '',
+          zoneId: o.zoneId || '',
         });
       } catch (err) {
         console.error('Failed to load order', err);
@@ -77,10 +87,10 @@ export default function EditOrderPage() {
     e.preventDefault();
     const errs: Record<string, string> = {};
     if (!form.receiverPhone || !String(form.receiverPhone).trim()) {
-      errs.receiverPhone = 'សូមបំពេញលេខទូរស័ព្ទអ្នកទទួល (Receiver Phone)';
+      errs.receiverPhone = lang === 'km' ? 'សូមបំពេញលេខទូរស័ព្ទអ្នកទទួល' : 'Receiver phone is required';
     }
     if (!form.receiverAddress || !String(form.receiverAddress).trim()) {
-      errs.receiverAddress = 'សូមបំពេញអាសយដ្ឋានអ្នកទទួល (Receiver Address)';
+      errs.receiverAddress = lang === 'km' ? 'សូមបំពេញអាសយដ្ឋានអ្នកទទួល' : 'Receiver address is required';
     }
 
     if (Object.keys(errs).length > 0) {
@@ -97,7 +107,7 @@ export default function EditOrderPage() {
         customerId: form.customerId ? parseInt(form.customerId as string) : undefined,
         driverId: form.driverId ? parseInt(form.driverId as string) : undefined,
         zoneId: form.zoneId ? parseInt(form.zoneId as string) : undefined,
-        codCurrency: form.codCurrency || 'USD'
+        codCurrency: form.codCurrency || 'USD',
       };
       await api.patch(`/parcels/${params.id}`, payload);
       router.push('/delivery');
@@ -112,7 +122,7 @@ export default function EditOrderPage() {
       <div className="app-layout">
         <Sidebar />
         <div className="main-content">
-          <Topbar title={`Edit Order #${params.id}`} subtitle="Loading data..." />
+          <Topbar title={lang === 'km' ? `កែប្រែកញ្ចប់ #${params.id}` : `Edit Order #${params.id}`} subtitle={t('loading')} />
           <div className="loading-wrapper"><div className="spinner" /></div>
         </div>
       </div>
@@ -123,42 +133,57 @@ export default function EditOrderPage() {
     <div className="app-layout">
       <Sidebar />
       <div className="main-content">
-        <Topbar title={`Edit Order #${params.id}`} subtitle="Update delivery details" />
+        <Topbar
+          title={lang === 'km' ? `កែប្រែកញ្ចប់ #${params.id}` : `Edit Order #${params.id}`}
+          subtitle={lang === 'km' ? 'កែប្រែព័ត៌មានកញ្ចប់អីវ៉ាន់ដឹកជញ្ជូន' : 'Update delivery parcel details'}
+        />
         <div className="page-content">
           <div className="card">
-            <div className="card-header">
-              <span className="card-title">Order Information</span>
+            <div className="card-header" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 20px' }}>
+              <button
+                type="button"
+                onClick={() => router.push('/delivery')}
+                className="btn btn-ghost btn-icon btn-sm"
+                title={lang === 'km' ? 'ត្រឡប់ក្រោយ' : 'Back'}
+              >
+                <MdArrowBack size={18} />
+              </button>
+              <span className="card-title" style={{ fontSize: 16, fontWeight: 700 }}>
+                {lang === 'km' ? 'ព័ត៌មានកញ្ចប់អីវ៉ាន់' : 'Order Information'}
+              </span>
             </div>
-            <div className="card-body">
+            <div className="card-body" style={{ padding: '20px 24px' }}>
               <form onSubmit={handleSave} noValidate>
                 <div className="form-row">
                   <div className="form-group" style={{ display: 'none' }}>
-                    <label className="form-label">Receiver Name <span>*</span></label>
-                    <input className="form-control" value={form.receiverName || '-'} onChange={f('receiverName')} />
+                    <label className="form-label">Receiver Name</label>
+                    <input className="form-control" value={form.receiverName || ''} onChange={f('receiverName')} />
                   </div>
-                  <div className="form-group">
-                    <label className="form-label">Receiver Phone <span style={{ color: '#ef4444' }}>*</span></label>
+                  <FormField label={lang === 'km' ? 'លេខទូរស័ព្ទអ្នកទទួល' : 'Receiver Phone'} required error={errors.receiverPhone}>
                     <input
-                      className={`form-control ${errors.receiverPhone ? 'is-invalid' : ''}`}
+                      className="form-control"
                       value={form.receiverPhone || ''}
                       onChange={f('receiverPhone')}
                       placeholder="e.g. 012 345 678"
                     />
-                    {errors.receiverPhone && <div className="form-error-text">{errors.receiverPhone}</div>}
-                  </div>
+                  </FormField>
+                  <FormField label={t('merchant')}>
+                    <select className="form-control" value={form.merchantId} onChange={f('merchantId')}>
+                      <option value="">{t('selectMerchant')}</option>
+                      {merchants.map((m: any) => <option key={m.id} value={m.id}>{m.name}{m.nameKh ? ` / ${m.nameKh}` : ''}</option>)}
+                    </select>
+                  </FormField>
                 </div>
-                
-                <div className="form-group">
-                  <label className="form-label">Receiver Address <span style={{ color: '#ef4444' }}>*</span></label>
+
+                <FormField label={lang === 'km' ? 'អាសយដ្ឋានអ្នកទទួល' : 'Receiver Address'} required error={errors.receiverAddress}>
                   <input
-                    className={`form-control ${errors.receiverAddress ? 'is-invalid' : ''}`}
+                    className="form-control"
                     value={form.receiverAddress || ''}
                     onChange={f('receiverAddress')}
                     placeholder="Full delivery address..."
                   />
-                  {errors.receiverAddress && <div className="form-error-text">{errors.receiverAddress}</div>}
-                </div>
-                
+                </FormField>
+
                 <div className="form-row-3" style={{ display: 'none' }}>
                   <div className="form-group">
                     <label className="form-label">Weight (kg)</label>
@@ -178,32 +203,23 @@ export default function EditOrderPage() {
                     </select>
                   </div>
                 </div>
-                
+
                 <div className="form-row">
                   <div className="form-group">
-                    <label className="form-label">COD Amount</label>
+                    <label className="form-label">{lang === 'km' ? 'ប្រាក់ COD' : 'COD Amount'}</label>
                     <div style={{ display: 'flex', gap: 8 }}>
-                      <select className="form-control" style={{ maxWidth: 90 }} value={form.codCurrency} onChange={f('codCurrency')}>
+                      <select className="form-control" style={{ maxWidth: 96 }} value={form.codCurrency} onChange={f('codCurrency')}>
                         <option value="USD">$ USD</option>
                         <option value="KHR">៛ KHR</option>
                       </select>
                       <input type="number" step={form.codCurrency === 'KHR' ? '1000' : '0.01'} min="0" className="form-control" value={form.cod} onChange={f('cod')} />
                     </div>
                   </div>
-                  <div className="form-group">
-                    <label className="form-label">Delivery Fee ($)</label>
+                  <FormField label={lang === 'km' ? 'សេវាដឹក ($)' : 'Delivery Fee ($)'}>
                     <input type="number" step="0.01" min="0" className="form-control" value={form.deliveryFee} onChange={f('deliveryFee')} />
-                  </div>
+                  </FormField>
                 </div>
-                
-                <div className="form-group">
-                  <label className="form-label">{t('merchant')}</label>
-                  <select className="form-control" value={form.merchantId} onChange={f('merchantId')}>
-                    <option value="">{t('selectMerchant')}</option>
-                    {merchants.map((m: any) => <option key={m.id} value={m.id}>{m.name}{m.nameKh ? ` / ${m.nameKh}` : ''}</option>)}
-                  </select>
-                </div>
-                
+
                 <div className="form-group" style={{ display: 'none' }}>
                   <label className="form-label">{t('customer')}</label>
                   <select className="form-control" value={form.customerId} onChange={f('customerId')}>
@@ -211,16 +227,18 @@ export default function EditOrderPage() {
                     {customers.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
                 </div>
-                
-                <div className="form-group">
-                  <label className="form-label">Note</label>
-                  <input className="form-control" value={form.note} onChange={f('note')} placeholder="Optional note..." />
-                </div>
-                
-                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 24, paddingTop: 20, borderTop: '1px solid var(--border)' }}>
-                  <button type="button" className="btn btn-outline" onClick={() => router.push('/delivery')}>Cancel</button>
+
+                <FormField label={lang === 'km' ? 'សម្គាល់' : 'Note'}>
+                  <input className="form-control" value={form.note} onChange={f('note')} placeholder={lang === 'km' ? 'សម្គាល់បន្ថែម...' : 'Optional note...'} />
+                </FormField>
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 24, paddingTop: 18, borderTop: '1px solid var(--border)' }}>
+                  <button type="button" className="btn btn-cancel" onClick={() => router.push('/delivery')}>
+                    {t('cancel') || (lang === 'km' ? 'បោះបង់' : 'Cancel')}
+                  </button>
                   <button type="submit" className="btn btn-primary" disabled={saving}>
-                    {saving ? 'Saving...' : 'Save Changes'}
+                    <MdSave size={17} />
+                    {saving ? (t('saving') || 'Saving...') : (t('save') || (lang === 'km' ? 'រក្សាទុក' : 'Save Changes'))}
                   </button>
                 </div>
               </form>

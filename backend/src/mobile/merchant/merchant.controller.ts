@@ -20,11 +20,12 @@ import {
   ApiOperation,
   ApiQuery,
   ApiParam,
-  ApiBody,
   ApiResponse,
 } from '@nestjs/swagger';
 import { MerchantService } from './merchant.service';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
+import { RolesGuard } from '../../auth/roles.guard';
+import { Roles } from '../../auth/roles.decorator';
 import { CreateParcelDto } from '../../parcels/dto/parcel.dto';
 import { CreatePickupRequestDto } from '../../parcels/dto/pickup-request.dto';
 import {
@@ -35,15 +36,12 @@ import {
   UpdateParcelNoteDto,
   SpeedUpParcelDto,
   SendMerchantMessageDto,
-  CreateMerchantBranchDto,
-  UpdateMerchantBranchDto,
-  CreateMerchantContactDto,
-  SendSupportMessageDto,
 } from './dto/merchant-mobile.dto';
 
 @ApiTags('Mobile Merchant')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles('merchant')
 @Controller('mobile/merchant')
 export class MerchantController {
   constructor(private readonly merchantService: MerchantService) {}
@@ -341,17 +339,6 @@ export class MerchantController {
   })
   getTrackingByCode(@Request() req: any, @Param('code') code: string) {
     return this.merchantService.getParcelTracking(req.user.id, code);
-  }
-
-  @Get('parcels/:id/tracking')
-  @ApiOperation({ summary: 'Track a parcel by ID with live GPS coordinates, ETA, driver status & timeline' })
-  @ApiParam({ name: 'id', type: Number, description: 'Parcel ID', example: 101 })
-  @ApiResponse({
-    status: 200,
-    description: 'Live tracking data, driver location, ETA, and progress timeline',
-  })
-  getParcelTracking(@Request() req: any, @Param('id', ParseIntPipe) id: number) {
-    return this.merchantService.getParcelTracking(req.user.id, id);
   }
 
   @Patch('parcels/:id/cancel')

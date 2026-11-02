@@ -7,6 +7,7 @@ import Sidebar from '@/components/layout/Sidebar';
 import Topbar from '@/components/layout/Topbar';
 import api from '@/lib/api';
 import { useLanguage } from '@/lib/LanguageContext';
+import { MdArrowBack, MdSave } from 'react-icons/md';
 
 export default function EditTelegramPage() {
   const router = useRouter();
@@ -124,8 +125,16 @@ export default function EditTelegramPage() {
 
         <div className="page-content">
           <div className="card">
-            <div className="card-header">
-              <span className="card-title">{isKh ? 'កែសម្រួល Telegram' : 'Edit Telegram'}</span>
+            <div className="card-header" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 20px' }}>
+              <button
+                type="button"
+                onClick={() => router.push('/setting/telegram')}
+                className="btn btn-ghost btn-icon btn-sm"
+                title={isKh ? 'ត្រឡប់ក្រោយ' : 'Back'}
+              >
+                <MdArrowBack size={18} />
+              </button>
+              <span className="card-title" style={{ fontSize: 16, fontWeight: 700 }}>{isKh ? 'កែសម្រួល Telegram' : 'Edit Telegram'}</span>
             </div>
 
             <div className="card-body">
@@ -286,11 +295,10 @@ export default function EditTelegramPage() {
                 </div>
 
                 {/* Footer Buttons */}
-                <div style={{ marginTop: 24, display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
+                <div style={{ marginTop: 24, paddingTop: 18, borderTop: '1px solid var(--border)', display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
                   <button
                     type="button"
                     className="btn btn-cancel"
-                    style={{ background: '#dc2626', color: '#ffffff', border: '1px solid #dc2626', fontWeight: 700 }}
                     onClick={() => router.push('/setting/telegram')}
                   >
                     {t('cancel') || (isKh ? 'បោះបង់' : 'Cancel')}
@@ -298,9 +306,9 @@ export default function EditTelegramPage() {
                   <button
                     type="submit"
                     className="btn btn-primary"
-                    style={{ background: '#2563eb', color: '#ffffff', border: '1px solid #2563eb', fontWeight: 700 }}
                     disabled={saving}
                   >
+                    <MdSave size={17} />
                     {saving ? (isKh ? 'កំពុងរក្សាទុក...' : 'Saving...') : (t('save') || (isKh ? 'រក្សាទុក' : 'Save'))}
                   </button>
                 </div>

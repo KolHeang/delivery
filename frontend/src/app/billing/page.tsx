@@ -182,9 +182,9 @@ export default function BillingPage() {
   };
 
   const formatDate = (dateStr?: string | Date | null) => {
-    if (!dateStr) return '-';
+    if (!dateStr) return '';
     const d = new Date(dateStr);
-    if (isNaN(d.getTime())) return '-';
+    if (isNaN(d.getTime())) return '';
     const day = String(d.getDate()).padStart(2, '0');
     const month = String(d.getMonth() + 1).padStart(2, '0');
     const year = d.getFullYear();
@@ -676,7 +676,7 @@ export default function BillingPage() {
                               -${discountNum.toFixed(2)}
                             </span>
                           ) : (
-                            <span style={{ color: '#94a3b8', fontWeight: 500 }}>—</span>
+                            <span style={{ color: '#94a3b8', fontWeight: 500 }}></span>
                           )}
                         </td>
                         <td style={{ fontWeight: 800, color: '#0f172a', padding: '13px 14px' }}>
@@ -1014,7 +1014,7 @@ export default function BillingPage() {
                                       {opt.bankName || opt.name} {opt.accountName && `• ${opt.accountName}`}
                                     </div>
                                     <div style={{ fontSize: 15, fontWeight: 900, color: '#0f172a', fontFamily: 'monospace', marginTop: 1 }}>
-                                      {opt.accountNumber || '-'}
+                                      {opt.accountNumber || ''}
                                     </div>
                                   </div>
                                 </div>
@@ -1174,27 +1174,16 @@ export default function BillingPage() {
                   {/* Confirm Button */}
                   <button
                     type="button"
+                    className="btn btn-primary w-full"
                     onClick={handleConfirmPayment}
                     disabled={paying}
                     style={{
                       width: '100%',
                       padding: '12px 20px',
                       borderRadius: 10,
-                      background: '#2563eb',
-                      color: '#ffffff',
                       fontSize: 14,
                       fontWeight: 800,
-                      border: 'none',
-                      cursor: paying ? 'not-allowed' : 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: 8,
-                      boxShadow: '0 4px 12px rgba(37,99,235,0.2)',
-                      transition: 'background 0.15s',
                     }}
-                    onMouseEnter={(e) => { if (!paying) e.currentTarget.style.background = '#1d4ed8'; }}
-                    onMouseLeave={(e) => { if (!paying) e.currentTarget.style.background = '#2563eb'; }}
                   >
                     {paying ? (
                       <>

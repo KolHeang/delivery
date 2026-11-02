@@ -17,16 +17,24 @@ export class PermissionsGuard implements CanActivate {
 
     const request = context.switchToHttp().getRequest();
     const user = request.user;
-    if (!user) {
+    if (!user || user.role === 'merchant') {
       return false;
     }
 
-    // Admin has all permissions automatically
-    if (user.roleName === 'admin' || user.role === 'admin') {
+    const userPermissions: string[] = user.permissions || [];
+
+    // Platform Super Admins and Tenant Admins have all permissions
+    if (
+      user.isSaasAdmin ||
+      userPermissions.includes('*') ||
+      user.roleName === 'admin' ||
+      user.role === 'admin' ||
+      user.role === 'super_admin' ||
+      user.role === 'superadmin'
+    ) {
       return true;
     }
 
-    const userPermissions = user.permissions || [];
     const hasPermission = requiredPermissions.some((permission) =>
       userPermissions.includes(permission),
     );

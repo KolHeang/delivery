@@ -392,10 +392,10 @@ function CreateBranchContent() {
                 <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', paddingTop: 16, borderTop: '1px solid #e2e8f0' }}>
                   <button
                     type="button"
-                    className="btn btn-secondary"
+                    className="btn btn-cancel"
                     onClick={() => router.push('/merchants/branches')}
                     disabled={saving}
-                    style={{ padding: '9px 20px', fontWeight: 600 }}
+                    style={{ padding: '9px 20px', fontWeight: 700, background: '#dc2626', color: '#ffffff', border: '1px solid #dc2626' }}
                   >
                     {lang === 'km' ? 'បោះបង់' : 'Cancel'}
                   </button>

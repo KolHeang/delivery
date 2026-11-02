@@ -328,7 +328,7 @@ export default function FirebaseSettingsListPage() {
 
   // Format Date-Time
   const formatDateTime = (dateStr?: string) => {
-    if (!dateStr) return '—';
+    if (!dateStr) return '';
     try {
       const d = new Date(dateStr);
       if (isNaN(d.getTime())) return dateStr;
@@ -1071,7 +1071,7 @@ export default function FirebaseSettingsListPage() {
                               <td style={{ padding: '12px 14px' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                                   <span style={{ fontWeight: 800, fontSize: 13, color: '#0f172a' }}>
-                                    {log.recipientName || `ID: ${log.recipientId || '—'}`}
+                                    {log.recipientName || (log.recipientId ? `ID: ${log.recipientId}` : '')}
                                   </span>
                                   <span
                                     style={{
@@ -1170,7 +1170,7 @@ export default function FirebaseSettingsListPage() {
                                     <span>{log.errorMessage}</span>
                                   </span>
                                 ) : (
-                                  <span style={{ color: '#94a3b8' }}>—</span>
+                                  <span style={{ color: '#94a3b8' }}></span>
                                 )}
                               </td>
 
@@ -1363,7 +1363,7 @@ export default function FirebaseSettingsListPage() {
                           const isDriver = !!dev.userId;
                           const isMerchant = !!dev.merchantId;
                           const name = dev.user?.name || dev.merchant?.name || 'Unknown User';
-                          const phone = dev.user?.phone || dev.merchant?.phone || '—';
+                          const phone = dev.user?.phone || dev.merchant?.phone || '';
                           const isAndroid = (dev.deviceType || '').toLowerCase() === 'android';
                           const isIos = (dev.deviceType || '').toLowerCase() === 'ios';
 
@@ -1649,7 +1649,7 @@ export default function FirebaseSettingsListPage() {
                                     whiteSpace: 'nowrap',
                                   }}
                                 >
-                                  {item.clientEmail || '—'}
+                                  {item.clientEmail || ''}
                                 </span>
                                 {item.clientEmail && (
                                   <button
@@ -1692,7 +1692,7 @@ export default function FirebaseSettingsListPage() {
 
                             {/* Date */}
                             <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                              {item.updatedAt ? formatDateTime(item.updatedAt) : '—'}
+                              {item.updatedAt ? formatDateTime(item.updatedAt) : ''}
                             </td>
 
                             {/* Status */}
@@ -1973,7 +1973,7 @@ export default function FirebaseSettingsListPage() {
                   </div>
                   <div>
                     <strong style={{ color: '#64748b' }}>{tr('ឈ្មោះអ្នកទទួល', 'Recipient Name')}:</strong>{' '}
-                    <span style={{ fontWeight: 700 }}>{selectedLog.recipientName || '—'}</span>
+                    <span style={{ fontWeight: 700 }}>{selectedLog.recipientName || ''}</span>
                   </div>
                   <div>
                     <strong style={{ color: '#64748b' }}>{tr('ចំនួនឧបករណ៍ Target', 'Devices Targeted')}:</strong>{' '}

@@ -852,13 +852,16 @@ export default function LocationMapModal({
           <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
             <button
               type="button"
-              className="btn btn-secondary"
+              className="btn btn-cancel"
               onClick={onClose}
               style={{
                 padding: '9px 20px',
                 fontWeight: 700,
                 fontSize: 13,
                 borderRadius: 10,
+                background: '#dc2626',
+                color: '#ffffff',
+                border: '1px solid #dc2626',
               }}
             >
               {lang === 'km' ? 'បោះបង់' : 'Cancel'}

@@ -58,12 +58,14 @@ import {
   MdPayment,
   MdCancel,
   MdAccountBalance,
+  MdMenu,
 } from 'react-icons/md';
 import { FaRegEdit, FaTrashAlt } from 'react-icons/fa';
 import { FiPlusCircle } from 'react-icons/fi';
 import { printInvoicePdf } from '@/lib/invoice-pdf';
 import { FlagKm, FlagEn } from '@/components/ui/Flags';
 import { SaasCloudIcon } from '@/components/ui/SaasCloudIcon';
+import { SidebarToggleIcon, useSidebarCollapsed } from '@/components/ui/SidebarToggleIcon';
 import Pagination from '@/components/ui/Pagination';
 import DateInput from '@/components/ui/DateInput';
 import { getTenantWorkspaceUrl } from '@/lib/domain';
@@ -72,6 +74,7 @@ import { formatRemainingDuration } from '@/lib/date-utils';
 export default function SaasMasterPortal({ initialTab }: { initialTab?: 'dashboard' | 'tenants' | 'invoices' | 'create-invoice' | 'users' | 'plans' | 'coupons' | 'partners' | 'create-tenant' | 'create-partner' | 'payment-options' } = {}) {
   const router = useRouter();
   const { lang, setLang } = useLanguage();
+  const { isCollapsed, toggleCollapsed, isMobileOpen, toggleMobile, closeMobile } = useSidebarCollapsed();
   const tr = (km: string, en: string) => (lang === 'km' ? km : en);
 
   const [activeMenu, setActiveMenu] = useState<'dashboard' | 'tenants' | 'invoices' | 'create-invoice' | 'users' | 'plans' | 'coupons' | 'partners' | 'create-tenant' | 'create-partner' | 'payment-options'>(initialTab || 'dashboard');
@@ -363,9 +366,9 @@ export default function SaasMasterPortal({ initialTab }: { initialTab?: 'dashboa
   };
 
   const formatDate = (dateStr: any) => {
-    if (!dateStr) return '-';
+    if (!dateStr) return '';
     const d = new Date(dateStr);
-    if (isNaN(d.getTime())) return '-';
+    if (isNaN(d.getTime())) return '';
     const day = String(d.getDate()).padStart(2, '0');
     const month = String(d.getMonth() + 1).padStart(2, '0');
     const year = d.getFullYear();
@@ -1323,10 +1326,12 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
   return (
     <div style={{ display: 'flex', height: '100vh', maxHeight: '100vh', background: '#f8fafc', fontFamily: "'Kantumruy Pro', 'Inter', sans-serif", width: '100vw', maxWidth: '100vw', overflow: 'hidden' }}>
       {/* 1. DEDICATED SAAS MASTER SIDEBAR */}
+      {isMobileOpen && <div className="sidebar-mobile-backdrop" onClick={closeMobile} />}
       <aside
+        className={`saas-sidebar ${isMobileOpen ? 'mobile-open' : ''}`}
         style={{
-          width: 260,
-          minWidth: 260,
+          width: 'var(--sidebar-width, 260px)',
+          minWidth: 'var(--sidebar-width, 260px)',
           background: '#1565D8',
           color: '#ffffff',
           display: 'flex',
@@ -1338,10 +1343,23 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
           height: '100vh',
           zIndex: 100,
           boxShadow: '4px 0 20px rgba(0,0,0,0.1)',
+          transition: 'width 0.2s ease, min-width 0.2s ease',
+          overflow: 'hidden',
         }}
       >
         {/* Brand Header */}
-        <div style={{ height: 64, padding: '0 20px', display: 'flex', alignItems: 'center', gap: 12, borderBottom: '1px solid rgba(255,255,255,0.12)', boxSizing: 'border-box' }}>
+        <div
+          style={{
+            height: 64,
+            padding: isCollapsed ? '0 8px' : '0 20px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: isCollapsed ? 'center' : 'flex-start',
+            gap: 12,
+            borderBottom: '1px solid rgba(255,255,255,0.12)',
+            boxSizing: 'border-box',
+          }}
+        >
           <div
             style={{
               width: 40,
@@ -1359,30 +1377,36 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
           >
             <SaasCloudIcon size={34} />
           </div>
-          <div>
-            <div style={{ fontSize: 15, fontWeight: 900, color: '#ffffff', letterSpacing: '-0.2px', lineHeight: 1.2 }}>
-              EBS Master SaaS
+          {!isCollapsed && (
+            <div style={{ minWidth: 0, overflow: 'hidden' }}>
+              <div style={{ fontSize: 15, fontWeight: 900, color: '#ffffff', letterSpacing: '-0.2px', lineHeight: 1.2, whiteSpace: 'nowrap' }}>
+                EBS Master SaaS
+              </div>
+              <div style={{ fontSize: 10.5, color: '#93c5fd', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px', whiteSpace: 'nowrap' }}>
+                ● {tr('ផ្ទាំងគ្រប់គ្រង SUPER ADMIN', 'SUPER ADMIN PORTAL')}
+              </div>
             </div>
-            <div style={{ fontSize: 10.5, color: '#93c5fd', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-              ● {tr('ផ្ទាំងគ្រប់គ្រង SUPER ADMIN', 'SUPER ADMIN PORTAL')}
-            </div>
-          </div>
+          )}
         </div>
 
         {/* Sidebar Nav Items */}
-        <div style={{ padding: '16px 12px', display: 'flex', flexDirection: 'column', gap: 6, flex: 1, overflowY: 'auto' }}>
-          <div style={{ fontSize: 11, fontWeight: 800, color: '#93c5fd', padding: '8px 12px', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
-            {tr('ម៉ឺនុយមេ', 'Main Menu')}
-          </div>
+        <div style={{ padding: isCollapsed ? '16px 8px' : '16px 12px', display: 'flex', flexDirection: 'column', gap: 6, flex: 1, overflowY: 'auto' }}>
+          {!isCollapsed && (
+            <div style={{ fontSize: 11, fontWeight: 800, color: '#93c5fd', padding: '8px 12px', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
+              {tr('ម៉ឺនុយមេ', 'Main Menu')}
+            </div>
+          )}
 
           <button
             onClick={() => handleSelectMenu('dashboard')}
+            title={isCollapsed ? tr('ផ្ទាំងគ្រប់គ្រង', 'Dashboard') : undefined}
             style={{
               display: 'flex',
               alignItems: 'center',
+              justifyContent: isCollapsed ? 'center' : 'flex-start',
               gap: 12,
               width: '100%',
-              padding: '11px 16px',
+              padding: isCollapsed ? '11px 0' : '11px 16px',
               borderRadius: 10,
               border: 'none',
               background: activeMenu === 'dashboard' ? 'rgba(255, 255, 255, 0.18)' : 'transparent',
@@ -1392,21 +1416,23 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
               cursor: 'pointer',
               textAlign: 'left',
               transition: 'all 0.15s',
-              borderLeft: activeMenu === 'dashboard' ? '4px solid #ffffff' : '4px solid transparent',
+              borderLeft: isCollapsed ? 'none' : (activeMenu === 'dashboard' ? '4px solid #ffffff' : '4px solid transparent'),
             }}
           >
             <MdDashboard size={20} color={activeMenu === 'dashboard' ? '#ffffff' : '#bfdbfe'} />
-            <span>{tr('ផ្ទាំងគ្រប់គ្រង', 'Dashboard')}</span>
+            {!isCollapsed && <span>{tr('ផ្ទាំងគ្រប់គ្រង', 'Dashboard')}</span>}
           </button>
 
           <button
             onClick={() => handleSelectMenu('tenants')}
+            title={isCollapsed ? tr('ក្រុមហ៊ុនទាំងអស់', 'All Companies') : undefined}
             style={{
               display: 'flex',
               alignItems: 'center',
+              justifyContent: isCollapsed ? 'center' : 'flex-start',
               gap: 12,
               width: '100%',
-              padding: '11px 16px',
+              padding: isCollapsed ? '11px 0' : '11px 16px',
               borderRadius: 10,
               border: 'none',
               background: (activeMenu === 'tenants' || activeMenu === 'create-tenant') ? 'rgba(255, 255, 255, 0.18)' : 'transparent',
@@ -1416,22 +1442,23 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
               cursor: 'pointer',
               textAlign: 'left',
               transition: 'all 0.15s',
-              borderLeft: (activeMenu === 'tenants' || activeMenu === 'create-tenant') ? '4px solid #ffffff' : '4px solid transparent',
+              borderLeft: isCollapsed ? 'none' : ((activeMenu === 'tenants' || activeMenu === 'create-tenant') ? '4px solid #ffffff' : '4px solid transparent'),
             }}
           >
             <MdBusiness size={20} color={(activeMenu === 'tenants' || activeMenu === 'create-tenant') ? '#ffffff' : '#bfdbfe'} />
-            <span>{tr('ក្រុមហ៊ុនទាំងអស់', 'All Companies')}</span>
+            {!isCollapsed && <span>{tr('ក្រុមហ៊ុនទាំងអស់', 'All Companies')}</span>}
           </button>
 
           <button
             onClick={() => handleSelectMenu('invoices')}
+            title={isCollapsed ? tr('ប្រវត្តិវិក្កយបត្រ', 'Billing Invoices') : undefined}
             style={{
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'space-between',
+              justifyContent: isCollapsed ? 'center' : 'space-between',
               gap: 12,
               width: '100%',
-              padding: '11px 16px',
+              padding: isCollapsed ? '11px 0' : '11px 16px',
               borderRadius: 10,
               border: 'none',
               background: (activeMenu === 'invoices' || activeMenu === 'create-invoice') ? 'rgba(255, 255, 255, 0.18)' : 'transparent',
@@ -1441,23 +1468,42 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
               cursor: 'pointer',
               textAlign: 'left',
               transition: 'all 0.15s',
-              borderLeft: (activeMenu === 'invoices' || activeMenu === 'create-invoice') ? '4px solid #ffffff' : '4px solid transparent',
+              borderLeft: isCollapsed ? 'none' : ((activeMenu === 'invoices' || activeMenu === 'create-invoice') ? '4px solid #ffffff' : '4px solid transparent'),
+              position: 'relative',
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
               <MdReceiptLong size={20} color={(activeMenu === 'invoices' || activeMenu === 'create-invoice') ? '#ffffff' : '#bfdbfe'} />
-              <span>{tr('ប្រវត្តិវិក្កយបត្រ', 'Billing Invoices')}</span>
+              {!isCollapsed && <span>{tr('ប្រវត្តិវិក្កយបត្រ', 'Billing Invoices')}</span>}
             </div>
             {pendingPaymentsCount > 0 && (
-              <span style={{
-                background: '#ef4444',
-                color: '#ffffff',
-                fontSize: 11,
-                fontWeight: 900,
-                padding: '2px 7px',
-                borderRadius: 10,
-                boxShadow: '0 2px 6px rgba(239,68,68,0.5)',
-              }}>
+              <span
+                style={
+                  isCollapsed
+                    ? {
+                        position: 'absolute',
+                        top: 4,
+                        right: 8,
+                        background: '#ef4444',
+                        color: '#ffffff',
+                        fontSize: 9.5,
+                        fontWeight: 900,
+                        padding: '1px 5px',
+                        borderRadius: 999,
+                        lineHeight: 1.2,
+                        boxShadow: '0 2px 6px rgba(239,68,68,0.5)',
+                      }
+                    : {
+                        background: '#ef4444',
+                        color: '#ffffff',
+                        fontSize: 11,
+                        fontWeight: 900,
+                        padding: '2px 7px',
+                        borderRadius: 10,
+                        boxShadow: '0 2px 6px rgba(239,68,68,0.5)',
+                      }
+                }
+              >
                 {pendingPaymentsCount}
               </span>
             )}
@@ -1465,12 +1511,14 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
 
           <button
             onClick={() => handleSelectMenu('payment-options')}
+            title={isCollapsed ? tr('ជម្រើសទូទាត់', 'Payment Options') : undefined}
             style={{
               display: 'flex',
               alignItems: 'center',
+              justifyContent: isCollapsed ? 'center' : 'flex-start',
               gap: 12,
               width: '100%',
-              padding: '11px 16px',
+              padding: isCollapsed ? '11px 0' : '11px 16px',
               borderRadius: 10,
               border: 'none',
               background: activeMenu === 'payment-options' ? 'rgba(255, 255, 255, 0.18)' : 'transparent',
@@ -1480,21 +1528,23 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
               cursor: 'pointer',
               textAlign: 'left',
               transition: 'all 0.15s',
-              borderLeft: activeMenu === 'payment-options' ? '4px solid #ffffff' : '4px solid transparent',
+              borderLeft: isCollapsed ? 'none' : (activeMenu === 'payment-options' ? '4px solid #ffffff' : '4px solid transparent'),
             }}
           >
             <MdPayment size={20} color={activeMenu === 'payment-options' ? '#ffffff' : '#bfdbfe'} />
-            <span>{tr('ជម្រើសទូទាត់', 'Payment Options')}</span>
+            {!isCollapsed && <span>{tr('ជម្រើសទូទាត់', 'Payment Options')}</span>}
           </button>
 
           <button
             onClick={() => handleSelectMenu('users')}
+            title={isCollapsed ? tr('គណនី SaaS Admins', 'SaaS Admins') : undefined}
             style={{
               display: 'flex',
               alignItems: 'center',
+              justifyContent: isCollapsed ? 'center' : 'flex-start',
               gap: 12,
               width: '100%',
-              padding: '11px 16px',
+              padding: isCollapsed ? '11px 0' : '11px 16px',
               borderRadius: 10,
               border: 'none',
               background: activeMenu === 'users' ? 'rgba(255, 255, 255, 0.18)' : 'transparent',
@@ -1504,21 +1554,23 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
               cursor: 'pointer',
               textAlign: 'left',
               transition: 'all 0.15s',
-              borderLeft: activeMenu === 'users' ? '4px solid #ffffff' : '4px solid transparent',
+              borderLeft: isCollapsed ? 'none' : (activeMenu === 'users' ? '4px solid #ffffff' : '4px solid transparent'),
             }}
           >
             <MdGroup size={20} color={activeMenu === 'users' ? '#ffffff' : '#bfdbfe'} />
-            <span>{tr('គណនី SaaS Admins', 'SaaS Admins')}</span>
+            {!isCollapsed && <span>{tr('គណនី SaaS Admins', 'SaaS Admins')}</span>}
           </button>
 
           <button
             onClick={() => handleSelectMenu('plans')}
+            title={isCollapsed ? tr('កញ្ចប់សេវា', 'Subscription Plans') : undefined}
             style={{
               display: 'flex',
               alignItems: 'center',
+              justifyContent: isCollapsed ? 'center' : 'flex-start',
               gap: 12,
               width: '100%',
-              padding: '11px 16px',
+              padding: isCollapsed ? '11px 0' : '11px 16px',
               borderRadius: 10,
               border: 'none',
               background: activeMenu === 'plans' ? 'rgba(255, 255, 255, 0.18)' : 'transparent',
@@ -1528,21 +1580,23 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
               cursor: 'pointer',
               textAlign: 'left',
               transition: 'all 0.15s',
-              borderLeft: activeMenu === 'plans' ? '4px solid #ffffff' : '4px solid transparent',
+              borderLeft: isCollapsed ? 'none' : (activeMenu === 'plans' ? '4px solid #ffffff' : '4px solid transparent'),
             }}
           >
             <MdWorkspacePremium size={20} color={activeMenu === 'plans' ? '#ffffff' : '#bfdbfe'} />
-            <span>{tr('កញ្ចប់សេវា', 'Subscription Plans')}</span>
+            {!isCollapsed && <span>{tr('កញ្ចប់សេវា', 'Subscription Plans')}</span>}
           </button>
 
           <button
             onClick={() => handleSelectMenu('coupons')}
+            title={isCollapsed ? tr('គូប៉ុងបញ្ចុះតម្លៃ', 'Promo Coupons') : undefined}
             style={{
               display: 'flex',
               alignItems: 'center',
+              justifyContent: isCollapsed ? 'center' : 'flex-start',
               gap: 12,
               width: '100%',
-              padding: '11px 16px',
+              padding: isCollapsed ? '11px 0' : '11px 16px',
               borderRadius: 10,
               border: 'none',
               background: activeMenu === 'coupons' ? 'rgba(255, 255, 255, 0.18)' : 'transparent',
@@ -1552,21 +1606,23 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
               cursor: 'pointer',
               textAlign: 'left',
               transition: 'all 0.15s',
-              borderLeft: activeMenu === 'coupons' ? '4px solid #ffffff' : '4px solid transparent',
+              borderLeft: isCollapsed ? 'none' : (activeMenu === 'coupons' ? '4px solid #ffffff' : '4px solid transparent'),
             }}
           >
             <MdLocalOffer size={20} color={activeMenu === 'coupons' ? '#ffffff' : '#bfdbfe'} />
-            <span>{tr('គូប៉ុងបញ្ចុះតម្លៃ', 'Promo Coupons')}</span>
+            {!isCollapsed && <span>{tr('គូប៉ុងបញ្ចុះតម្លៃ', 'Promo Coupons')}</span>}
           </button>
 
           <button
             onClick={() => handleSelectMenu('partners')}
+            title={isCollapsed ? tr('ដៃគូសហការ', 'Affiliate Partners') : undefined}
             style={{
               display: 'flex',
               alignItems: 'center',
+              justifyContent: isCollapsed ? 'center' : 'flex-start',
               gap: 12,
               width: '100%',
-              padding: '11px 16px',
+              padding: isCollapsed ? '11px 0' : '11px 16px',
               borderRadius: 10,
               border: 'none',
               background: (activeMenu === 'partners' || activeMenu === 'create-partner') ? 'rgba(255, 255, 255, 0.18)' : 'transparent',
@@ -1576,17 +1632,58 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
               cursor: 'pointer',
               textAlign: 'left',
               transition: 'all 0.15s',
-              borderLeft: (activeMenu === 'partners' || activeMenu === 'create-partner') ? '4px solid #ffffff' : '4px solid transparent',
+              borderLeft: isCollapsed ? 'none' : ((activeMenu === 'partners' || activeMenu === 'create-partner') ? '4px solid #ffffff' : '4px solid transparent'),
             }}
           >
             <MdAttachMoney size={20} color={(activeMenu === 'partners' || activeMenu === 'create-partner') ? '#ffffff' : '#bfdbfe'} />
-            <span>{tr('ដៃគូសហការ', 'Affiliate Partners')}</span>
+            {!isCollapsed && <span>{tr('ដៃគូសហការ', 'Affiliate Partners')}</span>}
+          </button>
+        </div>
+
+        {/* Sidebar Collapse / Expand Footer */}
+        <div
+          className="sidebar-collapse-footer"
+          style={{
+            borderTop: '1px solid rgba(255, 255, 255, 0.14)',
+            padding: '10px 8px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
+          }}
+        >
+          <button
+            type="button"
+            onClick={toggleCollapsed}
+            title={isCollapsed ? tr('ពង្រីកម៉ឺនុយ', 'Expand sidebar') : tr('បង្រួមម៉ឺនុយ', 'Collapse sidebar')}
+            aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: 10,
+              border: 'none',
+              background: 'transparent',
+              color: '#ffffff',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              transition: 'background 0.15s ease',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.14)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'transparent';
+            }}
+          >
+            <SidebarToggleIcon collapsed={isCollapsed} size={22} />
           </button>
         </div>
       </aside>
 
       {/* 2. MAIN CONTENT AREA WITH DEDICATED TOPBAR */}
-      <div style={{ flex: 1, marginLeft: 260, minWidth: 0, width: 'calc(100vw - 260px)', maxWidth: 'calc(100vw - 260px)', display: 'flex', flexDirection: 'column', height: '100vh', maxHeight: '100vh', overflow: 'hidden' }}>
+      <div className="saas-main" style={{ flex: 1, marginLeft: 'var(--sidebar-width, 260px)', minWidth: 0, width: 'calc(100vw - var(--sidebar-width, 260px))', maxWidth: 'calc(100vw - var(--sidebar-width, 260px))', transition: 'margin-left 0.2s ease, width 0.2s ease, max-width 0.2s ease', display: 'flex', flexDirection: 'column', height: '100vh', maxHeight: '100vh', overflow: 'hidden' }}>
         {/* Dedicated SaaS Master Topbar / Navbar */}
         <header
           style={{
@@ -1594,7 +1691,7 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
             minHeight: 64,
             background: '#1565D8',
             borderBottom: '1px solid rgba(255, 255, 255, 0.12)',
-            padding: '0 28px',
+            padding: '0 20px',
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
@@ -1606,7 +1703,18 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
             boxSizing: 'border-box',
           }}
         >
-          <div style={{ display: 'flex', justifyContent: 'flex-end', width: '100%' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <button
+                type="button"
+                className="mobile-menu-btn"
+                onClick={toggleMobile}
+                title={tr('បើកម៉ឺនុយ', 'Open menu')}
+                aria-label="Open menu"
+              >
+                <MdMenu size={22} />
+              </button>
+            </div>
             {/* Right Actions & Profile */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
               {/* Language Switcher Button */}
@@ -2160,7 +2268,7 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
                               {getTenantWorkspaceBaseUrl(s.subdomain || s.tenant?.slug).replace(/^https?:\/\//, '')}
                             </a>
                           ) : (
-                            <span style={{ color: 'var(--text-muted)' }}>-</span>
+                            <span style={{ color: 'var(--text-muted)' }}></span>
                           )}
                         </td>
                         <td>
@@ -2170,7 +2278,7 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
                         </td>
                         <td>
                           <div style={{ color: 'var(--text-secondary)', fontSize: 12.5 }}>
-                            {s.user?.phone || '-'}
+                            {s.user?.phone || ''}
                           </div>
                         </td>
                         <td>
@@ -2768,12 +2876,12 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
                                   </td>
                                   <td>
                                     <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
-                                      {inv.subscription?.companyName || `Company #${inv.subscriptionId || '-'}`}
+                                      {inv.subscription?.companyName || (inv.subscriptionId ? `Company #${inv.subscriptionId}` : '')}
                                     </span>
                                   </td>
                                   <td>
                                     <span style={{ color: 'var(--text-secondary)', fontSize: 13 }}>
-                                      {inv.user?.email || '-'}
+                                      {inv.user?.email || ''}
                                     </span>
                                   </td>
                                   <td style={{ color: 'var(--text-secondary)' }}>
@@ -2951,10 +3059,10 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
                                 </td>
                                 <td>
                                   <div style={{ fontWeight: 700, color: '#0f172a' }}>
-                                    {p.invoice?.subscription?.companyName || `Company #${p.invoice?.subscriptionId || '-'}`}
+                                    {p.invoice?.subscription?.companyName || (p.invoice?.subscriptionId ? `Company #${p.invoice.subscriptionId}` : '')}
                                   </div>
                                   <div style={{ fontSize: 11.5, color: '#64748b' }}>
-                                    {p.invoice?.user?.email || p.invoice?.subscription?.user?.email || '-'}
+                                    {p.invoice?.user?.email || p.invoice?.subscription?.user?.email || ''}
                                   </div>
                                 </td>
                                 <td>
@@ -2976,7 +3084,7 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
                                 <td>
                                   <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                                     <span style={{ fontFamily: 'monospace', fontWeight: 800, color: '#b45309', background: '#fffbeb', border: '1px solid #fde68a', padding: '3px 8px', borderRadius: 6, fontSize: 12 }}>
-                                      {p.transactionId || '-'}
+                                      {p.transactionId || ''}
                                     </span>
                                     {p.transactionId && (
                                       <button
@@ -3161,7 +3269,7 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
                                   {(paymentsPage - 1) * paymentsLimit + idx + 1}
                                 </td>
                                 <td style={{ fontWeight: 700, color: '#0f172a' }}>
-                                  {p.invoice?.subscription?.companyName || `Company #${p.invoice?.subscriptionId || '-'}`}
+                                  {p.invoice?.subscription?.companyName || (p.invoice?.subscriptionId ? `Company #${p.invoice.subscriptionId}` : '')}
                                 </td>
                                 <td style={{ fontWeight: 800, color: 'var(--accent)', fontFamily: 'monospace' }}>
                                   {p.invoice?.invoiceNumber || `#${p.invoiceId}`}
@@ -3175,7 +3283,7 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
                                   </span>
                                 </td>
                                 <td style={{ fontFamily: 'monospace', fontWeight: 700, color: '#334155' }}>
-                                  {p.transactionId || '-'}
+                                  {p.transactionId || ''}
                                 </td>
                                 <td>
                                   <span
@@ -3192,7 +3300,7 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
                                       <div style={{ fontSize: 10.5 }}>{formatDate(p.approvedAt)}</div>
                                     </div>
                                   ) : (
-                                    '-'
+                                    ''
                                   )}
                                 </td>
                                 <td style={{ color: 'var(--text-secondary)', fontSize: 12.5 }}>
@@ -3221,7 +3329,7 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
                                   ) : p.status === 'success' ? (
                                     <span style={{ fontSize: 12, color: '#10b981', fontWeight: 800 }}>✓ {tr('អនុម័តរួច', 'Approved')}</span>
                                   ) : (
-                                    <span style={{ fontSize: 12, color: '#ef4444' }}>{p.note || '-'}</span>
+                                    <span style={{ fontSize: 12, color: '#ef4444' }}>{p.note || ''}</span>
                                   )}
                                 </td>
                               </tr>
@@ -3561,7 +3669,7 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
                           {a.email}
                         </td>
                         <td style={{ color: 'var(--text-secondary)' }}>
-                          {a.phone || '-'}
+                          {a.phone || ''}
                         </td>
                         <td>
                           <span className="badge badge-admin" style={{ textTransform: 'uppercase', fontSize: 11 }}>
@@ -3853,7 +3961,7 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
                                 {new Date(c.expiresAt).toLocaleDateString()}
                               </span>
                             ) : (
-                              <span style={{ color: 'var(--text-muted)' }}>—</span>
+                              <span style={{ color: 'var(--text-muted)' }}></span>
                             )}
                           </td>
                           <td>
@@ -4012,10 +4120,10 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
                             <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{p.name}</div>
                           </td>
                           <td>
-                            <div style={{ color: 'var(--text-primary)', fontSize: 12.5 }}>{p.email || '-'}</div>
+                            <div style={{ color: 'var(--text-primary)', fontSize: 12.5 }}>{p.email || ''}</div>
                           </td>
                           <td>
-                            <div style={{ color: 'var(--text-secondary)', fontSize: 12.5 }}>{p.phone || '-'}</div>
+                            <div style={{ color: 'var(--text-secondary)', fontSize: 12.5 }}>{p.phone || ''}</div>
                           </td>
                           <td>
                             <span
@@ -4050,7 +4158,7 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
                                 </div>
                               </div>
                             ) : (
-                              <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>-</span>
+                              <span style={{ color: 'var(--text-muted)', fontSize: 12 }}></span>
                             )}
                           </td>
                           <td>
@@ -4512,9 +4620,8 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
                     {/* Action Button */}
                     <Link
                       href="/admin/saas/payment-options/create"
-                      style={{ display: 'inline-flex', alignItems: 'center', gap: 6, height: 36, padding: '0 14px', borderRadius: 8, background: '#2563eb', color: '#ffffff', border: 'none', fontSize: 12.5, fontWeight: 700, textDecoration: 'none', transition: 'background 0.15s' }}
-                      onMouseEnter={(e) => (e.currentTarget.style.background = '#1d4ed8')}
-                      onMouseLeave={(e) => (e.currentTarget.style.background = '#2563eb')}
+                      className="btn btn-primary btn-sm"
+                      style={{ height: 36, minHeight: 36, padding: '0 14px', fontSize: 12.5 }}
                     >
                       <FiPlusCircle size={15} />
                       <span>{tr('បង្កើតជម្រើសថ្មី', 'Create Option')}</span>
@@ -4629,7 +4736,7 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
                                     )}
                                   </div>
                                 ) : (
-                                  <span style={{ color: '#94a3b8', fontSize: 13 }}>-</span>
+                                  <span style={{ color: '#94a3b8', fontSize: 13 }}></span>
                                 )}
                               </td>
                               <td style={{ padding: '14px 16px' }}>
@@ -4845,18 +4952,9 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
                   />
                   <button
                     type="submit"
+                    className="btn btn-primary"
                     disabled={addingDomain}
-                    style={{
-                      padding: '10px 18px',
-                      borderRadius: 10,
-                      border: 'none',
-                      background: '#2563eb',
-                      color: '#ffffff',
-                      fontWeight: 800,
-                      fontSize: 13,
-                      cursor: addingDomain ? 'not-allowed' : 'pointer',
-                      whiteSpace: 'nowrap',
-                    }}
+                    style={{ padding: '10px 18px', borderRadius: 10, fontWeight: 800, fontSize: 13 }}
                   >
                     {addingDomain ? '...' : '+ ' + tr('បន្ថែម', 'Add')}
                   </button>
@@ -5428,40 +5526,37 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
                 <div style={{ display: 'flex', gap: 10 }}>
                   <button
                     type="button"
+                    className="btn btn-cancel"
                     onClick={() => setShowRenewModal(false)}
                     style={{
                       flex: 1,
                       padding: '12px 16px',
                       borderRadius: 12,
-                      border: '1px solid #e2e8f0',
-                      background: '#ffffff',
-                      color: '#64748b',
+                      border: '1px solid #dc2626',
+                      background: '#dc2626',
+                      color: '#ffffff',
                       fontSize: 13.5,
                       fontWeight: 800,
                       cursor: 'pointer',
                       transition: 'all 0.15s',
                     }}
-                    onMouseEnter={(e) => (e.currentTarget.style.background = '#f8fafc')}
-                    onMouseLeave={(e) => (e.currentTarget.style.background = '#ffffff')}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = '#b91c1c')}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = '#dc2626')}
                   >
                     {tr('បោះបង់', 'Cancel')}
                   </button>
 
                   <button
                     type="button"
+                    className="btn btn-primary"
                     onClick={handleConfirmRenew}
                     disabled={renewing}
                     style={{
                       flex: 2,
                       padding: '12px 20px',
                       borderRadius: 12,
-                      background: 'linear-gradient(135deg, #2563eb, #1d4ed8)',
-                      color: '#ffffff',
                       fontSize: 13.5,
                       fontWeight: 800,
-                      border: 'none',
-                      cursor: renewing ? 'not-allowed' : 'pointer',
-                      boxShadow: '0 6px 18px rgba(37,99,235,0.3)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -5724,14 +5819,15 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
               <div style={{ display: 'flex', gap: 10, marginTop: 22, borderTop: '1px solid #f1f5f9', paddingTop: 16 }}>
                 <button
                   type="button"
+                  className="btn btn-cancel"
                   onClick={() => setShowEditTenantModal(false)}
                   style={{
                     flex: 1,
                     padding: '11px 16px',
                     borderRadius: 10,
-                    border: '1px solid #e2e8f0',
-                    background: '#ffffff',
-                    color: '#64748b',
+                    border: '1px solid #dc2626',
+                    background: '#dc2626',
+                    color: '#ffffff',
                     fontSize: 13,
                     fontWeight: 700,
                     cursor: 'pointer',
@@ -5741,13 +5837,12 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
                 </button>
                 <button
                   type="submit"
+                  className="btn btn-primary"
                   disabled={savingTenant}
                   style={{
                     flex: 2,
                     padding: '11px 16px',
                     borderRadius: 10,
-                    border: 'none',
-                    background: '#0284c7',
                     color: '#ffffff',
                     fontSize: 13,
                     fontWeight: 800,
@@ -5860,7 +5955,7 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
                   <div>
                     <span style={{ color: '#64748b' }}>{tr('ក្រុមហ៊ុន:', 'Company:')}</span>
                     <div style={{ fontWeight: 800, color: '#0f172a' }}>
-                      {selectedPaymentForReject.invoice?.subscription?.companyName || `Company #${selectedPaymentForReject.invoice?.subscriptionId || '-'}`}
+                      {selectedPaymentForReject.invoice?.subscription?.companyName || (selectedPaymentForReject.invoice?.subscriptionId ? `Company #${selectedPaymentForReject.invoice.subscriptionId}` : '')}
                     </div>
                   </div>
                   <div>
@@ -5878,7 +5973,7 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
                   <div>
                     <span style={{ color: '#64748b' }}>{tr('Transaction ID:', 'Transaction ID:')}</span>
                     <div style={{ fontWeight: 800, color: '#b45309', fontFamily: 'monospace' }}>
-                      {selectedPaymentForReject.transactionId || '-'}
+                      {selectedPaymentForReject.transactionId || ''}
                     </div>
                   </div>
                 </div>
@@ -5911,14 +6006,15 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
               <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
                 <button
                   type="button"
+                  className="btn btn-cancel"
                   onClick={() => setShowRejectModal(false)}
                   style={{
                     flex: 1,
                     padding: '11px 16px',
                     borderRadius: 10,
-                    border: '1px solid #e2e8f0',
-                    background: '#ffffff',
-                    color: '#64748b',
+                    border: '1px solid #dc2626',
+                    background: '#dc2626',
+                    color: '#ffffff',
                     fontSize: 13,
                     fontWeight: 700,
                     cursor: 'pointer',
@@ -5928,6 +6024,7 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
                 </button>
                 <button
                   type="button"
+                  className="btn btn-danger"
                   onClick={handleConfirmRejectPayment}
                   disabled={rejecting}
                   style={{

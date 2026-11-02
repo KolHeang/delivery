@@ -16,7 +16,8 @@ interface Row { id: number; trackingCode: string; shopName: string; stockIn: num
 const statusBadge = (status: string) => {
   const s = (status || '').toLowerCase();
   const color = s === 'delivered' ? '#10b981' : s === 'failed' ? '#ef4444' : s === 'picked-up' ? '#3b82f6' : s === 'returned' ? '#f59e0b' : s === 'in-transit' ? '#8b5cf6' : '#64748b';
-  return <span style={{ padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 700, background: color, color: '#fff', textTransform: 'capitalize' }}>{status || '—'}</span>;
+  if (!status) return null;
+  return <span style={{ padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 700, background: color, color: '#fff', textTransform: 'capitalize' }}>{status}</span>;
 };
 
 export default function Rpt8Page() {

@@ -12,6 +12,7 @@ import { FiPlusCircle } from 'react-icons/fi';
 import { useLanguage } from '@/lib/LanguageContext';
 import Modal from '@/components/ui/Modal';
 import Pagination from '@/components/ui/Pagination';
+import { TableSkeleton } from '@/components/ui/Skeleton';
 
 export default function ZonesPage() {
   const router = useRouter();
@@ -117,20 +118,16 @@ export default function ZonesPage() {
               <table>
                 <thead>
                   <tr>
-                    <th style={{ width: '60px' }}>{lang === 'km' ? 'ល.រ' : 'No.'}</th>
+                    <th style={{ width: '60px', textAlign: 'center' }}>{lang === 'km' ? 'ល.រ' : 'No.'}</th>
                     <th>{lang === 'km' ? 'ឈ្មោះតំបន់' : 'Zone Name'}</th>
                     <th style={{ width: '130px' }}>{lang === 'km' ? 'តម្លៃសេវាដឹក' : 'Delivery Fee'}</th>
                     <th>{lang === 'km' ? 'ប្រភេទតំបន់រង' : 'Subzone Types'}</th>
-                    <th style={{ width: '100px', textAlign: 'center' }}>{lang === 'km' ? 'សកម្មភាព' : 'Actions'}</th>
+                    <th style={{ width: '120px', textAlign: 'center' }}>{lang === 'km' ? 'សកម្មភាព' : 'Actions'}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {loading ? (
-                    <tr>
-                      <td colSpan={5} style={{ padding: '40px 0', textAlign: 'center' }}>
-                        <div className="loading-wrapper"><div className="spinner" /></div>
-                      </td>
-                    </tr>
+                    <TableSkeleton columns={5} rows={6} />
                   ) : items.length === 0 ? (
                     <tr>
                       <td colSpan={5} style={{ padding: '36px 20px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
@@ -140,7 +137,7 @@ export default function ZonesPage() {
                   ) : (
                     items.map((z: any, i) => (
                         <tr key={z.id}>
-                          <td style={{ verticalAlign: 'top', paddingTop: '16px', color: '#1e293b', fontSize: 14 }}>{(currentPage - 1) * pageSize + i + 1}</td>
+                          <td style={{ verticalAlign: 'top', paddingTop: '16px', color: 'var(--text-muted)', fontSize: 12, textAlign: 'center' }}>{(currentPage - 1) * pageSize + i + 1}</td>
                           <td style={{ verticalAlign: 'top', paddingTop: '16px', fontWeight: 700 }}>{z.name}</td>
                           <td style={{ verticalAlign: 'top', paddingTop: '16px' }}>
                             <span style={{ fontWeight: 600, color: 'var(--accent, #2563eb)' }}>
@@ -194,70 +191,33 @@ export default function ZonesPage() {
                               ))}
                             </div>
                           </td>
-                          <td style={{ verticalAlign: 'top', paddingTop: '16px', textAlign: 'center' }}>
-                            <div style={{ display: 'flex', gap: 14, justifyContent: 'center', alignItems: 'center' }}>
+                          <td style={{ verticalAlign: 'top', paddingTop: '12px', textAlign: 'center' }}>
+                            <div style={{ display: 'inline-flex', gap: 4, justifyContent: 'center', alignItems: 'center' }}>
                               {/* Add Subzone */}
                               <button
+                                className="btn btn-ghost btn-icon btn-sm"
+                                style={{ color: 'var(--accent)' }}
                                 onClick={() => setSubzoneModal(z)}
                                 title={lang === 'km' ? 'បន្ថែមតំបន់រង' : 'Add Subzone'}
-                                style={{
-                                  border: 'none',
-                                  background: 'none',
-                                  padding: 0,
-                                  cursor: 'pointer',
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  color: '#64748b',
-                                  outline: 'none',
-                                  transition: 'color 0.15s ease'
-                                }}
-                                onMouseEnter={(e) => e.currentTarget.style.color = '#0f172a'}
-                                onMouseLeave={(e) => e.currentTarget.style.color = '#64748b'}
                               >
-                                <FiPlusCircle size={16} />
+                                <FiPlusCircle size={15} />
                               </button>
                               {/* Edit */}
                               <button
+                                className="btn btn-ghost btn-icon btn-sm"
                                 onClick={() => openEdit(z)}
                                 title={lang === 'km' ? 'កែប្រែ' : 'Edit'}
-                                style={{
-                                  border: 'none',
-                                  background: 'none',
-                                  padding: 0,
-                                  cursor: 'pointer',
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  color: '#64748b',
-                                  outline: 'none',
-                                  transition: 'color 0.15s ease'
-                                }}
-                                onMouseEnter={(e) => e.currentTarget.style.color = '#0f172a'}
-                                onMouseLeave={(e) => e.currentTarget.style.color = '#64748b'}
                               >
-                                <FaRegEdit size={16} />
+                                <FaRegEdit size={14} />
                               </button>
                               {/* Delete */}
                               <button
+                                className="btn btn-ghost btn-icon btn-sm"
+                                style={{ color: 'var(--danger)' }}
                                 onClick={() => del(z.id)}
                                 title={lang === 'km' ? 'លុប' : 'Delete'}
-                                style={{
-                                  border: 'none',
-                                  background: 'none',
-                                  padding: 0,
-                                  cursor: 'pointer',
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  color: '#ef4444',
-                                  outline: 'none',
-                                  transition: 'opacity 0.15s ease'
-                                }}
-                                onMouseEnter={(e) => e.currentTarget.style.opacity = '0.7'}
-                                onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
                               >
-                                <FaTrashAlt size={16} />
+                                <FaTrashAlt size={13} />
                               </button>
                             </div>
                           </td>
@@ -295,39 +255,17 @@ export default function ZonesPage() {
           footer={
             <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', width: '100%', fontFamily: "'Kantumruy Pro', sans-serif" }}>
               <button 
+                type="button"
+                className="btn btn-cancel btn-sm"
                 onClick={() => setSubzoneModal(null)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 6,
-                  border: '1px solid #cbd5e1',
-                  background: '#f8fafc',
-                  color: '#334155',
-                  padding: '8px 16px',
-                  borderRadius: 6,
-                  cursor: 'pointer',
-                  fontWeight: 600,
-                  fontSize: 13
-                }}
               >
                 <MdClose size={16} /> {lang === 'km' ? 'បិទ' : 'Close'}
               </button>
               <button 
+                type="button"
+                className="btn btn-primary btn-sm"
                 onClick={saveSubzone}
                 disabled={!subzoneName.trim() || !modalZoneId}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 6,
-                  border: 'none',
-                  background: '#e28a35',
-                  color: '#fff',
-                  padding: '8px 16px',
-                  borderRadius: 6,
-                  cursor: (!subzoneName.trim() || !modalZoneId) ? 'not-allowed' : 'pointer',
-                  fontWeight: 600,
-                  fontSize: 13
-                }}
               >
                 <MdBookmark size={16} /> {lang === 'km' ? 'រក្សាទុក' : 'Save'}
               </button>

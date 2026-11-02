@@ -7,6 +7,8 @@ import Sidebar from '@/components/layout/Sidebar';
 import Topbar from '@/components/layout/Topbar';
 import api from '@/lib/api';
 import { useLanguage } from '@/lib/LanguageContext';
+import FormField from '@/components/ui/FormField';
+import { MdArrowBack, MdSave } from 'react-icons/md';
 
 export default function EditZonePage() {
   const router = useRouter();
@@ -19,7 +21,7 @@ export default function EditZonePage() {
 
   useEffect(() => {
     if (!isAuthenticated()) { router.push('/'); return; }
-    
+
     const load = async () => {
       try {
         const res = await api.get(`/zones/${params.id}`);
@@ -29,10 +31,10 @@ export default function EditZonePage() {
             name: zone.name || '',
             price: zone.price !== undefined && zone.price !== null ? String(zone.price) : '',
             branch: zone.branch || 'EBS Express',
-            active: zone.active ?? true
+            active: zone.active ?? true,
           });
         }
-      } catch (err) {
+      } catch {
         alert('Failed to load zone details');
         router.push('/setting/zone_type');
       }
@@ -44,7 +46,7 @@ export default function EditZonePage() {
   const f = (k: string) => (e: any) => {
     setForm(p => ({
       ...p,
-      [k]: e.target.value
+      [k]: e.target.value,
     }));
     if (errors[k]) {
       setErrors(prev => {
@@ -68,7 +70,7 @@ export default function EditZonePage() {
         name: form.name.trim(),
         price: form.price ? parseFloat(form.price) : 0,
         branch: form.branch,
-        active: form.active
+        active: form.active,
       };
       await api.patch(`/zones/${params.id}`, payload);
       router.push('/setting/zone_type');
@@ -92,29 +94,32 @@ export default function EditZonePage() {
     <div className="app-layout">
       <Sidebar />
       <div className="main-content">
-        <Topbar title={t('editZone') || 'Edit Zone'} subtitle="Update delivery zone" />
+        <Topbar title={t('editZone') || 'Edit Zone'} subtitle={lang === 'km' ? 'កែប្រែព័ត៌មានតំបន់ដឹកជញ្ជូន' : 'Update delivery zone'} />
         <div className="page-content">
           <div className="card">
-            <div className="card-header"><span className="card-title">🗺️ {t('editZone') || 'Edit Zone'}</span></div>
-            <div className="card-body">
+            <div className="card-header" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 20px' }}>
+              <button
+                type="button"
+                onClick={() => router.push('/setting/zone_type')}
+                className="btn btn-ghost btn-icon btn-sm"
+                title={lang === 'km' ? 'ត្រឡប់ក្រោយ' : 'Back'}
+              >
+                <MdArrowBack size={18} />
+              </button>
+              <span className="card-title" style={{ fontSize: 16, fontWeight: 700 }}>{t('editZone') || 'Edit Zone'}</span>
+            </div>
+            <div className="card-body" style={{ padding: '20px 24px' }}>
               <form onSubmit={handleSubmit} noValidate>
-                <div className="form-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
-                  <div className="form-group">
-                    <label className="form-label" style={{ fontWeight: 'bold' }}>
-                      {lang === 'km' ? 'ឈ្មោះតំបន់' : 'Zone Name'} <span style={{ color: '#ef4444' }}>*</span>
-                    </label>
+                <div className="form-row">
+                  <FormField label={lang === 'km' ? 'ឈ្មោះតំបន់' : 'Zone Name'} required error={errors.name}>
                     <input
-                      className={`form-control ${errors.name ? 'is-invalid' : ''}`}
+                      className="form-control"
                       value={form.name}
                       onChange={f('name')}
                       placeholder="e.g. Phnom Penh Center"
                     />
-                    {errors.name && <div className="form-error-text">{errors.name}</div>}
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label" style={{ fontWeight: 'bold' }}>
-                      {lang === 'km' ? 'តម្លៃសេវាដឹក ($)' : 'Delivery Fee ($)'}
-                    </label>
+                  </FormField>
+                  <FormField label={lang === 'km' ? 'តម្លៃសេវាដឹក ($)' : 'Delivery Fee ($)'}>
                     <input
                       type="number"
                       step="0.01"
@@ -124,23 +129,19 @@ export default function EditZonePage() {
                       onChange={f('price')}
                       placeholder="e.g. 1.25"
                     />
-                  </div>
+                  </FormField>
                 </div>
 
-                <div style={{ marginTop: 24, display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
+                <div style={{ marginTop: 24, paddingTop: 18, borderTop: '1px solid var(--border)', display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
                   <button type="button" className="btn btn-cancel" onClick={() => router.push('/setting/zone_type')}>
                     {lang === 'km' ? 'បោះបង់' : 'Cancel'}
                   </button>
-                  <button 
-                    type="submit" 
-                    className="btn btn-primary" 
+                  <button
+                    type="submit"
+                    className="btn btn-primary"
                     disabled={saving}
-                    style={{
-                      padding: '8px 24px',
-                      fontWeight: 'bold',
-                      borderRadius: 6,
-                    }}
                   >
+                    <MdSave size={17} />
                     {saving ? (lang === 'km' ? 'កំពុងរក្សា...' : 'Saving...') : (lang === 'km' ? 'រក្សាទុក' : 'Save')}
                   </button>
                 </div>

@@ -12,6 +12,8 @@ import {
 } from 'react-icons/md';
 import { useLanguage } from '@/lib/LanguageContext';
 import SearchableSelect from '@/components/ui/SearchableSelect';
+import Pagination from '@/components/ui/Pagination';
+import { TableSkeleton } from '@/components/ui/Skeleton';
 
 const formatCOD = (cod: any, currency: string) => {
   if (currency === 'KHR') return `${parseInt(cod).toLocaleString()} ៛`;
@@ -430,17 +432,17 @@ export default function AssignDeliveryPage() {
                   {/* Reset all filters button */}
                   {hasActiveFilters && (
                     <button
+                      type="button"
+                      className="btn btn-outline btn-sm"
                       onClick={clearFilters}
                       style={{
                         display: 'flex',
                         alignItems: 'center',
                         gap: 4,
                         fontSize: 12,
-                        color: 'var(--danger)',
-                        background: 'rgba(239, 68, 68, 0.08)',
-                        border: '1px solid rgba(239, 68, 68, 0.2)',
                         padding: '5px 10px',
                         height: 34,
+                        minHeight: 34,
                         borderRadius: 8,
                         cursor: 'pointer',
                         fontWeight: 600,
@@ -501,11 +503,7 @@ export default function AssignDeliveryPage() {
                     </thead>
                     <tbody>
                       {loading ? (
-                        <tr>
-                          <td colSpan={8} style={{ padding: '60px 0', textAlign: 'center' }}>
-                            <div className="loading-wrapper"><div className="spinner" /></div>
-                          </td>
-                        </tr>
+                        <TableSkeleton columns={8} rows={6} />
                       ) : filtered.length === 0 ? (
                         <tr>
                           <td colSpan={8} style={{ padding: '60px 20px', textAlign: 'center' }}>
@@ -584,7 +582,7 @@ export default function AssignDeliveryPage() {
                                     {lang === 'km' ? (o.driver.nameKh || o.driver.name) : o.driver.name}
                                   </span>
                                 ) : (
-                                  <span style={{ color: 'var(--text-muted)' }}>—</span>
+                                  <span style={{ color: 'var(--text-muted)' }}></span>
                                 )}
                               </td>
                             </tr>
@@ -597,30 +595,14 @@ export default function AssignDeliveryPage() {
 
                 {/* Left Pagination Footer */}
                 {!loading && filtered.length > 0 && (
-                  <div style={{ padding: '8px 16px', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-card)', gap: 12, flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                      {lang === 'km' ? `បង្ហាញ ${(safePage - 1) * pageSize + 1}–${Math.min(safePage * pageSize, filtered.length)} នៃ ${filtered.length}` : `Showing ${(safePage - 1) * pageSize + 1}–${Math.min(safePage * pageSize, filtered.length)} of ${filtered.length}`}
-                    </span>
-                    <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-                      <button onClick={() => setCurrentPage(1)} disabled={safePage === 1} style={paginationBtnStyle(safePage === 1)}>«</button>
-                      <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={safePage === 1} style={paginationBtnStyle(safePage === 1)}>‹</button>
-                      {getPageNumbers(safePage, totalPages).map((pg, i) =>
-                        pg === '...' ? (
-                          <span key={`e-${i}`} style={{ padding: '0 4px', color: 'var(--text-muted)', fontSize: 12 }}>…</span>
-                        ) : (
-                          <button key={pg} onClick={() => setCurrentPage(pg as number)} style={{
-                            ...paginationBtnStyle(false),
-                            background: safePage === pg ? 'var(--accent)' : 'transparent',
-                            color: safePage === pg ? '#fff' : 'var(--text-secondary)',
-                            borderColor: safePage === pg ? 'var(--accent)' : 'var(--border)',
-                            fontWeight: safePage === pg ? 700 : 500,
-                          }}>{pg}</button>
-                        )
-                      )}
-                      <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={safePage === totalPages} style={paginationBtnStyle(safePage === totalPages)}>›</button>
-                      <button onClick={() => setCurrentPage(totalPages)} disabled={safePage === totalPages} style={paginationBtnStyle(safePage === totalPages)}>»</button>
-                    </div>
-                  </div>
+                  <Pagination
+                    currentPage={safePage}
+                    totalItems={filtered.length}
+                    pageSize={pageSize}
+                    onPageChange={setCurrentPage}
+                    onPageSizeChange={(sz) => { setPageSize(sz); setCurrentPage(1); }}
+                    pageSizeOptions={PAGE_SIZE_OPTIONS}
+                  />
                 )}
               </div>
             </div>
@@ -819,7 +801,7 @@ export default function AssignDeliveryPage() {
                       borderRadius: 10,
                       minHeight: 44,
                       gap: 8,
-                      boxShadow: (selected.length > 0 && selectedDriver) ? '0 6px 18px rgba(234, 88, 12, 0.35)' : 'none',
+                      boxShadow: (selected.length > 0 && selectedDriver) ? '0 6px 18px var(--accent-glow, rgba(21, 101, 216, 0.28))' : 'none',
                       transition: 'all 0.2s ease',
                     }}>
                     <MdAssignmentTurnedIn size={18} />
@@ -846,32 +828,3 @@ export default function AssignDeliveryPage() {
   );
 }
 
-// Helper: generate page numbers with ellipsis
-function getPageNumbers(current: number, total: number): (number | '...')[] {
-  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
-  const pages: (number | '...')[] = [];
-  if (current <= 4) {
-    pages.push(1, 2, 3, 4, 5, '...', total);
-  } else if (current >= total - 3) {
-    pages.push(1, '...', total - 4, total - 3, total - 2, total - 1, total);
-  } else {
-    pages.push(1, '...', current - 1, current, current + 1, '...', total);
-  }
-  return pages;
-}
-
-function paginationBtnStyle(disabled: boolean): React.CSSProperties {
-  return {
-    padding: '4px 8px',
-    minWidth: 28,
-    borderRadius: 6,
-    border: '1.5px solid var(--border)',
-    background: 'transparent',
-    color: disabled ? 'var(--text-muted)' : 'var(--text-secondary)',
-    fontSize: 12,
-    fontWeight: 500,
-    cursor: disabled ? 'not-allowed' : 'pointer',
-    opacity: disabled ? 0.4 : 1,
-    transition: 'all 0.15s',
-  };
-}

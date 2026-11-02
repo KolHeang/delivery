@@ -769,52 +769,6 @@
           }
         },
         {
-          "name": "Get Driver Earnings & Settlements",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{driver_token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{base_url}}/api/mobile/driver/settlements?status=all&page=1&limit=20&date=2026-10-28",
-              "host": ["{{base_url}}"],
-              "path": ["api", "mobile", "driver", "settlements"],
-              "query": [
-                {
-                  "key": "status",
-                  "value": "all",
-                  "description": "all | paid | pending | problem"
-                },
-                {
-                  "key": "date",
-                  "value": "2026-10-28"
-                },
-                {
-                  "key": "startDate",
-                  "value": "2026-10-01",
-                  "disabled": true
-                },
-                {
-                  "key": "endDate",
-                  "value": "2026-10-28",
-                  "disabled": true
-                },
-                {
-                  "key": "page",
-                  "value": "1"
-                },
-                {
-                  "key": "limit",
-                  "value": "20"
-                }
-              ]
-            }
-          }
-        },
-        {
           "name": "Get Driver Daily Invoice Summary",
           "request": {
             "method": "GET",
@@ -882,23 +836,6 @@
               "raw": "{{base_url}}/api/mobile/driver/pickup-requests/1/pickup",
               "host": ["{{base_url}}"],
               "path": ["api", "mobile", "driver", "pickup-requests", "1", "pickup"]
-            }
-          }
-        },
-        {
-          "name": "Get Failed Reasons List",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{driver_token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{base_url}}/api/mobile/driver/reasons",
-              "host": ["{{base_url}}"],
-              "path": ["api", "mobile", "driver", "reasons"]
             }
           }
         }

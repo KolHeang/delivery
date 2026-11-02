@@ -8,6 +8,7 @@ import Topbar from '@/components/layout/Topbar';
 import api from '@/lib/api';
 import { useLanguage } from '@/lib/LanguageContext';
 import { TableSkeleton } from '@/components/ui/Skeleton';
+import Pagination from '@/components/ui/Pagination';
 import {
   MdRefresh, MdSearch, MdClose, MdVisibility, MdDirectionsBike,
   MdCheckCircle, MdHourglassEmpty, MdLocalShipping,
@@ -41,7 +42,7 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 function formatDate(d: string | null | undefined) {
-  if (!d) return '—';
+  if (!d) return '';
   return new Date(d).toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
@@ -158,9 +159,9 @@ export default function PickupRequestsPage() {
                 {PAGE_SIZE_OPTIONS.map(sz => (
                   <button key={sz} onClick={() => setPageSize(sz)} style={{
                     padding: '5px 10px', borderRadius: 8,
-                    border: `1.5px solid ${pageSize === sz ? '#d97706' : 'var(--border)'}`,
-                    background: pageSize === sz ? '#fef3c7' : 'transparent',
-                    color: pageSize === sz ? '#d97706' : 'var(--text-secondary)',
+                    border: `1.5px solid ${pageSize === sz ? 'var(--accent)' : 'var(--border)'}`,
+                    background: pageSize === sz ? 'var(--accent-light)' : 'transparent',
+                    color: pageSize === sz ? 'var(--accent)' : 'var(--text-secondary)',
                     fontSize: 12, fontWeight: pageSize === sz ? 700 : 500, cursor: 'pointer', transition: 'all 0.15s',
                   }}>{sz}</button>
                 ))}
@@ -172,7 +173,7 @@ export default function PickupRequestsPage() {
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                 <thead style={{ position: 'sticky', top: 0, zIndex: 10, background: 'var(--sidebar-bg, #1565D8)' }}>
                   <tr style={{ background: 'var(--sidebar-bg, #1565D8)' }}>
-                    <th style={{ padding: '12px 10px', paddingLeft: 24, background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'ល.រ' : 'No.'}</th>
+                    <th style={{ width: 70, padding: '12px 10px', textAlign: 'center', background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'ល.រ' : 'No.'}</th>
                     <th style={{ padding: '12px 10px', background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('merchant')}</th>
                     <th style={{ padding: '12px 10px', background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('location')}</th>
                     <th style={{ padding: '12px 10px', background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{t('pickupDriver')}</th>
@@ -199,7 +200,7 @@ export default function PickupRequestsPage() {
                       const progress = r.declaredQuantity > 0 ? Math.round((completedCount / r.declaredQuantity) * 100) : 0;
                       return (
                         <tr key={r.id} style={{ borderBottom: '1px solid #f1f5f9', transition: 'background-color 0.15s' }}>
-                          <td style={{ padding: '12px 10px', paddingLeft: 24, border: 'none' }}>
+                          <td style={{ padding: '12px 10px', textAlign: 'center', border: 'none' }}>
                             <code style={{ fontSize: 12, background: 'rgba(47,85,165,0.08)', color: 'var(--accent, #1565D8)', padding: '3px 8px', borderRadius: 6, fontWeight: 700 }}>
                               #{r.id}
                             </code>
@@ -275,7 +276,7 @@ export default function PickupRequestsPage() {
                                 </div>
                               </div>
                             ) : (
-                              <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>—</span>
+                              <span style={{ fontSize: 12, color: 'var(--text-muted)' }}></span>
                             )}
                           </td>
                           <td style={{ padding: '12px 10px', textAlign: 'center', fontWeight: 700, border: 'none' }}>{r.declaredQuantity ?? ''}</td>
@@ -296,10 +297,9 @@ export default function PickupRequestsPage() {
                           <td style={{ padding: '12px 10px', textAlign: 'center', border: 'none' }}><StatusBadge status={r.status} /></td>
                           <td style={{ padding: '12px 10px', textAlign: 'center', border: 'none' }}>
                             <button
+                              className="btn btn-primary btn-sm"
                               onClick={() => router.push(`/delivery/pickup_requests/${r.id}`)}
-                              style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 14px', borderRadius: 8, border: '1.5px solid #1565D8', background: '#eff6ff', color: 'var(--accent, #1565D8)', fontSize: 12, fontWeight: 700, cursor: 'pointer', transition: 'all 0.15s', whiteSpace: 'nowrap' }}
-                              onMouseEnter={e => { (e.currentTarget as any).style.background = '#1565D8'; (e.currentTarget as any).style.color = '#fff'; }}
-                              onMouseLeave={e => { (e.currentTarget as any).style.background = '#eff6ff'; (e.currentTarget as any).style.color = '#1565D8'; }}
+                              style={{ padding: '5px 12px', minHeight: 32, fontSize: 12 }}
                             >
                               <MdVisibility size={14} /> {t('viewInbound')}
                             </button>
@@ -314,30 +314,14 @@ export default function PickupRequestsPage() {
 
             {/* ── Pagination ── */}
             {!loading && filtered.length > 0 && (
-              <div style={{ padding: '10px 24px', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-card)', gap: 12, flexWrap: 'wrap' }}>
-                <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                  {lang === 'km' ? `បង្ហាញ ${(safePage - 1) * pageSize + 1}–${Math.min(safePage * pageSize, filtered.length)} នៃ ${filtered.length}` : `Showing ${(safePage - 1) * pageSize + 1}–${Math.min(safePage * pageSize, filtered.length)} of ${filtered.length}`}
-                </span>
-                <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                  <button onClick={() => setCurrentPage(1)} disabled={safePage === 1} style={paginationBtnStyle(safePage === 1)}>«</button>
-                  <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={safePage === 1} style={paginationBtnStyle(safePage === 1)}>‹</button>
-                  {getPageNumbers(safePage, totalPages).map((pg, i) =>
-                    pg === '...' ? (
-                      <span key={`e-${i}`} style={{ padding: '0 4px', color: 'var(--text-muted)', fontSize: 13 }}>…</span>
-                    ) : (
-                      <button key={pg} onClick={() => setCurrentPage(pg as number)} style={{
-                        ...paginationBtnStyle(false),
-                        background: safePage === pg ? '#d97706' : 'transparent',
-                        color: safePage === pg ? '#fff' : 'var(--text-secondary)',
-                        borderColor: safePage === pg ? '#d97706' : 'var(--border)',
-                        fontWeight: safePage === pg ? 700 : 500,
-                      }}>{pg}</button>
-                    )
-                  )}
-                  <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={safePage === totalPages} style={paginationBtnStyle(safePage === totalPages)}>›</button>
-                  <button onClick={() => setCurrentPage(totalPages)} disabled={safePage === totalPages} style={paginationBtnStyle(safePage === totalPages)}>»</button>
-                </div>
-              </div>
+              <Pagination
+                currentPage={safePage}
+                totalItems={filtered.length}
+                pageSize={pageSize}
+                onPageChange={setCurrentPage}
+                onPageSizeChange={(sz) => { setPageSize(sz); setCurrentPage(1); }}
+                pageSizeOptions={PAGE_SIZE_OPTIONS}
+              />
             )}
           </div>
         </div>
@@ -402,22 +386,3 @@ export default function PickupRequestsPage() {
   );
 }
 
-function getPageNumbers(current: number, total: number): (number | '...')[] {
-  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
-  const pages: (number | '...')[] = [];
-  if (current <= 4) { pages.push(1, 2, 3, 4, 5, '...', total); }
-  else if (current >= total - 3) { pages.push(1, '...', total - 4, total - 3, total - 2, total - 1, total); }
-  else { pages.push(1, '...', current - 1, current, current + 1, '...', total); }
-  return pages;
-}
-
-function paginationBtnStyle(disabled: boolean): React.CSSProperties {
-  return {
-    padding: '5px 10px', minWidth: 32, borderRadius: 8,
-    border: '1.5px solid var(--border)', background: 'transparent',
-    color: disabled ? 'var(--text-muted)' : 'var(--text-secondary)',
-    fontSize: 13, fontWeight: 500,
-    cursor: disabled ? 'not-allowed' : 'pointer',
-    opacity: disabled ? 0.4 : 1, transition: 'all 0.15s',
-  };
-}

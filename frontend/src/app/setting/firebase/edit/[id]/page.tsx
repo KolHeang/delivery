@@ -402,7 +402,7 @@ export default function EditFirebasePage() {
                 }}>
                   <button
                     type="button"
-                    className="btn btn-secondary"
+                    className="btn btn-cancel"
                     onClick={() => router.push('/setting/firebase')}
                     style={{ fontWeight: 700 }}
                   >

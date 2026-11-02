@@ -5,6 +5,7 @@ import { LanguageProvider } from '@/lib/LanguageContext';
 import { SettingsProvider } from '@/lib/SettingsContext';
 import { TenantProvider } from '@/lib/TenantContext';
 import DynamicTitle from '@/components/layout/DynamicTitle';
+import GlobalToastProvider from '@/components/ui/GlobalToastProvider';
 
 export const metadata: Metadata = {
   title: 'EBS Express',
@@ -19,6 +20,8 @@ export const metadata: Metadata = {
 const THEME_INIT_SCRIPT = `
 (function() {
   try {
+    var collapsed = localStorage.getItem('sidebar-collapsed') === 'true';
+    document.documentElement.setAttribute('data-sidebar-collapsed', collapsed ? 'true' : 'false');
     var color = localStorage.getItem('app-brand-color');
     if (!color) {
       var org = localStorage.getItem('app-org-settings');
@@ -72,6 +75,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 <DynamicTitle />
               </Suspense>
               {children}
+              <GlobalToastProvider />
             </SettingsProvider>
           </LanguageProvider>
         </TenantProvider>

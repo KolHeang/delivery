@@ -441,24 +441,15 @@ export default function PrintInvoicePage() {
 
             {/* Right Action */}
             <button 
-              className="btn" 
+              type="button"
+              className="btn btn-primary" 
               onClick={handlePrint}
               disabled={printableOrders.length === 0 || isPrinting}
               style={{ 
                 fontWeight: 700, 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: 8, 
                 padding: '9px 22px',
                 borderRadius: 8,
                 fontSize: 14,
-                background: 'linear-gradient(135deg, #10b981, #059669)',
-                color: '#fff',
-                border: 'none',
-                cursor: printableOrders.length === 0 ? 'not-allowed' : 'pointer',
-                opacity: printableOrders.length === 0 ? 0.6 : 1,
-                boxShadow: '0 4px 12px rgba(16, 185, 129, 0.25)',
-                transition: 'all 0.2s'
               }}
             >
               <MdPrint size={20} /> {isPrinting ? (lang === 'km' ? 'កំពុងរៀបចំ...' : 'Preparing...') : (lang === 'km' ? 'បោះពុម្ពវិក្កយបត្រ' : 'Print Invoice')}
@@ -638,7 +629,7 @@ export default function PrintInvoicePage() {
                     type="button"
                     onClick={handleDeselectAll}
                     className="btn btn-outline btn-sm"
-                    style={{ fontSize: 12, padding: '5px 12px', borderRadius: 6, fontWeight: 600, color: '#ef4444', borderColor: '#fca5a5' }}
+                    style={{ fontSize: 12, padding: '5px 12px', borderRadius: 6, fontWeight: 600 }}
                   >
                     {lang === 'km' ? 'ដោះការជ្រើសរើស' : 'Clear All'}
                   </button>
@@ -844,10 +835,10 @@ export default function PrintInvoicePage() {
                   fontSize: 13 
                 }}>
                   <div>
-                    {lang === 'km' ? 'ឈ្មោះហាង' : 'Shop Name'} : <span style={{ textTransform: 'uppercase', color: '#0f172a' }}>{o.merchant?.nameKh || o.merchant?.name || '—'}</span>
+                    {lang === 'km' ? 'ឈ្មោះហាង' : 'Shop Name'} : <span style={{ textTransform: 'uppercase', color: '#0f172a' }}>{o.merchant?.nameKh || o.merchant?.name || ''}</span>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#0f172a' }}>
-                    <span style={{ color: '#e11d48' }}>📞</span> {o.merchant?.phone || '—'}
+                    <span style={{ color: '#e11d48' }}>📞</span> {o.merchant?.phone || ''}
                   </div>
                 </div>
 
@@ -861,7 +852,7 @@ export default function PrintInvoicePage() {
                     </div>
                     <div>
                       <span style={{ fontWeight: 800, color: '#0f172a' }}>{lang === 'km' ? 'អាសយដ្ឋានអ្នកទទួល' : 'Receive Address'} :</span>{' '}
-                      <span>{o.receiverAddress || '—'}</span>
+                      <span>{o.receiverAddress || ''}</span>
                     </div>
                   </div>
 

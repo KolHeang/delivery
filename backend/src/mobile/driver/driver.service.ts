@@ -1968,7 +1968,105 @@ export class DriverService {
     };
   }
 
-  async getDailyDeliveryInvoice(driverId: number, dateStr?: string) {
+  async getSummary(driverId: number, options?: DriverFinancialFilterOptions) {
+    const { start, end } = parseDriverPeriodFilter(
+      options?.period,
+      options?.date,
+      options?.startDate,
+      options?.endDate,
+      options?.month,
+      options?.dateRange,
+    );
+
+    const s = start || new Date();
+    if (!start) s.setHours(0, 0, 0, 0);
+    const e = end || new Date();
+    if (!end) e.setHours(23, 59, 59, 999);
+
+    const totalAssigned = await this.parcelRepo.count({ where: { driverId } });
+
+    const statusCountsQb = this.parcelRepo
+      .createQueryBuilder('parcel')
+      .select('parcel.status', 'status')
+      .addSelect('COUNT(*)', 'count')
+      .where('parcel.driver_id = :driverId', { driverId });
+
+    if (start && end) {
+      statusCountsQb.andWhere(
+        'COALESCE(parcel.delivered_at, parcel.assigned_at, parcel.updated_at, parcel.created_at) >= :s AND COALESCE(parcel.delivered_at, parcel.assigned_at, parcel.updated_at, parcel.created_at) <= :e',
+        { s, e },
+      );
+    }
+    const statusCounts = await statusCountsQb.groupBy('parcel.status').getRawMany();
+
+    const todayDeliveredQb = this.parcelRepo
+      .createQueryBuilder('parcel')
+      .where('parcel.driver_id = :driverId', { driverId })
+      .andWhere('parcel.status = :status', { status: 'delivered' })
+      .andWhere(
+        'COALESCE(parcel.delivered_at, parcel.assigned_at, parcel.updated_at, parcel.created_at) >= :s AND COALESCE(parcel.delivered_at, parcel.assigned_at, parcel.updated_at, parcel.created_at) <= :e',
+        { s, e },
+      );
+    const todayDelivered = await todayDeliveredQb.getCount();
+
+    const codCollectedQb = this.parcelRepo
+      .createQueryBuilder('parcel')
+      .select('SUM(parcel.cod)', 'total')
+      .addSelect("UPPER(COALESCE(parcel.cod_currency, 'USD'))", 'currency')
+      .where('parcel.driver_id = :driverId', { driverId })
+      .andWhere('parcel.status = :status', { status: 'delivered' })
+      .andWhere('(parcel.driver_payment_status = :payment OR parcel.driver_payment_status IS NULL)', {
+        payment: 'unpaid',
+      });
+
+    if (start && end) {
+      codCollectedQb.andWhere(
+        'COALESCE(parcel.delivered_at, parcel.updated_at, parcel.created_at) >= :s AND COALESCE(parcel.delivered_at, parcel.updated_at, parcel.created_at) <= :e',
+        { s, e },
+      );
+    }
+    const codCollected = await codCollectedQb
+      .groupBy("UPPER(COALESCE(parcel.cod_currency, 'USD'))")
+      .getRawMany();
+
+    const codPendingUSD = parseFloat(
+      codCollected.find((c) => (c.currency || '').toUpperCase() === 'USD')
+        ?.total || 0,
+    );
+    const codPendingKHR = parseFloat(
+      codCollected.find((c) => (c.currency || '').toUpperCase() === 'KHR')
+        ?.total || 0,
+    );
+
+    return {
+      filter: {
+        period: options?.period || (options?.date ? 'custom' : 'today'),
+        date: options?.date || null,
+        startDate: options?.startDate || (start ? start.toISOString().split('T')[0] : null),
+        endDate: options?.endDate || (end ? end.toISOString().split('T')[0] : null),
+      },
+      totalAssigned,
+      statusCounts: statusCounts.reduce(
+        (acc, curr) => ({ ...acc, [curr.status]: parseInt(curr.count) }),
+        {},
+      ),
+      todayDelivered,
+      codPendingUSD,
+      codPendingKHR,
+    };
+  }
+
+  async getDailyDeliveryInvoice(
+    driverId: number,
+    dateOrOptions?: string | DriverFinancialFilterOptions,
+  ) {
+    let opts: DriverFinancialFilterOptions = {};
+    if (typeof dateOrOptions === 'object' && dateOrOptions !== null) {
+      opts = dateOrOptions;
+    } else {
+      opts = { date: dateOrOptions };
+    }
+
     const driver = await this.userRepo.findOne({
       where: { id: driverId },
       select: {

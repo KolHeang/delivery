@@ -41,7 +41,7 @@ import {
 @Roles('driver')
 @Controller('mobile/driver')
 export class DriverController {
-  constructor(private readonly driverService: DriverService) {}
+  constructor(private readonly driverService: DriverService) { }
 
   @Get('profile')
   @ApiOperation({ summary: 'Get driver profile' })
@@ -327,6 +327,36 @@ export class DriverController {
     example: '2026-10-15',
   })
   @ApiQuery({
+    name: 'period',
+    required: false,
+    enum: ['today', 'yesterday', 'week', 'month', 'year', 'all', 'custom'],
+    description: 'Filter tasks by period preset',
+  })
+  @ApiQuery({
+    name: 'paymentStatus',
+    required: false,
+    enum: ['pending', 'paid'],
+    description: 'Filter tasks by customer payment / COD collection status',
+  })
+  @ApiQuery({
+    name: 'driverPaymentStatus',
+    required: false,
+    enum: ['unpaid', 'paid'],
+    description: 'Filter tasks by driver delivery fee payment status',
+  })
+  @ApiQuery({
+    name: 'codCurrency',
+    required: false,
+    enum: ['USD', 'KHR', 'all'],
+    description: 'Filter tasks by COD currency',
+  })
+  @ApiQuery({
+    name: 'hasCod',
+    required: false,
+    type: Boolean,
+    description: 'Filter tasks having COD collection (true/false)',
+  })
+  @ApiQuery({
     name: 'page',
     required: false,
     type: Number,
@@ -380,6 +410,11 @@ export class DriverController {
     @Query('endDate') endDate?: string,
     @Query('page') page?: number,
     @Query('limit') limit?: number,
+    @Query('period') period?: string,
+    @Query('paymentStatus') paymentStatus?: string,
+    @Query('driverPaymentStatus') driverPaymentStatus?: string,
+    @Query('codCurrency') codCurrency?: string,
+    @Query('hasCod') hasCod?: string,
   ) {
     const start = date || startDate;
     const end = date || endDate;
@@ -391,6 +426,14 @@ export class DriverController {
       end,
       page,
       limit,
+      {
+        date,
+        period,
+        paymentStatus,
+        driverPaymentStatus,
+        codCurrency,
+        hasCod,
+      },
     );
   }
 
@@ -425,6 +468,30 @@ export class DriverController {
     type: String,
     description: 'Range end date (YYYY-MM-DD)',
     example: '2026-10-15',
+  })
+  @ApiQuery({
+    name: 'period',
+    required: false,
+    enum: ['today', 'yesterday', 'week', 'month', 'year', 'all', 'custom'],
+    description: 'Filter counts by period preset',
+  })
+  @ApiQuery({
+    name: 'paymentStatus',
+    required: false,
+    enum: ['pending', 'paid'],
+    description: 'Filter counts by customer payment / COD collection status',
+  })
+  @ApiQuery({
+    name: 'driverPaymentStatus',
+    required: false,
+    enum: ['unpaid', 'paid'],
+    description: 'Filter counts by driver fee settlement status',
+  })
+  @ApiQuery({
+    name: 'codCurrency',
+    required: false,
+    enum: ['USD', 'KHR', 'all'],
+    description: 'Filter counts by COD currency',
   })
   @ApiResponse({
     status: 200,
@@ -464,6 +531,10 @@ export class DriverController {
     @Query('date') date?: string,
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
+    @Query('period') period?: string,
+    @Query('paymentStatus') paymentStatus?: string,
+    @Query('driverPaymentStatus') driverPaymentStatus?: string,
+    @Query('codCurrency') codCurrency?: string,
   ) {
     const start = date || startDate;
     const end = date || endDate;
@@ -472,6 +543,13 @@ export class DriverController {
       search,
       start,
       end,
+      {
+        date,
+        period,
+        paymentStatus,
+        driverPaymentStatus,
+        codCurrency,
+      },
     );
   }
 
@@ -554,7 +632,7 @@ export class DriverController {
     name: 'period',
     required: false,
     type: String,
-    enum: ['today', 'week', 'month', 'custom', 'all'],
+    enum: ['today', 'yesterday', 'week', 'month', 'year', 'custom', 'all'],
     description: 'Dashboard timeframe period preset',
     example: 'today',
   })
@@ -578,6 +656,20 @@ export class DriverController {
     type: String,
     description: 'Custom range end date (YYYY-MM-DD)',
     example: '2026-10-15',
+  })
+  @ApiQuery({
+    name: 'month',
+    required: false,
+    type: String,
+    description: 'Filter dashboard stats by month (YYYY-MM)',
+    example: '2026-10',
+  })
+  @ApiQuery({
+    name: 'driverPaymentStatus',
+    required: false,
+    type: String,
+    enum: ['paid', 'unpaid'],
+    description: 'Filter dashboard stats by driver fee payment status',
   })
   @ApiResponse({
     status: 200,
@@ -611,11 +703,97 @@ export class DriverController {
     @Query('period') period?: string,
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
+    @Query('month') month?: string,
+    @Query('driverPaymentStatus') driverPaymentStatus?: string,
   ) {
-    const start = date || startDate;
-    const end = date || endDate;
-    const p = date ? 'custom' : period;
-    return this.driverService.getDashboard(req.user.id, p, start, end);
+    return this.driverService.getDashboard(req.user.id, {
+      period,
+      date,
+      startDate,
+      endDate,
+      month,
+      driverPaymentStatus,
+    });
+  }
+
+  @Get(['summary', 'dashboard/summary'])
+  @ApiOperation({
+    summary:
+      'Get overall driver performance and money summary with timeframe filters',
+  })
+  @ApiQuery({
+    name: 'period',
+    required: false,
+    enum: ['today', 'yesterday', 'week', 'month', 'year', 'all', 'custom'],
+    description: 'Summary timeframe preset',
+    example: 'today',
+  })
+  @ApiQuery({
+    name: 'date',
+    required: false,
+    type: String,
+    description: 'Specific date (YYYY-MM-DD)',
+    example: '2026-10-15',
+  })
+  @ApiQuery({
+    name: 'startDate',
+    required: false,
+    type: String,
+    description: 'Range start date (YYYY-MM-DD)',
+    example: '2026-10-01',
+  })
+  @ApiQuery({
+    name: 'endDate',
+    required: false,
+    type: String,
+    description: 'Range end date (YYYY-MM-DD)',
+    example: '2026-10-15',
+  })
+  @ApiQuery({
+    name: 'month',
+    required: false,
+    type: String,
+    description: 'Month (YYYY-MM)',
+    example: '2026-10',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Driver overall performance and financial summary',
+    schema: {
+      example: {
+        status: true,
+        message: 'Successfully',
+        data: {
+          period: 'today',
+          totalDeliveries: 15,
+          successfulDeliveries: 12,
+          failedDeliveries: 2,
+          returnedDeliveries: 1,
+          successRate: '80%',
+          totalCodUsd: 180.5,
+          totalCodKhr: 120000,
+          codToRemitUsd: 180.5,
+          codToRemitKhr: 120000,
+          driverFeeEarnedKhr: 15000,
+        },
+      },
+    },
+  })
+  getSummary(
+    @Request() req: any,
+    @Query('period') period?: string,
+    @Query('date') date?: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+    @Query('month') month?: string,
+  ) {
+    return this.driverService.getSummary(req.user.id, {
+      period,
+      date,
+      startDate,
+      endDate,
+      month,
+    });
   }
 
   @Get('report')
@@ -626,9 +804,16 @@ export class DriverController {
   @ApiQuery({
     name: 'period',
     required: false,
-    enum: ['today', 'yesterday', 'week', 'month', 'custom', 'all'],
+    enum: ['today', 'yesterday', 'week', 'month', 'year', 'custom', 'all'],
     description: 'Reporting period preset',
     example: 'today',
+  })
+  @ApiQuery({
+    name: 'date',
+    required: false,
+    type: String,
+    description: 'Filter report by specific date (YYYY-MM-DD)',
+    example: '2026-10-15',
   })
   @ApiQuery({
     name: 'startDate',
@@ -645,12 +830,33 @@ export class DriverController {
     example: '2026-10-15',
   })
   @ApiQuery({
+    name: 'month',
+    required: false,
+    type: String,
+    description: 'Filter report by month (YYYY-MM)',
+    example: '2026-10',
+  })
+  @ApiQuery({
     name: 'status',
     required: false,
     type: String,
     enum: ['delivered', 'failed', 'returned', 'picked-up', 'in-transit'],
     description: 'Filter parcel records by delivery status',
     example: 'delivered',
+  })
+  @ApiQuery({
+    name: 'driverPaymentStatus',
+    required: false,
+    type: String,
+    enum: ['paid', 'unpaid'],
+    description: 'Filter report by driver fee settlement status',
+  })
+  @ApiQuery({
+    name: 'currency',
+    required: false,
+    type: String,
+    enum: ['USD', 'KHR', 'all'],
+    description: 'Filter report by currency',
   })
   @ApiResponse({
     status: 200,
@@ -685,17 +891,24 @@ export class DriverController {
   getReport(
     @Request() req: any,
     @Query('period') period?: string,
+    @Query('date') date?: string,
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
+    @Query('month') month?: string,
     @Query('status') status?: string,
+    @Query('driverPaymentStatus') driverPaymentStatus?: string,
+    @Query('currency') currency?: string,
   ) {
-    return this.driverService.getReport(
-      req.user.id,
+    return this.driverService.getReport(req.user.id, {
       period,
+      date,
       startDate,
       endDate,
+      month,
       status,
-    );
+      driverPaymentStatus,
+      currency,
+    });
   }
 
 
@@ -763,7 +976,7 @@ export class DriverController {
   }
 
   @Get('invoices/daily')
-  @ApiOperation({ summary: 'Get daily delivery invoice for rider' })
+  @ApiOperation({ summary: 'Get daily delivery invoice for rider with filters' })
   @ApiQuery({
     name: 'date',
     required: false,
@@ -771,6 +984,50 @@ export class DriverController {
     description:
       'Invoice date (YYYY-MM-DD). Defaults to current day if omitted.',
     example: '2026-10-15',
+  })
+  @ApiQuery({
+    name: 'period',
+    required: false,
+    enum: ['today', 'yesterday', 'week', 'month', 'year', 'all', 'custom'],
+    description: 'Invoice period preset',
+  })
+  @ApiQuery({
+    name: 'startDate',
+    required: false,
+    type: String,
+    description: 'Range start date (YYYY-MM-DD)',
+  })
+  @ApiQuery({
+    name: 'endDate',
+    required: false,
+    type: String,
+    description: 'Range end date (YYYY-MM-DD)',
+  })
+  @ApiQuery({
+    name: 'month',
+    required: false,
+    type: String,
+    description: 'Month (YYYY-MM)',
+  })
+  @ApiQuery({
+    name: 'status',
+    required: false,
+    type: String,
+    description: 'Filter parcel status in invoice (delivered, failed, returned, etc.)',
+  })
+  @ApiQuery({
+    name: 'driverPaymentStatus',
+    required: false,
+    type: String,
+    enum: ['paid', 'unpaid'],
+    description: 'Filter by driver payment settlement status',
+  })
+  @ApiQuery({
+    name: 'currency',
+    required: false,
+    type: String,
+    enum: ['USD', 'KHR', 'all'],
+    description: 'Filter by currency',
   })
   @ApiResponse({
     status: 200,
@@ -806,8 +1063,27 @@ export class DriverController {
       },
     },
   })
-  getDailyInvoice(@Request() req: any, @Query('date') date?: string) {
-    return this.driverService.getDailyDeliveryInvoice(req.user.id, date);
+  getDailyInvoice(
+    @Request() req: any,
+    @Query('date') date?: string,
+    @Query('period') period?: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+    @Query('month') month?: string,
+    @Query('status') status?: string,
+    @Query('driverPaymentStatus') driverPaymentStatus?: string,
+    @Query('currency') currency?: string,
+  ) {
+    return this.driverService.getDailyDeliveryInvoice(req.user.id, {
+      date,
+      period,
+      startDate,
+      endDate,
+      month,
+      status,
+      driverPaymentStatus,
+      currency,
+    });
   }
 
   // ===================== PARCEL CHAT =====================

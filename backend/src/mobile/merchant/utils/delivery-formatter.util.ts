@@ -28,7 +28,7 @@ export function formatMerchantDelivery(parcel: any) {
       khr: !isUsd ? Math.round(codNum) : 0,
     },
     codAmount: codNum,
-    codCurrency: parcel.codCurrency || 'USD',
+    codCurrency: (parcel.codCurrency || 'USD').toUpperCase(),
     deliveryFee: feeNum,
     deliveredAt: parcel.deliveredAt || parcel.updatedAt || new Date().toISOString(),
     createdAt: parcel.createdAt,
@@ -133,7 +133,7 @@ export function formatMerchantSettlement(payment: any, parcels: any[] = []) {
       phone: p.receiverPhone || p.customer?.phone || '',
       address: p.receiverAddress || p.customer?.address || '',
       amount: parseFloat(p.cod as any) || 0,
-      currency: p.codCurrency || 'USD',
+      currency: (p.codCurrency || 'USD').toUpperCase(),
       status: p.status || 'delivered',
       statusKh: orderStatusKh,
       deliveredAt: p.deliveredAt || p.updatedAt || dateStr,
@@ -148,6 +148,32 @@ export function formatMerchantSettlement(payment: any, parcels: any[] = []) {
   const statusKh = settlementStatus === 'paid' ? 'បានទូទាត់' :
                    (settlementStatus === 'pending' || settlementStatus === 'unpaid') ? 'រង់ចាំទូទាត់' :
                    settlementStatus === 'problem' ? 'មានបញ្ហា' : settlementStatus;
+
+  let totalDeliveryFee = parseFloat(payment.deliveryFee as any || 0);
+  if (!totalDeliveryFee && parcels && parcels.length > 0) {
+    totalDeliveryFee = parcels.reduce((sum, p) => sum + (parseFloat(p.deliveryFee as any) || 0), 0);
+  }
+
+  let calcCodUsd = 0;
+  let calcCodKhr = 0;
+  if (parcels && parcels.length > 0) {
+    for (const p of parcels) {
+      const cod = parseFloat(p.cod as any) || 0;
+      if ((p.codCurrency || 'USD').toUpperCase() === 'KHR') {
+        calcCodKhr += cod;
+      } else {
+        calcCodUsd += cod;
+      }
+    }
+  }
+
+  const finalCodUsd = payment.codUSD !== undefined && payment.codUSD !== null
+    ? parseFloat(payment.codUSD as any) || 0
+    : (calcCodUsd > 0 ? Math.round(calcCodUsd * 100) / 100 : Math.round((rawUsd + totalDeliveryFee) * 100) / 100);
+
+  const finalCodKhr = payment.codKHR !== undefined && payment.codKHR !== null
+    ? parseFloat(payment.codKHR as any) || 0
+    : (calcCodKhr > 0 ? Math.round(calcCodKhr) : Math.round(rawKhr));
 
   return {
     id: String(rawId),
@@ -165,6 +191,9 @@ export function formatMerchantSettlement(payment: any, parcels: any[] = []) {
     },
     totalAmount: rawUsd,
     totalAmountKhr: Math.round(rawKhr),
+    deliveryFee: Math.round(totalDeliveryFee * 100) / 100,
+    codUSD: finalCodUsd,
+    codKHR: finalCodKhr,
     date: dateStr,
     paidAt: (settlementStatus === 'pending' || settlementStatus === 'unpaid' || settlementStatus === 'problem') ? null : paidAtStr,
     paymentDate: dateStr,

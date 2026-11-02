@@ -22,6 +22,125 @@ import { TrackingGateway } from '../../tracking/tracking.gateway';
 import { formatDriverTask } from './utils/task-formatter.util';
 import { formatMerchantDelivery, formatMerchantPickupRequest } from '../merchant/utils/delivery-formatter.util';
 
+export interface DriverFinancialFilterOptions {
+  period?: string;
+  date?: string;
+  startDate?: string;
+  endDate?: string;
+  dateRange?: string;
+  month?: string;
+  status?: string;
+  paymentStatus?: string;
+  driverPaymentStatus?: string;
+  currency?: string;
+  codCurrency?: string;
+  hasCod?: boolean | string;
+  search?: string;
+  page?: number;
+  limit?: number;
+}
+
+export function parseDriverPeriodFilter(
+  period?: string,
+  date?: string,
+  startDate?: string,
+  endDate?: string,
+  month?: string,
+  dateRange?: string,
+): { start: Date | null; end: Date | null } {
+  let s = startDate;
+  let e = endDate;
+
+  if (date) {
+    s = date;
+    e = date;
+  } else if (dateRange) {
+    const parts = dateRange.includes('_')
+      ? dateRange.split('_')
+      : (dateRange.includes(',') ? dateRange.split(',') : dateRange.split(' to '));
+    if (parts[0]) s = parts[0].trim();
+    if (parts[1]) e = parts[1].trim();
+  }
+
+  if (month) {
+    const mMatch = month.trim().match(/^(\d{4})[-/](\d{1,2})$/);
+    if (mMatch) {
+      const year = parseInt(mMatch[1], 10);
+      const m = parseInt(mMatch[2], 10) - 1;
+      const start = new Date(year, m, 1, 0, 0, 0, 0);
+      const end = new Date(year, m + 1, 0, 23, 59, 59, 999);
+      return { start, end };
+    }
+  }
+
+  if (s || e || period === 'custom') {
+    let start: Date | null = null;
+    let end: Date | null = null;
+    if (s) {
+      const trimmed = String(s).trim();
+      const match = trimmed.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
+      if (match) {
+        start = new Date(parseInt(match[1], 10), parseInt(match[2], 10) - 1, parseInt(match[3], 10), 0, 0, 0, 0);
+      } else {
+        start = new Date(trimmed);
+        start.setHours(0, 0, 0, 0);
+      }
+    }
+    if (e) {
+      const trimmed = String(e).trim();
+      const match = trimmed.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
+      if (match) {
+        end = new Date(parseInt(match[1], 10), parseInt(match[2], 10) - 1, parseInt(match[3], 10), 23, 59, 59, 999);
+      } else {
+        end = new Date(trimmed);
+        end.setHours(23, 59, 59, 999);
+      }
+    }
+    return { start, end };
+  }
+
+  const p = (period || 'today').toLowerCase().trim();
+  if (p === 'yesterday') {
+    const start = new Date();
+    start.setDate(start.getDate() - 1);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date();
+    end.setDate(end.getDate() - 1);
+    end.setHours(23, 59, 59, 999);
+    return { start, end };
+  } else if (p === 'week' || p === 'this-week') {
+    const start = new Date();
+    start.setDate(start.getDate() - 7);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date();
+    end.setHours(23, 59, 59, 999);
+    return { start, end };
+  } else if (p === 'month' || p === 'this-month') {
+    const start = new Date();
+    start.setDate(1);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date();
+    end.setHours(23, 59, 59, 999);
+    return { start, end };
+  } else if (p === 'year' || p === 'this-year') {
+    const start = new Date();
+    start.setMonth(0, 1);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date();
+    end.setHours(23, 59, 59, 999);
+    return { start, end };
+  } else if (p === 'all') {
+    return { start: null, end: null };
+  } else {
+    // Default 'today'
+    const start = new Date();
+    start.setHours(0, 0, 0, 0);
+    const end = new Date();
+    end.setHours(23, 59, 59, 999);
+    return { start, end };
+  }
+}
+
 @Injectable()
 export class DriverService {
   constructor(
@@ -39,7 +158,7 @@ export class DriverService {
     private readonly notificationRepo: Repository<DriverNotification>,
     private readonly firebaseService: FirebaseService,
     @Optional() private readonly trackingGateway?: TrackingGateway,
-  ) {}
+  ) { }
 
   async getProfile(driverId: number) {
     const driver = await this.userRepo.findOne({
@@ -96,10 +215,10 @@ export class DriverService {
       zone: driver.zone ? { id: driver.zone.id, name: driver.zone.name } : null,
       vehicle: driver.vehicle
         ? {
-            id: driver.vehicle.id,
-            type: driver.vehicle.type,
-            plate: driver.vehicle.plate,
-          }
+          id: driver.vehicle.id,
+          type: driver.vehicle.type,
+          plate: driver.vehicle.plate,
+        }
         : null,
     };
   }
@@ -165,6 +284,14 @@ export class DriverService {
     endDate?: string,
     page?: number,
     limit?: number,
+    extraOptions?: {
+      paymentStatus?: string;
+      driverPaymentStatus?: string;
+      codCurrency?: string;
+      hasCod?: boolean | string;
+      date?: string;
+      period?: string;
+    },
   ) {
     const query = this.parcelRepo
       .createQueryBuilder('parcel')
@@ -199,7 +326,7 @@ export class DriverService {
       .orderBy('parcel.createdAt', 'DESC');
 
     // 1. Apply Status & Driver Logic
-    if (status) {
+    if (status && status !== 'all') {
       query
         .andWhere(
           new Brackets((qb) => {
@@ -239,8 +366,20 @@ export class DriverService {
       );
     }
 
-    // 3. Apply Date Filter Logic
-    if (startDate || endDate) {
+    // 3. Apply Date / Period Filter Logic
+    const { start: pStart, end: pEnd } = parseDriverPeriodFilter(
+      extraOptions?.period,
+      extraOptions?.date,
+      startDate,
+      endDate,
+    );
+
+    if (pStart && pEnd) {
+      query.andWhere(
+        'COALESCE(parcel.delivered_at, parcel.assigned_at, parcel.created_at) >= :pStart AND COALESCE(parcel.delivered_at, parcel.assigned_at, parcel.created_at) <= :pEnd',
+        { pStart, pEnd },
+      );
+    } else if (startDate || endDate) {
       const s = startDate ? new Date(startDate) : new Date(endDate!);
       s.setHours(0, 0, 0, 0);
       const e = endDate ? new Date(endDate) : new Date(startDate!);
@@ -249,6 +388,32 @@ export class DriverService {
         'COALESCE(parcel.delivered_at, parcel.assigned_at, parcel.created_at) >= :startDate AND COALESCE(parcel.delivered_at, parcel.assigned_at, parcel.created_at) <= :endDate',
         { startDate: s, endDate: e },
       );
+    }
+
+    // 4. Financial Filters (Payment Status, Driver Payment Status, Currency, Has COD)
+    if (extraOptions?.paymentStatus && extraOptions.paymentStatus !== 'all') {
+      query.andWhere('parcel.payment_status = :paymentStatus', { paymentStatus: extraOptions.paymentStatus });
+    }
+
+    if (extraOptions?.driverPaymentStatus && extraOptions.driverPaymentStatus !== 'all') {
+      query.andWhere('parcel.driver_payment_status = :driverPaymentStatus', {
+        driverPaymentStatus: extraOptions.driverPaymentStatus,
+      });
+    }
+
+    if (extraOptions?.codCurrency && extraOptions.codCurrency !== 'all') {
+      query.andWhere("UPPER(COALESCE(parcel.cod_currency, 'USD')) = :codCurrency", {
+        codCurrency: extraOptions.codCurrency.toUpperCase(),
+      });
+    }
+
+    if (extraOptions?.hasCod !== undefined && extraOptions?.hasCod !== null && String(extraOptions.hasCod) !== 'all') {
+      const isHas = String(extraOptions.hasCod) === 'true';
+      if (isHas) {
+        query.andWhere('parcel.cod > 0');
+      } else {
+        query.andWhere('(parcel.cod IS NULL OR parcel.cod = 0)');
+      }
     }
 
     // 4. Pagination
@@ -281,6 +446,13 @@ export class DriverService {
     search?: string,
     startDate?: string,
     endDate?: string,
+    extraOptions?: {
+      date?: string;
+      period?: string;
+      paymentStatus?: string;
+      driverPaymentStatus?: string;
+      codCurrency?: string;
+    },
   ) {
     const query = this.parcelRepo
       .createQueryBuilder('parcel')
@@ -312,11 +484,39 @@ export class DriverService {
       );
     }
 
-    if (startDate && endDate) {
+    const { start: pStart, end: pEnd } = parseDriverPeriodFilter(
+      extraOptions?.period,
+      extraOptions?.date,
+      startDate,
+      endDate,
+    );
+
+    if (pStart && pEnd) {
+      query.andWhere(
+        'COALESCE(parcel.delivered_at, parcel.assigned_at, parcel.created_at) >= :pStart AND COALESCE(parcel.delivered_at, parcel.assigned_at, parcel.created_at) <= :pEnd',
+        { pStart, pEnd },
+      );
+    } else if (startDate && endDate) {
       query.andWhere(
         'COALESCE(parcel.delivered_at, parcel.assigned_at, parcel.created_at) >= :startDate AND COALESCE(parcel.delivered_at, parcel.assigned_at, parcel.created_at) <= :endDate',
         { startDate: new Date(startDate), endDate: new Date(endDate) },
       );
+    }
+
+    if (extraOptions?.paymentStatus && extraOptions.paymentStatus !== 'all') {
+      query.andWhere('parcel.payment_status = :paymentStatus', { paymentStatus: extraOptions.paymentStatus });
+    }
+
+    if (extraOptions?.driverPaymentStatus && extraOptions.driverPaymentStatus !== 'all') {
+      query.andWhere('parcel.driver_payment_status = :driverPaymentStatus', {
+        driverPaymentStatus: extraOptions.driverPaymentStatus,
+      });
+    }
+
+    if (extraOptions?.codCurrency && extraOptions.codCurrency !== 'all') {
+      query.andWhere("UPPER(COALESCE(parcel.cod_currency, 'USD')) = :codCurrency", {
+        codCurrency: extraOptions.codCurrency.toUpperCase(),
+      });
     }
 
     const rawCounts = await query.groupBy('parcel.status').getRawMany();
@@ -508,7 +708,7 @@ export class DriverService {
               note,
             }),
           );
-        } catch (e) {}
+        } catch (e) { }
 
         if (previousDriverId && previousDriverId !== driverId) {
           try {
@@ -516,7 +716,7 @@ export class DriverService {
               previousDriverId,
               formatDriverTask({ ...existing, status: 'reassigned' }, previousDriverId),
             );
-          } catch (e) {}
+          } catch (e) { }
         }
 
         parcel = existing;
@@ -599,11 +799,11 @@ export class DriverService {
     if (updated) {
       try {
         this.trackingGateway?.notifyDriverTaskUpdated(driverId, formatDriverTask(updated, driverId));
-      } catch (e) {}
+      } catch (e) { }
       if (dto.status === 'delivered' && updated.merchantId) {
         try {
           this.trackingGateway?.notifyMerchantDelivery(updated.merchantId, formatMerchantDelivery(updated));
-        } catch (e) {}
+        } catch (e) { }
       }
     }
 
@@ -612,47 +812,32 @@ export class DriverService {
 
   async getDashboard(
     driverId: number,
-    period: string = 'today',
+    optionsOrPeriod: string | DriverFinancialFilterOptions = 'today',
     startDate?: string,
     endDate?: string,
   ) {
+    let opts: DriverFinancialFilterOptions = {};
+    if (typeof optionsOrPeriod === 'object' && optionsOrPeriod !== null) {
+      opts = optionsOrPeriod;
+    } else {
+      opts = {
+        period: optionsOrPeriod || 'today',
+        startDate,
+        endDate,
+      };
+    }
+
     const driver = await this.userRepo.findOne({ where: { id: driverId } });
     if (!driver) throw new NotFoundException('Driver not found');
 
-    let start: Date | null = new Date();
-    let end: Date | null = new Date();
-
-    if (startDate || endDate || period === 'custom') {
-      if (startDate) {
-        start = new Date(startDate);
-        start.setHours(0, 0, 0, 0);
-      } else {
-        start = null;
-      }
-      if (endDate) {
-        end = new Date(endDate);
-        end.setHours(23, 59, 59, 999);
-      } else {
-        end = null;
-      }
-    } else if (period === 'week') {
-      start = new Date();
-      start.setDate(start.getDate() - 7);
-      start.setHours(0, 0, 0, 0);
-      end.setHours(23, 59, 59, 999);
-    } else if (period === 'month') {
-      start = new Date();
-      start.setDate(1);
-      start.setHours(0, 0, 0, 0);
-      end.setHours(23, 59, 59, 999);
-    } else if (period === 'all') {
-      start = null;
-      end = null;
-    } else {
-      // Default 'today'
-      start.setHours(0, 0, 0, 0);
-      end.setHours(23, 59, 59, 999);
-    }
+    const { start, end } = parseDriverPeriodFilter(
+      opts.period,
+      opts.date,
+      opts.startDate,
+      opts.endDate,
+      opts.month,
+      opts.dateRange,
+    );
 
     // Today/Period total packages (assigned or picked up)
     const pkgQuery = this.parcelRepo
@@ -756,33 +941,60 @@ export class DriverService {
     }
     const broughtToHub = await broughtToHubQuery.getCount();
 
-    // COD collected (delivered & unpaid in period)
+    // 1. Total COD collected from all delivered packages in this period
     const codQuery = this.parcelRepo
       .createQueryBuilder('parcel')
       .select('SUM(parcel.cod)', 'total')
-      .addSelect('parcel.cod_currency', 'currency')
+      .addSelect("UPPER(COALESCE(parcel.cod_currency, 'USD'))", 'currency')
       .where('parcel.driver_id = :driverId', { driverId })
-      .andWhere('parcel.status = :status', { status: 'delivered' })
-      .andWhere('parcel.driver_payment_status = :payment', {
-        payment: 'unpaid',
-      });
+      .andWhere('parcel.status = :status', { status: 'delivered' });
 
     if (start && end) {
       codQuery.andWhere(
-        'parcel.updated_at >= :start AND parcel.updated_at <= :end',
+        'COALESCE(parcel.delivered_at, parcel.updated_at, parcel.created_at) >= :start AND COALESCE(parcel.delivered_at, parcel.updated_at, parcel.created_at) <= :end',
         { start, end },
       );
     }
     const codCollected = await codQuery
-      .groupBy('parcel.cod_currency')
+      .groupBy("UPPER(COALESCE(parcel.cod_currency, 'USD'))")
       .getRawMany();
 
-    const codPendingUSD = parseFloat(
+    const amountCollectedUSD = parseFloat(
       codCollected.find((c) => (c.currency || '').toUpperCase() === 'USD')
         ?.total || 0,
     );
-    const codPendingKHR = parseFloat(
+    const amountCollectedKHR = parseFloat(
       codCollected.find((c) => (c.currency || '').toUpperCase() === 'KHR')
+        ?.total || 0,
+    );
+
+    // 2. COD pending to remit to company (delivered & unpaid driver payment status)
+    const unpaidCodQuery = this.parcelRepo
+      .createQueryBuilder('parcel')
+      .select('SUM(parcel.cod)', 'total')
+      .addSelect("UPPER(COALESCE(parcel.cod_currency, 'USD'))", 'currency')
+      .where('parcel.driver_id = :driverId', { driverId })
+      .andWhere('parcel.status = :status', { status: 'delivered' })
+      .andWhere('(parcel.driver_payment_status = :payment OR parcel.driver_payment_status IS NULL)', {
+        payment: 'unpaid',
+      });
+
+    if (end) {
+      unpaidCodQuery.andWhere(
+        'COALESCE(parcel.delivered_at, parcel.updated_at, parcel.created_at) <= :end',
+        { end },
+      );
+    }
+    const unpaidCodResults = await unpaidCodQuery
+      .groupBy("UPPER(COALESCE(parcel.cod_currency, 'USD'))")
+      .getRawMany();
+
+    const codPendingUSD = parseFloat(
+      unpaidCodResults.find((c) => (c.currency || '').toUpperCase() === 'USD')
+        ?.total || 0,
+    );
+    const codPendingKHR = parseFloat(
+      unpaidCodResults.find((c) => (c.currency || '').toUpperCase() === 'KHR')
         ?.total || 0,
     );
 
@@ -796,7 +1008,7 @@ export class DriverService {
 
     if (start && end) {
       feeQuery.andWhere(
-        'parcel.delivered_at >= :start AND parcel.delivered_at <= :end',
+        'COALESCE(parcel.delivered_at, parcel.updated_at, parcel.created_at) >= :start AND COALESCE(parcel.delivered_at, parcel.updated_at, parcel.created_at) <= :end',
         { start, end },
       );
     }
@@ -885,7 +1097,14 @@ export class DriverService {
     }));
 
     return {
-      period,
+      filter: {
+        period: opts.period || (opts.date ? 'custom' : 'today'),
+        date: opts.date || null,
+        startDate: opts.startDate || (start ? start.toISOString().split('T')[0] : null),
+        endDate: opts.endDate || (end ? end.toISOString().split('T')[0] : null),
+        month: opts.month || null,
+      },
+      period: opts.period || (opts.date ? 'custom' : 'today'),
       deliveryFeeTotal,
       driverFeeTotal,
       wallets: [
@@ -899,11 +1118,17 @@ export class DriverService {
       amountToCollectUSD,
       amountToCollectKHR,
       amountCollected: {
+        usd: amountCollectedUSD,
+        khr: amountCollectedKHR,
+      },
+      amountCollectedUSD,
+      amountCollectedKHR,
+      codToRemit: {
         usd: codPendingUSD,
         khr: codPendingKHR,
       },
-      amountCollectedUSD: codPendingUSD,
-      amountCollectedKHR: codPendingKHR,
+      codPendingUSD,
+      codPendingKHR,
       workStatistics: {
         totalParcels: sumTotalPackage > 0 ? sumTotalPackage : totalPackage,
         assigned: assignedParcels,
@@ -927,11 +1152,23 @@ export class DriverService {
 
   async getReport(
     driverId: number,
-    period: string = 'today',
+    optionsOrPeriod: string | DriverFinancialFilterOptions = 'today',
     startDate?: string,
     endDate?: string,
     status?: string,
   ) {
+    let opts: DriverFinancialFilterOptions = {};
+    if (typeof optionsOrPeriod === 'object' && optionsOrPeriod !== null) {
+      opts = optionsOrPeriod;
+    } else {
+      opts = {
+        period: optionsOrPeriod || 'today',
+        startDate,
+        endDate,
+        status,
+      };
+    }
+
     const driver = await this.userRepo.findOne({
       where: { id: driverId },
       select: {
@@ -955,49 +1192,14 @@ export class DriverService {
     });
     if (!driver) throw new NotFoundException('Driver not found');
 
-    let start: Date | null = new Date();
-    let end: Date | null = new Date();
-
-    if (startDate || endDate || period === 'custom') {
-      if (startDate) {
-        start = new Date(startDate);
-        start.setHours(0, 0, 0, 0);
-      } else {
-        start = null;
-      }
-      if (endDate) {
-        end = new Date(endDate);
-        end.setHours(23, 59, 59, 999);
-      } else {
-        end = null;
-      }
-    } else if (period === 'yesterday') {
-      start = new Date();
-      start.setDate(start.getDate() - 1);
-      start.setHours(0, 0, 0, 0);
-      end = new Date();
-      end.setDate(end.getDate() - 1);
-      end.setHours(23, 59, 59, 999);
-    } else if (period === 'week') {
-      start = new Date();
-      start.setDate(start.getDate() - 7);
-      start.setHours(0, 0, 0, 0);
-      end = new Date();
-      end.setHours(23, 59, 59, 999);
-    } else if (period === 'month') {
-      start = new Date();
-      start.setDate(1);
-      start.setHours(0, 0, 0, 0);
-      end = new Date();
-      end.setHours(23, 59, 59, 999);
-    } else if (period === 'all') {
-      start = null;
-      end = null;
-    } else {
-      // Default 'today'
-      start.setHours(0, 0, 0, 0);
-      end.setHours(23, 59, 59, 999);
-    }
+    const { start, end } = parseDriverPeriodFilter(
+      opts.period,
+      opts.date,
+      opts.startDate,
+      opts.endDate,
+      opts.month,
+      opts.dateRange,
+    );
 
     const baseParcelQuery = this.parcelRepo
       .createQueryBuilder('parcel')
@@ -1036,8 +1238,20 @@ export class DriverService {
       );
     }
 
-    if (status && status !== 'all') {
-      baseParcelQuery.andWhere('parcel.status = :status', { status });
+    if (opts.status && opts.status !== 'all') {
+      baseParcelQuery.andWhere('parcel.status = :status', { status: opts.status });
+    }
+
+    if (opts.driverPaymentStatus && opts.driverPaymentStatus !== 'all') {
+      baseParcelQuery.andWhere('parcel.driver_payment_status = :driverPaymentStatus', {
+        driverPaymentStatus: opts.driverPaymentStatus,
+      });
+    }
+
+    if (opts.currency && opts.currency !== 'all') {
+      baseParcelQuery.andWhere("UPPER(COALESCE(parcel.cod_currency, 'USD')) = :currency", {
+        currency: opts.currency.toUpperCase(),
+      });
     }
 
     const parcels = await baseParcelQuery
@@ -1095,11 +1309,13 @@ export class DriverService {
       const codVal = parseFloat(ord.cod as any) || 0;
       const feeVal = parseFloat(ord.deliveryFee as any) || 0;
 
-      if (isDelivered) {
+      const isDeliveredByMe = ord.status === 'delivered' && (ord.driverId === driverId || (!ord.driverId && ord.pickupDriverId === driverId));
+      if (isDeliveredByMe) {
         totalDeliveryFee += feeVal;
         const dFeeVal = ord.driverFee !== undefined && ord.driverFee !== null ? parseFloat(ord.driverFee as any) : 1000;
         totalDriverFee += dFeeVal;
-        if (ord.codCurrency === 'KHR') {
+        const cur = (ord.codCurrency || 'USD').toUpperCase();
+        if (cur === 'KHR') {
           codDeliveredKHR += codVal;
           if (ord.driverPaymentStatus === 'paid') {
             codPaidKHR += codVal;
@@ -1137,10 +1353,11 @@ export class DriverService {
 
       const dayItem = dailyMap.get(dateKey)!;
       dayItem.totalParcels++;
-      if (isDelivered) {
+      if (isDeliveredByMe) {
         dayItem.delivered++;
         dayItem.deliveryFee += feeVal;
-        if (ord.codCurrency === 'KHR') {
+        const cur = (ord.codCurrency || 'USD').toUpperCase();
+        if (cur === 'KHR') {
           dayItem.codKHR += codVal;
         } else {
           dayItem.codUSD += codVal;
@@ -1175,10 +1392,13 @@ export class DriverService {
           : null,
       },
       filter: {
-        period,
-        startDate: start ? start.toISOString() : null,
-        endDate: end ? end.toISOString() : null,
-        status: status || 'all',
+        period: opts.period || (opts.date ? 'custom' : 'today'),
+        date: opts.date || null,
+        startDate: opts.startDate || (start ? start.toISOString().split('T')[0] : null),
+        endDate: opts.endDate || (end ? end.toISOString().split('T')[0] : null),
+        status: opts.status || 'all',
+        driverPaymentStatus: opts.driverPaymentStatus || 'all',
+        currency: opts.currency || 'all',
       },
       summary: {
         totalParcels: totalAssigned,
@@ -1292,7 +1512,7 @@ export class DriverService {
           formatMerchantPickupRequest(reloaded),
           'pickup_request_picked_up',
         );
-      } catch (e) {}
+      } catch (e) { }
     }
     return saved;
   }
@@ -1538,7 +1758,7 @@ export class DriverService {
     // 1. Notify new driver (Driver 2) via real-time WebSocket
     try {
       this.trackingGateway?.notifyDriverNewTask(driverId, formatDriverTask(result.parcel, driverId));
-    } catch (e) {}
+    } catch (e) { }
 
     // 2. Notify previous driver (Driver 1) that parcel was reassigned
     if (isReassigned) {
@@ -1547,7 +1767,7 @@ export class DriverService {
           previousDriverId,
           formatDriverTask({ ...result.parcel, status: 'reassigned' }, previousDriverId),
         );
-      } catch (e) {}
+      } catch (e) { }
     }
 
     return result;
@@ -1760,7 +1980,26 @@ export class DriverService {
     });
     if (!driver) throw new NotFoundException('Driver not found');
 
-    const formattedDate = dateStr || new Date().toISOString().split('T')[0];
+    const { start, end } = parseDriverPeriodFilter(
+      opts.period,
+      opts.date,
+      opts.startDate,
+      opts.endDate,
+      opts.month,
+      opts.dateRange,
+    );
+
+    let formattedDate = opts.date || (start ? start.toISOString().split('T')[0] : '');
+    if (!formattedDate) {
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const day = String(now.getDate()).padStart(2, '0');
+      formattedDate = `${year}-${month}-${day}`;
+    }
+
+    const s = start || new Date(`${formattedDate}T00:00:00.000`);
+    const e = end || new Date(`${formattedDate}T23:59:59.999`);
 
     const query = this.parcelRepo
       .createQueryBuilder('parcel')
@@ -1784,19 +2023,39 @@ export class DriverService {
         { driverId },
       )
       .andWhere(
-        'DATE(COALESCE(parcel.delivered_at, parcel.assigned_at, parcel.updated_at, parcel.created_at)) = :formattedDate',
-        { formattedDate },
+        'COALESCE(parcel.delivered_at, parcel.assigned_at, parcel.updated_at, parcel.created_at) >= :s AND COALESCE(parcel.delivered_at, parcel.assigned_at, parcel.updated_at, parcel.created_at) <= :e',
+        { s, e },
       );
+
+    if (opts.status && opts.status !== 'all') {
+      query.andWhere('parcel.status = :status', { status: opts.status });
+    }
+
+    if (opts.driverPaymentStatus && opts.driverPaymentStatus !== 'all') {
+      query.andWhere('parcel.driver_payment_status = :dps', { dps: opts.driverPaymentStatus });
+    }
+
+    if (opts.currency && opts.currency !== 'all') {
+      query.andWhere("UPPER(COALESCE(parcel.cod_currency, 'USD')) = :cur", { cur: opts.currency.toUpperCase() });
+    }
 
     const parcels = await query.getMany();
 
-    const deliveredParcels = parcels.filter((p) => p.status === 'delivered');
+    const deliveredParcels = parcels.filter(
+      (p) =>
+        p.status === 'delivered' &&
+        (p.driverId === driverId || (!p.driverId && p.pickupDriverId === driverId)),
+    );
     const deliveredCount = deliveredParcels.length;
     const failedCount = parcels.filter(
-      (p) => p.status === 'failed' || (p.status as any) === 'problem',
+      (p) =>
+        (p.status === 'failed' || (p.status as any) === 'problem') &&
+        (p.driverId === driverId || (!p.driverId && p.pickupDriverId === driverId)),
     ).length;
     const returnedCount = parcels.filter(
-      (p) => p.status === 'returned' || (p.status as any) === 'rejected',
+      (p) =>
+        (p.status === 'returned' || (p.status as any) === 'rejected') &&
+        (p.driverId === driverId || (!p.driverId && p.pickupDriverId === driverId)),
     ).length;
     const totalParcels = parcels.length;
 
@@ -1809,7 +2068,8 @@ export class DriverService {
       const dFee = p.driverFee !== undefined && p.driverFee !== null ? parseFloat(p.driverFee as any) : 1000;
       totalDriverFee += dFee;
       const codVal = parseFloat(p.cod as any) || 0;
-      if (p.codCurrency === 'KHR') {
+      const cur = (p.codCurrency || 'USD').toUpperCase();
+      if (cur === 'KHR') {
         totalCodKhr += codVal;
       } else {
         totalCodUsd += codVal;
@@ -1854,13 +2114,22 @@ export class DriverService {
       receiverPhone: p.receiverPhone,
       receiverAddress: p.receiverAddress,
       cod: parseFloat(p.cod as any) || 0,
-      codCurrency: p.codCurrency || 'USD',
+      codCurrency: (p.codCurrency || 'USD').toUpperCase(),
       status: p.status,
-      driverFee: parseFloat((p.driverFee ?? 1000) as any),
+      driverFee: parseFloat((p.driverFee !== undefined && p.driverFee !== null ? p.driverFee : 1000) as any),
       deliveredAt: p.deliveredAt,
     }));
 
     return {
+      filter: {
+        date: opts.date || formattedDate,
+        period: opts.period || (opts.date ? 'custom' : 'today'),
+        startDate: opts.startDate || (start ? start.toISOString().split('T')[0] : formattedDate),
+        endDate: opts.endDate || (end ? end.toISOString().split('T')[0] : formattedDate),
+        status: opts.status || 'all',
+        driverPaymentStatus: opts.driverPaymentStatus || 'all',
+        currency: opts.currency || 'all',
+      },
       date: formattedDate,
       invoiceStatus: payment ? 'Completed' : (deliveredCount > 0 ? 'Completed' : 'Pending'),
       rider: {
@@ -1945,11 +2214,11 @@ export class DriverService {
         status: parcel.status,
         merchant: parcel.merchant
           ? {
-              id: parcel.merchant.id,
-              name: parcel.merchant.nameKh || parcel.merchant.name,
-              phone: parcel.merchant.phone,
-              photo: parcel.merchant.photo,
-            }
+            id: parcel.merchant.id,
+            name: parcel.merchant.nameKh || parcel.merchant.name,
+            phone: parcel.merchant.phone,
+            photo: parcel.merchant.photo,
+          }
           : null,
       },
       messages,

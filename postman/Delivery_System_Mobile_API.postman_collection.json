@@ -41,8 +41,16 @@
             },
             "url": {
               "raw": "{{base_url}}/api/mobile/auth/merchant/login",
-              "host": ["{{base_url}}"],
-              "path": ["api", "mobile", "auth", "merchant", "login"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "mobile",
+                "auth",
+                "merchant",
+                "login"
+              ]
             },
             "description": "Login as merchant with phone or email. Token will automatically be saved into {{merchant_token}} collection variable."
           }
@@ -79,8 +87,16 @@
             },
             "url": {
               "raw": "{{base_url}}/api/mobile/auth/driver/login",
-              "host": ["{{base_url}}"],
-              "path": ["api", "mobile", "auth", "driver", "login"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "mobile",
+                "auth",
+                "driver",
+                "login"
+              ]
             },
             "description": "Login as driver with driver code (e.g. DRV001), phone, or email. Token will automatically be saved into {{driver_token}} variable."
           }
@@ -101,8 +117,15 @@
             },
             "url": {
               "raw": "{{base_url}}/api/mobile/auth/refresh",
-              "host": ["{{base_url}}"],
-              "path": ["api", "mobile", "auth", "refresh"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "mobile",
+                "auth",
+                "refresh"
+              ]
             }
           }
         },
@@ -126,8 +149,15 @@
             },
             "url": {
               "raw": "{{base_url}}/api/mobile/auth/device-token",
-              "host": ["{{base_url}}"],
-              "path": ["api", "mobile", "auth", "device-token"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "mobile",
+                "auth",
+                "device-token"
+              ]
             }
           }
         },
@@ -143,8 +173,15 @@
             ],
             "url": {
               "raw": "{{base_url}}/api/mobile/auth/logout",
-              "host": ["{{base_url}}"],
-              "path": ["api", "mobile", "auth", "logout"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "mobile",
+                "auth",
+                "logout"
+              ]
             }
           }
         }
@@ -165,8 +202,15 @@
             ],
             "url": {
               "raw": "{{base_url}}/api/mobile/merchant/profile",
-              "host": ["{{base_url}}"],
-              "path": ["api", "mobile", "merchant", "profile"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "mobile",
+                "merchant",
+                "profile"
+              ]
             }
           }
         },
@@ -182,8 +226,15 @@
             ],
             "url": {
               "raw": "{{base_url}}/api/mobile/merchant/dashboard?date=2026-10-28&branchId=1",
-              "host": ["{{base_url}}"],
-              "path": ["api", "mobile", "merchant", "dashboard"],
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "mobile",
+                "merchant",
+                "dashboard"
+              ],
               "query": [
                 {
                   "key": "date",
@@ -230,8 +281,16 @@
             ],
             "url": {
               "raw": "{{base_url}}/api/mobile/merchant/deliveries/realtime?date=2026-10-28&branchId=1",
-              "host": ["{{base_url}}"],
-              "path": ["api", "mobile", "merchant", "deliveries", "realtime"],
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "mobile",
+                "merchant",
+                "deliveries",
+                "realtime"
+              ],
               "query": [
                 {
                   "key": "date",
@@ -262,8 +321,16 @@
             ],
             "url": {
               "raw": "{{base_url}}/api/mobile/merchant/pickup-requests/realtime?date=2026-10-28&branchId=1",
-              "host": ["{{base_url}}"],
-              "path": ["api", "mobile", "merchant", "pickup-requests", "realtime"],
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "mobile",
+                "merchant",
+                "pickup-requests",
+                "realtime"
+              ],
               "query": [
                 {
                   "key": "date",
@@ -290,8 +357,15 @@
             ],
             "url": {
               "raw": "{{base_url}}/api/mobile/merchant/settlements?status=all&page=1&limit=10&date=2026-10-28&branchId=1",
-              "host": ["{{base_url}}"],
-              "path": ["api", "mobile", "merchant", "settlements"],
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "mobile",
+                "merchant",
+                "settlements"
+              ],
               "query": [
                 {
                   "key": "status",
@@ -348,8 +422,16 @@
             ],
             "url": {
               "raw": "{{base_url}}/api/mobile/merchant/settlements/SETTLE-SHOP-879002",
-              "host": ["{{base_url}}"],
-              "path": ["api", "mobile", "merchant", "settlements", "SETTLE-SHOP-879002"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "mobile",
+                "merchant",
+                "settlements",
+                "SETTLE-SHOP-879002"
+              ]
             }
           }
         },
@@ -365,8 +447,16 @@
             ],
             "url": {
               "raw": "{{base_url}}/api/mobile/merchant/branches/select",
-              "host": ["{{base_url}}"],
-              "path": ["api", "mobile", "merchant", "branches", "select"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "mobile",
+                "merchant",
+                "branches",
+                "select"
+              ]
             },
             "description": "Returns lightweight branch list [{ id, name, nameKh, address }] with Bearer token authentication."
           }
@@ -383,8 +473,15 @@
             ],
             "url": {
               "raw": "{{base_url}}/api/mobile/merchant/zones",
-              "host": ["{{base_url}}"],
-              "path": ["api", "mobile", "merchant", "zones"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "mobile",
+                "merchant",
+                "zones"
+              ]
             }
           }
         },
@@ -400,8 +497,15 @@
             ],
             "url": {
               "raw": "{{base_url}}/api/mobile/merchant/parcels?status=in-transit&page=1&limit=20&search=08466595",
-              "host": ["{{base_url}}"],
-              "path": ["api", "mobile", "merchant", "parcels"],
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "mobile",
+                "merchant",
+                "parcels"
+              ],
               "query": [
                 {
                   "key": "status",
@@ -450,8 +554,15 @@
             },
             "url": {
               "raw": "{{base_url}}/api/mobile/merchant/parcels",
-              "host": ["{{base_url}}"],
-              "path": ["api", "mobile", "merchant", "parcels"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "mobile",
+                "merchant",
+                "parcels"
+              ]
             }
           }
         },
@@ -467,8 +578,16 @@
             ],
             "url": {
               "raw": "{{base_url}}/api/mobile/merchant/tracking/CO221020260075",
-              "host": ["{{base_url}}"],
-              "path": ["api", "mobile", "merchant", "tracking", "CO221020260075"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "mobile",
+                "merchant",
+                "tracking",
+                "CO221020260075"
+              ]
             }
           }
         },
@@ -492,8 +611,17 @@
             },
             "url": {
               "raw": "{{base_url}}/api/mobile/merchant/parcels/1/cancel",
-              "host": ["{{base_url}}"],
-              "path": ["api", "mobile", "merchant", "parcels", "1", "cancel"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "mobile",
+                "merchant",
+                "parcels",
+                "1",
+                "cancel"
+              ]
             }
           }
         },
@@ -509,8 +637,15 @@
             ],
             "url": {
               "raw": "{{base_url}}/api/mobile/merchant/pickup-requests?branchId=1",
-              "host": ["{{base_url}}"],
-              "path": ["api", "mobile", "merchant", "pickup-requests"],
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "mobile",
+                "merchant",
+                "pickup-requests"
+              ],
               "query": [
                 {
                   "key": "branchId",
@@ -550,8 +685,15 @@
             },
             "url": {
               "raw": "{{base_url}}/api/mobile/merchant/pickup-requests",
-              "host": ["{{base_url}}"],
-              "path": ["api", "mobile", "merchant", "pickup-requests"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "mobile",
+                "merchant",
+                "pickup-requests"
+              ]
             }
           }
         },
@@ -567,8 +709,15 @@
             ],
             "url": {
               "raw": "{{base_url}}/api/mobile/merchant/notifications?page=1&limit=20",
-              "host": ["{{base_url}}"],
-              "path": ["api", "mobile", "merchant", "notifications"],
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "mobile",
+                "merchant",
+                "notifications"
+              ],
               "query": [
                 {
                   "key": "page",
@@ -594,8 +743,16 @@
             ],
             "url": {
               "raw": "{{base_url}}/api/mobile/merchant/notifications/unread-count",
-              "host": ["{{base_url}}"],
-              "path": ["api", "mobile", "merchant", "notifications", "unread-count"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "mobile",
+                "merchant",
+                "notifications",
+                "unread-count"
+              ]
             }
           }
         }
@@ -616,8 +773,15 @@
             ],
             "url": {
               "raw": "{{base_url}}/api/mobile/driver/profile",
-              "host": ["{{base_url}}"],
-              "path": ["api", "mobile", "driver", "profile"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "mobile",
+                "driver",
+                "profile"
+              ]
             }
           }
         },
@@ -633,8 +797,15 @@
             ],
             "url": {
               "raw": "{{base_url}}/api/mobile/driver/dashboard?date=2026-10-28",
-              "host": ["{{base_url}}"],
-              "path": ["api", "mobile", "driver", "dashboard"],
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "mobile",
+                "driver",
+                "dashboard"
+              ],
               "query": [
                 {
                   "key": "date",
@@ -656,8 +827,15 @@
             ],
             "url": {
               "raw": "{{base_url}}/api/mobile/driver/tasks?status=in-transit&page=1&limit=20",
-              "host": ["{{base_url}}"],
-              "path": ["api", "mobile", "driver", "tasks"],
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "mobile",
+                "driver",
+                "tasks"
+              ],
               "query": [
                 {
                   "key": "status",
@@ -688,8 +866,16 @@
             ],
             "url": {
               "raw": "{{base_url}}/api/mobile/driver/tasks/status-counts",
-              "host": ["{{base_url}}"],
-              "path": ["api", "mobile", "driver", "tasks", "status-counts"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "mobile",
+                "driver",
+                "tasks",
+                "status-counts"
+              ]
             }
           }
         },
@@ -713,8 +899,17 @@
             },
             "url": {
               "raw": "{{base_url}}/api/mobile/driver/tasks/1/status",
-              "host": ["{{base_url}}"],
-              "path": ["api", "mobile", "driver", "tasks", "1", "status"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "mobile",
+                "driver",
+                "tasks",
+                "1",
+                "status"
+              ]
             }
           }
         },
@@ -738,8 +933,15 @@
             },
             "url": {
               "raw": "{{base_url}}/api/mobile/driver/scan",
-              "host": ["{{base_url}}"],
-              "path": ["api", "mobile", "driver", "scan"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "mobile",
+                "driver",
+                "scan"
+              ]
             }
           }
         },
@@ -763,8 +965,164 @@
             },
             "url": {
               "raw": "{{base_url}}/api/mobile/driver/scan/claim",
-              "host": ["{{base_url}}"],
-              "path": ["api", "mobile", "driver", "scan", "claim"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "mobile",
+                "driver",
+                "scan",
+                "claim"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Driver Settlement History",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{driver_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/driver/settlement-history?status=all&page=1&limit=20",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "driver",
+                "settlement-history"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "all",
+                  "description": "all | paid | pending | problem"
+                },
+                {
+                  "key": "period",
+                  "value": "today",
+                  "disabled": true
+                },
+                {
+                  "key": "date",
+                  "value": "2026-10-28",
+                  "disabled": true
+                },
+                {
+                  "key": "startDate",
+                  "value": "2026-10-01",
+                  "disabled": true
+                },
+                {
+                  "key": "endDate",
+                  "value": "2026-10-28",
+                  "disabled": true
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Get driver settlements history (All, Paid, Pending, Problem) matching mobile driver UI."
+          }
+        },
+        {
+          "name": "Get Driver Settlement Detail by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{driver_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/driver/settlements/ST8002",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "driver",
+                "settlements",
+                "ST8002"
+              ]
+            },
+            "description": "Get single settlement detail and included parcels by settlement ID (e.g. 2) or reference code (e.g. ST8002)."
+          }
+        },
+        {
+          "name": "Create Driver Settlement Request",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{driver_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 77000,\n  \"currency\": \"KHR\",\n  \"parcelIds\": [101, 102],\n  \"note\": \"Daily cash handover settlement request\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/driver/settlements",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "driver",
+                "settlements"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Report Driver Settlement Problem",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{driver_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"COD cash discrepancy\",\n  \"note\": \"Customer cash collected 75,000 KHR instead of 77,000 KHR\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/driver/settlements/ST8002/problem",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "driver",
+                "settlements",
+                "ST8002",
+                "problem"
+              ]
             }
           }
         },
@@ -780,8 +1138,16 @@
             ],
             "url": {
               "raw": "{{base_url}}/api/mobile/driver/invoices/daily?date=2026-10-28",
-              "host": ["{{base_url}}"],
-              "path": ["api", "mobile", "driver", "invoices", "daily"],
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "mobile",
+                "driver",
+                "invoices",
+                "daily"
+              ],
               "query": [
                 {
                   "key": "date",
@@ -803,8 +1169,15 @@
             ],
             "url": {
               "raw": "{{base_url}}/api/mobile/driver/pickup-requests?status=assigned",
-              "host": ["{{base_url}}"],
-              "path": ["api", "mobile", "driver", "pickup-requests"],
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "mobile",
+                "driver",
+                "pickup-requests"
+              ],
               "query": [
                 {
                   "key": "status",
@@ -834,8 +1207,17 @@
             },
             "url": {
               "raw": "{{base_url}}/api/mobile/driver/pickup-requests/1/pickup",
-              "host": ["{{base_url}}"],
-              "path": ["api", "mobile", "driver", "pickup-requests", "1", "pickup"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "mobile",
+                "driver",
+                "pickup-requests",
+                "1",
+                "pickup"
+              ]
             }
           }
         }
@@ -850,8 +1232,14 @@
             "method": "GET",
             "url": {
               "raw": "{{base_url}}/api/select/branches",
-              "host": ["{{base_url}}"],
-              "path": ["api", "select", "branches"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "select",
+                "branches"
+              ]
             }
           }
         },
@@ -861,8 +1249,14 @@
             "method": "GET",
             "url": {
               "raw": "{{base_url}}/api/select/merchants?branchId=1",
-              "host": ["{{base_url}}"],
-              "path": ["api", "select", "merchants"],
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "select",
+                "merchants"
+              ],
               "query": [
                 {
                   "key": "branchId",
@@ -878,8 +1272,14 @@
             "method": "GET",
             "url": {
               "raw": "{{base_url}}/api/select/drivers?branchId=1",
-              "host": ["{{base_url}}"],
-              "path": ["api", "select", "drivers"],
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "select",
+                "drivers"
+              ],
               "query": [
                 {
                   "key": "branchId",
@@ -920,4 +1320,3 @@
     }
   ]
 }
-

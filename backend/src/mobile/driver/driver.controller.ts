@@ -33,13 +33,16 @@ import {
   BatchScanParcelsDto,
   BatchClaimParcelsDto,
   BatchUpdateParcelStatusDto,
+  DriverSettlementFilterDto,
+  CreateDriverSettlementRequestDto,
+  ReportSettlementProblemDto,
 } from './dto/driver-mobile.dto';
 
 @ApiTags('Mobile Driver')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles('driver')
-@Controller('mobile/driver')
+@Controller(['mobile/driver'])
 export class DriverController {
   constructor(private readonly driverService: DriverService) { }
 
@@ -716,7 +719,7 @@ export class DriverController {
     });
   }
 
-  @Get(['summary', 'dashboard/summary'])
+  @Get(['summary'])
   @ApiOperation({
     summary:
       'Get overall driver performance and money summary with timeframe filters',
@@ -974,8 +977,123 @@ export class DriverController {
   ) {
     return this.driverService.confirmPickup(req.user.id, id, dto);
   }
+  @Get(['settlement-history'])
+  @ApiOperation({
+    summary:
+      'Get driver settlement history with filters (All, Paid, Pending, Problem, Date range)',
+  })
+  @ApiQuery({
+    name: 'status',
+    required: false,
+    enum: ['all', 'paid', 'pending', 'problem'],
+    description: 'Filter settlements by status: all, paid, pending, problem',
+    example: 'all',
+  })
+  @ApiQuery({
+    name: 'date',
+    required: false,
+    type: String,
+    description: 'Filter settlements by exact date (YYYY-MM-DD)',
+    example: '2026-10-15',
+  })
+  @ApiQuery({
+    name: 'startDate',
+    required: false,
+    type: String,
+    description: 'Filter settlements range start date (YYYY-MM-DD)',
+    example: '2026-10-01',
+  })
+  @ApiQuery({
+    name: 'endDate',
+    required: false,
+    type: String,
+    description: 'Filter settlements range end date (YYYY-MM-DD)',
+    example: '2026-10-15',
+  })
+  @ApiQuery({
+    name: 'month',
+    required: false,
+    type: String,
+    description: 'Filter settlements by month (YYYY-MM)',
+    example: '2026-10',
+  })
+  @ApiQuery({
+    name: 'period',
+    required: false,
+    enum: ['today', 'yesterday', 'week', 'month', 'year', 'all', 'custom'],
+    description: 'Timeframe period preset',
+  })
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    type: Number,
+    description: 'Page number for pagination',
+    example: 1,
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    type: Number,
+    description: 'Number of records per page',
+    example: 20,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Driver settlement history matching mobile UI',
+    schema: {
+      example: {
+        status: true,
+        message: 'Successfully',
+        data: [
+          {
+            id: 2,
+            reference: 'ST8002',
+            date: '2026-10-13',
+            formattedDate: 'Oct 13, 2026',
+            status: 'Paid',
+            orderCount: 1,
+            ordersText: '1 Orders',
+            subtitle: 'ST8002 • 1 Orders',
+            usdAmount: 0.0,
+            khrAmount: 77000,
+            usdText: 'USD 0.00',
+            khrText: 'KHR 77,000',
+          },
+        ],
+        summary: {
+          allCount: 4,
+          paidCount: 3,
+          pendingCount: 1,
+          problemCount: 0,
+        },
+      },
+    },
+  })
+  getSettlements(
+    @Request() req: any,
+    @Query() query: DriverSettlementFilterDto,
+  ) {
+    return this.driverService.getSettlements(req.user.id, query);
+  }
 
-  @Get('invoices/daily')
+  @Get(['settlements/:id'])
+  @ApiOperation({
+    summary: 'Get single settlement detail by ID or reference code',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'Settlement record ID (e.g. 2) or reference (e.g. ST8002)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Detailed settlement record with list of orders/parcels included',
+  })
+  getSettlementById(@Request() req: any, @Param('id') id: string) {
+    return this.driverService.getSettlementById(req.user.id, id);
+  }
+
+
+  @Get(['invoices/daily'])
   @ApiOperation({ summary: 'Get daily delivery invoice for rider with filters' })
   @ApiQuery({
     name: 'date',

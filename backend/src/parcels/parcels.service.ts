@@ -5,7 +5,7 @@ import {
   Optional,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Like, ILike, Between, MoreThanOrEqual, LessThanOrEqual, In } from 'typeorm';
+import { Repository, DataSource, EntityManager } from 'typeorm';
 import { Parcel } from './entities/parcel.entity';
 import { ParcelEvent } from './entities/parcel-event.entity';
 import { PickupRequest } from './entities/pickup-request.entity';
@@ -23,34 +23,109 @@ import { PaginatedResult } from '../interface/pagination.interface';
 import { FirebaseService } from '../firebase/firebase.service';
 import { TrackingGateway } from '../tracking/tracking.gateway';
 import { formatDriverTask } from '../mobile/driver/utils/task-formatter.util';
-import { formatMerchantDelivery, formatMerchantPickupRequest } from '../mobile/merchant/utils/delivery-formatter.util';
+import {
+  formatMerchantDelivery,
+  formatMerchantPickupRequest,
+} from '../mobile/merchant/utils/delivery-formatter.util';
 
 @Injectable()
 export class ParcelsService {
+  private static readonly NON_SETTLED_STATUSES = [
+    'pending',
+    'in-warehouse',
+    'assigned',
+    'picked-up',
+    'in-transit',
+  ];
+
   constructor(
     @InjectRepository(Parcel) private readonly repo: Repository<Parcel>,
-    @InjectRepository(ParcelEvent) private readonly eventRepo: Repository<ParcelEvent>,
-    @InjectRepository(PickupRequest) private readonly pickupRequestRepo: Repository<PickupRequest>,
+    @InjectRepository(ParcelEvent)
+    private readonly eventRepo: Repository<ParcelEvent>,
+    @InjectRepository(PickupRequest)
+    private readonly pickupRequestRepo: Repository<PickupRequest>,
     @InjectRepository(Zone) private readonly zoneRepo: Repository<Zone>,
     @InjectRepository(User) private readonly userRepo: Repository<User>,
+    private readonly dataSource: DataSource,
     private readonly firebaseService: FirebaseService,
     @Optional() private readonly trackingGateway?: TrackingGateway,
-  ) { }
+  ) {}
 
+  // ============================================================================
+  // INTERNAL HELPERS
+  // ============================================================================
 
-
-  private async addEvent(parcelId: number, status: string, note?: string) {
+  private async addEvent(
+    parcelId: number,
+    status: string,
+    note?: string,
+    manager?: EntityManager,
+  ) {
     try {
-      const event = this.eventRepo.create({
+      const targetRepo = manager
+        ? manager.getRepository(ParcelEvent)
+        : this.eventRepo;
+      const event = targetRepo.create({
         parcelId,
         status,
         note,
       });
-      await this.eventRepo.save(event);
+      await targetRepo.save(event);
     } catch (err) {
-      console.error(`Failed to add event for parcel #${parcelId} and status ${status}`, err);
+      console.error(
+        `Failed to add event for parcel #${parcelId} and status ${status}`,
+        err,
+      );
     }
   }
+
+  /**
+   * ការពារមិនឱ្យកែ Status កញ្ចប់ឥវ៉ាន់ដែលទូទាត់លុយរួច (paid) ត្រឡប់ថយក្រោយ
+   */
+  private assertNotSettledBeforeRevert(parcel: Parcel, targetStatus?: string) {
+    const isSettled =
+      parcel.merchantPaymentStatus === 'paid' ||
+      parcel.driverPaymentStatus === 'paid';
+
+    if (
+      isSettled &&
+      targetStatus &&
+      ParcelsService.NON_SETTLED_STATUSES.includes(targetStatus)
+    ) {
+      throw new BadRequestException(
+        `Cannot revert status of parcel #${parcel.trackingCode} to "${targetStatus}" because it has already been settled in payments.`,
+      );
+    }
+  }
+
+  private parseFlexibleDate(dateStr?: string | Date | null): Date | null {
+    if (!dateStr) return null;
+    if (dateStr instanceof Date)
+      return isNaN(dateStr.getTime()) ? null : dateStr;
+    const str = String(dateStr).trim();
+    const ddmmyyyy = str.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/);
+    if (ddmmyyyy) {
+      const day = parseInt(ddmmyyyy[1], 10);
+      const month = parseInt(ddmmyyyy[2], 10) - 1;
+      const year = parseInt(ddmmyyyy[3], 10);
+      const d = new Date(year, month, day);
+      return isNaN(d.getTime()) ? null : d;
+    }
+    const yyyymmdd = str.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
+    if (yyyymmdd) {
+      const year = parseInt(yyyymmdd[1], 10);
+      const month = parseInt(yyyymmdd[2], 10) - 1;
+      const day = parseInt(yyyymmdd[3], 10);
+      const d = new Date(year, month, day);
+      return isNaN(d.getTime()) ? null : d;
+    }
+    const d = new Date(str);
+    return isNaN(d.getTime()) ? null : d;
+  }
+
+  // ============================================================================
+  // QUERY & LOOKUP METHODS
+  // ============================================================================
 
   async findAll(query?: {
     page?: number;
@@ -98,41 +173,23 @@ export class ParcelsService {
       qb.andWhere('parcel.driverId = :driverId', { driverId: query.driverId });
     }
     if (query?.merchantId) {
-      qb.andWhere('parcel.merchantId = :merchantId', { merchantId: query.merchantId });
+      qb.andWhere('parcel.merchantId = :merchantId', {
+        merchantId: query.merchantId,
+      });
     }
     if (query?.driverPaymentStatus) {
-      qb.andWhere('parcel.driverPaymentStatus = :driverPaymentStatus', { driverPaymentStatus: query.driverPaymentStatus });
+      qb.andWhere('parcel.driverPaymentStatus = :driverPaymentStatus', {
+        driverPaymentStatus: query.driverPaymentStatus,
+      });
     }
     if (query?.merchantPaymentStatus) {
-      qb.andWhere('parcel.merchantPaymentStatus = :merchantPaymentStatus', { merchantPaymentStatus: query.merchantPaymentStatus });
+      qb.andWhere('parcel.merchantPaymentStatus = :merchantPaymentStatus', {
+        merchantPaymentStatus: query.merchantPaymentStatus,
+      });
     }
 
-    const parseFlexibleDate = (dateStr?: string | Date | null): Date | null => {
-      if (!dateStr) return null;
-      if (dateStr instanceof Date) return isNaN(dateStr.getTime()) ? null : dateStr;
-      const str = String(dateStr).trim();
-      const ddmmyyyy = str.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/);
-      if (ddmmyyyy) {
-        const day = parseInt(ddmmyyyy[1], 10);
-        const month = parseInt(ddmmyyyy[2], 10) - 1;
-        const year = parseInt(ddmmyyyy[3], 10);
-        const d = new Date(year, month, day);
-        return isNaN(d.getTime()) ? null : d;
-      }
-      const yyyymmdd = str.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
-      if (yyyymmdd) {
-        const year = parseInt(yyyymmdd[1], 10);
-        const month = parseInt(yyyymmdd[2], 10) - 1;
-        const day = parseInt(yyyymmdd[3], 10);
-        const d = new Date(year, month, day);
-        return isNaN(d.getTime()) ? null : d;
-      }
-      const d = new Date(str);
-      return isNaN(d.getTime()) ? null : d;
-    };
-
-    const start = parseFlexibleDate(query?.startDate);
-    const end = parseFlexibleDate(query?.endDate);
+    const start = this.parseFlexibleDate(query?.startDate);
+    const end = this.parseFlexibleDate(query?.endDate);
 
     if (start && end) {
       start.setHours(0, 0, 0, 0);
@@ -176,8 +233,13 @@ export class ParcelsService {
     };
   }
 
-  async findOne(id: number, tenantId?: number): Promise<Parcel> {
-    const qb = this.repo
+  async findOne(
+    id: number,
+    tenantId?: number,
+    manager?: EntityManager,
+  ): Promise<Parcel> {
+    const targetRepo = manager ? manager.getRepository(Parcel) : this.repo;
+    const qb = targetRepo
       .createQueryBuilder('parcel')
       .leftJoinAndSelect('parcel.merchant', 'merchant')
       .leftJoinAndSelect('parcel.branch', 'branch')
@@ -193,12 +255,14 @@ export class ParcelsService {
     }
 
     const item = await qb.getOne();
-
     if (!item) throw new NotFoundException(`Parcel #${id} not found`);
     return item;
   }
 
-  async findByTracking(codeOrPhone: string, tenantId?: number): Promise<Parcel> {
+  async findByTracking(
+    codeOrPhone: string,
+    tenantId?: number,
+  ): Promise<Parcel> {
     const term = codeOrPhone.trim();
     const qb = this.repo
       .createQueryBuilder('parcel')
@@ -219,11 +283,11 @@ export class ParcelsService {
     }
 
     const item = await qb.orderBy('parcel.createdAt', 'DESC').getOne();
-
-    if (!item)
+    if (!item) {
       throw new NotFoundException(
         `Parcel with tracking or phone ${codeOrPhone} not found`,
       );
+    }
     return item;
   }
 
@@ -244,7 +308,6 @@ export class ParcelsService {
     return qb.orderBy('parcel.createdAt', 'DESC').getMany();
   }
 
-  /** Pending parcels with no driver assigned (used by Assign Delivery page for direct flow) */
   async findUnassigned(tenantId?: number): Promise<Parcel[]> {
     const qb = this.repo
       .createQueryBuilder('parcel')
@@ -261,7 +324,6 @@ export class ParcelsService {
     return qb.getMany();
   }
 
-  /** Parcels waiting to be finalized / completed in box (បញ្ចប់ប្រអប់) */
   async findCompleteBox(params?: {
     tenantId?: number;
     search?: string;
@@ -277,7 +339,14 @@ export class ParcelsService {
       .leftJoinAndSelect('parcel.customer', 'customer')
       .leftJoinAndSelect('parcel.zone', 'zone')
       .where('parcel.status IN (:...statuses)', {
-        statuses: ['pending', 'in-warehouse', 'assigned', 'picked-up', 'in-transit', 'failed'],
+        statuses: [
+          'pending',
+          'in-warehouse',
+          'assigned',
+          'picked-up',
+          'in-transit',
+          'failed',
+        ],
       })
       .orderBy('parcel.id', 'DESC');
 
@@ -291,11 +360,14 @@ export class ParcelsService {
       qb.andWhere('parcel.status = :status', { status: params.status });
     }
     if (params?.date) {
-      const start = new Date(params.date);
-      start.setHours(0, 0, 0, 0);
-      const end = new Date(params.date);
-      end.setHours(23, 59, 59, 999);
-      qb.andWhere('parcel.createdAt BETWEEN :start AND :end', { start, end });
+      const parsedDate = this.parseFlexibleDate(params.date);
+      if (parsedDate) {
+        const start = new Date(parsedDate);
+        start.setHours(0, 0, 0, 0);
+        const end = new Date(parsedDate);
+        end.setHours(23, 59, 59, 999);
+        qb.andWhere('parcel.createdAt BETWEEN :start AND :end', { start, end });
+      }
     }
     if (params?.search) {
       const term = `%${params.search.trim()}%`;
@@ -307,7 +379,6 @@ export class ParcelsService {
     return qb.getMany();
   }
 
-  /** Dedicated endpoint for invoice printing list */
   async findPrintInvoices(query: {
     page?: number;
     limit?: number;
@@ -322,56 +393,10 @@ export class ParcelsService {
   }) {
     return this.findAll({
       ...query,
-      limit: query.limit !== undefined ? query.limit : (query.ids ? 1000 : 50),
+      limit: query.limit !== undefined ? query.limit : query.ids ? 1000 : 50,
     });
   }
 
-  /** Batch create parcels for entry_data_item */
-  async batchCreate(dtos: CreateParcelDto[], tenantId?: number, createdById?: number): Promise<Parcel[]> {
-    const created: Parcel[] = [];
-    for (const dto of dtos) {
-      if (tenantId) dto.tenantId = tenantId;
-      if (createdById) dto.createdById = createdById;
-      const parcel = await this.create(dto);
-      created.push(parcel);
-    }
-    return created;
-  }
-
-  /** Batch assign delivery driver */
-  async assignDeliveryBatch(dto: { parcelIds: number[]; driverId: number }, tenantId?: number): Promise<Parcel[]> {
-    const results: Parcel[] = [];
-    for (const id of dto.parcelIds) {
-      const updated = await this.assignDelivery(id, { driverId: dto.driverId }, tenantId);
-      results.push(updated);
-    }
-    return results;
-  }
-
-  /** Batch update complete box */
-  async completeBoxBatchUpdate(
-    items: Array<{ id: number; status: string; paymentMethod?: string; paymentStatus?: string; note?: string; reason?: string; deliveredAt?: string }>,
-    tenantId?: number,
-    updatedById?: number,
-  ): Promise<Parcel[]> {
-    const results: Parcel[] = [];
-    for (const item of items) {
-      const updated = await this.update(item.id, {
-        status: item.status,
-        paymentMethod: item.paymentMethod,
-        paymentStatus: item.paymentStatus,
-        note: item.note,
-        reason: item.reason,
-        deliveredAt: item.deliveredAt as any,
-        updatedById,
-      }, tenantId);
-      results.push(updated);
-    }
-    return results;
-  }
-
-
-  /** Pending parcels waiting for a pickup driver (via-warehouse flow) */
   async findPendingForPickup(tenantId?: number): Promise<Parcel[]> {
     const qb = this.repo
       .createQueryBuilder('parcel')
@@ -388,7 +413,6 @@ export class ParcelsService {
     return qb.getMany();
   }
 
-  /** Parcels that have arrived at the warehouse, waiting for delivery assignment (includes already-assigned for reassignment) */
   async findInWarehouse(tenantId?: number): Promise<Parcel[]> {
     const qb = this.repo
       .createQueryBuilder('parcel')
@@ -408,6 +432,10 @@ export class ParcelsService {
     return qb.getMany();
   }
 
+  // ============================================================================
+  // TRACKING CODE & PARCEL CREATION / UPDATES
+  // ============================================================================
+
   async generateNextTrackingCode(): Promise<string> {
     const today = new Date();
     const day = String(today.getDate()).padStart(2, '0');
@@ -416,69 +444,117 @@ export class ParcelsService {
     const datePrefix = `CO${day}${month}${year}`;
 
     try {
-      const result = await this.repo.query("SELECT nextval('tracking_code_seq') as nextval");
+      const result = await this.repo.query(
+        "SELECT nextval('tracking_code_seq') as nextval",
+      );
       const nextval = parseInt(result[0].nextval, 10);
-      const seq = String(nextval % 100000).padStart(4, '0');
+      const seq = String(nextval % 100000).padStart(5, '0');
       return `${datePrefix}${seq}`;
-    } catch (err) {
+    } catch {
       try {
-        await this.repo.query("CREATE SEQUENCE IF NOT EXISTS tracking_code_seq START WITH 1");
-      } catch { }
-      const rand = String(Math.floor(1000 + Math.random() * 9000));
-      return `${datePrefix}${rand}`;
+        await this.repo.query(
+          'CREATE SEQUENCE IF NOT EXISTS tracking_code_seq START WITH 1',
+        );
+        const retryResult = await this.repo.query(
+          "SELECT nextval('tracking_code_seq') as nextval",
+        );
+        const nextval = parseInt(retryResult[0].nextval, 10);
+        const seq = String(nextval % 100000).padStart(5, '0');
+        return `${datePrefix}${seq}`;
+      } catch {
+        const rand = String(Math.floor(10000 + Math.random() * 90000));
+        return `${datePrefix}${rand}`;
+      }
     }
   }
 
-  async create(dto: CreateParcelDto): Promise<Parcel> {
+  async create(dto: CreateParcelDto, tenantId?: number): Promise<Parcel> {
+    const effectiveTenantId: number | undefined =
+      tenantId ?? dto.tenantId ?? undefined;
+    if (effectiveTenantId) {
+      dto.tenantId = effectiveTenantId;
+    }
+
     if (!dto.trackingCode) {
       dto.trackingCode = await this.generateNextTrackingCode();
     }
     if (dto.weight === undefined || dto.weight === null) dto.weight = 0;
-    if (!dto.receiverName || /^[-—–]{1,3}$/.test(dto.receiverName.trim())) dto.receiverName = '';
+    if (!dto.receiverName || /^[-—–]{1,3}$/.test(dto.receiverName.trim())) {
+      dto.receiverName = '';
+    }
     if (!dto.size) dto.size = 'small';
     if (dto.cod === undefined || dto.cod === null) dto.cod = 0;
-    if (dto.deliveryFee === undefined || dto.deliveryFee === null || Number(dto.deliveryFee) === 0) {
+
+    if (
+      dto.deliveryFee === undefined ||
+      dto.deliveryFee === null ||
+      Number(dto.deliveryFee) === 0
+    ) {
       if (dto.zoneId) {
-        const zone = await this.zoneRepo.findOne({ where: { id: dto.zoneId } });
+        const zoneWhere: Record<string, any> = { id: dto.zoneId };
+        if (effectiveTenantId) zoneWhere.tenantId = effectiveTenantId;
+        const zone = await this.zoneRepo.findOne({ where: zoneWhere });
         dto.deliveryFee = zone && zone.price ? Number(zone.price) : 0;
       } else {
         dto.deliveryFee = 0;
       }
     }
+
     if (dto.driverFee === undefined || dto.driverFee === null) {
       if (dto.driverId) {
-        const driver = await this.userRepo.findOne({ where: { id: dto.driverId } });
+        const driverWhere: Record<string, any> = { id: dto.driverId };
+        if (effectiveTenantId) driverWhere.tenantId = effectiveTenantId;
+        const driver = await this.userRepo.findOne({ where: driverWhere });
         dto.driverFee = driver?.driverFee ? Number(driver.driverFee) : 1000;
       } else {
         dto.driverFee = 1000;
       }
     }
-    const parcel = this.repo.create(dto as any) as any as Parcel;
+
+    const parcel = this.repo.create(dto as any) as unknown as Parcel;
     if (parcel.status === 'picked-up' && !parcel.pickedUpAt) {
       parcel.pickedUpAt = new Date();
     }
     if (dto.createdAt) {
       parcel.createdAt = new Date(dto.createdAt);
     }
-    const savedParcel = await this.repo.save(parcel) as any as Parcel;
+
+    const savedParcel = (await this.repo.save(parcel)) as unknown as Parcel;
     await this.addEvent(savedParcel.id, savedParcel.status, savedParcel.note);
-    return this.findOne(savedParcel.id);
+    return this.findOne(savedParcel.id, effectiveTenantId);
   }
 
-  async update(id: number, dto: UpdateParcelDto, tenantId?: number): Promise<Parcel> {
+  async update(
+    id: number,
+    dto: UpdateParcelDto,
+    tenantId?: number,
+  ): Promise<Parcel> {
     const parcel = await this.findOne(id, tenantId);
+    const effectiveTenantId: number | undefined =
+      tenantId ?? parcel.tenantId ?? undefined;
     const updates: any = { ...dto };
 
     if (dto.driverId !== undefined) {
       if (dto.driverId) {
         if (updates.driverFee === undefined || updates.driverFee === null) {
-          const driver = await this.userRepo.findOne({ where: { id: dto.driverId } });
+          const driverWhere: Record<string, any> = { id: dto.driverId };
+          if (effectiveTenantId) driverWhere.tenantId = effectiveTenantId;
+          const driver = await this.userRepo.findOne({ where: driverWhere });
           if (driver?.driverFee) {
             updates.driverFee = Number(driver.driverFee);
           }
         }
-        if (updates.status === undefined || updates.status === 'pending' || updates.status === 'in-warehouse' || updates.status === 'failed') {
-          if (parcel.status === 'pending' || parcel.status === 'in-warehouse' || parcel.status === 'failed') {
+        if (
+          updates.status === undefined ||
+          updates.status === 'pending' ||
+          updates.status === 'in-warehouse' ||
+          updates.status === 'failed'
+        ) {
+          if (
+            parcel.status === 'pending' ||
+            parcel.status === 'in-warehouse' ||
+            parcel.status === 'failed'
+          ) {
             updates.status = 'assigned';
             updates.assignedAt = new Date();
           }
@@ -495,7 +571,13 @@ export class ParcelsService {
 
     const finalStatus = updates.status || dto.status;
 
-    if (finalStatus && ['pending', 'in-warehouse', 'assigned', 'picked-up', 'in-transit'].includes(finalStatus)) {
+    // 1. ការពារមិនឱ្យកែ Status កញ្ចប់ឥវ៉ាន់ដែលទូទាត់ប្រាក់រួច (paid) ត្រឡប់ទៅ unpaid វិញ
+    this.assertNotSettledBeforeRevert(parcel, finalStatus);
+
+    if (
+      finalStatus &&
+      ParcelsService.NON_SETTLED_STATUSES.includes(finalStatus)
+    ) {
       updates.driverPaymentStatus = 'unpaid';
       updates.merchantPaymentStatus = 'unpaid';
       updates.paymentMethod = null as any;
@@ -520,7 +602,11 @@ export class ParcelsService {
         updates.paymentStatus = 'paid';
       }
     }
-    if (finalStatus === 'failed' || finalStatus === 'returned' || finalStatus === 'cancelled') {
+    if (
+      finalStatus === 'failed' ||
+      finalStatus === 'returned' ||
+      finalStatus === 'cancelled'
+    ) {
       if (dto.paymentMethod !== undefined) {
         updates.paymentMethod = dto.paymentMethod;
       }
@@ -539,10 +625,16 @@ export class ParcelsService {
       if (!updates.note) updates.note = updates.reason;
       delete updates.reason;
     }
-    await this.repo.update(id, updates);
+
+    await this.repo.update(parcel.id, updates);
+
     if (finalStatus && (finalStatus !== parcel.status || updates.note)) {
-      const historyNote = updates.note || dto.note || (updates.status === 'assigned' ? 'Driver assigned' : undefined);
-      await this.addEvent(id, finalStatus, historyNote);
+      const historyNote =
+        updates.note ||
+        dto.note ||
+        (updates.status === 'assigned' ? 'Driver assigned' : undefined);
+      await this.addEvent(parcel.id, finalStatus, historyNote);
+
       if (finalStatus !== parcel.status && parcel.merchantId) {
         try {
           const notifInfo = this.getStatusNotificationText(
@@ -559,33 +651,66 @@ export class ParcelsService {
               trackingCode: parcel.trackingCode,
               status: finalStatus,
             },
-            tenantId: parcel.tenantId,
+            tenantId: effectiveTenantId,
           });
-        } catch (e) {}
+        } catch {
+          // Non-blocking notification
+        }
       }
     }
-    const updatedParcel = await this.findOne(id);
-    if (dto.driverId && (!parcel.driverId || parcel.driverId !== dto.driverId)) {
+
+    const updatedParcel = await this.findOne(parcel.id, effectiveTenantId);
+
+    if (
+      dto.driverId &&
+      (!parcel.driverId || parcel.driverId !== dto.driverId)
+    ) {
       try {
-        this.trackingGateway?.notifyDriverNewTask(dto.driverId, formatDriverTask(updatedParcel, dto.driverId));
-      } catch (e) {}
-    } else if (updatedParcel.driverId && finalStatus && finalStatus !== parcel.status) {
+        this.trackingGateway?.notifyDriverNewTask(
+          dto.driverId,
+          formatDriverTask(updatedParcel, dto.driverId),
+        );
+      } catch {}
+    } else if (
+      updatedParcel.driverId &&
+      finalStatus &&
+      finalStatus !== parcel.status
+    ) {
       try {
-        this.trackingGateway?.notifyDriverTaskUpdated(updatedParcel.driverId, formatDriverTask(updatedParcel, updatedParcel.driverId));
-      } catch (e) {}
+        this.trackingGateway?.notifyDriverTaskUpdated(
+          updatedParcel.driverId,
+          formatDriverTask(updatedParcel, updatedParcel.driverId),
+        );
+      } catch {}
     }
+
     if (finalStatus === 'delivered' && updatedParcel.merchantId) {
       try {
-        this.trackingGateway?.notifyMerchantDelivery(updatedParcel.merchantId, formatMerchantDelivery(updatedParcel));
-      } catch (e) {}
+        this.trackingGateway?.notifyMerchantDelivery(
+          updatedParcel.merchantId,
+          formatMerchantDelivery(updatedParcel),
+        );
+      } catch {}
     }
+
     return updatedParcel;
   }
 
-  async updateStatus(id: number, dto: UpdateParcelStatusDto, tenantId?: number): Promise<Parcel> {
+  async updateStatus(
+    id: number,
+    dto: UpdateParcelStatusDto,
+    tenantId?: number,
+  ): Promise<Parcel> {
     const parcel = await this.findOne(id, tenantId);
+    const effectiveTenantId: number | undefined =
+      tenantId ?? parcel.tenantId ?? undefined;
+
+    // 1. ការពារមិនឱ្យកែ Status កញ្ចប់ឥវ៉ាន់ដែលទូទាត់ប្រាក់រួច (paid) ត្រឡប់ទៅ unpaid វិញ
+    this.assertNotSettledBeforeRevert(parcel, dto.status);
+
     const finalNote = dto.remark !== undefined ? dto.remark : dto.note;
     const updates: Partial<Parcel> = { status: dto.status as any };
+
     if (dto.status === 'picked-up') updates.pickedUpAt = new Date();
     if (dto.status === 'in-warehouse') updates.warehouseAt = new Date();
     if (dto.status === 'delivered') {
@@ -594,21 +719,24 @@ export class ParcelsService {
     }
     if (dto.paymentMethod) updates.paymentMethod = dto.paymentMethod;
     if (dto.paymentStatus) updates.paymentStatus = dto.paymentStatus as any;
-    if (dto.proofPhotos && dto.proofPhotos.length > 0) updates.proofPhotos = dto.proofPhotos;
+    if (dto.proofPhotos && dto.proofPhotos.length > 0)
+      updates.proofPhotos = dto.proofPhotos;
     if (dto.signatureUrl) updates.signatureUrl = dto.signatureUrl;
-    if (dto.failedPhoto || dto.photo) updates.failedPhoto = dto.failedPhoto || dto.photo;
+    if (dto.failedPhoto || dto.photo)
+      updates.failedPhoto = dto.failedPhoto || dto.photo;
     if (dto.returnPhoto) updates.returnPhoto = dto.returnPhoto;
     if (finalNote !== undefined) updates.note = finalNote;
 
-    if (['pending', 'in-warehouse', 'assigned', 'picked-up', 'in-transit'].includes(dto.status)) {
+    if (ParcelsService.NON_SETTLED_STATUSES.includes(dto.status)) {
       updates.driverPaymentStatus = 'unpaid';
       updates.merchantPaymentStatus = 'unpaid';
       updates.paymentMethod = null as any;
     }
 
-    await this.repo.update(id, updates);
+    await this.repo.update(parcel.id, updates);
+
     if (dto.status !== parcel.status || finalNote) {
-      await this.addEvent(id, dto.status, finalNote);
+      await this.addEvent(parcel.id, dto.status, finalNote);
     }
 
     if (dto.status !== parcel.status && parcel.merchantId) {
@@ -627,56 +755,153 @@ export class ParcelsService {
             trackingCode: parcel.trackingCode,
             status: dto.status,
           },
-          tenantId: parcel.tenantId,
+          tenantId: effectiveTenantId,
         });
-      } catch (e) {
-        // Continue silently
+      } catch {
+        // Non-blocking notification
       }
     }
 
-    const updatedParcel = await this.findOne(id);
+    const updatedParcel = await this.findOne(parcel.id, effectiveTenantId);
+
     if (updatedParcel.driverId) {
       try {
-        this.trackingGateway?.notifyDriverTaskUpdated(updatedParcel.driverId, formatDriverTask(updatedParcel, updatedParcel.driverId));
-      } catch (e) {}
+        this.trackingGateway?.notifyDriverTaskUpdated(
+          updatedParcel.driverId,
+          formatDriverTask(updatedParcel, updatedParcel.driverId),
+        );
+      } catch {}
     }
-    if (updatedParcel.pickupDriverId && updatedParcel.pickupDriverId !== updatedParcel.driverId) {
+    if (
+      updatedParcel.pickupDriverId &&
+      updatedParcel.pickupDriverId !== updatedParcel.driverId
+    ) {
       try {
-        this.trackingGateway?.notifyDriverTaskUpdated(updatedParcel.pickupDriverId, formatDriverTask(updatedParcel, updatedParcel.pickupDriverId));
-      } catch (e) {}
+        this.trackingGateway?.notifyDriverTaskUpdated(
+          updatedParcel.pickupDriverId,
+          formatDriverTask(updatedParcel, updatedParcel.pickupDriverId),
+        );
+      } catch {}
     }
     if (dto.status === 'delivered' && updatedParcel.merchantId) {
       try {
-        this.trackingGateway?.notifyMerchantDelivery(updatedParcel.merchantId, formatMerchantDelivery(updatedParcel));
-      } catch (e) {}
+        this.trackingGateway?.notifyMerchantDelivery(
+          updatedParcel.merchantId,
+          formatMerchantDelivery(updatedParcel),
+        );
+      } catch {}
     }
 
     return updatedParcel;
   }
 
+  // ============================================================================
+  // BATCH OPERATIONS
+  // ============================================================================
+
+  async batchCreate(
+    dtos: CreateParcelDto[],
+    tenantId?: number,
+    createdById?: number,
+  ): Promise<Parcel[]> {
+    const created: Parcel[] = [];
+    for (const dto of dtos) {
+      if (tenantId) dto.tenantId = tenantId;
+      if (createdById) dto.createdById = createdById;
+      const parcel = await this.create(dto, tenantId);
+      created.push(parcel);
+    }
+    return created;
+  }
+
+  async assignDeliveryBatch(
+    dto: { parcelIds: number[]; driverId: number },
+    tenantId?: number,
+  ): Promise<Parcel[]> {
+    const results: Parcel[] = [];
+    for (const id of dto.parcelIds) {
+      const updated = await this.assignDelivery(
+        id,
+        { driverId: dto.driverId },
+        tenantId,
+      );
+      results.push(updated);
+    }
+    return results;
+  }
+
+  async completeBoxBatchUpdate(
+    items: Array<{
+      id: number;
+      status: string;
+      paymentMethod?: string;
+      paymentStatus?: string;
+      note?: string;
+      reason?: string;
+      deliveredAt?: string;
+    }>,
+    tenantId?: number,
+    updatedById?: number,
+  ): Promise<Parcel[]> {
+    const results: Parcel[] = [];
+    for (const item of items) {
+      const updated = await this.update(
+        item.id,
+        {
+          status: item.status,
+          paymentMethod: item.paymentMethod,
+          paymentStatus: item.paymentStatus,
+          note: item.note,
+          reason: item.reason,
+          deliveredAt: item.deliveredAt as any,
+          updatedById,
+        },
+        tenantId,
+      );
+      results.push(updated);
+    }
+    return results;
+  }
+
+  // ============================================================================
+  // DRIVER ASSIGNMENT FLOWS
+  // ============================================================================
+
   /**
    * Flow 1 — Direct Delivery:
    * pending → assign driver → picked-up
    */
-  async assignDriver(id: number, dto: AssignDriverDto, tenantId?: number): Promise<Parcel> {
+  async assignDriver(
+    id: number,
+    dto: AssignDriverDto,
+    tenantId?: number,
+  ): Promise<Parcel> {
     const parcel = await this.findOne(id, tenantId);
     if (parcel.status !== 'pending') {
       throw new BadRequestException(
         'Direct delivery can only be assigned to pending parcels',
       );
     }
-    let directFee: number | undefined;
-    const directDriver = await this.userRepo.findOne({ where: { id: dto.driverId } });
-    if (directDriver?.driverFee) {
-      directFee = Number(directDriver.driverFee);
-    }
-    await this.repo.update(id, {
+
+    const effectiveTenantId: number | undefined =
+      tenantId ?? parcel.tenantId ?? undefined;
+    const driverWhere: Record<string, any> = { id: dto.driverId };
+    if (effectiveTenantId) driverWhere.tenantId = effectiveTenantId;
+
+    const directDriver = await this.userRepo.findOne({ where: driverWhere });
+    if (!directDriver) throw new NotFoundException('Driver not found');
+
+    const directFee = directDriver.driverFee
+      ? Number(directDriver.driverFee)
+      : undefined;
+
+    await this.repo.update(parcel.id, {
       driverId: dto.driverId,
-      ...(directFee ? { driverFee: directFee } : {}),
+      ...(directFee !== undefined ? { driverFee: directFee } : {}),
       status: 'picked-up',
       pickedUpAt: new Date(),
     });
-    await this.addEvent(id, 'picked-up');
+    await this.addEvent(parcel.id, 'picked-up');
 
     try {
       await this.firebaseService.sendToDriver(dto.driverId, {
@@ -684,11 +909,9 @@ export class ParcelsService {
         body: `អ្នកទទួលបានកញ្ចប់ទំនិញ #${parcel.trackingCode}`,
         type: 'task_assigned',
         data: { parcelId: parcel.id, trackingCode: parcel.trackingCode },
-        tenantId: parcel.tenantId,
+        tenantId: effectiveTenantId,
       });
-    } catch (e) {
-      // Continue
-    }
+    } catch {}
 
     if (parcel.merchantId) {
       try {
@@ -696,35 +919,55 @@ export class ParcelsService {
           title: 'បានចាត់តាំងអ្នកដឹកជញ្ជូន',
           body: `កញ្ចប់ទំនិញ #${parcel.trackingCode} ត្រូវបានចាត់តាំងអ្នកដឹកជញ្ជូន`,
           type: 'driver_assigned',
-          data: { parcelId: parcel.id, trackingCode: parcel.trackingCode, driverId: dto.driverId },
-          tenantId: parcel.tenantId,
+          data: {
+            parcelId: parcel.id,
+            trackingCode: parcel.trackingCode,
+            driverId: dto.driverId,
+          },
+          tenantId: effectiveTenantId,
         });
-      } catch (e) {}
+      } catch {}
     }
 
-    const result = await this.findOne(id);
+    const result = await this.findOne(parcel.id, effectiveTenantId);
     try {
-      this.trackingGateway?.notifyDriverNewTask(dto.driverId, formatDriverTask(result, dto.driverId));
-    } catch (e) {}
+      this.trackingGateway?.notifyDriverNewTask(
+        dto.driverId,
+        formatDriverTask(result, dto.driverId),
+      );
+    } catch {}
 
     return result;
   }
 
   /**
    * Flow 2 — Step 1 (Via Warehouse):
-   * pending → assign pickup driver → in-warehouse
+   * pending → assign pickup driver
    */
-  async assignPickup(id: number, dto: AssignPickupDto, tenantId?: number): Promise<Parcel> {
+  async assignPickup(
+    id: number,
+    dto: AssignPickupDto,
+    tenantId?: number,
+  ): Promise<Parcel> {
     const parcel = await this.findOne(id, tenantId);
     if (parcel.status !== 'pending') {
       throw new BadRequestException(
         'Pickup can only be assigned to pending parcels',
       );
     }
-    await this.repo.update(id, {
+
+    const effectiveTenantId: number | undefined =
+      tenantId ?? parcel.tenantId ?? undefined;
+    const driverWhere: Record<string, any> = { id: dto.driverId };
+    if (effectiveTenantId) driverWhere.tenantId = effectiveTenantId;
+
+    const pickupDriver = await this.userRepo.findOne({ where: driverWhere });
+    if (!pickupDriver) throw new NotFoundException('Pickup driver not found');
+
+    await this.repo.update(parcel.id, {
       pickupDriverId: dto.driverId,
     });
-    await this.addEvent(id, 'pending', 'Pickup driver assigned');
+    await this.addEvent(parcel.id, 'pending', 'Pickup driver assigned');
 
     try {
       await this.firebaseService.sendToDriver(dto.driverId, {
@@ -732,25 +975,30 @@ export class ParcelsService {
         body: `អ្នកត្រូវបានចាត់តាំងទៅទទួលកញ្ចប់ទំនិញ #${parcel.trackingCode}`,
         type: 'pickup_assigned',
         data: { parcelId: parcel.id, trackingCode: parcel.trackingCode },
-        tenantId: parcel.tenantId,
+        tenantId: effectiveTenantId,
       });
-    } catch (e) {
-      // Continue
-    }
+    } catch {}
 
-    const result = await this.findOne(id);
+    const result = await this.findOne(parcel.id, effectiveTenantId);
     try {
-      this.trackingGateway?.notifyDriverNewTask(dto.driverId, formatDriverTask(result, dto.driverId));
-    } catch (e) {}
+      this.trackingGateway?.notifyDriverNewTask(
+        dto.driverId,
+        formatDriverTask(result, dto.driverId),
+      );
+    } catch {}
 
     return result;
   }
 
   /**
    * Flow 2 — Step 2 (Via Warehouse) OR direct from office:
-   * in-warehouse | pending → assign delivery driver → assigned
+   * in-warehouse | pending | assigned | failed → assign delivery driver → assigned
    */
-  async assignDelivery(id: number, dto: AssignDeliveryDto, tenantId?: number): Promise<Parcel> {
+  async assignDelivery(
+    id: number,
+    dto: AssignDeliveryDto,
+    tenantId?: number,
+  ): Promise<Parcel> {
     const parcel = await this.findOne(id, tenantId);
     if (
       parcel.status !== 'in-warehouse' &&
@@ -762,31 +1010,49 @@ export class ParcelsService {
         'Delivery can only be assigned to pending, in-warehouse, already-assigned, or failed parcels',
       );
     }
-    const isReassign = (parcel.status === 'assigned' || parcel.status === 'failed') && parcel.driverId !== dto.driverId;
-    let assignedFee: number | undefined;
-    const deliveryDriver = await this.userRepo.findOne({ where: { id: dto.driverId } });
-    if (deliveryDriver?.driverFee) {
-      assignedFee = Number(deliveryDriver.driverFee);
-    }
-    await this.repo.update(id, {
+
+    this.assertNotSettledBeforeRevert(parcel, 'assigned');
+
+    const effectiveTenantId: number | undefined =
+      tenantId ?? parcel.tenantId ?? undefined;
+    const driverWhere: Record<string, any> = { id: dto.driverId };
+    if (effectiveTenantId) driverWhere.tenantId = effectiveTenantId;
+
+    const deliveryDriver = await this.userRepo.findOne({ where: driverWhere });
+    if (!deliveryDriver)
+      throw new NotFoundException('Delivery driver not found');
+
+    const isReassign =
+      (parcel.status === 'assigned' || parcel.status === 'failed') &&
+      parcel.driverId !== dto.driverId;
+
+    const assignedFee = deliveryDriver.driverFee
+      ? Number(deliveryDriver.driverFee)
+      : undefined;
+
+    await this.repo.update(parcel.id, {
       driverId: dto.driverId,
-      ...(assignedFee ? { driverFee: assignedFee } : {}),
+      ...(assignedFee !== undefined ? { driverFee: assignedFee } : {}),
       status: 'assigned',
       assignedAt: new Date(),
     });
-    await this.addEvent(id, 'assigned', isReassign ? `Reassigned to driver #${dto.driverId}` : undefined);
+    await this.addEvent(
+      parcel.id,
+      'assigned',
+      isReassign ? `Reassigned to driver #${dto.driverId}` : undefined,
+    );
 
     try {
       await this.firebaseService.sendToDriver(dto.driverId, {
-        title: isReassign ? 'កញ្ចប់ទំនិញត្រូវបានផ្ទេរមកអ្នក' : 'បានចាត់តាំងកញ្ចប់ទំនិញថ្មី',
+        title: isReassign
+          ? 'កញ្ចប់ទំនិញត្រូវបានផ្ទេរមកអ្នក'
+          : 'បានចាត់តាំងកញ្ចប់ទំនិញថ្មី',
         body: `អ្នកទទួលបានកញ្ចប់ទំនិញ #${parcel.trackingCode}`,
         type: 'task_assigned',
         data: { parcelId: parcel.id, trackingCode: parcel.trackingCode },
-        tenantId: parcel.tenantId,
+        tenantId: effectiveTenantId,
       });
-    } catch (e) {
-      // Continue
-    }
+    } catch {}
 
     if (parcel.merchantId) {
       try {
@@ -794,88 +1060,155 @@ export class ParcelsService {
           title: 'បានចាត់តាំងអ្នកដឹកជញ្ជូន',
           body: `កញ្ចប់ទំនិញ #${parcel.trackingCode} ត្រូវបានចាត់តាំងអ្នកដឹកជញ្ជូន`,
           type: 'driver_assigned',
-          data: { parcelId: parcel.id, trackingCode: parcel.trackingCode, driverId: dto.driverId },
-          tenantId: parcel.tenantId,
+          data: {
+            parcelId: parcel.id,
+            trackingCode: parcel.trackingCode,
+            driverId: dto.driverId,
+          },
+          tenantId: effectiveTenantId,
         });
-      } catch (e) {}
+      } catch {}
     }
 
-    const result = await this.findOne(id);
+    const result = await this.findOne(parcel.id, effectiveTenantId);
     try {
-      this.trackingGateway?.notifyDriverNewTask(dto.driverId, formatDriverTask(result, dto.driverId));
-    } catch (e) {}
+      this.trackingGateway?.notifyDriverNewTask(
+        dto.driverId,
+        formatDriverTask(result, dto.driverId),
+      );
+    } catch {}
 
     return result;
   }
 
   async remove(id: number, tenantId?: number): Promise<{ message: string }> {
-    await this.findOne(id, tenantId);
-    await this.repo.delete(id);
+    const parcel = await this.findOne(id, tenantId);
+    if (
+      parcel.merchantPaymentStatus === 'paid' ||
+      parcel.driverPaymentStatus === 'paid'
+    ) {
+      throw new BadRequestException(
+        `Cannot delete parcel #${parcel.trackingCode} because it has already been settled in payments.`,
+      );
+    }
+    await this.repo.delete(parcel.id);
     return { message: 'Parcel deleted successfully' };
   }
 
-  async getStats(tenantId?: number) {
-    const tenantWhere: any = tenantId ? { tenantId } : {};
-    const total = await this.repo.count({ where: tenantWhere });
-    const pending = await this.repo.count({ where: { ...tenantWhere, status: 'pending' } });
-    const inWarehouse = await this.repo.count({ where: { ...tenantWhere, status: 'in-warehouse' } });
-    const assigned = await this.repo.count({ where: { ...tenantWhere, status: 'assigned' } });
-    const pickedUp = await this.repo.count({ where: { ...tenantWhere, status: 'picked-up' } });
-    const inTransit = await this.repo.count({
-      where: { ...tenantWhere, status: 'in-transit' },
-    });
-    const delivered = await this.repo.count({ where: { ...tenantWhere, status: 'delivered' } });
-    const failed = await this.repo.count({ where: { ...tenantWhere, status: 'failed' } });
-    const returned = await this.repo.count({ where: { ...tenantWhere, status: 'returned' } });
+  // ============================================================================
+  // DASHBOARD STATS (SINGLE QUERY OPTIMIZATION)
+  // ============================================================================
 
-    const revQb = this.repo
+  async getStats(tenantId?: number) {
+    const qb = this.repo
       .createQueryBuilder('parcel')
-      .select('SUM(parcel.deliveryFee)', 'total')
-      .where("parcel.status = 'delivered'");
-    if (tenantId) revQb.andWhere('parcel.tenantId = :tenantId', { tenantId });
-    const revenue = await revQb.getRawOne();
+      .select([
+        'COUNT(*)::int AS "total"',
+        'COUNT(*) FILTER (WHERE parcel.status = \'pending\')::int AS "pending"',
+        'COUNT(*) FILTER (WHERE parcel.status = \'in-warehouse\')::int AS "inWarehouse"',
+        'COUNT(*) FILTER (WHERE parcel.status = \'assigned\')::int AS "assigned"',
+        'COUNT(*) FILTER (WHERE parcel.status = \'picked-up\')::int AS "pickedUp"',
+        'COUNT(*) FILTER (WHERE parcel.status = \'in-transit\')::int AS "inTransit"',
+        'COUNT(*) FILTER (WHERE parcel.status = \'delivered\')::int AS "delivered"',
+        'COUNT(*) FILTER (WHERE parcel.status = \'failed\')::int AS "failed"',
+        'COUNT(*) FILTER (WHERE parcel.status = \'returned\')::int AS "returned"',
+        'COALESCE(SUM(CASE WHEN parcel.status = \'delivered\' THEN parcel.deliveryFee ELSE 0 END), 0) AS "revenue"',
+      ]);
+
+    if (tenantId) {
+      qb.where('parcel.tenantId = :tenantId', { tenantId });
+    }
+
+    const raw = await qb.getRawOne();
 
     return {
-      total,
-      pending,
-      inWarehouse,
-      assigned,
-      pickedUp,
-      inTransit,
-      delivered,
-      failed,
-      returned,
-      revenue: parseFloat(revenue?.total || '0'),
+      total: Number(raw?.total || 0),
+      pending: Number(raw?.pending || 0),
+      inWarehouse: Number(raw?.inWarehouse || 0),
+      assigned: Number(raw?.assigned || 0),
+      pickedUp: Number(raw?.pickedUp || 0),
+      inTransit: Number(raw?.inTransit || 0),
+      delivered: Number(raw?.delivered || 0),
+      failed: Number(raw?.failed || 0),
+      returned: Number(raw?.returned || 0),
+      revenue: parseFloat(raw?.revenue || '0'),
     };
   }
 
-  async findAllPickupRequests(query?: { status?: string; merchantId?: number; tenantId?: number }) {
-    const where: any = {};
+  // ============================================================================
+  // PICKUP REQUESTS (WITH TENANT ISOLATION & ATOMIC TRANSACTIONS)
+  // ============================================================================
+
+  async findAllPickupRequests(query?: {
+    status?: string;
+    merchantId?: number;
+    tenantId?: number;
+  }) {
+    const where: Record<string, any> = {};
     if (query?.status) where.status = query.status;
     if (query?.merchantId) where.merchantId = query.merchantId;
     if (query?.tenantId) where.tenantId = query.tenantId;
+
     return this.pickupRequestRepo.find({
       where,
-      relations: { merchant: true, pickupDriver: true, parcels: true, branch: true },
+      relations: {
+        merchant: true,
+        pickupDriver: true,
+        parcels: true,
+        branch: true,
+      },
       order: { createdAt: 'DESC' },
     });
   }
 
-  async findPickupRequestById(id: number) {
-    const request = await this.pickupRequestRepo.findOne({
-      where: { id },
-      relations: { merchant: true, pickupDriver: true, parcels: true, branch: true },
+  async findPickupRequestById(
+    id: number,
+    tenantId?: number,
+    manager?: EntityManager,
+  ) {
+    const targetRepo = manager
+      ? manager.getRepository(PickupRequest)
+      : this.pickupRequestRepo;
+
+    const where: Record<string, any> = { id };
+    if (tenantId) where.tenantId = tenantId;
+
+    const request = await targetRepo.findOne({
+      where,
+      relations: {
+        merchant: true,
+        pickupDriver: true,
+        parcels: true,
+        branch: true,
+      },
     });
-    if (!request) throw new NotFoundException(`Pickup request #${id} not found`);
+    if (!request)
+      throw new NotFoundException(`Pickup request #${id} not found`);
     return request;
   }
 
-  async assignPickupDriverToRequest(id: number, pickupDriverId: number) {
-    const request = await this.findPickupRequestById(id);
+  async assignPickupDriverToRequest(
+    id: number,
+    pickupDriverId: number,
+    tenantId?: number,
+  ) {
+    const request = await this.findPickupRequestById(id, tenantId);
+    const effectiveTenantId: number | undefined =
+      tenantId ??
+      (request as any).tenantId ??
+      request.merchant?.tenantId ??
+      undefined;
+
+    const driverWhere: Record<string, any> = { id: pickupDriverId };
+    if (effectiveTenantId) driverWhere.tenantId = effectiveTenantId;
+    const driver = await this.userRepo.findOne({ where: driverWhere });
+    if (!driver) throw new NotFoundException('Pickup driver not found');
+
     request.pickupDriverId = pickupDriverId;
     request.status = 'assigned' as any;
     await this.pickupRequestRepo.save(request);
-    const reloaded = await this.findPickupRequestById(id);
+
+    const reloaded = await this.findPickupRequestById(id, effectiveTenantId);
     if (reloaded.merchantId) {
       try {
         this.trackingGateway?.notifyMerchantPickupRequest(
@@ -883,84 +1216,168 @@ export class ParcelsService {
           formatMerchantPickupRequest(reloaded),
           'pickup_request_assigned',
         );
-      } catch (e) {}
+      } catch {}
     }
     return reloaded;
   }
 
-  async createParcelForRequest(id: number, dto: CreateParcelDto) {
-    const request = await this.findPickupRequestById(id);
+  async createParcelForRequest(
+    id: number,
+    dto: CreateParcelDto,
+    tenantId?: number,
+  ) {
+    const trackingCode =
+      dto.trackingCode || (await this.generateNextTrackingCode());
 
-    const existingCount = await this.repo.count({ where: { pickupRequestId: id } });
-    if (existingCount >= request.declaredQuantity) {
-      throw new BadRequestException(
-        `Cannot add more parcels. Pickup request #${id} already has ${existingCount} parcel(s) registered, which reached the declared quantity of ${request.declaredQuantity}.`,
-      );
-    }
+    return this.dataSource.transaction(async (manager) => {
+      // Lock pickup request row to prevent concurrent over-registration
+      const reqQb = manager
+        .createQueryBuilder(PickupRequest, 'req')
+        .setLock('pessimistic_write')
+        .where('req.id = :id', { id });
 
-    let resolvedDeliveryFee = dto.deliveryFee;
-    if (resolvedDeliveryFee === undefined || resolvedDeliveryFee === null || Number(resolvedDeliveryFee) === 0) {
-      if (request.merchant?.deliveryFee && Number(request.merchant.deliveryFee) > 0) {
-        resolvedDeliveryFee = request.merchant.deliveryFee;
-      } else if (dto.zoneId) {
-        const zone = await this.repo.manager.findOne(Zone, { where: { id: dto.zoneId } });
-        resolvedDeliveryFee = zone ? Number(zone.price) : 0;
-      } else {
-        resolvedDeliveryFee = 0;
+      if (tenantId) {
+        reqQb.andWhere('req.tenantId = :tenantId', { tenantId });
       }
-    }
 
-    const trackingCode = await this.generateNextTrackingCode();
+      const lockedReq = await reqQb.getOne();
+      if (!lockedReq)
+        throw new NotFoundException(`Pickup request #${id} not found`);
 
-    const parcel = this.repo.create({
-      ...dto,
-      merchantId: request.merchantId,
-      branchId: dto.branchId || request.branchId || undefined,
-      pickupRequestId: id,
-      pickupDriverId: request.pickupDriverId || undefined,
-      status: 'in-warehouse',
-      warehouseAt: new Date(),
-      deliveryFee: resolvedDeliveryFee,
-      trackingCode,
-    } as any);
+      const request = await this.findPickupRequestById(id, tenantId, manager);
+      const effectiveTenantId: number | undefined =
+        tenantId ??
+        (request as any).tenantId ??
+        request.merchant?.tenantId ??
+        dto.tenantId ??
+        undefined;
 
-    const savedParcel = await this.repo.save(parcel as unknown as Parcel);
-    await this.addEvent(savedParcel.id, 'in-warehouse', 'Inbound from pickup request');
+      const targetQty =
+        request.actualQuantity !== null && request.actualQuantity !== undefined
+          ? Number(request.actualQuantity)
+          : Number(request.declaredQuantity);
 
-    const count = await this.repo.count({ where: { pickupRequestId: id } });
-    const targetQty = request.actualQuantity !== null && request.actualQuantity !== undefined
-      ? request.actualQuantity
-      : request.declaredQuantity;
+      const existingCount = await manager.count(Parcel, {
+        where: { pickupRequestId: id },
+      });
 
-    if (count >= targetQty && request.status !== 'completed') {
-      request.status = 'completed';
-      await this.pickupRequestRepo.save(request);
-    }
+      if (existingCount >= targetQty) {
+        throw new BadRequestException(
+          `Cannot add more parcels. Pickup request #${id} already has ${existingCount}/${targetQty} parcel(s) registered.`,
+        );
+      }
 
-    return this.findOne(savedParcel.id);
+      let resolvedDeliveryFee = dto.deliveryFee;
+      if (
+        resolvedDeliveryFee === undefined ||
+        resolvedDeliveryFee === null ||
+        Number(resolvedDeliveryFee) === 0
+      ) {
+        if (
+          request.merchant?.deliveryFee &&
+          Number(request.merchant.deliveryFee) > 0
+        ) {
+          resolvedDeliveryFee = Number(request.merchant.deliveryFee);
+        } else if (dto.zoneId) {
+          const zoneWhere: Record<string, any> = { id: dto.zoneId };
+          if (effectiveTenantId) zoneWhere.tenantId = effectiveTenantId;
+          const zone = await manager.findOne(Zone, { where: zoneWhere });
+          resolvedDeliveryFee = zone ? Number(zone.price) : 0;
+        } else {
+          resolvedDeliveryFee = 0;
+        }
+      }
+
+      const parcelEntity = manager.create(Parcel, {
+        ...dto,
+        merchantId: request.merchantId,
+        branchId: dto.branchId || request.branchId || undefined,
+        pickupRequestId: id,
+        pickupDriverId: request.pickupDriverId || undefined,
+        status: 'in-warehouse',
+        warehouseAt: new Date(),
+        deliveryFee: resolvedDeliveryFee,
+        trackingCode,
+        tenantId: effectiveTenantId,
+      } as any);
+
+      const savedParcel = (await manager.save(
+        Parcel,
+        parcelEntity,
+      )) as unknown as Parcel;
+      await this.addEvent(
+        savedParcel.id,
+        'in-warehouse',
+        'Inbound from pickup request',
+        manager,
+      );
+
+      const newCount = existingCount + 1;
+      if (newCount >= targetQty && request.status !== 'completed') {
+        await manager.update(PickupRequest, id, { status: 'completed' as any });
+      }
+
+      return this.findOne(savedParcel.id, effectiveTenantId, manager);
+    });
   }
 
-  async deleteParcelFromRequest(id: number, parcelId: number) {
-    const parcel = await this.findOne(parcelId);
-    if (parcel.pickupRequestId !== id) {
-      throw new BadRequestException(`Parcel #${parcelId} is not linked to pickup request #${id}`);
-    }
-    await this.repo.remove(parcel);
+  async deleteParcelFromRequest(
+    id: number,
+    parcelId: number,
+    tenantId?: number,
+  ) {
+    return this.dataSource.transaction(async (manager) => {
+      const request = await this.findPickupRequestById(id, tenantId, manager);
+      const effectiveTenantId: number | undefined =
+        tenantId ??
+        (request as any).tenantId ??
+        request.merchant?.tenantId ??
+        undefined;
 
-    const request = await this.findPickupRequestById(id);
-    const count = await this.repo.count({ where: { pickupRequestId: id } });
-    const targetQty = request.actualQuantity !== null && request.actualQuantity !== undefined
-      ? request.actualQuantity
-      : request.declaredQuantity;
+      const parcel = await this.findOne(parcelId, effectiveTenantId, manager);
+      if (parcel.pickupRequestId !== id) {
+        throw new BadRequestException(
+          `Parcel #${parcelId} is not linked to pickup request #${id}`,
+        );
+      }
 
-    if (count < targetQty && request.status === 'completed') {
-      request.status = 'picked-up';
-      await this.pickupRequestRepo.save(request);
-    }
-    return { success: true };
+      if (
+        parcel.merchantPaymentStatus === 'paid' ||
+        parcel.driverPaymentStatus === 'paid'
+      ) {
+        throw new BadRequestException(
+          `Cannot delete parcel #${parcel.trackingCode} because it has already been settled in payments.`,
+        );
+      }
+
+      await manager.remove(Parcel, parcel);
+
+      const remainingCount = await manager.count(Parcel, {
+        where: { pickupRequestId: id },
+      });
+
+      const targetQty =
+        request.actualQuantity !== null && request.actualQuantity !== undefined
+          ? Number(request.actualQuantity)
+          : Number(request.declaredQuantity);
+
+      if (remainingCount < targetQty && request.status === 'completed') {
+        await manager.update(PickupRequest, id, { status: 'picked-up' as any });
+      }
+
+      return { success: true };
+    });
   }
 
-  private getStatusNotificationText(status: string, trackingCode: string, note?: string) {
+  // ============================================================================
+  // NOTIFICATION TEXT BUILDER
+  // ============================================================================
+
+  private getStatusNotificationText(
+    status: string,
+    trackingCode: string,
+    note?: string,
+  ) {
     switch (status) {
       case 'picked-up':
         return {

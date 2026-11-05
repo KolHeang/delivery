@@ -128,11 +128,11 @@ export class ReportsService {
       .addSelect('0', 'qrDriverUSD')
       .addSelect('0', 'qrDriverKHR')
       .addSelect(
-        "SUM(CASE WHEN parcel.codCurrency = 'USD' THEN parcel.cod ELSE 0 END)",
+        "SUM(CASE WHEN parcel.status = 'delivered' AND UPPER(COALESCE(parcel.codCurrency, 'USD')) = 'USD' THEN parcel.cod ELSE 0 END)",
         'codUSD',
       )
       .addSelect(
-        "SUM(CASE WHEN parcel.codCurrency = 'KHR' THEN parcel.cod ELSE 0 END)",
+        "SUM(CASE WHEN parcel.status = 'delivered' AND UPPER(COALESCE(parcel.codCurrency, 'USD')) = 'KHR' THEN parcel.cod ELSE 0 END)",
         'codKHR',
       )
       .addSelect('SUM(parcel.deliveryFee)', 'fee')
@@ -225,11 +225,11 @@ export class ReportsService {
         'returned',
       )
       .addSelect(
-        "SUM(CASE WHEN parcel.codCurrency = 'USD' THEN parcel.cod ELSE 0 END)",
+        "SUM(CASE WHEN parcel.status = 'delivered' AND UPPER(COALESCE(parcel.codCurrency, 'USD')) = 'USD' THEN parcel.cod ELSE 0 END)",
         'codUSD',
       )
       .addSelect(
-        "SUM(CASE WHEN parcel.codCurrency = 'KHR' THEN parcel.cod ELSE 0 END)",
+        "SUM(CASE WHEN parcel.status = 'delivered' AND UPPER(COALESCE(parcel.codCurrency, 'USD')) = 'KHR' THEN parcel.cod ELSE 0 END)",
         'codKHR',
       )
       .addSelect('SUM(parcel.deliveryFee)', 'fee')

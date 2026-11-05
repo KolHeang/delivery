@@ -473,6 +473,27 @@ export class MerchantController {
     return this.merchantService.createParcel(req.user.id, dto);
   }
 
+  @Post(['parcels/batch', 'parcels/multiple'])
+  @ApiOperation({ summary: 'Create multiple parcels in batch' })
+  @ApiResponse({
+    status: 201,
+    description: 'Parcels created in batch successfully',
+  })
+  createBatchParcels(@Request() req: any, @Body() body: any) {
+    const list = Array.isArray(body) ? body : (body?.parcels || []);
+    return this.merchantService.createBatchParcels(req.user.id, list);
+  }
+
+  @Get(['summary', 'dashboard/summary'])
+  @ApiOperation({ summary: 'Get merchant overview summary' })
+  @ApiResponse({
+    status: 200,
+    description: 'Merchant overview summary data',
+  })
+  getSummary(@Request() req: any) {
+    return this.merchantService.getSummary(req.user.id);
+  }
+
   @Get('dashboard')
   @ApiOperation({ summary: 'Get merchant dashboard data' })
   @ApiQuery({

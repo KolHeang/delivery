@@ -1092,6 +1092,42 @@ export class DriverController {
     return this.driverService.getSettlementById(req.user.id, id);
   }
 
+  @Post('settlements')
+  @ApiOperation({ summary: 'Submit driver settlement / payout request' })
+  @ApiResponse({
+    status: 201,
+    description: 'Settlement request submitted successfully',
+  })
+  createSettlementRequest(
+    @Request() req: any,
+    @Body() dto: CreateDriverSettlementRequestDto,
+  ) {
+    return this.driverService.createSettlementRequest(req.user.id, dto);
+  }
+
+  @Post(['settlements/:id/problem', 'payments/:id/problem'])
+  @ApiOperation({ summary: 'Report a problem or discrepancy on a settlement' })
+  @ApiParam({
+    name: 'id',
+    description: 'Settlement ID or reference code (e.g. ST8002)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Settlement marked as problem successfully',
+  })
+  reportSettlementProblem(
+    @Request() req: any,
+    @Param('id') id: string,
+    @Body() dto: ReportSettlementProblemDto,
+  ) {
+    return this.driverService.reportSettlementProblem(
+      req.user.id,
+      id,
+      dto.reason,
+      dto.note,
+    );
+  }
+
 
   @Get(['invoices/daily'])
   @ApiOperation({ summary: 'Get daily delivery invoice for rider with filters' })

@@ -590,6 +590,84 @@ export class MerchantController {
     });
   }
 
+  @Get(['report', 'reports'])
+  @ApiOperation({
+    summary:
+      'Get comprehensive merchant performance, financial COD, and delivery reports',
+  })
+  @ApiQuery({
+    name: 'period',
+    required: false,
+    enum: ['today', 'yesterday', 'week', 'month', 'year', 'all', 'custom'],
+    description: 'Reporting period preset',
+    example: 'month',
+  })
+  @ApiQuery({
+    name: 'date',
+    required: false,
+    type: String,
+    description: 'Specific date (YYYY-MM-DD)',
+    example: '2026-10-28',
+  })
+  @ApiQuery({
+    name: 'startDate',
+    required: false,
+    type: String,
+    description: 'Filter start date (YYYY-MM-DD)',
+    example: '2026-10-01',
+  })
+  @ApiQuery({
+    name: 'endDate',
+    required: false,
+    type: String,
+    description: 'Filter end date (YYYY-MM-DD)',
+    example: '2026-10-31',
+  })
+  @ApiQuery({
+    name: 'branchId',
+    required: false,
+    type: Number,
+    description: 'Filter report by branch ID',
+  })
+  @ApiQuery({
+    name: 'status',
+    required: false,
+    type: String,
+    enum: ['delivered', 'failed', 'returned', 'in-transit', 'all'],
+    description: 'Filter by delivery status',
+  })
+  @ApiQuery({
+    name: 'currency',
+    required: false,
+    type: String,
+    enum: ['USD', 'KHR', 'all'],
+    description: 'Filter by COD currency',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Detailed report with summary, daily breakdown, by branch, and recent orders',
+  })
+  getReport(
+    @Request() req: any,
+    @Query('period') period?: string,
+    @Query('date') date?: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+    @Query('branchId') branchId?: string,
+    @Query('status') status?: string,
+    @Query('currency') currency?: string,
+  ) {
+    return this.merchantService.getReport(req.user.id, {
+      period,
+      date,
+      startDate,
+      endDate,
+      branchId: branchId ? Number(branchId) : undefined,
+      status,
+      currency,
+    });
+  }
+
   @Sse('deliveries/realtime')
   @ApiOperation({
     summary: 'Server-Sent Events (SSE) real-time stream for recent deliveries & orders',

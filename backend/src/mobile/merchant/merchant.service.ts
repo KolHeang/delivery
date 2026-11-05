@@ -1352,6 +1352,295 @@ export class MerchantService {
     };
   }
 
+  async getReport(
+    merchantId: number,
+    options?: {
+      period?: string;
+      date?: string;
+      startDate?: string;
+      endDate?: string;
+      branchId?: number;
+      status?: string;
+      currency?: string;
+    },
+  ) {
+    const merchant = await this.merchantRepo.findOne({
+      where: { id: merchantId },
+      select: {
+        id: true,
+        name: true,
+        nameKh: true,
+        phone: true,
+        exchangeRate: true,
+      },
+    });
+    if (!merchant) throw new NotFoundException('Merchant not found');
+
+    const rate = parseFloat((merchant.exchangeRate as any) || 4100);
+    const branchId = options?.branchId ? Number(options.branchId) : undefined;
+
+    let sDate = options?.startDate;
+    let eDate = options?.endDate;
+    const period = (options?.period || '').toLowerCase();
+
+    const now = new Date();
+    if (options?.date) {
+      sDate = options.date;
+      eDate = options.date;
+    } else if (period === 'today') {
+      const ymd = now.toISOString().split('T')[0];
+      sDate = ymd;
+      eDate = ymd;
+    } else if (period === 'yesterday') {
+      const y = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+      const ymd = y.toISOString().split('T')[0];
+      sDate = ymd;
+      eDate = ymd;
+    } else if (period === 'week') {
+      const day = now.getDay();
+      const diffToMonday = day === 0 ? -6 : 1 - day;
+      const monday = new Date(now);
+      monday.setDate(now.getDate() + diffToMonday);
+      sDate = monday.toISOString().split('T')[0];
+      eDate = now.toISOString().split('T')[0];
+    } else if (period === 'month') {
+      const y = now.getFullYear();
+      const m = String(now.getMonth() + 1).padStart(2, '0');
+      sDate = `${y}-${m}-01`;
+      eDate = now.toISOString().split('T')[0];
+    } else if (period === 'year') {
+      const y = now.getFullYear();
+      sDate = `${y}-01-01`;
+      eDate = now.toISOString().split('T')[0];
+    }
+
+    const dateFilter = parseDateFilter(undefined, sDate, eDate);
+
+    const qb = this.parcelRepo
+      .createQueryBuilder('parcel')
+      .leftJoin('parcel.branch', 'branch')
+      .addSelect(['branch.id', 'branch.name'])
+      .leftJoin('parcel.zone', 'zone')
+      .addSelect(['zone.id', 'zone.name'])
+      .leftJoin('parcel.driver', 'driver')
+      .addSelect(['driver.id', 'driver.name', 'driver.nameKh', 'driver.phone'])
+      .where('parcel.merchantId = :merchantId', { merchantId });
+
+    if (branchId) {
+      qb.andWhere('parcel.branchId = :branchId', { branchId });
+    }
+
+    applyDateRangeToQb(
+      qb,
+      'COALESCE(parcel.deliveredAt, parcel.updatedAt, parcel.createdAt)',
+      dateFilter,
+      'rep',
+    );
+
+    if (options?.status && options.status !== 'all') {
+      qb.andWhere('parcel.status = :status', { status: options.status });
+    }
+
+    if (options?.currency && options.currency !== 'all') {
+      qb.andWhere("UPPER(COALESCE(parcel.codCurrency, 'USD')) = :cur", {
+        cur: options.currency.toUpperCase(),
+      });
+    }
+
+    qb.orderBy('parcel.createdAt', 'DESC');
+    const parcels = await qb.getMany();
+
+    let totalParcels = parcels.length;
+    let deliveredCount = 0;
+    let failedCount = 0;
+    let returnedCount = 0;
+    let inTransitCount = 0;
+    let pickedUpCount = 0;
+    let pendingCount = 0;
+
+    let totalCodUsd = 0;
+    let totalCodKhr = 0;
+    let paidCodUsd = 0;
+    let paidCodKhr = 0;
+    let unpaidCodUsd = 0;
+    let unpaidCodKhr = 0;
+    let totalDeliveryFee = 0;
+
+    const dailyMap = new Map<string, {
+      date: string;
+      total: number;
+      delivered: number;
+      failed: number;
+      returned: number;
+      codUsd: number;
+      codKhr: number;
+      deliveryFee: number;
+    }>();
+
+    const branchMap = new Map<number, {
+      branchId: number;
+      branchName: string;
+      totalParcels: number;
+      delivered: number;
+      codUsd: number;
+      codKhr: number;
+    }>();
+
+    const zoneMap = new Map<string, {
+      zoneName: string;
+      totalParcels: number;
+      delivered: number;
+    }>();
+
+    for (const p of parcels) {
+      const isDelivered = p.status === 'delivered';
+      const isFailed = p.status === 'failed';
+      const isReturned = p.status === 'returned';
+      const isInTransit = p.status === 'in-transit';
+      const isPickedUp = p.status === 'picked-up';
+      const isPending = p.status === 'pending';
+
+      if (isDelivered) deliveredCount++;
+      if (isFailed) failedCount++;
+      if (isReturned) returnedCount++;
+      if (isInTransit) inTransitCount++;
+      if (isPickedUp) pickedUpCount++;
+      if (isPending) pendingCount++;
+
+      const codVal = parseFloat(p.cod as any) || 0;
+      const feeVal = parseFloat(p.deliveryFee as any) || 0;
+      const cur = (p.codCurrency || 'USD').toUpperCase();
+      const isPaid = p.merchantPaymentStatus === 'paid';
+
+      if (isDelivered) {
+        totalDeliveryFee += feeVal;
+        if (cur === 'KHR') {
+          totalCodKhr += codVal;
+          if (isPaid) paidCodKhr += codVal;
+          else unpaidCodKhr += codVal;
+        } else {
+          totalCodUsd += codVal;
+          if (isPaid) paidCodUsd += codVal;
+          else unpaidCodUsd += codVal;
+        }
+      }
+
+      // Daily Breakdown
+      const d = p.deliveredAt || p.updatedAt || p.createdAt;
+      const dateKey = d ? new Date(d).toISOString().split('T')[0] : 'unknown';
+      if (!dailyMap.has(dateKey)) {
+        dailyMap.set(dateKey, {
+          date: dateKey,
+          total: 0,
+          delivered: 0,
+          failed: 0,
+          returned: 0,
+          codUsd: 0,
+          codKhr: 0,
+          deliveryFee: 0,
+        });
+      }
+      const dayItem = dailyMap.get(dateKey)!;
+      dayItem.total++;
+      if (isDelivered) {
+        dayItem.delivered++;
+        dayItem.deliveryFee += feeVal;
+        if (cur === 'KHR') dayItem.codKhr += codVal;
+        else dayItem.codUsd += codVal;
+      }
+      if (isFailed) dayItem.failed++;
+      if (isReturned) dayItem.returned++;
+
+      // Branch Breakdown
+      const bId = p.branchId || 1;
+      const bName = p.branch?.name || (bId === 1 ? 'Main Branch' : `Branch #${bId}`);
+      if (!branchMap.has(bId)) {
+        branchMap.set(bId, {
+          branchId: bId,
+          branchName: bName,
+          totalParcels: 0,
+          delivered: 0,
+          codUsd: 0,
+          codKhr: 0,
+        });
+      }
+      const bItem = branchMap.get(bId)!;
+      bItem.totalParcels++;
+      if (isDelivered) {
+        bItem.delivered++;
+        if (cur === 'KHR') bItem.codKhr += codVal;
+        else bItem.codUsd += codVal;
+      }
+
+      // Zone Breakdown
+      const zName = p.zone?.name || 'Standard Zone';
+      if (!zoneMap.has(zName)) {
+        zoneMap.set(zName, {
+          zoneName: zName,
+          totalParcels: 0,
+          delivered: 0,
+        });
+      }
+      const zItem = zoneMap.get(zName)!;
+      zItem.totalParcels++;
+      if (isDelivered) zItem.delivered++;
+    }
+
+    const completedTotal = deliveredCount + failedCount + returnedCount;
+    const successRate =
+      completedTotal > 0
+        ? `${((deliveredCount / completedTotal) * 100).toFixed(1)}%`
+        : '0.0%';
+
+    const netPayableUsd = Math.max(0, unpaidCodUsd - totalDeliveryFee);
+    const remFee = Math.max(0, totalDeliveryFee - unpaidCodUsd);
+    const netPayableKhr = Math.max(0, unpaidCodKhr - (remFee * rate));
+
+    const dailyBreakdown = Array.from(dailyMap.values()).sort((a, b) => b.date.localeCompare(a.date));
+    const byBranch = Array.from(branchMap.values()).sort((a, b) => b.totalParcels - a.totalParcels);
+    const byZone = Array.from(zoneMap.values()).sort((a, b) => b.totalParcels - a.totalParcels);
+
+    const formattedParcels = parcels.slice(0, 100).map((p) => formatMerchantDelivery(p));
+
+    return {
+      merchant: {
+        id: merchant.id,
+        name: merchant.nameKh || merchant.name,
+        phone: merchant.phone,
+      },
+      appliedFilter: {
+        period: period || 'custom',
+        startDate: sDate || null,
+        endDate: eDate || null,
+        branchId: branchId || null,
+        status: options?.status || 'all',
+      },
+      summary: {
+        totalParcels,
+        deliveredCount,
+        failedCount,
+        returnedCount,
+        inTransitCount,
+        pickedUpCount,
+        pendingCount,
+        successRate,
+        totalCodUsd: Math.round(totalCodUsd * 100) / 100,
+        totalCodKhr: Math.round(totalCodKhr),
+        paidCodUsd: Math.round(paidCodUsd * 100) / 100,
+        paidCodKhr: Math.round(paidCodKhr),
+        unpaidCodUsd: Math.round(unpaidCodUsd * 100) / 100,
+        unpaidCodKhr: Math.round(unpaidCodKhr),
+        totalDeliveryFee: Math.round(totalDeliveryFee * 100) / 100,
+        netPayableUsd: Math.round(netPayableUsd * 100) / 100,
+        netPayableKhr: Math.round(netPayableKhr),
+      },
+      dailyBreakdown,
+      byBranch,
+      byZone,
+      parcels: formattedParcels,
+    };
+  }
+
   /**
    * Real-time Server-Sent Events (SSE) stream for merchant dashboard & recent deliveries
    */

@@ -954,24 +954,28 @@ export class MerchantService {
     const pendingCOD = await this.parcelRepo
       .createQueryBuilder('parcel')
       .select('SUM(parcel.cod)', 'total')
-      .addSelect('parcel.codCurrency', 'currency')
+      .addSelect("UPPER(COALESCE(parcel.codCurrency, 'USD'))", 'currency')
       .where('parcel.merchantId = :merchantId', { merchantId })
       .andWhere('parcel.status = :status', { status: 'delivered' })
-      .andWhere('parcel.merchantPaymentStatus = :payment', { payment: 'unpaid' })
-      .groupBy('parcel.codCurrency')
+      .andWhere('(parcel.merchantPaymentStatus = :payment OR parcel.merchantPaymentStatus IS NULL)', {
+        payment: 'unpaid',
+      })
+      .groupBy("UPPER(COALESCE(parcel.codCurrency, 'USD'))")
       .getRawMany();
 
     const codPendingUSD =
-      pendingCOD.find((c) => c.currency === 'USD')?.total || 0;
+      pendingCOD.find((c) => (c.currency || '').toUpperCase() === 'USD')?.total || 0;
     const codPendingKHR =
-      pendingCOD.find((c) => c.currency === 'KHR')?.total || 0;
+      pendingCOD.find((c) => (c.currency || '').toUpperCase() === 'KHR')?.total || 0;
 
     const feesPending = await this.parcelRepo
       .createQueryBuilder('parcel')
       .select('SUM(parcel.deliveryFee)', 'total')
       .where('parcel.merchantId = :merchantId', { merchantId })
       .andWhere('parcel.status = :status', { status: 'delivered' })
-      .andWhere('parcel.merchantPaymentStatus = :payment', { payment: 'unpaid' })
+      .andWhere('(parcel.merchantPaymentStatus = :payment OR parcel.merchantPaymentStatus IS NULL)', {
+        payment: 'unpaid',
+      })
       .getRawOne();
 
     return {

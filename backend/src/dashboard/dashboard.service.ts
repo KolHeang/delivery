@@ -132,9 +132,9 @@ export class DashboardService {
     const codQuery = this.parcelRepo
       .createQueryBuilder('parcel')
       .select('SUM(parcel.cod)', 'total')
-      .addSelect('parcel.cod_currency', 'currency')
+      .addSelect("UPPER(COALESCE(parcel.cod_currency, 'USD'))", 'currency')
       .where("parcel.status = 'delivered'")
-      .groupBy('parcel.cod_currency');
+      .groupBy("UPPER(COALESCE(parcel.cod_currency, 'USD'))");
     this.applyTenantFilter(codQuery, 'parcel', tenantId);
     this.applyDateFilter(codQuery, 'parcel', startDate, endDate);
     const codResults = await codQuery.getRawMany();
@@ -152,10 +152,10 @@ export class DashboardService {
     });
 
     const collectedCashUSD = parseFloat(
-      codResults.find((c) => c.currency === 'USD')?.total || '0',
+      codResults.find((c) => (c.currency || '').toUpperCase() === 'USD')?.total || '0',
     );
     const collectedCashKHR = parseFloat(
-      codResults.find((c) => c.currency === 'KHR')?.total || '0',
+      codResults.find((c) => (c.currency || '').toUpperCase() === 'KHR')?.total || '0',
     );
 
     return {

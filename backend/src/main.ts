@@ -16,7 +16,7 @@ async function bootstrap() {
   // Security headers via Helmet
   app.use(
     helmet({
-      contentSecurityPolicy: false, // Ensures Swagger UI works without blocking scripts
+      contentSecurityPolicy: false, // Ensures Scalar API Reference works without blocking scripts
       crossOriginEmbedderPolicy: false,
     }),
   );
@@ -217,27 +217,37 @@ async function bootstrap() {
     paths: merchantPaths,
   };
 
-  // Primary Swagger URL: Only shows Mobile Merchant
-  SwaggerModule.setup('api/docs', app, merchantDocument as any, {
-    swaggerOptions: {
-      persistAuthorization: true,
-      docExpansion: 'list',
-      filter: true,
-      showRequestDuration: true,
-    },
-  });
+  // Scalar API Reference (loaded via dynamic import for ESM compatibility on all Node versions)
+  const { apiReference } = await import('@scalar/nestjs-api-reference');
 
-  // Full API documentation for all services (Admin, Driver, SaaS)
-  SwaggerModule.setup('api/docs/all', app, fullDocument, {
-    swaggerOptions: {
-      persistAuthorization: true,
-    },
-  });
+  // Scalar API Reference for all services (Admin, Driver, SaaS)
+  // Registered before '/api/reference' so Express doesn't match the prefix first
+  app.use(
+    '/api/reference/all',
+    apiReference({
+      pageTitle: 'All Services API Reference',
+      theme: 'default',
+      persistAuth: true,
+      content: fullDocument,
+    }),
+  );
+
+  // Primary Scalar API Reference (Only shows Mobile Merchant)
+  app.use(
+    '/api/reference',
+    apiReference({
+      pageTitle: 'Delivery & Merchant API Reference',
+      theme: 'default',
+      persistAuth: true,
+      content: merchantDocument as Record<string, any>,
+    }),
+  );
 
   const port = process.env.PORT ?? 3001;
   await app.listen(port);
   console.log(`🚀 Backend running on http://localhost:${port}`);
-  console.log(`📚 Swagger: http://localhost:${port}/api/docs`);
+  console.log(`✨ Scalar: http://localhost:${port}/api/reference`);
+  console.log(`✨ Scalar (All): http://localhost:${port}/api/reference/all`);
   // trigger restart - db reset
 }
 bootstrap();

@@ -7,6 +7,11 @@ import { useRouter, useParams } from 'next/navigation';
 import { saasApi } from '@/lib/saas-api';
 import { getUser, clearAuth } from '@/lib/auth';
 import { useLanguage } from '@/lib/LanguageContext';
+import {
+  sanitizePhoneInput,
+  isPhoneExceedingMaxDigits,
+  getPhoneMaxDigitsError,
+} from '@/lib/phone-util';
 import { MdArrowBack } from 'react-icons/md';
 
 export default function EditSaasAdminPage() {
@@ -71,6 +76,10 @@ export default function EditSaasAdminPage() {
     e.preventDefault();
     if (!adminForm.name.trim() || !adminForm.email.trim()) {
       alert(tr('សូមបំពេញព័ត៌មានចាំបាច់ឱ្យបានគ្រប់គ្រាន់', 'Please fill in required fields'));
+      return;
+    }
+    if (adminForm.phone.trim() && isPhoneExceedingMaxDigits(adminForm.phone)) {
+      alert(getPhoneMaxDigitsError(lang));
       return;
     }
 
@@ -163,10 +172,11 @@ export default function EditSaasAdminPage() {
                   </label>
                   <input
                     type="text"
+                    inputMode="tel"
                     className="form-control"
-                    placeholder="012 345 678"
+                    placeholder="012345678"
                     value={adminForm.phone}
-                    onChange={(e) => setAdminForm({ ...adminForm, phone: e.target.value })}
+                    onChange={(e) => setAdminForm({ ...adminForm, phone: sanitizePhoneInput(e.target.value) })}
                   />
                 </div>
               </div>

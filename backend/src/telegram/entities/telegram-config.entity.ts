@@ -35,6 +35,9 @@ export class TelegramConfig {
   @Column({ name: 'chat_id', type: 'varchar' })
   chatId: string; // e.g. "761552994" or "-100123456789" or "@username"
 
+  @Column({ name: 'message_thread_id', type: 'int', nullable: true })
+  messageThreadId: number | null; // Optional Forum Topic / Thread ID (e.g. 110, 108, 106)
+
   @Column({ name: 'chat_type', type: 'varchar', default: 'group' })
   chatType: string; // 'group' | 'channel' | 'private'
 
@@ -46,6 +49,9 @@ export class TelegramConfig {
 
   @Column({ name: 'notify_new_order', type: 'boolean', default: true })
   notifyNewOrder: boolean;
+
+  @Column({ name: 'notify_pickup', type: 'boolean', default: true })
+  notifyPickup: boolean;
 
   @Column({ name: 'notify_delivery_success', type: 'boolean', default: true })
   notifyDeliverySuccess: boolean;

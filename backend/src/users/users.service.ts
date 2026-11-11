@@ -12,6 +12,7 @@ import { Role } from '../roles/entities/role.entity';
 import { Vehicle } from '../vehicles/entities/vehicle.entity';
 import { CreateUserDto, UpdateUserDto } from './dto/user.dto';
 import { PaginatedResult } from '../interface/pagination.interface';
+import { assertValidPhoneMaxDigits } from '../common/phone.util';
 
 @Injectable()
 export class UsersService implements OnModuleInit {
@@ -129,6 +130,7 @@ export class UsersService implements OnModuleInit {
     dto: CreateUserDto,
     tenantContext?: { tenantId?: number; tenantSubdomain?: string },
   ): Promise<Omit<User, 'password'>> {
+    assertValidPhoneMaxDigits(dto.phone);
     const cleanEmail = dto.email && typeof dto.email === 'string' && dto.email.trim() !== '' ? dto.email.trim() : null;
     if (cleanEmail) {
       const exists = await this.repo.findOne({ where: { email: cleanEmail } });
@@ -224,6 +226,9 @@ export class UsersService implements OnModuleInit {
   }
 
   async update(id: number, dto: UpdateUserDto, tenantId?: number): Promise<User> {
+    if (dto.phone !== undefined) {
+      assertValidPhoneMaxDigits(dto.phone);
+    }
     const existingUser = await this.findOne(id, tenantId);
     const payload = { ...dto } as any;
 

@@ -27,6 +27,18 @@ import {
   formatMerchantDelivery,
   formatMerchantPickupRequest,
 } from '../mobile/merchant/utils/delivery-formatter.util';
+import { cleanParcelNote } from '../common/note.util';
+import { assertValidPhoneMaxDigits } from '../common/phone.util';
+import { TelegramService } from '../telegram/telegram.service';
+import {
+  escapeTelegramHtml,
+  formatParcelBatchCreatedTelegramMessage,
+  formatParcelBatchTerminalTelegramMessage,
+  formatParcelCreatedTelegramMessage,
+  formatParcelTerminalTelegramMessage,
+  isTerminalParcelStatus,
+  ParcelTelegramSnapshot,
+} from '../telegram/telegram.util';
 
 @Injectable()
 export class ParcelsService {
@@ -49,6 +61,7 @@ export class ParcelsService {
     private readonly dataSource: DataSource,
     private readonly firebaseService: FirebaseService,
     @Optional() private readonly trackingGateway?: TrackingGateway,
+    @Optional() private readonly telegramService?: TelegramService,
   ) {}
 
   // ============================================================================
@@ -468,7 +481,131 @@ export class ParcelsService {
     }
   }
 
+  private async notifyParcelCreatedTelegram(
+    parcel: ParcelTelegramSnapshot & { tenantId?: number | null },
+    tenantId?: number,
+  ) {
+    if (
+      !this.telegramService ||
+      typeof this.telegramService.notifyTopic !== 'function'
+    ) {
+      return;
+    }
+    try {
+      await this.telegramService.notifyTopic(
+        'parcels',
+        formatParcelCreatedTelegramMessage(parcel),
+        {
+          eventType: 'ORDER_CREATED',
+          parcelOutcome: 'created',
+          merchantId: parcel.merchantId ?? undefined,
+          tenantId: tenantId ?? parcel.tenantId ?? undefined,
+        },
+      );
+    } catch {
+      // Non-blocking notification
+    }
+  }
+
+  private async notifyParcelsBatchCreatedTelegram(
+    parcels: Array<ParcelTelegramSnapshot & { tenantId?: number | null }>,
+    tenantId?: number,
+  ) {
+    if (
+      !parcels.length ||
+      !this.telegramService ||
+      typeof this.telegramService.notifyTopic !== 'function'
+    ) {
+      return;
+    }
+    try {
+      const uniqueMerchantIds = Array.from(
+        new Set(parcels.map((p) => p.merchantId).filter((id): id is number => Boolean(id))),
+      );
+      await this.telegramService.notifyTopic(
+        'parcels',
+        formatParcelBatchCreatedTelegramMessage(parcels),
+        {
+          eventType: 'ORDER_CREATED',
+          parcelOutcome: 'created',
+          merchantId: uniqueMerchantIds.length === 1 ? uniqueMerchantIds[0] : undefined,
+          tenantId: tenantId ?? parcels[0]?.tenantId ?? undefined,
+        },
+      );
+    } catch {
+      // Non-blocking notification
+    }
+  }
+
+  private async notifyParcelTerminalTelegram(
+    parcel: ParcelTelegramSnapshot & { tenantId?: number | null },
+    tenantId?: number,
+  ) {
+    if (
+      !isTerminalParcelStatus(parcel.status) ||
+      !this.telegramService ||
+      typeof this.telegramService.notifyTopic !== 'function'
+    ) {
+      return;
+    }
+    try {
+      await this.telegramService.notifyTopic(
+        'parcels',
+        formatParcelTerminalTelegramMessage(parcel),
+        {
+          eventType: 'DELIVERY_STATUS',
+          parcelOutcome: parcel.status === 'delivered' ? 'delivered' : 'failed',
+          merchantId: parcel.merchantId ?? undefined,
+          tenantId: tenantId ?? parcel.tenantId ?? undefined,
+        },
+      );
+    } catch {
+      // Non-blocking notification
+    }
+  }
+
+  private async notifyParcelsBatchTerminalTelegram(
+    parcels: Array<ParcelTelegramSnapshot & { tenantId?: number | null }>,
+    tenantId?: number,
+  ) {
+    if (
+      !parcels.length ||
+      !this.telegramService ||
+      typeof this.telegramService.notifyTopic !== 'function'
+    ) {
+      return;
+    }
+    try {
+      const hasDelivered = parcels.some((p) => p.status === 'delivered');
+      const allDelivered = parcels.every((p) => p.status === 'delivered');
+      await this.telegramService.notifyTopic(
+        'parcels',
+        formatParcelBatchTerminalTelegramMessage(parcels),
+        {
+          eventType: 'DELIVERY_STATUS',
+          parcelOutcome: allDelivered
+            ? 'delivered'
+            : hasDelivered
+              ? 'delivered'
+              : 'failed',
+          tenantId: tenantId ?? parcels[0]?.tenantId ?? undefined,
+        },
+      );
+    } catch {
+      // Non-blocking notification
+    }
+  }
+
   async create(dto: CreateParcelDto, tenantId?: number): Promise<Parcel> {
+    return this.createInternal(dto, tenantId, false);
+  }
+
+  private async createInternal(
+    dto: CreateParcelDto,
+    tenantId?: number,
+    suppressTelegram = false,
+  ): Promise<Parcel> {
+    assertValidPhoneMaxDigits(dto.receiverPhone);
     const effectiveTenantId: number | undefined =
       tenantId ?? dto.tenantId ?? undefined;
     if (effectiveTenantId) {
@@ -521,7 +658,13 @@ export class ParcelsService {
 
     const savedParcel = (await this.repo.save(parcel)) as unknown as Parcel;
     await this.addEvent(savedParcel.id, savedParcel.status, savedParcel.note);
-    return this.findOne(savedParcel.id, effectiveTenantId);
+    const result = await this.findOne(savedParcel.id, effectiveTenantId);
+
+    if (!suppressTelegram) {
+      await this.notifyParcelCreatedTelegram(result, effectiveTenantId);
+    }
+
+    return result;
   }
 
   async update(
@@ -529,6 +672,19 @@ export class ParcelsService {
     dto: UpdateParcelDto,
     tenantId?: number,
   ): Promise<Parcel> {
+    return this.updateInternal(id, dto, tenantId, false);
+  }
+
+  private async updateInternal(
+    id: number,
+    dto: UpdateParcelDto,
+    tenantId?: number,
+    suppressTelegram = false,
+    collectedTerminal?: Parcel[],
+  ): Promise<Parcel> {
+    if (dto.receiverPhone !== undefined) {
+      assertValidPhoneMaxDigits(dto.receiverPhone);
+    }
     const parcel = await this.findOne(id, tenantId);
     const effectiveTenantId: number | undefined =
       tenantId ?? parcel.tenantId ?? undefined;
@@ -622,8 +778,19 @@ export class ParcelsService {
       delete updates.remark;
     }
     if (updates.reason !== undefined) {
-      if (!updates.note) updates.note = updates.reason;
+      const cleanReason =
+        typeof updates.reason === 'string' ? updates.reason.trim() : '';
+      if (
+        !updates.note &&
+        cleanReason &&
+        cleanReason.toLowerCase() !== 'other'
+      ) {
+        updates.note = cleanReason;
+      }
       delete updates.reason;
+    }
+    if (typeof updates.note === 'string') {
+      updates.note = cleanParcelNote(updates.note);
     }
 
     await this.repo.update(parcel.id, updates);
@@ -693,6 +860,17 @@ export class ParcelsService {
       } catch {}
     }
 
+    if (
+      updatedParcel.status !== parcel.status &&
+      isTerminalParcelStatus(updatedParcel.status)
+    ) {
+      if (suppressTelegram) {
+        collectedTerminal?.push(updatedParcel);
+      } else {
+        await this.notifyParcelTerminalTelegram(updatedParcel, effectiveTenantId);
+      }
+    }
+
     return updatedParcel;
   }
 
@@ -708,7 +886,9 @@ export class ParcelsService {
     // 1. ការពារមិនឱ្យកែ Status កញ្ចប់ឥវ៉ាន់ដែលទូទាត់ប្រាក់រួច (paid) ត្រឡប់ទៅ unpaid វិញ
     this.assertNotSettledBeforeRevert(parcel, dto.status);
 
-    const finalNote = dto.remark !== undefined ? dto.remark : dto.note;
+    const rawNote = dto.remark !== undefined ? dto.remark : dto.note;
+    const finalNote =
+      typeof rawNote === 'string' ? cleanParcelNote(rawNote) : rawNote;
     const updates: Partial<Parcel> = { status: dto.status as any };
 
     if (dto.status === 'picked-up') updates.pickedUpAt = new Date();
@@ -792,6 +972,20 @@ export class ParcelsService {
       } catch {}
     }
 
+    if (
+      dto.status !== parcel.status &&
+      isTerminalParcelStatus(dto.status)
+    ) {
+      await this.notifyParcelTerminalTelegram(
+        {
+          ...updatedParcel,
+          status: dto.status as any,
+          note: finalNote !== undefined ? finalNote : updatedParcel.note,
+        },
+        effectiveTenantId,
+      );
+    }
+
     return updatedParcel;
   }
 
@@ -804,12 +998,19 @@ export class ParcelsService {
     tenantId?: number,
     createdById?: number,
   ): Promise<Parcel[]> {
+    for (const dto of dtos) {
+      assertValidPhoneMaxDigits(dto?.receiverPhone);
+    }
+    const suppressIndividual = dtos.length > 1;
     const created: Parcel[] = [];
     for (const dto of dtos) {
       if (tenantId) dto.tenantId = tenantId;
       if (createdById) dto.createdById = createdById;
-      const parcel = await this.create(dto, tenantId);
+      const parcel = await this.createInternal(dto, tenantId, suppressIndividual);
       created.push(parcel);
+    }
+    if (suppressIndividual && created.length > 0) {
+      await this.notifyParcelsBatchCreatedTelegram(created, tenantId);
     }
     return created;
   }
@@ -843,9 +1044,11 @@ export class ParcelsService {
     tenantId?: number,
     updatedById?: number,
   ): Promise<Parcel[]> {
+    const suppressIndividual = items.length > 1;
+    const terminalUpdated: Parcel[] = [];
     const results: Parcel[] = [];
     for (const item of items) {
-      const updated = await this.update(
+      const updated = await this.updateInternal(
         item.id,
         {
           status: item.status,
@@ -857,8 +1060,23 @@ export class ParcelsService {
           updatedById,
         },
         tenantId,
+        suppressIndividual,
+        terminalUpdated,
       );
       results.push(updated);
+    }
+    if (suppressIndividual) {
+      if (terminalUpdated.length === 1) {
+        await this.notifyParcelTerminalTelegram(
+          terminalUpdated[0],
+          tenantId ?? terminalUpdated[0].tenantId,
+        );
+      } else if (terminalUpdated.length > 1) {
+        await this.notifyParcelsBatchTerminalTelegram(
+          terminalUpdated,
+          tenantId ?? terminalUpdated[0]?.tenantId,
+        );
+      }
     }
     return results;
   }
@@ -1218,6 +1436,35 @@ export class ParcelsService {
         );
       } catch {}
     }
+
+    if (
+      this.telegramService &&
+      typeof this.telegramService.notifyTopic === 'function'
+    ) {
+      try {
+        const shopName =
+          reloaded.merchant?.nameKh ||
+          reloaded.merchant?.name ||
+          `Shop #${reloaded.merchantId}`;
+        const driverName = driver.nameKh || driver.name || `Driver #${driver.id}`;
+        const lines = [
+          `👤 <b>បានចាត់តាំងអ្នកដឹកទៅយកទំនិញ #${reloaded.id}</b>`,
+          ``,
+          `- 🏪 ហាង: ${escapeTelegramHtml(shopName)}`,
+          `- 🛵 អ្នកដឹកជញ្ជូន: ${escapeTelegramHtml(driverName)}${driver.phone ? ` (${escapeTelegramHtml(driver.phone)})` : ''}`,
+          `- 📍 ទីតាំងយក: ${escapeTelegramHtml(reloaded.pickupAddress || reloaded.merchant?.address || '-')}`,
+          `- 📦 ចំនួនប្រកាស: ${reloaded.declaredQuantity} កញ្ចប់`,
+        ];
+        await this.telegramService.notifyTopic('pickup', lines.join('\n'), {
+          eventType: 'PICKUP_REQUEST',
+          merchantId: reloaded.merchantId,
+          tenantId: effectiveTenantId,
+        });
+      } catch {
+        // Non-blocking notification
+      }
+    }
+
     return reloaded;
   }
 
@@ -1226,10 +1473,11 @@ export class ParcelsService {
     dto: CreateParcelDto,
     tenantId?: number,
   ) {
+    assertValidPhoneMaxDigits(dto.receiverPhone);
     const trackingCode =
       dto.trackingCode || (await this.generateNextTrackingCode());
 
-    return this.dataSource.transaction(async (manager) => {
+    const createdParcel = await this.dataSource.transaction(async (manager) => {
       // Lock pickup request row to prevent concurrent over-registration
       const reqQb = manager
         .createQueryBuilder(PickupRequest, 'req')
@@ -1319,6 +1567,13 @@ export class ParcelsService {
 
       return this.findOne(savedParcel.id, effectiveTenantId, manager);
     });
+
+    await this.notifyParcelCreatedTelegram(
+      createdParcel,
+      tenantId ?? createdParcel.tenantId,
+    );
+
+    return createdParcel;
   }
 
   async deleteParcelFromRequest(

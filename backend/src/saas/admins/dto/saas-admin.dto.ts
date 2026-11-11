@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 import { IsBoolean, IsEmail, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { MaxPhoneDigits } from '../../../common/phone.util';
 
 export class SaasAdminLoginDto {
   @ApiProperty({ description: 'Admin email', example: 'admin@platform.com' })
@@ -29,9 +30,10 @@ export class CreateSaasAdminDto {
   @IsString()
   password: string;
 
-  @ApiPropertyOptional({ description: 'Contact phone number', example: '+85512345678' })
+  @ApiPropertyOptional({ description: 'Contact phone number', example: '012345678' })
   @IsOptional()
   @IsString()
+  @MaxPhoneDigits()
   phone?: string;
 
   @ApiPropertyOptional({ description: 'Admin role', default: 'superadmin', example: 'superadmin' })

@@ -10,6 +10,7 @@ import {
 } from 'class-validator';
 import { ApiProperty, PartialType } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
+import { MaxPhoneDigits } from '../../common/phone.util';
 
 export class CreateParcelDto {
   @ApiProperty({ example: 'Chan Vanna', required: false, description: 'Receiver customer name' })
@@ -21,6 +22,7 @@ export class CreateParcelDto {
   @ApiProperty({ example: '098765432', description: 'Receiver phone number' })
   @IsNotEmpty()
   @IsString()
+  @MaxPhoneDigits()
   receiverPhone: string;
 
   @ApiProperty({ example: 'House #12B, Street 271, Boeng Tumpun, Phnom Penh', description: 'Receiver delivery address' })

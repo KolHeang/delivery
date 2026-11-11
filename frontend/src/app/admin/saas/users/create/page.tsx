@@ -7,6 +7,11 @@ import { useRouter } from 'next/navigation';
 import { saasApi } from '@/lib/saas-api';
 import { getUser } from '@/lib/auth';
 import { useLanguage } from '@/lib/LanguageContext';
+import {
+  sanitizePhoneInput,
+  isPhoneExceedingMaxDigits,
+  getPhoneMaxDigitsError,
+} from '@/lib/phone-util';
 import { MdArrowBack } from 'react-icons/md';
 
 export default function CreateSaasAdminPage() {
@@ -44,6 +49,9 @@ export default function CreateSaasAdminPage() {
     const errs: Record<string, string> = {};
     if (!adminForm.name.trim()) {
       errs.name = tr('សូមបំពេញឈ្មោះអ្នកគ្រប់គ្រង', 'Please enter admin name');
+    }
+    if (adminForm.phone.trim() && isPhoneExceedingMaxDigits(adminForm.phone)) {
+      errs.phone = getPhoneMaxDigitsError(lang);
     }
     if (!adminForm.email.trim()) {
       errs.email = tr('សូមបំពេញអ៊ីម៉ែល', 'Please enter email');
@@ -148,11 +156,16 @@ export default function CreateSaasAdminPage() {
                 </label>
                 <input
                   type="text"
-                  className="form-control"
-                  placeholder="012 345 678"
+                  inputMode="tel"
+                  className={`form-control ${errors.phone ? 'is-invalid' : ''}`}
+                  placeholder="012345678"
                   value={adminForm.phone}
-                  onChange={(e) => setAdminForm({ ...adminForm, phone: e.target.value })}
+                  onChange={(e) => {
+                    setAdminForm({ ...adminForm, phone: sanitizePhoneInput(e.target.value) });
+                    if (errors.phone) setErrors((prev) => { const n = { ...prev }; delete n.phone; return n; });
+                  }}
                 />
+                {errors.phone && <div style={{ color: '#ef4444', fontSize: 11.5, marginTop: 4 }}>{errors.phone}</div>}
               </div>
             </div>
 

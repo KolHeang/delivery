@@ -9,6 +9,11 @@ import api from '@/lib/api';
 import { useLanguage } from '@/lib/LanguageContext';
 import { MdArrowBack, MdMap, MdSave, MdOpenInNew, MdLink } from 'react-icons/md';
 import { parseMapLinkOrCoords, isShortGoogleMapsUrl, getGoogleMapsUrl } from '@/lib/geo-util';
+import {
+  sanitizePhoneInput,
+  isPhoneExceedingMaxDigits,
+  getPhoneMaxDigitsError,
+} from '@/lib/phone-util';
 import LocationMapModal from '@/components/ui/LocationMapModal';
 
 export default function EditBranchPage() {
@@ -78,6 +83,8 @@ export default function EditBranchPage() {
     }
     if (!form.phone.trim()) {
       errs.phone = lang === 'km' ? 'សូមបញ្ចូលលេខទូរស័ព្ទ' : 'Please enter phone number';
+    } else if (isPhoneExceedingMaxDigits(form.phone)) {
+      errs.phone = getPhoneMaxDigitsError(lang);
     }
     if (!form.address.trim()) {
       errs.address = lang === 'km' ? 'សូមបញ្ចូលអាសយដ្ឋាន' : 'Please enter address';
@@ -209,11 +216,13 @@ export default function EditBranchPage() {
                       {lang === 'km' ? 'លេខទូរស័ព្ទ' : 'Phone'} <span style={{ color: 'var(--danger)' }}>*</span>
                     </label>
                     <input
+                      type="text"
+                      inputMode="tel"
                       className={`form-control ${errors.phone ? 'is-invalid' : ''}`}
-                      placeholder="012 345 678"
+                      placeholder="012345678"
                       value={form.phone}
                       onChange={(e) => {
-                        setForm({ ...form, phone: e.target.value });
+                        setForm({ ...form, phone: sanitizePhoneInput(e.target.value) });
                         if (errors.phone) setErrors((prev) => ({ ...prev, phone: '' }));
                       }}
                       style={{ height: 42, fontSize: 14 }}

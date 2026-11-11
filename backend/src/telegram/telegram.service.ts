@@ -1,10 +1,16 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { IsNull, Repository } from 'typeorm';
 import { TelegramConfig } from './entities/telegram-config.entity';
 import { TelegramLog } from './entities/telegram-log.entity';
 import { Merchant } from '../merchants/entities/merchant.entity';
 import { CreateTelegramConfigDto, UpdateTelegramConfigDto } from './dto/telegram.dto';
+import {
+  TelegramTopicKey,
+  normalizeTelegramChatId,
+  normalizeTelegramThreadId,
+  resolveEnvTelegramTopicId,
+} from './telegram.util';
 
 @Injectable()
 export class TelegramService {
@@ -19,25 +25,37 @@ export class TelegramService {
     private readonly merchantRepo: Repository<Merchant>,
   ) {}
 
+  getDefaultChatId(): string {
+    return (process.env.TELEGRAM_CHAT_ID || process.env.CHAT_ID || '').trim();
+  }
+
+  getTopicThreadId(topic: TelegramTopicKey): number | undefined {
+    return resolveEnvTelegramTopicId(topic);
+  }
+
   /**
-   * Send a raw Telegram message and automatically record a log
+   * Send a raw Telegram message (with optional forum topic message_thread_id)
+   * and automatically record a log.
    */
   async sendMessage(
     chatId: string,
     text: string,
     options?: {
       botToken?: string;
+      messageThreadId?: number | string | null;
       eventType?: string;
       merchantId?: number;
       tenantId?: number;
     },
   ): Promise<{ success: boolean; message?: string; error?: string }> {
+    const messageThreadId = normalizeTelegramThreadId(options?.messageThreadId);
     const token = (options?.botToken || process.env.TELEGRAM_BOT_TOKEN || '').trim();
     if (!token) {
       const err = 'TELEGRAM_BOT_TOKEN is not defined';
       this.logger.warn(err);
       await this.saveLog({
         chatId,
+        messageThreadId: messageThreadId ?? null,
         eventType: options?.eventType || 'NOTIFICATION',
         messageText: text,
         status: 'FAILED',
@@ -49,31 +67,36 @@ export class TelegramService {
     }
 
     // Normalize username/chat ID
-    let targetChatId = (chatId || '').trim();
+    const targetChatId = normalizeTelegramChatId(chatId);
     if (!targetChatId) {
       return { success: false, error: 'Empty Chat ID' };
     }
-    if (!targetChatId.match(/^-?\d+$/) && !targetChatId.startsWith('@')) {
-      targetChatId = `@${targetChatId}`;
+
+    const requestBody: Record<string, any> = {
+      chat_id: targetChatId,
+      text,
+      parse_mode: 'HTML',
+      disable_web_page_preview: true,
+    };
+    if (messageThreadId) {
+      requestBody.message_thread_id = messageThreadId;
     }
 
     try {
       const response = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          chat_id: targetChatId,
-          text: text,
-          parse_mode: 'HTML',
-          disable_web_page_preview: true,
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       if (!response.ok) {
         const errorText = await response.text();
-        this.logger.error(`Telegram API error (${response.status}): ${errorText}`);
+        this.logger.error(
+          `Telegram API error (${response.status}) for ${targetChatId}${messageThreadId ? ` [topic ${messageThreadId}]` : ''}: ${errorText}`,
+        );
         await this.saveLog({
           chatId: targetChatId,
+          messageThreadId: messageThreadId ?? null,
           eventType: options?.eventType || 'NOTIFICATION',
           messageText: text,
           status: 'FAILED',
@@ -84,9 +107,12 @@ export class TelegramService {
         return { success: false, error: errorText };
       }
 
-      this.logger.log(`Telegram message sent successfully to ${targetChatId}`);
+      this.logger.log(
+        `Telegram message sent successfully to ${targetChatId}${messageThreadId ? ` [topic ${messageThreadId}]` : ''}`,
+      );
       await this.saveLog({
         chatId: targetChatId,
+        messageThreadId: messageThreadId ?? null,
         eventType: options?.eventType || 'NOTIFICATION',
         messageText: text,
         status: 'SENT',
@@ -98,6 +124,7 @@ export class TelegramService {
       this.logger.error('Failed to send Telegram message:', err?.message || err);
       await this.saveLog({
         chatId: targetChatId,
+        messageThreadId: messageThreadId ?? null,
         eventType: options?.eventType || 'NOTIFICATION',
         messageText: text,
         status: 'FAILED',
@@ -110,19 +137,141 @@ export class TelegramService {
   }
 
   /**
+   * Send a notification to a configured company Telegram forum topic
+   * (TELEGRAM_TOPIC_PICKUP / TELEGRAM_TOPIC_DRIVER_PAYMENT / TELEGRAM_TOPIC_MERCHANT_PAYMENT / TELEGRAM_TOPIC_PARCELS)
+   * and any matching active global TelegramConfig channels.
+   */
+  async notifyTopic(
+    topic: TelegramTopicKey,
+    text: string,
+    options?: {
+      eventType?: string;
+      merchantId?: number;
+      tenantId?: number;
+      chatId?: string;
+      messageThreadId?: number | string | null;
+      botToken?: string;
+      skipSentKeys?: Set<string>;
+      parcelOutcome?: 'created' | 'delivered' | 'failed';
+    },
+  ): Promise<{ sentCount: number }> {
+    const defaultEventType =
+      topic === 'pickup'
+        ? 'PICKUP_REQUEST'
+        : topic === 'driver_payment'
+          ? 'DRIVER_PAYMENT'
+          : topic === 'parcels'
+            ? 'ORDER_CREATED'
+            : 'PAYMENT_SETTLEMENT';
+    const eventType = options?.eventType || defaultEventType;
+    const topicThreadId =
+      normalizeTelegramThreadId(options?.messageThreadId) ?? this.getTopicThreadId(topic);
+    const sentKeys = options?.skipSentKeys ?? new Set<string>();
+    let sentCount = 0;
+
+    const sendUnique = async (
+      rawChatId: string,
+      threadId?: number,
+      botToken?: string,
+      tenantId?: number,
+    ) => {
+      const normalizedChat = normalizeTelegramChatId(rawChatId);
+      if (!normalizedChat) return;
+      const key = `${normalizedChat}::${threadId ?? ''}`;
+      if (sentKeys.has(key)) return;
+      sentKeys.add(key);
+
+      await this.sendMessage(normalizedChat, text, {
+        botToken,
+        messageThreadId: threadId,
+        eventType,
+        merchantId: options?.merchantId,
+        tenantId,
+      });
+      sentCount += 1;
+    };
+
+    // 1. Check active global Telegram configs in DB (merchantId IS NULL)
+    let globalConfigs: TelegramConfig[] = [];
+    if (this.configRepo && typeof this.configRepo.find === 'function') {
+      try {
+        const where = options?.tenantId
+          ? [
+              { merchantId: IsNull(), isActive: true, tenantId: options.tenantId },
+              { merchantId: IsNull(), isActive: true, tenantId: IsNull() },
+            ]
+          : { merchantId: IsNull(), isActive: true };
+        globalConfigs = await this.configRepo.find({ where });
+      } catch {
+        globalConfigs = [];
+      }
+    }
+
+    for (const cfg of globalConfigs) {
+      let shouldSend = true;
+      if (topic === 'pickup') {
+        shouldSend = cfg.notifyPickup !== false;
+      } else if (topic === 'parcels') {
+        if (options?.parcelOutcome === 'delivered') {
+          shouldSend = cfg.notifyDeliverySuccess !== false;
+        } else if (options?.parcelOutcome === 'failed') {
+          shouldSend = cfg.notifyDeliveryFailed !== false;
+        } else {
+          shouldSend = cfg.notifyNewOrder !== false;
+        }
+      } else {
+        shouldSend = cfg.notifySettlement !== false;
+      }
+      if (!shouldSend) continue;
+
+      const resolvedThreadId =
+        normalizeTelegramThreadId(cfg.messageThreadId) ?? topicThreadId;
+      await sendUnique(
+        cfg.chatId,
+        resolvedThreadId,
+        cfg.botToken || options?.botToken,
+        cfg.tenantId || options?.tenantId,
+      );
+    }
+
+    // 2. Always deliver to system env chat ID (with topic thread ID) unless already sent above
+    const fallbackChatId = (options?.chatId || this.getDefaultChatId()).trim();
+    if (fallbackChatId) {
+      await sendUnique(
+        fallbackChatId,
+        topicThreadId,
+        options?.botToken,
+        options?.tenantId,
+      );
+    }
+
+    return { sentCount };
+  }
+
+  /**
    * Broadcast notification to all active Telegram configs of a specific merchant,
-   * with fallback to merchant.telegram or default system chat.
+   * with fallback to merchant.telegram, and route PAYMENT_SETTLEMENT to
+   * TELEGRAM_TOPIC_MERCHANT_PAYMENT without duplicate sends.
    */
   async notifyMerchant(
     merchantId: number,
     eventType: 'PAYMENT_SETTLEMENT' | 'ORDER_CREATED' | 'DELIVERY_STATUS',
     text: string,
+    options?: {
+      tenantId?: number;
+    },
   ) {
     const configs = await this.configRepo.find({
       where: { merchantId, isActive: true },
     });
 
-    let sentAny = false;
+    const envChatId = normalizeTelegramChatId(this.getDefaultChatId());
+    const merchantTopicId =
+      eventType === 'PAYMENT_SETTLEMENT'
+        ? this.getTopicThreadId('merchant_payment')
+        : undefined;
+    const sentKeys = new Set<string>();
+    let sentAnyMerchantTarget = false;
 
     // Send to custom channels configured for this merchant
     for (const cfg of configs) {
@@ -132,26 +281,64 @@ export class TelegramService {
       if (eventType === 'DELIVERY_STATUS' && (cfg.notifyDeliverySuccess || cfg.notifyDeliveryFailed)) shouldSend = true;
 
       if (shouldSend) {
-        await this.sendMessage(cfg.chatId, text, {
-          botToken: cfg.botToken,
-          eventType,
-          merchantId,
-          tenantId: cfg.tenantId || undefined,
-        });
-        sentAny = true;
+        const normalizedChat = normalizeTelegramChatId(cfg.chatId);
+        const resolvedThreadId =
+          normalizeTelegramThreadId(cfg.messageThreadId) ??
+          (eventType === 'PAYMENT_SETTLEMENT' && envChatId && normalizedChat === envChatId
+            ? merchantTopicId
+            : undefined);
+
+        const dedupKey = `${normalizedChat}::${resolvedThreadId ?? ''}`;
+        if (!sentKeys.has(dedupKey) && normalizedChat) {
+          sentKeys.add(dedupKey);
+          await this.sendMessage(normalizedChat, text, {
+            botToken: cfg.botToken,
+            messageThreadId: resolvedThreadId,
+            eventType,
+            merchantId,
+            tenantId: cfg.tenantId || options?.tenantId || undefined,
+          });
+        }
+        sentAnyMerchantTarget = true;
       }
     }
 
-    // Fallback: If no config in telegram_configs, check merchant.telegram or global fallback
-    if (!sentAny) {
+    // Fallback: If no config in telegram_configs, check merchant.telegram
+    if (!sentAnyMerchantTarget) {
       const merchant = await this.merchantRepo.findOne({ where: { id: merchantId } });
-      const fallbackChatId = (merchant?.telegram || process.env.CHAT_ID || process.env.TELEGRAM_CHAT_ID || '').trim();
-      if (fallbackChatId) {
-        await this.sendMessage(fallbackChatId, text, {
+      const merchantChatId = normalizeTelegramChatId(merchant?.telegram);
+      if (merchantChatId) {
+        const resolvedThreadId =
+          eventType === 'PAYMENT_SETTLEMENT' && envChatId && merchantChatId === envChatId
+            ? merchantTopicId
+            : undefined;
+        const dedupKey = `${merchantChatId}::${resolvedThreadId ?? ''}`;
+        if (!sentKeys.has(dedupKey)) {
+          sentKeys.add(dedupKey);
+          await this.sendMessage(merchantChatId, text, {
+            messageThreadId: resolvedThreadId,
+            eventType,
+            merchantId,
+            tenantId: options?.tenantId,
+          });
+        }
+      } else if (eventType !== 'PAYMENT_SETTLEMENT' && envChatId) {
+        await this.sendMessage(envChatId, text, {
           eventType,
           merchantId,
+          tenantId: options?.tenantId,
         });
       }
+    }
+
+    // For merchant settlements, also deliver to company forum topic (TELEGRAM_TOPIC_MERCHANT_PAYMENT)
+    if (eventType === 'PAYMENT_SETTLEMENT') {
+      await this.notifyTopic('merchant_payment', text, {
+        eventType,
+        merchantId,
+        tenantId: options?.tenantId,
+        skipSentKeys: sentKeys,
+      });
     }
   }
 
@@ -225,14 +412,22 @@ export class TelegramService {
 
   // --- Test Telegram Connection ---
 
-  async testConnection(chatId: string, botToken?: string) {
-    const text = `🔔 <b>Telegram Integration Test</b>\n\n` +
+  async testConnection(
+    chatId: string,
+    botToken?: string,
+    messageThreadId?: number | string | null,
+  ) {
+    const parsedThreadId = normalizeTelegramThreadId(messageThreadId);
+    const text =
+      `🔔 <b>Telegram Integration Test</b>\n\n` +
       `✅ ការភ្ជាប់ជាមួយ Telegram Bot ទទួលបានជោគជ័យ!\n` +
+      (parsedThreadId ? `💬 Topic ID: #${parsedThreadId}\n` : '') +
       `⏰ ពេលវេលា: ${new Date().toLocaleString('km-KH', { timeZone: 'Asia/Phnom_Penh' })}\n` +
       `🚀 ប្រព័ន្ធដឹកជញ្ជូន EBS Delivery System ដំណើរការធម្មតា។`;
 
     return this.sendMessage(chatId, text, {
       botToken,
+      messageThreadId: parsedThreadId,
       eventType: 'TEST',
     });
   }

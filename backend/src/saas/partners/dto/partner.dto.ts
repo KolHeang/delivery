@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 import { IsBoolean, IsEmail, IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
+import { MaxPhoneDigits } from '../../../common/phone.util';
 
 export class CreatePartnerDto {
   @ApiProperty({ description: 'Partner full name', example: 'Alex Partner' })
@@ -12,9 +13,10 @@ export class CreatePartnerDto {
   @IsEmail()
   email: string;
 
-  @ApiPropertyOptional({ description: 'Phone number', example: '+85512345678' })
+  @ApiPropertyOptional({ description: 'Phone number', example: '012345678' })
   @IsOptional()
   @IsString()
+  @MaxPhoneDigits()
   phone?: string;
 
   @ApiPropertyOptional({ description: 'Custom referral code (auto-generated if omitted)', example: 'ALEX2026' })

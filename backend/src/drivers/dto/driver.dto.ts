@@ -13,12 +13,13 @@ import {
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { Type, Transform } from 'class-transformer';
+import { MaxPhoneDigits } from '../../common/phone.util';
 
 export class CreateDriverDto {
   @ApiProperty({ required: false }) @IsOptional() @IsString() code?: string;
   @ApiProperty() @IsNotEmpty() @IsString() name: string;
   @ApiProperty({ required: false }) @IsOptional() @IsString() nameKh?: string;
-  @ApiProperty() @IsNotEmpty() @IsString() phone: string;
+  @ApiProperty() @IsNotEmpty() @IsString() @MaxPhoneDigits() phone: string;
   @ApiProperty({ required: false })
   @IsOptional()
   @Transform(({ value }) => (!value || typeof value !== 'string' || value.trim() === '' ? null : value.trim()))

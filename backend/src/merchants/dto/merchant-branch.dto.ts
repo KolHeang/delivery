@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 import { IsBoolean, IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
+import { MaxPhoneDigits } from '../../common/phone.util';
 
 export class CreateMerchantBranchDto {
   @ApiPropertyOptional({ description: 'Merchant ID', example: 1 })
@@ -22,9 +23,10 @@ export class CreateMerchantBranchDto {
   @IsString()
   contactName?: string;
 
-  @ApiPropertyOptional({ description: 'Phone number for driver to call', example: '+85512345678' })
+  @ApiPropertyOptional({ description: 'Phone number for driver to call', example: '012345678' })
   @IsOptional()
   @IsString()
+  @MaxPhoneDigits()
   phone?: string;
 
   @ApiPropertyOptional({ description: 'Specific pickup address', example: 'Street 315, Sangkat Boeung Kak 1, Khan Toul Kork' })

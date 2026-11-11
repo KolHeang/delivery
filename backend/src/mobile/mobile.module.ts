@@ -29,6 +29,7 @@ import { MerchantController } from './merchant/merchant.controller';
 import { MerchantService } from './merchant/merchant.service';
 import { UploadController } from './upload/upload.controller';
 import { TrackingModule } from '../tracking/tracking.module';
+import { TelegramModule } from '../telegram/telegram.module';
 
 @Module({
   imports: [
@@ -52,6 +53,7 @@ import { TrackingModule } from '../tracking/tracking.module';
     ]),
     MinioModule,
     TrackingModule,
+    TelegramModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: (config: ConfigService) => ({

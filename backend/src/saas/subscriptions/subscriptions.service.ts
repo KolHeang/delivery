@@ -16,6 +16,7 @@ import { Tenant } from '../entities/tenant.entity';
 import { TenantDomain } from '../entities/tenant-domain.entity';
 import { Role } from '../../roles/entities/role.entity';
 import { Permission } from '../../roles/entities/permission.entity';
+import { assertValidPhoneMaxDigits } from '../../common/phone.util';
 
 @Injectable()
 export class SubscriptionsService {
@@ -208,6 +209,7 @@ export class SubscriptionsService {
     primaryColor?: string;
     color?: string;
   }) {
+    assertValidPhoneMaxDigits(dto.phone);
     if (!dto.email || !dto.companyName || !dto.subdomain) {
       throw new BadRequestException('Please provide company name, subdomain, and email');
     }

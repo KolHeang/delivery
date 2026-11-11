@@ -7,6 +7,7 @@ import { MerchantBranch } from './entities/merchant-branch.entity';
 import { CreateMerchantDto, UpdateMerchantDto } from './dto/merchant.dto';
 import { CreateMerchantBranchDto, UpdateMerchantBranchDto } from './dto/merchant-branch.dto';
 import { PaginatedResult } from '../interface/pagination.interface';
+import { assertValidPhoneMaxDigits } from '../common/phone.util';
 
 @Injectable()
 export class MerchantsService {
@@ -76,6 +77,7 @@ export class MerchantsService {
   }
 
   async create(dto: CreateMerchantDto): Promise<Merchant> {
+    assertValidPhoneMaxDigits(dto.phone);
     const data: any = { ...dto };
     if (!data.email || (typeof data.email === 'string' && data.email.trim() === '')) {
       delete data.email;
@@ -106,6 +108,9 @@ export class MerchantsService {
   }
 
   async update(id: number, dto: UpdateMerchantDto, tenantId?: number): Promise<Merchant> {
+    if (dto.phone !== undefined) {
+      assertValidPhoneMaxDigits(dto.phone);
+    }
     await this.findOne(id, tenantId);
     const data: any = { ...dto };
     if (data.email !== undefined) {
@@ -242,6 +247,7 @@ export class MerchantsService {
   }
 
   async createBranch(merchantId: number, dto: CreateMerchantBranchDto, tenantId?: number): Promise<MerchantBranch> {
+    assertValidPhoneMaxDigits(dto.phone);
     const merchant = await this.findOne(merchantId);
 
     // If marked as default, unset other default branches for this merchant
@@ -266,6 +272,9 @@ export class MerchantsService {
   }
 
   async updateBranch(merchantId: number, branchId: number, dto: UpdateMerchantBranchDto, tenantId?: number): Promise<MerchantBranch> {
+    if (dto.phone !== undefined) {
+      assertValidPhoneMaxDigits(dto.phone);
+    }
     await this.findBranch(merchantId, branchId, tenantId);
 
     if (dto.isDefault) {

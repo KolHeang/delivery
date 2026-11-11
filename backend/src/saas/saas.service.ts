@@ -13,6 +13,7 @@ import { Role } from '../roles/entities/role.entity';
 import { Permission } from '../roles/entities/permission.entity';
 import { Zone } from '../zones/entities/zone.entity';
 import { SubZone } from '../zones/entities/subzone.entity';
+import { assertValidPhoneMaxDigits } from '../common/phone.util';
 
 @Injectable()
 export class SaasService {
@@ -101,6 +102,7 @@ export class SaasService {
     color?: string;
     settings?: Record<string, any>;
   }) {
+    assertValidPhoneMaxDigits(dto.phone);
     const rawSlug = dto.slug || dto.subdomain || dto.companyName.toLowerCase().replace(/[^a-z0-9-]/g, '-');
     const cleanSlug = rawSlug.replace(/^-+|-+$/g, '') || `tenant-${Date.now()}`;
     const cleanEmail = dto.email.toLowerCase().trim();
@@ -291,6 +293,7 @@ export class SaasService {
   }
 
   async createTenant(dto: Partial<Tenant>) {
+    assertValidPhoneMaxDigits(dto.phone);
     const tenant = await this.tenantRepo.save(this.tenantRepo.create(dto));
     if (tenant?.id) {
       await this.provisionDefaultZonesForTenant(tenant.id, tenant.name);
@@ -299,6 +302,9 @@ export class SaasService {
   }
 
   async updateTenant(id: number, dto: any) {
+    if (dto.phone !== undefined) {
+      assertValidPhoneMaxDigits(dto.phone);
+    }
     const tenant = await this.tenantRepo.findOne({ where: { id } });
     if (!tenant) throw new NotFoundException('Tenant not found');
 

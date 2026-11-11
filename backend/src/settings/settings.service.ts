@@ -10,6 +10,7 @@ import { CreateFirebaseCredentialDto, UpdateFirebaseCredentialDto } from './dto/
 import { CreateCurrencyDto, UpdateCurrencyDto } from './dto/currency.dto';
 import { FirebaseService } from '../firebase/firebase.service';
 import { WORLD_CURRENCIES } from './currency-catalog';
+import { assertValidPhoneMaxDigits } from '../common/phone.util';
 
 @Injectable()
 export class SettingsService {
@@ -107,6 +108,14 @@ export class SettingsService {
     if (resolvedTenantId) {
       org = await this.orgRepo.findOne({ where: { tenantId: resolvedTenantId } });
       const tenant = await this.tenantRepo.findOne({ where: { id: resolvedTenantId } });
+      const existingPhone = org?.phone || tenant?.phone || '';
+      if (attrs.phone !== undefined) {
+        const isUntouchedLegacyDefault =
+          attrs.phone === existingPhone && String(existingPhone).trim().startsWith('+855');
+        if (!isUntouchedLegacyDefault) {
+          assertValidPhoneMaxDigits(attrs.phone);
+        }
+      }
       if (!org) {
         org = this.orgRepo.create({
           tenantId: resolvedTenantId,
@@ -128,6 +137,14 @@ export class SettingsService {
       }
     } else {
       org = await this.getOrganisation();
+      const existingPhone = org?.phone || '';
+      if (attrs.phone !== undefined) {
+        const isUntouchedLegacyDefault =
+          attrs.phone === existingPhone && String(existingPhone).trim().startsWith('+855');
+        if (!isUntouchedLegacyDefault) {
+          assertValidPhoneMaxDigits(attrs.phone);
+        }
+      }
     }
 
     Object.assign(org, attrs);

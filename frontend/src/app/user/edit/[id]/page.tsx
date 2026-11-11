@@ -7,6 +7,11 @@ import Sidebar from '@/components/layout/Sidebar';
 import Topbar from '@/components/layout/Topbar';
 import api from '@/lib/api';
 import { useLanguage } from '@/lib/LanguageContext';
+import {
+  sanitizePhoneInput,
+  isPhoneExceedingMaxDigits,
+  getPhoneMaxDigitsError,
+} from '@/lib/phone-util';
 import { MdArrowBack, MdSave } from 'react-icons/md';
 
 const emptyForm = {
@@ -124,7 +129,8 @@ export default function EditStaffPage() {
   }, [params.id, router]);
 
   const f = (k: string) => (e: any) => {
-    const val = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
+    const rawVal = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
+    const val = k === 'phone' ? sanitizePhoneInput(String(rawVal ?? '')) : rawVal;
     setForm(p => ({ ...p, [k]: val }));
     if (errors[k]) {
       setErrors(prev => {
@@ -150,6 +156,8 @@ export default function EditStaffPage() {
     }
     if (!form.phone.trim()) {
       errs.phone = lang === 'km' ? 'សូមបំពេញលេខទូរស័ព្ទ' : 'Phone is required';
+    } else if (isPhoneExceedingMaxDigits(form.phone)) {
+      errs.phone = getPhoneMaxDigitsError(lang);
     }
     if (form.role !== 'driver') {
       if (!form.email.trim()) {
@@ -396,10 +404,12 @@ export default function EditStaffPage() {
                       {t('phone') || 'ទូរស័ព្ទ'} <span style={{ color: '#ef4444' }}>*</span>
                     </label>
                     <input
+                      type="text"
+                      inputMode="tel"
                       className={`form-control ${errors.phone ? 'is-invalid' : ''}`}
                       value={form.phone}
                       onChange={f('phone')}
-                      placeholder="e.g. 012-345-678"
+                      placeholder="e.g. 012345678"
                     />
                     {errors.phone && <div className="form-error-text">{errors.phone}</div>}
                   </div>

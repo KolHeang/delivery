@@ -8,6 +8,11 @@ import { saasApi, Plan } from '@/lib/saas-api';
 import api from '@/lib/api';
 import { getUser, clearAuth } from '@/lib/auth';
 import {
+  sanitizePhoneInput,
+  isPhoneExceedingMaxDigits,
+  getPhoneMaxDigitsError,
+} from '@/lib/phone-util';
+import {
   MdDashboard,
   MdBusiness,
   MdArrowBack,
@@ -250,6 +255,9 @@ export default function EditTenantPage() {
     }
     if (!form.subdomain.trim()) {
       errs.subdomain = tr('សូមបញ្ចូលឈ្មោះ Subdomain', 'Please enter subdomain');
+    }
+    if (form.phone.trim() && isPhoneExceedingMaxDigits(form.phone)) {
+      errs.phone = getPhoneMaxDigitsError(lang);
     }
 
     if (Object.keys(errs).length > 0) {
@@ -665,11 +673,16 @@ export default function EditTenantPage() {
                       </label>
                       <input
                         type="text"
-                        className="form-control"
-                        placeholder="012 345 678"
+                        inputMode="tel"
+                        className={`form-control ${errors.phone ? 'is-invalid' : ''}`}
+                        placeholder="012345678"
                         value={form.phone}
-                        onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                        onChange={(e) => {
+                          setForm({ ...form, phone: sanitizePhoneInput(e.target.value) });
+                          if (errors.phone) setErrors((prev: any) => { const n = { ...prev }; delete n.phone; return n; });
+                        }}
                       />
+                      {errors.phone && <div className="form-error-text">{errors.phone}</div>}
                     </div>
 
                     <div className="form-group">

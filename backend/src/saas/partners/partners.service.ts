@@ -7,6 +7,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, ILike } from 'typeorm';
 import { Partner } from './partner.entity';
 import { Commission } from '../commissions/commission.entity';
+import { assertValidPhoneMaxDigits } from '../../common/phone.util';
 
 @Injectable()
 export class PartnersService {
@@ -123,6 +124,7 @@ export class PartnersService {
   }
 
   async create(data: Partial<Partner>): Promise<Partner> {
+    assertValidPhoneMaxDigits(data.phone);
     let code = data.referralCode?.toUpperCase().trim();
     if (!code) {
       code = 'REF-' + Math.random().toString(36).substring(2, 8).toUpperCase();
@@ -143,6 +145,9 @@ export class PartnersService {
   }
 
   async update(id: number, data: Partial<Partner>): Promise<Partner> {
+    if (data.phone !== undefined) {
+      assertValidPhoneMaxDigits(data.phone);
+    }
     const partner = await this.findById(id);
     if (data.referralCode) {
       data.referralCode = data.referralCode.toUpperCase().trim();

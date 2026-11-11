@@ -13,7 +13,9 @@ import { Parcel } from '../parcels/entities/parcel.entity';
 import { Organisation } from '../settings/entities/organisation.entity';
 import { Tenant } from '../saas/entities/tenant.entity';
 import { TelegramService } from '../telegram/telegram.service';
+import { escapeTelegramHtml } from '../telegram/telegram.util';
 import { FirebaseService } from '../firebase/firebase.service';
+import { cleanParcelNote } from '../common/note.util';
 import * as crypto from 'crypto';
 
 export interface TelegramReportPayload {
@@ -71,62 +73,175 @@ export class PaymentsService {
     const cleanAmount = Number(amount) || 0;
     const normalizedCurrency = (currency || 'KHR').toUpperCase();
 
-    return this.dataSource.transaction(async (manager) => {
-      const driverQb = manager
-        .createQueryBuilder(User, 'user')
-        .where('user.id = :driverId', { driverId });
+    const { saved, driver, effectiveTenantId } =
+      await this.dataSource.transaction(async (manager) => {
+        const driverQb = manager
+          .createQueryBuilder(User, 'user')
+          .where('user.id = :driverId', { driverId });
 
-      if (tenantId) {
-        driverQb.andWhere('user.tenantId = :tenantId', { tenantId });
-      }
-
-      const driver = await driverQb.getOne();
-      if (!driver) throw new NotFoundException('Driver not found');
-
-      // បម្លែង null ទៅជា undefined ដើម្បីឱ្យត្រូវជាមួយ DeepPartial<DriverPayment>
-      const effectiveTenantId: number | undefined =
-        tenantId ?? driver.tenantId ?? undefined;
-
-      if (parcelIds && parcelIds.length > 0) {
-        const updateQb = manager
-          .createQueryBuilder()
-          .update(Parcel)
-          .set({ driverPaymentStatus: 'paid' })
-          .whereInIds(parcelIds)
-          .andWhere('driverId = :driverId', { driverId })
-          .andWhere(
-            "(driverPaymentStatus IS NULL OR driverPaymentStatus != 'paid')",
-          );
-
-        if (effectiveTenantId) {
-          updateQb.andWhere('tenantId = :tenantId', {
-            tenantId: effectiveTenantId,
-          });
+        if (tenantId) {
+          driverQb.andWhere('user.tenantId = :tenantId', { tenantId });
         }
 
-        const updateResult = await updateQb.execute();
-        if (updateResult.affected === 0) {
-          throw new BadRequestException(
-            'Selected parcels are already paid or invalid for this driver',
-          );
-        }
-      }
+        const foundDriver = await driverQb.getOne();
+        if (!foundDriver) throw new NotFoundException('Driver not found');
 
-      const payment = manager.create(DriverPayment, {
-        driverId,
-        amount: cleanAmount,
-        currency: normalizedCurrency,
-        status: status || 'Paid',
-        date: date || new Date(),
-        reference,
-        note,
-        parcelIds,
-        createdById: userId,
-        tenantId: effectiveTenantId,
+        // បម្លែង null ទៅជា undefined ដើម្បីឱ្យត្រូវជាមួយ DeepPartial<DriverPayment>
+        const resolvedTenantId: number | undefined =
+          tenantId ?? foundDriver.tenantId ?? undefined;
+
+        if (parcelIds && parcelIds.length > 0) {
+          const updateQb = manager
+            .createQueryBuilder()
+            .update(Parcel)
+            .set({ driverPaymentStatus: 'paid' })
+            .whereInIds(parcelIds)
+            .andWhere('driverId = :driverId', { driverId })
+            .andWhere(
+              "(driverPaymentStatus IS NULL OR driverPaymentStatus != 'paid')",
+            );
+
+          if (resolvedTenantId) {
+            updateQb.andWhere('tenantId = :tenantId', {
+              tenantId: resolvedTenantId,
+            });
+          }
+
+          const updateResult = await updateQb.execute();
+          if (updateResult.affected === 0) {
+            throw new BadRequestException(
+              'Selected parcels are already paid or invalid for this driver',
+            );
+          }
+        }
+
+        const payment = manager.create(DriverPayment, {
+          driverId,
+          amount: cleanAmount,
+          currency: normalizedCurrency,
+          status: status || 'Paid',
+          date: date || new Date(),
+          reference,
+          note,
+          parcelIds,
+          createdById: userId,
+          tenantId: resolvedTenantId,
+        });
+
+        const savedPayment = await manager.save(DriverPayment, payment);
+        return {
+          saved: savedPayment,
+          driver: foundDriver,
+          effectiveTenantId: resolvedTenantId,
+        };
       });
 
-      return manager.save(DriverPayment, payment);
-    });
+    // Notify Telegram Driver Payment Topic after DB commit (non-blocking)
+    if (
+      this.telegramService &&
+      typeof this.telegramService.notifyTopic === 'function'
+    ) {
+      try {
+        let parcelCount = Array.isArray(parcelIds) ? parcelIds.length : 0;
+        let deliveredCount = 0;
+        let failedOrReturnedCount = 0;
+        let totalCodUSD = 0;
+        let totalCodKHR = 0;
+
+        if (
+          parcelCount > 0 &&
+          this.parcelRepo &&
+          typeof this.parcelRepo.createQueryBuilder === 'function'
+        ) {
+          try {
+            const settledParcels = await this.parcelRepo
+              .createQueryBuilder('parcel')
+              .select([
+                'parcel.id',
+                'parcel.status',
+                'parcel.cod',
+                'parcel.codCurrency',
+              ])
+              .whereInIds(parcelIds!)
+              .getMany();
+
+            if (Array.isArray(settledParcels) && settledParcels.length > 0) {
+              parcelCount = settledParcels.length;
+              for (const p of settledParcels) {
+                if (p.status === 'delivered') {
+                  deliveredCount += 1;
+                  const codVal = Number(p.cod) || 0;
+                  if (String(p.codCurrency || 'USD').toUpperCase() === 'KHR') {
+                    totalCodKHR += codVal;
+                  } else {
+                    totalCodUSD += codVal;
+                  }
+                } else if (p.status === 'failed' || p.status === 'returned') {
+                  failedOrReturnedCount += 1;
+                }
+              }
+            }
+          } catch {
+            // Optional summary lookup; fallback to parcelIds.length
+          }
+        }
+
+        const d = date ? new Date(date) : new Date();
+        const formattedDate = !isNaN(d.getTime())
+          ? d.toLocaleDateString('en-GB', { timeZone: 'Asia/Phnom_Penh' })
+          : '';
+        const formattedAmount =
+          normalizedCurrency === 'KHR'
+            ? `${Math.round(cleanAmount).toLocaleString()} រៀល`
+            : `$ ${cleanAmount.toFixed(2)} USD`;
+
+        const driverDisplay = escapeTelegramHtml(
+          driver.nameKh || driver.name || `Driver #${driverId}`,
+        );
+        const lines = [
+          `💵 <b>របាយការណ៍ទូទាត់ប្រាក់អ្នកដឹកជញ្ជូន</b>`,
+          ``,
+          `- 🛵 អ្នកដឹកជញ្ជូន: ${driverDisplay}`,
+          ...(driver.phone
+            ? [`- 📞 លេខទូរស័ព្ទ: ${escapeTelegramHtml(driver.phone)}`]
+            : []),
+          `- 🧾 លេខយោង: ${escapeTelegramHtml(saved.reference || `#${saved.id}`)}`,
+          ...(formattedDate ? [`- 📅 កាលបរិច្ឆេទ: ${formattedDate}`] : []),
+          `- 📊 ស្ថានភាព: ${escapeTelegramHtml(saved.status || status || 'Paid')}`,
+          ...(parcelCount > 0
+            ? [
+                `- 📦 ចំនួនកញ្ចប់: ${parcelCount} កញ្ចប់` +
+                  (deliveredCount || failedOrReturnedCount
+                    ? ` (ជោគជ័យ ${deliveredCount} / មានបញ្ហា-ត្រឡប់ ${failedOrReturnedCount})`
+                    : ''),
+              ]
+            : []),
+          ...(totalCodUSD > 0 || totalCodKHR > 0
+            ? [
+                `- 💰 COD ប្រមូលបាន: $ ${totalCodUSD.toFixed(2)} / ${Math.round(totalCodKHR).toLocaleString()} រៀល`,
+              ]
+            : []),
+          ``,
+          `💵 <b>ទឹកប្រាក់ទូទាត់: ${formattedAmount}</b>`,
+          ...(saved.note
+            ? [`- 📝 កំណត់ចំណាំ: ${escapeTelegramHtml(saved.note)}`]
+            : []),
+        ];
+
+        await this.telegramService.notifyTopic(
+          'driver_payment',
+          lines.join('\n'),
+          {
+            eventType: 'DRIVER_PAYMENT',
+            tenantId: effectiveTenantId,
+          },
+        );
+      } catch {
+        // Non-blocking notification
+      }
+    }
+
+    return saved;
   }
 
   async createStaffPayment(
@@ -423,9 +538,9 @@ export class PaymentsService {
 
       const text =
         `📦 <b>របាយការណ៍ដឹកជញ្ជូនប្រចាំថ្ងៃ</b>\n\n` +
-        `- ឈ្មោះហាង: ${merchant.nameKh || merchant.name}\n` +
+        `- ឈ្មោះហាង: ${escapeTelegramHtml(merchant.nameKh || merchant.name)}\n` +
         `- កាលបរិច្ឆេទ: ${formattedDate}\n` +
-        `- លេខទូរស័ព្ទ: ${merchant.phone}\n` +
+        `- លេខទូរស័ព្ទ: ${escapeTelegramHtml(merchant.phone || '')}\n` +
         `- សរុបចំនួនកញ្ចប់ (ថ្មី/ចាស់): ${telegramReport.newCount || 0} / ${telegramReport.oldCount || 0}\n` +
         `- ដឹកជោគជ័យ: ${telegramReport.successCount || 0} កញ្ចប់\n` +
         `- កំពុងដឹក: ${telegramReport.inProgressCount || 0} កញ្ចប់\n` +
@@ -435,15 +550,55 @@ export class PaymentsService {
         `- 🚚 សេវាដឹកត្រូវទទួល: $ ${Number(telegramReport.deliveryFee || 0).toFixed(2)}\n\n` +
         `💵 <b>Total Amount: $ ${Number(telegramReport.totalUSD || 0).toFixed(2)}</b>\n` +
         `<b>USD:</b> $ ${Number(telegramReport.payableUSD || 0).toFixed(2)} USD\n` +
-        `<b>KHR:</b> ${Number(telegramReport.payableKHR || 0).toLocaleString()} រៀល\n` +
-        `-------------------------\n` +
-        `របាយការណ៍លម្អិត ចុចត្រង់នេះ: <a href="${finalDetailUrl}">Click Detail</a>`;
+        `<b>KHR:</b> ${Number(telegramReport.payableKHR || 0).toLocaleString()} រៀល` +
+        (finalDetailUrl
+          ? `\n-------------------------\nរបាយការណ៍លម្អិត ចុចត្រង់នេះ: <a href="${escapeTelegramHtml(finalDetailUrl)}">Click Detail</a>`
+          : '');
+
+      try {
+        if (
+          this.telegramService &&
+          typeof this.telegramService.notifyMerchant === 'function'
+        ) {
+          await this.telegramService.notifyMerchant(
+            merchantId,
+            'PAYMENT_SETTLEMENT',
+            text,
+            { tenantId: effectiveTenantId },
+          );
+        }
+      } catch {
+        // Prevent Telegram failure from failing HTTP response after DB commit
+      }
+    } else if (
+      this.telegramService &&
+      typeof this.telegramService.notifyMerchant === 'function'
+    ) {
+      const d = date ? new Date(date) : new Date();
+      const formattedDate = !isNaN(d.getTime())
+        ? d.toLocaleDateString('en-GB', { timeZone: 'Asia/Phnom_Penh' })
+        : '';
+      const fallbackText =
+        `📦 <b>ការទូទាត់ប្រាក់ជាមួយហាង</b>\n\n` +
+        `- 🏪 ឈ្មោះហាង: ${escapeTelegramHtml(merchant.nameKh || merchant.name)}\n` +
+        (merchant.phone
+          ? `- 📞 លេខទូរស័ព្ទ: ${escapeTelegramHtml(merchant.phone)}\n`
+          : '') +
+        `- 🧾 លេខយោង: ${escapeTelegramHtml(saved.reference || `#${saved.id}`)}\n` +
+        (formattedDate ? `- 📅 កាលបរិច្ឆេទ: ${formattedDate}\n` : '') +
+        (Array.isArray(parcelIds) && parcelIds.length > 0
+          ? `- 📦 ចំនួនកញ្ចប់: ${parcelIds.length} កញ្ចប់\n`
+          : '') +
+        `\n<b>USD:</b> $ ${cleanAmountUSD.toFixed(2)} USD\n` +
+        `<b>KHR:</b> ${Math.round(cleanAmountKHR).toLocaleString()} រៀល` +
+        (saved.note ? `\n- 📝 កំណត់ចំណាំ: ${escapeTelegramHtml(saved.note)}` : '');
 
       try {
         await this.telegramService.notifyMerchant(
           merchantId,
           'PAYMENT_SETTLEMENT',
-          text,
+          fallbackText,
+          { tenantId: effectiveTenantId },
         );
       } catch {
         // Prevent Telegram failure from failing HTTP response after DB commit
@@ -817,6 +972,7 @@ export class PaymentsService {
         });
       }
       parcels = await parcelQb.getMany();
+      this.sanitizeParcelNotes(parcels);
     }
 
     let tenant: Tenant | null = null;
@@ -934,7 +1090,9 @@ export class PaymentsService {
       );
     }
 
-    return qb.getMany();
+    const parcels = await qb.getMany();
+    this.sanitizeParcelNotes(parcels);
+    return parcels;
   }
 
   /** Dedicated endpoint for Driver settlement parcels (ទូទាត់ប្រាក់ជាមួយអ្នកដឹក) */
@@ -1006,7 +1164,24 @@ export class PaymentsService {
       );
     }
 
-    return qb.getMany();
+    const parcels = await qb.getMany();
+    this.sanitizeParcelNotes(parcels);
+    return parcels;
+  }
+
+  private sanitizeParcelNotes(parcels: Parcel[]): void {
+    for (const parcel of parcels) {
+      if (parcel.note) {
+        parcel.note = cleanParcelNote(parcel.note);
+      }
+      if (Array.isArray(parcel.events)) {
+        for (const event of parcel.events) {
+          if (event.note) {
+            event.note = cleanParcelNote(event.note);
+          }
+        }
+      }
+    }
   }
 
   async sendTelegramMessage(chatId: string, text: string) {

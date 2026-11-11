@@ -14,6 +14,7 @@ import {
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { Type, Transform } from 'class-transformer';
+import { MaxPhoneDigits } from '../../common/phone.util';
 
 export class CreateUserDto {
   @ApiProperty({ required: false })
@@ -58,6 +59,7 @@ export class CreateUserDto {
   @ApiProperty({ required: false })
   @IsOptional()
   @IsString()
+  @MaxPhoneDigits()
   phone?: string;
 
   @ApiProperty({

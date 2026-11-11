@@ -19,6 +19,9 @@ export class TelegramLog {
   @Column({ name: 'chat_id', type: 'varchar' })
   chatId: string;
 
+  @Column({ name: 'message_thread_id', type: 'int', nullable: true })
+  messageThreadId: number | null;
+
   @Column({ name: 'event_type', type: 'varchar', default: 'NOTIFICATION' })
   eventType: string; // 'PAYMENT_SETTLEMENT' | 'ORDER_CREATED' | 'DELIVERY_STATUS' | 'TEST'
 

@@ -38,6 +38,7 @@ export default function TelegramSettingsPage() {
 
   // Test Modal State
   const [testChatId, setTestChatId] = useState('761552994');
+  const [testThreadId, setTestThreadId] = useState('');
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<{ success?: boolean; message?: string; error?: string } | null>(null);
 
@@ -104,7 +105,12 @@ export default function TelegramSettingsPage() {
     setTesting(true);
     setTestResult(null);
     try {
-      const res = await api.post('/telegram/test', { chatId: testChatId.trim() });
+      const trimmedThread = testThreadId.trim();
+      const parsedThread = trimmedThread ? parseInt(trimmedThread, 10) : undefined;
+      const res = await api.post('/telegram/test', {
+        chatId: testChatId.trim(),
+        ...(parsedThread && parsedThread > 0 ? { messageThreadId: parsedThread } : {}),
+      });
       if (res.data?.success) {
         setTestResult({ success: true, message: isKh ? 'សារ Test ត្រូវបានផ្ញើជោគជ័យ!' : 'Test message sent successfully!' });
       } else {
@@ -169,6 +175,7 @@ export default function TelegramSettingsPage() {
                 <button
                   className="btn btn-secondary btn-sm"
                   onClick={() => {
+                    setTestThreadId('');
                     setTestResult(null);
                     setShowTestModal(true);
                   }}
@@ -225,10 +232,20 @@ export default function TelegramSettingsPage() {
                             {cfg.channelTitle || ''}
                           </td>
                           <td style={{ fontFamily: 'monospace', fontSize: 13, fontWeight: 600 }}>
-                            {cfg.chatId}
+                            <div>{cfg.chatId}</div>
+                            {cfg.messageThreadId ? (
+                              <div style={{ fontSize: 11, color: '#0284c7', marginTop: 2 }}>
+                                Topic #{cfg.messageThreadId}
+                              </div>
+                            ) : null}
                           </td>
                           <td>
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                              {cfg.notifyPickup !== false && (
+                                <span className="badge badge-pending" style={{ fontSize: 11, padding: '2px 6px' }}>
+                                  🛵 Pickup
+                                </span>
+                              )}
                               {cfg.notifySettlement && (
                                 <span className="badge badge-delivered" style={{ fontSize: 11, padding: '2px 6px' }}>
                                   💵 Settlement
@@ -269,6 +286,7 @@ export default function TelegramSettingsPage() {
                                 title={isKh ? 'តេស្តផ្ញើសារ' : 'Send Test Ping'}
                                 onClick={() => {
                                   setTestChatId(cfg.chatId);
+                                  setTestThreadId(cfg.messageThreadId ? String(cfg.messageThreadId) : '');
                                   setTestResult(null);
                                   setShowTestModal(true);
                                 }}
@@ -341,6 +359,20 @@ export default function TelegramSettingsPage() {
                 placeholder="761552994"
                 value={testChatId}
                 onChange={(e) => setTestChatId(e.target.value)}
+              />
+            </div>
+
+            <div className="form-group" style={{ marginTop: 10 }}>
+              <label className="form-label">
+                {isKh ? 'Topic / Thread ID (បើប្រើ Telegram Topics):' : 'Topic / Thread ID (optional):'}
+              </label>
+              <input
+                type="text"
+                inputMode="numeric"
+                className="form-control"
+                placeholder="e.g. 110, 108, 106, 113"
+                value={testThreadId}
+                onChange={(e) => setTestThreadId(e.target.value.replace(/\D/g, ''))}
               />
             </div>
 

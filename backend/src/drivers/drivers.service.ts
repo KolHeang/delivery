@@ -4,6 +4,7 @@ import { Repository, ILike } from 'typeorm';
 import { User } from '../users/entities/users.entity';
 import { Role } from '../roles/entities/role.entity';
 import { CreateDriverDto, UpdateDriverDto } from './dto/driver.dto';
+import { assertValidPhoneMaxDigits } from '../common/phone.util';
 import * as bcrypt from 'bcrypt';
 
 @Injectable()
@@ -77,6 +78,7 @@ export class DriversService {
   }
 
   async create(dto: CreateDriverDto, tenantId?: number): Promise<User> {
+    assertValidPhoneMaxDigits(dto.phone);
     const rawPassword = dto.password || '123456';
     const hashed = await bcrypt.hash(rawPassword, 10);
     let roleId = dto.roleId;
@@ -124,6 +126,9 @@ export class DriversService {
   }
 
   async update(id: number, dto: UpdateDriverDto, tenantId?: number): Promise<User> {
+    if (dto.phone !== undefined) {
+      assertValidPhoneMaxDigits(dto.phone);
+    }
     await this.findOne(id, tenantId);
     const payload = { ...dto } as any;
     if (dto.password) {

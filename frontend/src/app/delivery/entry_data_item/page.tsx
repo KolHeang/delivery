@@ -10,6 +10,11 @@ import { MdDelete, MdAdd, MdSave } from 'react-icons/md';
 import { useLanguage } from '@/lib/LanguageContext';
 import SearchableSelect from '@/components/ui/SearchableSelect';
 import DateInput, { getLocalDateString } from '@/components/ui/DateInput';
+import {
+  sanitizePhoneInput,
+  isPhoneExceedingMaxDigits,
+  getPhoneMaxDigitsError,
+} from '@/lib/phone-util';
 
 export default function BatchEntryPage() {
   const router = useRouter();
@@ -106,9 +111,10 @@ export default function BatchEntryPage() {
   };
 
   const handleRowChange = (index: number, key: string, val: any) => {
+    const nextVal = key === 'receiverPhone' ? sanitizePhoneInput(String(val ?? '')) : val;
     setRows(prev => prev.map((row, i) => {
       if (i === index) {
-        return { ...row, [key]: val };
+        return { ...row, [key]: nextVal };
       }
       return row;
     }));
@@ -144,6 +150,9 @@ export default function BatchEntryPage() {
       }
       if (!r.receiverPhone?.trim()) {
         rowErr.receiverPhone = 'សូមបំពេញលេខទូរស័ព្ទ';
+        hasError = true;
+      } else if (isPhoneExceedingMaxDigits(r.receiverPhone)) {
+        rowErr.receiverPhone = getPhoneMaxDigitsError(lang);
         hasError = true;
       }
       if (Object.keys(rowErr).length > 0) {
@@ -346,10 +355,11 @@ export default function BatchEntryPage() {
                       <td style={{ padding: '8px 6px' }}>
                         <input
                           type="text"
+                          inputMode="tel"
                           className={`form-control ${rowErrors[idx]?.receiverPhone ? 'is-invalid' : ''}`}
                           placeholder={lang === 'km' ? 'ឧ. 012345678' : 'e.g. 012345678'}
                           value={row.receiverPhone}
-                          onChange={e => handleRowChange(idx, 'receiverPhone', e.target.value)}
+                          onChange={e => handleRowChange(idx, 'receiverPhone', sanitizePhoneInput(e.target.value))}
                           style={{ height: 38, fontSize: 13 }}
                         />
                         {rowErrors[idx]?.receiverPhone && (

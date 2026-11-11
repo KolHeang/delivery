@@ -7,6 +7,11 @@ import { saasApi } from '@/lib/saas-api';
 import { getUser, clearAuth } from '@/lib/auth';
 import { useLanguage } from '@/lib/LanguageContext';
 import {
+  sanitizePhoneInput,
+  isPhoneExceedingMaxDigits,
+  getPhoneMaxDigitsError,
+} from '@/lib/phone-util';
+import {
   MdDashboard,
   MdBusiness,
   MdWorkspacePremium,
@@ -400,6 +405,10 @@ export default function SaasMasterPortal({ initialTab }: { initialTab?: 'dashboa
     e.preventDefault();
     if (!editTenantForm.name.trim()) {
       alert(tr('សូមបញ្ចូលឈ្មោះក្រុមហ៊ុន', 'Please enter company name'));
+      return;
+    }
+    if (editTenantForm.phone.trim() && isPhoneExceedingMaxDigits(editTenantForm.phone)) {
+      alert(getPhoneMaxDigitsError(lang));
       return;
     }
     try {
@@ -923,6 +932,7 @@ export default function SaasMasterPortal({ initialTab }: { initialTab?: 'dashboa
     const newErrors: { [key: string]: string } = {};
     if (!partnerForm.name.trim()) newErrors.name = tr('សូមបញ្ចូលឈ្មោះដៃគូសហការ', 'Please enter partner name');
     if (!partnerForm.email.trim()) newErrors.email = tr('សូមបញ្ចូលអ៊ីមែល', 'Please enter email');
+    if (partnerForm.phone.trim() && isPhoneExceedingMaxDigits(partnerForm.phone)) newErrors.phone = getPhoneMaxDigitsError(lang);
     if (!partnerForm.referralCode.trim()) newErrors.referralCode = tr('សូមបញ្ចូលកូដណែនាំ', 'Please enter referral code');
 
     if (Object.keys(newErrors).length > 0) {
@@ -998,6 +1008,10 @@ export default function SaasMasterPortal({ initialTab }: { initialTab?: 'dashboa
       alert(tr('សូមបំពេញព័ត៌មានចាំបាច់ឱ្យបានគ្រប់គ្រាន់', 'Please fill in all required fields'));
       return;
     }
+    if (companyForm.phone.trim() && isPhoneExceedingMaxDigits(companyForm.phone)) {
+      alert(getPhoneMaxDigitsError(lang));
+      return;
+    }
 
     try {
       setCreatingCompany(true);
@@ -1038,6 +1052,10 @@ export default function SaasMasterPortal({ initialTab }: { initialTab?: 'dashboa
     e.preventDefault();
     if (!newAdminForm.name || !newAdminForm.email || !newAdminForm.password) {
       alert(tr('សូមបំពេញព័ត៌មានឱ្យបានគ្រប់គ្រាន់', 'Please fill in all required fields'));
+      return;
+    }
+    if (newAdminForm.phone.trim() && isPhoneExceedingMaxDigits(newAdminForm.phone)) {
+      alert(getPhoneMaxDigitsError(lang));
       return;
     }
 
@@ -2581,10 +2599,11 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
                           </label>
                           <input
                             type="text"
+                            inputMode="tel"
                             className="form-control"
-                            placeholder="012 345 678"
+                            placeholder="012345678"
                             value={companyForm.phone}
-                            onChange={(e) => setCompanyForm({ ...companyForm, phone: e.target.value })}
+                            onChange={(e) => setCompanyForm({ ...companyForm, phone: sanitizePhoneInput(e.target.value) })}
                           />
                         </div>
                       </div>
@@ -4358,11 +4377,16 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
                       </label>
                       <input
                         type="text"
-                        className="form-control"
-                        placeholder="012 345 678"
+                        inputMode="tel"
+                        className={`form-control ${partnerErrors.phone ? 'is-invalid' : ''}`}
+                        placeholder="012345678"
                         value={partnerForm.phone}
-                        onChange={(e) => setPartnerForm({ ...partnerForm, phone: e.target.value })}
+                        onChange={(e) => {
+                          setPartnerForm({ ...partnerForm, phone: sanitizePhoneInput(e.target.value) });
+                          if (partnerErrors.phone) setPartnerErrors((prev) => { const n = { ...prev }; delete n.phone; return n; });
+                        }}
                       />
+                      {partnerErrors.phone && <div className="form-error-text" style={{ color: '#ef4444', fontSize: 11.5, marginTop: 4, fontWeight: 600 }}>{partnerErrors.phone}</div>}
                     </div>
 
                     <div className="form-group">
@@ -5700,8 +5724,9 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
                     </label>
                     <input
                       type="text"
+                      inputMode="tel"
                       value={editTenantForm.phone}
-                      onChange={(e) => setEditTenantForm({ ...editTenantForm, phone: e.target.value })}
+                      onChange={(e) => setEditTenantForm({ ...editTenantForm, phone: sanitizePhoneInput(e.target.value) })}
                       style={{
                         width: '100%',
                         padding: '10px 14px',

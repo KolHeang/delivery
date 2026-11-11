@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsNotEmpty, IsString, IsOptional, IsEnum, IsArray, ArrayNotEmpty } from 'class-validator';
+import { MaxPhoneDigits } from '../../../common/phone.util';
 
 export class UpdateDriverProfileDto {
   @ApiProperty({ example: 'Sok Dara', required: false, description: 'Full name in English' })
@@ -15,6 +16,7 @@ export class UpdateDriverProfileDto {
   @ApiProperty({ example: '012345678', required: false, description: 'Contact phone number' })
   @IsOptional()
   @IsString()
+  @MaxPhoneDigits()
   phone?: string;
 
   @ApiProperty({ example: 'driver@delivery.com', required: false, description: 'Email address' })

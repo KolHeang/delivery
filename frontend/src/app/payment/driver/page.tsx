@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { isAuthenticated } from '@/lib/auth';
 import Sidebar from '@/components/layout/Sidebar';
@@ -14,6 +14,11 @@ import Modal from '@/components/ui/Modal';
 import { useSettings } from '@/lib/SettingsContext';
 import { TableSkeleton, Skeleton } from '@/components/ui/Skeleton';
 import SearchableSelect from '@/components/ui/SearchableSelect';
+import {
+  filterDriverSettlementOrders,
+  isInTransitSettlementStatus,
+  matchesDriverPaymentStatus,
+} from '@/lib/settlement-utils';
 
 
 
@@ -46,6 +51,22 @@ const getKhmerDateString = (date: Date = new Date()) => {
   return `ថ្ងៃ ${dayName} ទី ${day} ខែ ${monthName} ឆ្នាំ ${year}`;
 };
 
+const cleanNote = (val: any): string => {
+  if (!val) return '';
+  return String(val).replace(/\[Reason:\s*Other\]\s*/gi, '').trim();
+};
+
+const getLatestParcelNote = (o: any, fallback = ''): string => {
+  const timeline = o.events || o.histories;
+  const timelineNote = Array.isArray(timeline)
+    ? timeline
+        .slice()
+        .sort((a: any, b: any) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
+        .find((h: any) => cleanNote(h.note))
+    : null;
+  return cleanNote(timelineNote?.note) || cleanNote(o.note) || fallback;
+};
+
 export default function PaymentWithStaffPage() {
   const router = useRouter();
   const { t, lang } = useLanguage();
@@ -66,6 +87,7 @@ export default function PaymentWithStaffPage() {
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [saving, setSaving] = useState(false);
   const [user, setUser] = useState<any>(null);
+  const latestFilterReqRef = useRef(0);
   const [orgInfo, setOrgInfo] = useState<any>({
     name: 'E-Express',
     phone: '011609414',
@@ -197,11 +219,17 @@ export default function PaymentWithStaffPage() {
   }, [router]);
 
   const handleFilter = async () => {
+    const reqId = ++latestFilterReqRef.current;
     try {
-      const url = driverId
-        ? `/payments/driver/settlement-parcels?driverId=${driverId}`
+      const params = new URLSearchParams();
+      if (driverId) params.set('driverId', driverId);
+      if (statusFilter) params.set('statusFilter', statusFilter);
+      const qs = params.toString();
+      const url = qs
+        ? `/payments/driver/settlement-parcels?${qs}`
         : `/payments/driver/settlement-parcels`;
       const res = await api.get(url);
+      if (reqId !== latestFilterReqRef.current) return;
       const list = Array.isArray(res.data) ? res.data : (res.data?.results || res.data?.result || []);
       const sanitizedList = list.map((item: any) => ({
         ...item,
@@ -212,6 +240,7 @@ export default function PaymentWithStaffPage() {
       setOrders(sanitizedList);
       setSelectedIds([]);
     } catch {
+      if (reqId !== latestFilterReqRef.current) return;
       setOrders([]);
     }
   };
@@ -219,6 +248,10 @@ export default function PaymentWithStaffPage() {
   useEffect(() => {
     handleFilter();
   }, [driverId, statusFilter]);
+
+  useEffect(() => {
+    setSelectedIds([]);
+  }, [driverId, statusFilter, startDate, endDate]);
 
   const handleClear = () => {
     setDriverId('');
@@ -228,33 +261,25 @@ export default function PaymentWithStaffPage() {
     setSelectedIds([]);
   };
 
-  // Filter orders by date client-side
+  // Filter orders by driver, payment status, displayable status, and date range client-side
   const safeOrders = Array.isArray(orders) ? orders : [];
-  const deliveredOrders = safeOrders.filter((o: any) => o.status === 'delivered' || o.status === 'failed' || o.status === 'returned');
-  const pendingOrders = safeOrders.filter((o: any) => o.status !== 'delivered' && o.status !== 'failed' && o.status !== 'returned');
-
-  const filteredOrders = safeOrders.filter((o: any) => {
-    let dateString = o.deliveredAt;
-    if (!dateString && (o.status === 'failed' || o.status === 'returned' || o.status === 'pending' || o.status === 'in-transit' || o.status === 'picked-up')) {
-      dateString = o.updatedAt || o.createdAt;
-    }
-    const d = dateString ? new Date(dateString) : new Date(o.createdAt);
-    if (startDate) {
-      const start = new Date(startDate);
-      start.setHours(0, 0, 0, 0);
-      if (d < start) return false;
-    }
-    if (endDate) {
-      const end = new Date(endDate);
-      end.setHours(23, 59, 59, 999);
-      if (d > end) return false;
-    }
-    return true;
+  const filteredOrders = filterDriverSettlementOrders(safeOrders, {
+    driverId,
+    statusFilter,
+    startDate,
+    endDate,
   });
+
+  const deliveredVisibleOrders = filteredOrders.filter((o: any) => o.status === 'delivered');
+  const inTransitVisibleOrders = filteredOrders.filter((o: any) => isInTransitSettlementStatus(o.status));
+  const returnedVisibleOrders = filteredOrders.filter((o: any) => o.status === 'returned');
+  const activeSelectedIds = selectedIds.filter((id) =>
+    deliveredVisibleOrders.some((o: any) => o.id === id),
+  );
 
   const handleToggleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.checked) {
-      setSelectedIds(filteredOrders.map((o: any) => o.id));
+      setSelectedIds(deliveredVisibleOrders.map((o: any) => o.id));
     } else {
       setSelectedIds([]);
     }
@@ -277,10 +302,10 @@ export default function PaymentWithStaffPage() {
   const handleSavePayment = async () => {
     // Also include unpaid failed/returned order IDs in the date range so they get marked as paid/settled
     const unpaidFailedOrderIds = filteredOrders
-      .filter((o: any) => (o.status === 'failed' || o.status === 'returned') && o.driverPaymentStatus === 'unpaid')
+      .filter((o: any) => (o.status === 'failed' || o.status === 'returned') && matchesDriverPaymentStatus(o, 'unpaid'))
       .map((o: any) => o.id);
 
-    const allOrderIdsToSettle = [...selectedIds, ...unpaidFailedOrderIds];
+    const allOrderIdsToSettle = Array.from(new Set([...activeSelectedIds, ...unpaidFailedOrderIds]));
 
     if (allOrderIdsToSettle.length === 0) {
       alert(lang === 'km' ? 'សូមជ្រើសរើសយ៉ាងហោចណាស់កញ្ចប់អីវ៉ាន់មួយ ឬមានកញ្ចប់អីវ៉ាន់មិនជោគជ័យដើម្បីទូទាត់។' : 'Please select at least one order or have failed/returned orders to settle.');
@@ -291,7 +316,7 @@ export default function PaymentWithStaffPage() {
       return;
     }
     
-    const selectedOrders = filteredOrders.filter((o: any) => selectedIds.includes(o.id));
+    const selectedOrders = deliveredVisibleOrders.filter((o: any) => activeSelectedIds.includes(o.id));
     const totalDriverFee = selectedOrders.reduce((sum, o: any) => sum + (o.driverFee !== undefined && o.driverFee !== null ? parseFloat(o.driverFee) : 1000), 0);
     
     setSaving(true);
@@ -314,7 +339,7 @@ export default function PaymentWithStaffPage() {
         currency: 'KHR',
         date: new Date().toISOString(),
         reference: `SETTLE-STAFF-${Date.now().toString().slice(-6)}`,
-        note: `Bulk settlement for ${selectedIds.length} parcels (Driver fee: ${totalDriverFee.toLocaleString()} KHR)`,
+        note: `Bulk settlement for ${activeSelectedIds.length} parcels (Driver fee: ${totalDriverFee.toLocaleString()} KHR)`,
         parcelIds: allOrderIdsToSettle,
       });
       alert(lang === 'km' ? 'រក្សាទុកការទូទាត់បានជោគជ័យ!' : 'Payment settled successfully!');
@@ -325,8 +350,8 @@ export default function PaymentWithStaffPage() {
     setSaving(false);
   };
 
-  const unpaidFailedOrders = filteredOrders.filter((o: any) => (o.status === 'failed' || o.status === 'returned') && o.driverPaymentStatus === 'unpaid');
-  const selectedOrders = filteredOrders.filter((o: any) => selectedIds.includes(o.id));
+  const unpaidFailedOrders = filteredOrders.filter((o: any) => (o.status === 'failed' || o.status === 'returned') && matchesDriverPaymentStatus(o, 'unpaid'));
+  const selectedOrders = deliveredVisibleOrders.filter((o: any) => activeSelectedIds.includes(o.id));
   const totalDeliveryFee = selectedOrders.reduce((sum, o: any) => sum + parseFloat(o.deliveryFee || '0'), 0);
   const totalDriverFee = selectedOrders.reduce((sum, o: any) => sum + (o.driverFee !== undefined && o.driverFee !== null ? parseFloat(o.driverFee) : 1000), 0);
   const totalCodKhr = selectedOrders.filter((o: any) => o.codCurrency === 'KHR').reduce((sum, o: any) => sum + parseFloat(o.cod || '0'), 0);
@@ -334,29 +359,19 @@ export default function PaymentWithStaffPage() {
 
   // Print: use selected orders if any, otherwise print all filtered orders — delivered only for section 1
   // Print: delivered orders are filtered by selection if selected; carried forward and returned always include filtered orders of this driver
-  const printDeliveredCandidates = selectedIds.length > 0
-    ? filteredOrders.filter((o: any) => selectedIds.includes(o.id) && o.status === 'delivered')
-    : filteredOrders.filter((o: any) => o.status === 'delivered');
-  const printOrders = printDeliveredCandidates.filter((o: any) => o.driverPaymentStatus === statusFilter || (!o.driverPaymentStatus && statusFilter === 'unpaid'));
+  const printOrders = activeSelectedIds.length > 0
+    ? deliveredVisibleOrders.filter((o: any) => activeSelectedIds.includes(o.id))
+    : deliveredVisibleOrders;
 
-  const selectedInTransit = filteredOrders.filter((o: any) =>
-    selectedIds.includes(o.id) &&
-    (o.status === 'failed' || o.status === 'in-transit' || o.status === 'picked-up' || o.status === 'pending')
-  );
+  const selectedInTransit = inTransitVisibleOrders.filter((o: any) => selectedIds.includes(o.id));
   const printInTransitOrders = selectedInTransit.length > 0
-    ? selectedInTransit.filter((o: any) => o.driverPaymentStatus === statusFilter || (!o.driverPaymentStatus && statusFilter === 'unpaid'))
-    : filteredOrders.filter((o: any) =>
-        (o.status === 'failed' || o.status === 'in-transit' || o.status === 'picked-up' || o.status === 'pending') &&
-        (o.driverPaymentStatus === statusFilter || (!o.driverPaymentStatus && statusFilter === 'unpaid'))
-      );
+    ? selectedInTransit
+    : inTransitVisibleOrders;
 
-  const selectedReturned = filteredOrders.filter((o: any) => selectedIds.includes(o.id) && o.status === 'returned');
+  const selectedReturned = returnedVisibleOrders.filter((o: any) => selectedIds.includes(o.id));
   const printReturnedOrders = selectedReturned.length > 0
-    ? selectedReturned.filter((o: any) => o.driverPaymentStatus === statusFilter || (!o.driverPaymentStatus && statusFilter === 'unpaid'))
-    : filteredOrders.filter((o: any) =>
-        o.status === 'returned' &&
-        (o.driverPaymentStatus === statusFilter || (!o.driverPaymentStatus && statusFilter === 'unpaid'))
-      );
+    ? selectedReturned
+    : returnedVisibleOrders;
   
   const printTotalFee = printOrders.reduce((sum, o: any) => sum + parseFloat(o.deliveryFee || '0'), 0);
   const printTotalDriverFee = printOrders.reduce((sum, o: any) => sum + (o.driverFee !== undefined && o.driverFee !== null ? parseFloat(o.driverFee) : 1000), 0);
@@ -554,14 +569,14 @@ export default function PaymentWithStaffPage() {
                 disabled={filteredOrders.length === 0}
                 style={{ height: 38, padding: '0 16px', fontSize: 13 }}
               >
-                <MdPrint size={16} /> {lang === 'km' ? 'បោះពុម្ព' : 'Print'} {selectedIds.length > 0 ? `(${selectedIds.length})` : `(${filteredOrders.length} ${lang === 'km' ? 'ទាំងអស់' : 'All'})`}
+                <MdPrint size={16} /> {lang === 'km' ? 'បោះពុម្ព' : 'Print'} {activeSelectedIds.length > 0 ? `(${activeSelectedIds.length})` : `(${filteredOrders.length} ${lang === 'km' ? 'ទាំងអស់' : 'All'})`}
               </button>
               {statusFilter === 'unpaid' && (
                 <button 
                   type="button"
                   className="btn btn-primary"
                   onClick={handleSavePayment} 
-                  disabled={saving || (selectedIds.length === 0 && unpaidFailedOrders.length === 0)}
+                  disabled={saving || (activeSelectedIds.length === 0 && unpaidFailedOrders.length === 0)}
                   title={!driverId ? (lang === 'km' ? 'សូមជ្រើសរើសឈ្មោះអ្នកដឹកជាក់លាក់ដើម្បីទូទាត់' : 'Please select a specific driver to settle') : ''}
                   style={{ 
                     height: 38, 
@@ -571,7 +586,7 @@ export default function PaymentWithStaffPage() {
                     gap: 6, 
                     fontSize: 13, 
                     fontWeight: 600, 
-                    cursor: (saving || (selectedIds.length === 0 && unpaidFailedOrders.length === 0)) ? 'not-allowed' : 'pointer' 
+                    cursor: (saving || (activeSelectedIds.length === 0 && unpaidFailedOrders.length === 0)) ? 'not-allowed' : 'pointer' 
                   }}
                 >
                   <MdSave size={16} /> {lang === 'km' ? 'រក្សាទុកការទូទាត់' : 'Save Settlement'}
@@ -588,7 +603,7 @@ export default function PaymentWithStaffPage() {
                 {lang === 'km' ? '១. ផ្នែកដឹកជោគជ័យ' : '1. Successful Deliveries'}
               </h3>
               <span style={{ background: '#dcfce7', color: '#16a34a', padding: '2px 10px', borderRadius: 12, fontSize: 12, fontWeight: 600 }}>
-                {filteredOrders.filter((o: any) => o.status === 'delivered' && o.driverPaymentStatus === statusFilter).length} {lang === 'km' ? 'កញ្ចប់' : 'parcels'}
+                {deliveredVisibleOrders.length} {lang === 'km' ? 'កញ្ចប់' : 'parcels'}
               </span>
             </div>
             <div style={{ border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', overflow: 'hidden' }}>
@@ -599,9 +614,9 @@ export default function PaymentWithStaffPage() {
                       <th style={{ position: 'sticky', top: 0, zIndex: 10, padding: '12px 10px', textAlign: 'center', width: 44, background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'ល.រ' : 'No.'}</th>
                       <th style={{ position: 'sticky', top: 0, zIndex: 10, padding: '12px 10px', textAlign: 'center', width: 44, background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', border: 'none' }}>
                         <input type="checkbox"
-                          checked={filteredOrders.filter((o: any) => o.status === 'delivered' && o.driverPaymentStatus === statusFilter).length > 0 && filteredOrders.filter((o: any) => o.status === 'delivered' && o.driverPaymentStatus === statusFilter).every((o: any) => selectedIds.includes(o.id))}
+                          checked={deliveredVisibleOrders.length > 0 && deliveredVisibleOrders.every((o: any) => activeSelectedIds.includes(o.id))}
                           onChange={(e) => {
-                            const ids = filteredOrders.filter((o: any) => o.status === 'delivered' && o.driverPaymentStatus === statusFilter).map((o: any) => o.id);
+                            const ids = deliveredVisibleOrders.map((o: any) => o.id);
                             if (e.target.checked) setSelectedIds(prev => Array.from(new Set([...prev, ...ids])));
                             else setSelectedIds(prev => prev.filter(id => !ids.includes(id)));
                           }}
@@ -622,11 +637,11 @@ export default function PaymentWithStaffPage() {
                     </tr>
                   </thead>
                   <tbody>
-                  {filteredOrders.filter((o: any) => o.status === 'delivered' && o.driverPaymentStatus === statusFilter).length === 0 ? (
+                  {deliveredVisibleOrders.length === 0 ? (
                     <tr><td colSpan={13} style={{ textAlign: 'center', padding: '30px 0', color: '#64748b' }}>{lang === 'km' ? 'គ្មានទិន្នន័យ' : 'No data'}</td></tr>
                   ) : (
-                    filteredOrders.filter((o: any) => o.status === 'delivered' && o.driverPaymentStatus === statusFilter).map((o: any, idx: number) => {
-                      const isSelected = selectedIds.includes(o.id);
+                    deliveredVisibleOrders.map((o: any, idx: number) => {
+                      const isSelected = activeSelectedIds.includes(o.id);
                       return (
                         <tr key={o.id} style={{ borderBottom: '1px solid #f1f5f9', background: isSelected ? '#f0f7ff' : '#ffffff', transition: 'background-color 0.15s' }}>
                           <td style={{ padding: '12px 10px', textAlign: 'center', color: '#64748b', fontWeight: 'bold', border: 'none' }}>{idx + 1}</td>
@@ -728,7 +743,7 @@ export default function PaymentWithStaffPage() {
                                 style={{ width: '135px', padding: '4px 8px', fontSize: '12px', border: '1px solid #cbd5e1', borderRadius: '6px', color: '#334155' }}
                               />
                             ) : (
-                              <span style={{ fontSize: '12px', color: '#64748b' }}>{o.note || ''}</span>
+                              <span style={{ fontSize: '12px', color: '#64748b' }}>{cleanNote(o.note)}</span>
                             )}
                           </td>
                           <td style={{ padding: '12px 10px', textAlign: 'center', border: 'none' }}>
@@ -745,8 +760,8 @@ export default function PaymentWithStaffPage() {
 
             {/* Sticky Totals Bar at bottom of table container */}
             {(() => {
-              const delivOrders = filteredOrders.filter((o: any) => o.status === 'delivered' && o.driverPaymentStatus === statusFilter && selectedIds.includes(o.id));
-              const allDeliv = filteredOrders.filter((o: any) => o.status === 'delivered' && o.driverPaymentStatus === statusFilter);
+              const delivOrders = deliveredVisibleOrders.filter((o: any) => activeSelectedIds.includes(o.id));
+              const allDeliv = deliveredVisibleOrders;
               const src = delivOrders.length > 0 ? delivOrders : allDeliv;
               const khr = src.filter((o: any) => o.codCurrency === 'KHR').reduce((s: number, o: any) => s + parseFloat(o.cod || '0'), 0);
               const usd = src.filter((o: any) => o.codCurrency === 'USD').reduce((s: number, o: any) => s + parseFloat(o.cod || '0'), 0);
@@ -869,10 +884,7 @@ export default function PaymentWithStaffPage() {
 
           {/* ── Section 2: In-Transit / Carried Forward Deliveries (អីវ៉ាន់ដឹកបន្ត) ── */}
           {(() => {
-            const inTransitOrders = filteredOrders.filter((o: any) => 
-              (o.status === 'failed' || o.status === 'in-transit' || o.status === 'picked-up' || o.status === 'pending') && 
-              (o.driverPaymentStatus === statusFilter || (!o.driverPaymentStatus && statusFilter === 'unpaid'))
-            );
+            const inTransitOrders = inTransitVisibleOrders;
             return (
               <div style={{ marginBottom: 28 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
@@ -907,10 +919,7 @@ export default function PaymentWithStaffPage() {
                           <tr><td colSpan={11} style={{ textAlign: 'center', padding: '30px 0', color: '#64748b' }}>{lang === 'km' ? 'គ្មានអីវ៉ាន់ដឹកបន្តទេ' : 'No carried forward orders'}</td></tr>
                         ) : (
                           inTransitOrders.map((o: any, idx: number) => {
-                            const latestNote = o.histories
-                              ?.slice()
-                              .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-                              .find((h: any) => h.note)?.note || o.note || '';
+                            const latestNote = getLatestParcelNote(o);
                             let statusBadge = (
                               <span style={{ background: '#e0e7ff', color: '#4338ca', padding: '4px 10px', borderRadius: 6, fontSize: 11, fontWeight: 700 }}>
                                 {lang === 'km' ? 'កំពុងដឹក' : 'In Transit'}
@@ -982,10 +991,7 @@ export default function PaymentWithStaffPage() {
 
           {/* ── Section 3: Returned Deliveries (អីវ៉ាន់ត្រឡប់ទៅហាង) ── */}
           {(() => {
-            const returnedOrders = filteredOrders.filter((o: any) => 
-              o.status === 'returned' && 
-              (o.driverPaymentStatus === statusFilter || (!o.driverPaymentStatus && statusFilter === 'unpaid'))
-            );
+            const returnedOrders = returnedVisibleOrders;
             return (
               <div style={{ marginBottom: 28 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
@@ -1020,10 +1026,7 @@ export default function PaymentWithStaffPage() {
                           <tr><td colSpan={11} style={{ textAlign: 'center', padding: '30px 0', color: '#64748b' }}>{lang === 'km' ? 'គ្មានអីវ៉ាន់ត្រឡប់ទេ' : 'No returned orders'}</td></tr>
                         ) : (
                           returnedOrders.map((o: any, idx: number) => {
-                            const latestNote = o.histories
-                              ?.slice()
-                              .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-                              .find((h: any) => h.note)?.note || o.note || '';
+                            const latestNote = getLatestParcelNote(o);
                             return (
                               <tr key={o.id} style={{ borderBottom: '1px solid #f1f5f9', background: '#ffffff', transition: 'background-color 0.15s' }}>
                                 <td style={{ padding: '12px 10px', textAlign: 'center', color: '#64748b', fontWeight: 'bold', border: 'none' }}>{idx + 1}</td>
@@ -1398,7 +1401,7 @@ export default function PaymentWithStaffPage() {
                       <td style={{ textAlign: 'right', padding: '4px 4px', border: '1px solid #64748b', whiteSpace: 'nowrap' }}>${parseFloat(o.deliveryFee || 0).toFixed(2)}</td>
                       <td style={{ textAlign: 'right', padding: '4px 4px', border: '1px solid #64748b', fontWeight: 700, color: '#15803d', whiteSpace: 'nowrap' }}>{driverFeeVal.toLocaleString()} ៛</td>
                       <td style={{ padding: '4px 4px', border: '1px solid #64748b', textAlign: 'center', color: '#15803d', fontWeight: 700, whiteSpace: 'nowrap' }}>{lang === 'km' ? 'ជោគជ័យ' : 'Delivered'}</td>
-                      <td style={{ padding: '4px 4px', border: '1px solid #64748b', textAlign: 'left', fontSize: 9, wordBreak: 'break-word' }}>{o.note || ''}</td>
+                      <td style={{ padding: '4px 4px', border: '1px solid #64748b', textAlign: 'left', fontSize: 9, wordBreak: 'break-word' }}>{cleanNote(o.note)}</td>
                     </tr>
                   );
                 })}
@@ -1442,10 +1445,7 @@ export default function PaymentWithStaffPage() {
                   statusLabel = lang === 'km' ? 'ដឹកបន្ត' : 'Carried Forward';
                 }
 
-                const latestNote = o.histories
-                  ?.slice()
-                  .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-                  .find((h: any) => h.note)?.note || o.note || '';
+                const latestNote = getLatestParcelNote(o);
 
                 return (
                   <tr key={o.id}>
@@ -1482,10 +1482,7 @@ export default function PaymentWithStaffPage() {
               printReturnedOrders.map((o, idx) => {
                 const isUSD = o.codCurrency === 'USD';
                 const codVal = parseFloat(o.cod || 0);
-                const latestNote = o.histories
-                  ?.slice()
-                  .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-                  .find((h: any) => h.note)?.note || o.note || (lang === 'km' ? 'ត្រឡប់' : 'Returned');
+                const latestNote = getLatestParcelNote(o, lang === 'km' ? 'ត្រឡប់' : 'Returned');
                 return (
                   <tr key={o.id}>
                     <td style={{ textAlign: 'center', padding: '4px 3px', border: '1px solid #64748b', whiteSpace: 'nowrap' }}>{idx + 1}</td>

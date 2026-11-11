@@ -14,6 +14,13 @@ import DateInput, { formatDateToDDMMYYYY, getLocalDateString } from '@/component
 import Modal from '@/components/ui/Modal';
 import { TableSkeleton, Skeleton } from '@/components/ui/Skeleton';
 import SearchableSelect from '@/components/ui/SearchableSelect';
+import {
+  filterMerchantSettlementOrders,
+  isEligibleMerchantSettlementOrder,
+  isInTransitSettlementStatus,
+  isWithinSettlementDateRange,
+  matchesMerchantPaymentStatus,
+} from '@/lib/settlement-utils';
 
 
 
@@ -37,6 +44,22 @@ const getKhmerDateString = (date: Date = new Date()) => {
   const year = toKhmerNum(date.getFullYear());
 
   return `ថ្ងៃ ${dayName} ទី ${day} ខែ ${monthName} ឆ្នាំ ${year}`;
+};
+
+const cleanNote = (val: any): string => {
+  if (!val) return '';
+  return String(val).replace(/\[Reason:\s*Other\]\s*/gi, '').trim();
+};
+
+const getLatestParcelNote = (o: any, fallback = ''): string => {
+  const timeline = o.events || o.histories;
+  const timelineNote = Array.isArray(timeline)
+    ? timeline
+        .slice()
+        .sort((a: any, b: any) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
+        .find((h: any) => cleanNote(h.note))
+    : null;
+  return cleanNote(timelineNote?.note) || cleanNote(o.note) || fallback;
 };
 
 export default function PaymentWithShopPage() {
@@ -165,6 +188,7 @@ export default function PaymentWithShopPage() {
 
   useEffect(() => {
     setSelectedMerchantIds([]);
+    setSelectedIds([]);
   }, [statusFilter, merchantFilter, startDate, endDate]);
 
   const loadData = async () => {
@@ -219,41 +243,13 @@ export default function PaymentWithShopPage() {
   // Aggregate and Group orders by merchant
   const groupedData = merchants
     .map(m => {
-      let mOrders = orders.filter(o => o.merchantId === m.id);
-
-      // Apply date filters
-      if (startDate) {
-        const start = new Date(startDate);
-        start.setHours(0, 0, 0, 0);
-        mOrders = mOrders.filter(o => {
-          let dateString = o.deliveredAt;
-          if (!dateString && (o.status === 'failed' || o.status === 'returned')) {
-            dateString = o.updatedAt || o.createdAt;
-          }
-          const d = dateString ? new Date(dateString) : new Date(o.createdAt);
-          return d >= start;
-        });
-      }
-      if (endDate) {
-        const end = new Date(endDate);
-        end.setHours(23, 59, 59, 999);
-        mOrders = mOrders.filter(o => {
-          let dateString = o.deliveredAt;
-          if (!dateString && (o.status === 'failed' || o.status === 'returned')) {
-            dateString = o.updatedAt || o.createdAt;
-          }
-          const d = dateString ? new Date(dateString) : new Date(o.createdAt);
-          return d <= end;
-        });
-      }
+      const mOrders = orders.filter(
+        o => o.merchantId === m.id && isWithinSettlementDateRange(o, startDate, endDate),
+      );
 
       // Filtered orders for payouts (status: delivered, failed, returned, matching shop payout status)
       // NOTE: For unpaid shop settlements, the driver MUST have settled the cash first (driverPaymentStatus === 'paid')
-      const paymentOrders = mOrders.filter(o => 
-        (o.status === 'delivered' || o.status === 'failed' || o.status === 'returned' || o.status === 'in-transit' || o.status === 'picked-up' || o.status === 'pending') && 
-        (o.merchantPaymentStatus === statusFilter || (!o.merchantPaymentStatus && statusFilter === 'unpaid')) &&
-        (statusFilter === 'unpaid' ? (o.status === 'delivered' ? o.driverPaymentStatus === 'paid' : true) : true)
-      );
+      const paymentOrders = mOrders.filter(o => isEligibleMerchantSettlementOrder(o, statusFilter));
 
       // Package counts stats (all orders)
       const totalCount = mOrders.length;
@@ -306,33 +302,18 @@ export default function PaymentWithShopPage() {
       return row.paymentOrders.length > 0;
     });
 
-  const filteredOrders = orders.filter(o => {
-    if (o.status !== 'delivered' && o.status !== 'failed' && o.status !== 'returned' && o.status !== 'in-transit' && o.status !== 'picked-up' && o.status !== 'pending') return false;
-    if (o.merchantPaymentStatus !== statusFilter && !(!o.merchantPaymentStatus && statusFilter === 'unpaid')) return false;
-    if (statusFilter === 'unpaid' && o.status === 'delivered' && o.driverPaymentStatus !== 'paid') return false;
-    if (merchantFilter && String(o.merchantId) !== merchantFilter) return false;
-    let dateStr = o.deliveredAt;
-    if (!dateStr && (o.status === 'failed' || o.status === 'returned' || o.status === 'in-transit' || o.status === 'picked-up' || o.status === 'pending')) {
-      dateStr = o.updatedAt || o.createdAt;
-    }
-    const orderDate = dateStr ? new Date(dateStr) : new Date(o.createdAt);
-    if (startDate) {
-      const start = new Date(startDate);
-      start.setHours(0, 0, 0, 0);
-      if (orderDate < start) return false;
-    }
-    if (endDate) {
-      const end = new Date(endDate);
-      end.setHours(23, 59, 59, 999);
-      if (orderDate > end) return false;
-    }
-    return true;
+  const filteredOrders = filterMerchantSettlementOrders(orders, {
+    merchantId: merchantFilter,
+    statusFilter,
+    startDate,
+    endDate,
   });
 
   const eligibleOrders = filteredOrders.filter(o => o.status === 'delivered');
+  const activeSelectedIds = selectedIds.filter(id => eligibleOrders.some(o => o.id === id));
 
-  const targetOrders = selectedIds.length > 0 
-    ? eligibleOrders.filter(o => selectedIds.includes(o.id))
+  const targetOrders = activeSelectedIds.length > 0 
+    ? eligibleOrders.filter(o => activeSelectedIds.includes(o.id))
     : eligibleOrders;
 
   const totalUSD = targetOrders.filter(o => o.codCurrency === 'USD').reduce((sum, o) => sum + parseFloat(o.cod || 0), 0);
@@ -420,8 +401,8 @@ export default function PaymentWithShopPage() {
 
 
   const handleConfirmSettlement = async () => {
-    const ordersToSettle = selectedIds.length > 0
-      ? eligibleOrders.filter(o => selectedIds.includes(o.id))
+    const ordersToSettle = activeSelectedIds.length > 0
+      ? eligibleOrders.filter(o => activeSelectedIds.includes(o.id))
       : eligibleOrders;
 
     if (ordersToSettle.length === 0) {
@@ -465,7 +446,7 @@ export default function PaymentWithShopPage() {
 
         // Also find any failed/returned orders for this merchant in the filter criteria to mark as settled
         const groupFailedOrders = filteredOrders.filter(
-          o => o.merchantId === mId && (o.status === 'failed' || o.status === 'returned') && o.merchantPaymentStatus === 'unpaid'
+          o => o.merchantId === mId && (o.status === 'failed' || o.status === 'returned') && matchesMerchantPaymentStatus(o, 'unpaid')
         );
         const parcelIds = [...groupOrders.map(o => o.id), ...groupFailedOrders.map(o => o.id)];
 
@@ -739,6 +720,7 @@ export default function PaymentWithShopPage() {
                 <button
                   className="btn btn-outline"
                   onClick={triggerPrintReceipt}
+                  disabled={merchantFilter ? filteredOrders.length === 0 : groupedData.length === 0}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -750,11 +732,12 @@ export default function PaymentWithShopPage() {
                     borderRadius: '4px',
                     borderColor: '#d1d5db',
                     backgroundColor: '#fff',
-                    cursor: 'pointer'
+                    cursor: (merchantFilter ? filteredOrders.length === 0 : groupedData.length === 0) ? 'not-allowed' : 'pointer',
+                    opacity: (merchantFilter ? filteredOrders.length === 0 : groupedData.length === 0) ? 0.6 : 1
                   }}
                 >
                   <MdPrint size={18} />
-                  <span>{lang === 'km' ? 'បោះពុម្ព' : 'Print'} {selectedIds.length > 0 ? '(' + selectedIds.length + ')' : ('(' + eligibleOrders.length + ' ' + (lang === 'km' ? 'ទាំងអស់' : 'All') + ')')}</span>
+                  <span>{lang === 'km' ? 'បោះពុម្ព' : 'Print'} {activeSelectedIds.length > 0 ? '(' + activeSelectedIds.length + ')' : ('(' + filteredOrders.length + ' ' + (lang === 'km' ? 'ទាំងអស់' : 'All') + ')')}</span>
                 </button>
                 {statusFilter === 'unpaid' && (
                   <button
@@ -829,7 +812,7 @@ export default function PaymentWithShopPage() {
                           {statusFilter === 'unpaid' && (
                             <input
                               type="checkbox"
-                              checked={eligibleOrders.length > 0 && selectedIds.length === eligibleOrders.length}
+                              checked={eligibleOrders.length > 0 && activeSelectedIds.length === eligibleOrders.length}
                               onChange={(e) => handleToggleSelectAll(e.target.checked)}
                               style={{ cursor: 'pointer', accentColor: 'var(--accent, #1565D8)' }}
                             />
@@ -851,7 +834,7 @@ export default function PaymentWithShopPage() {
                       <tr><td colSpan={11} style={{ textAlign: 'center', padding: '30px 0', color: '#64748b' }}>{lang === 'km' ? 'គ្មានទិន្នន័យ' : 'No data'}</td></tr>
                     ) : (
                       eligibleOrders.map((o, idx) => {
-                        const isSelected = selectedIds.includes(o.id);
+                        const isSelected = activeSelectedIds.includes(o.id);
                         return (
                           <tr key={o.id} style={{ borderBottom: '1px solid #f1f5f9', background: isSelected ? '#f0f7ff' : '#ffffff', transition: 'background-color 0.15s' }}>
                             <td style={{ padding: '12px 10px', textAlign: 'center', color: '#64748b', fontWeight: 'bold', border: 'none' }}>{idx + 1}</td>
@@ -934,11 +917,11 @@ export default function PaymentWithShopPage() {
                               {statusFilter === 'unpaid' ? (
                                 <input
                                   type="text"
-                                  defaultValue={o.note || ''}
+                                  defaultValue={cleanNote(o.note)}
                                   placeholder={lang === 'km' ? 'ចំណាំ...' : 'Note...'}
                                   onBlur={async (e) => {
                                     const newVal = e.target.value;
-                                    if (newVal !== (o.note || '')) {
+                                    if (newVal !== cleanNote(o.note)) {
                                       try {
                                         await api.patch('/parcels/' + o.id, { note: newVal });
                                         setOrders(prev => prev.map(item => item.id === o.id ? { ...item, note: newVal } : item));
@@ -949,9 +932,9 @@ export default function PaymentWithShopPage() {
                                   }}
                                   style={{ width: 130, height: 28, padding: '2px 6px', fontSize: 12, borderRadius: 6, border: '1px solid #cbd5e1' }}
                                 />
-                              ) : o.note ? (
+                              ) : cleanNote(o.note) ? (
                                 <span style={{ color: '#0f172a', fontWeight: 500 }}>
-                                  📝 {o.note}
+                                  📝 {cleanNote(o.note)}
                                 </span>
                               ) : (
                                 <span style={{ color: '#94a3b8' }}></span>
@@ -1027,8 +1010,7 @@ export default function PaymentWithShopPage() {
             {/* ── Section 2: In-Transit / Carried Forward Deliveries (អីវ៉ាន់ដឹកបន្ត) ── */}
             {(() => {
               const inTransitOrders = filteredOrders.filter(
-                (o) => (o.status === 'failed' || o.status === 'in-transit' || o.status === 'picked-up' || o.status === 'pending') && 
-                       (o.merchantPaymentStatus === statusFilter || (!o.merchantPaymentStatus && statusFilter === 'unpaid'))
+                (o) => isInTransitSettlementStatus(o.status) && matchesMerchantPaymentStatus(o, statusFilter)
               );
               return (
                 <div style={{ marginBottom: 20 }}>
@@ -1063,10 +1045,7 @@ export default function PaymentWithShopPage() {
                             <tr><td colSpan={10} style={{ textAlign: 'center', padding: '30px 0', color: '#64748b' }}>{lang === 'km' ? 'គ្មានអីវ៉ាន់ដឹកបន្តទេ' : 'No carried forward orders'}</td></tr>
                           ) : (
                             inTransitOrders.map((o, idx) => {
-                              const latestNote = o.histories
-                                ?.slice()
-                                .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-                                .find((h: any) => h.note)?.note || o.note || '';
+                              const latestNote = getLatestParcelNote(o);
                               let statusBadge = (
                                 <span style={{ background: '#e0e7ff', color: '#4338ca', padding: '4px 10px', borderRadius: 6, fontSize: 11, fontWeight: 700 }}>
                                   {lang === 'km' ? 'កំពុងដឹក' : 'In Transit'}
@@ -1135,7 +1114,7 @@ export default function PaymentWithShopPage() {
             {/* ── Section 3: Returned Deliveries (អីវ៉ាន់ត្រឡប់ទៅហាង) ── */}
             {(() => {
               const returnedOrders = filteredOrders.filter(
-                (o) => o.status === 'returned' && (o.merchantPaymentStatus === statusFilter || (!o.merchantPaymentStatus && statusFilter === 'unpaid'))
+                (o) => o.status === 'returned' && matchesMerchantPaymentStatus(o, statusFilter)
               );
               return (
                 <div style={{ marginBottom: 20 }}>
@@ -1170,10 +1149,7 @@ export default function PaymentWithShopPage() {
                             <tr><td colSpan={10} style={{ textAlign: 'center', padding: '30px 0', color: '#64748b' }}>{lang === 'km' ? 'គ្មានអីវ៉ាន់ត្រឡប់ទេ' : 'No returned orders'}</td></tr>
                           ) : (
                             returnedOrders.map((o, idx) => {
-                              const latestNote = o.histories
-                                ?.slice()
-                                .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-                                .find((h: any) => h.note)?.note || o.note || '';
+                              const latestNote = getLatestParcelNote(o);
                               return (
                                 <tr key={o.id} style={{ borderBottom: '1px solid #f1f5f9', background: '#ffffff', transition: 'background-color 0.15s' }}>
                                   <td style={{ padding: '12px 10px', textAlign: 'center', color: '#64748b', fontWeight: 'bold', border: 'none' }}>{idx + 1}</td>
@@ -1540,29 +1516,21 @@ export default function PaymentWithShopPage() {
             {merchantFilter && groupedData.length > 0 ? (
               (() => {
                 const row = groupedData[0];
-                const deliveredCandidates = selectedIds.length > 0
-                  ? row.orders.filter(o => selectedIds.includes(o.id) && o.status === 'delivered')
-                  : row.orders.filter(o => o.status === 'delivered');
-                const deliveredOrders = deliveredCandidates.filter(o => o.merchantPaymentStatus === statusFilter || (!o.merchantPaymentStatus && statusFilter === 'unpaid'));
+                const deliveredOrders = activeSelectedIds.length > 0
+                  ? row.paymentOrders.filter(o => activeSelectedIds.includes(o.id) && o.status === 'delivered')
+                  : row.paymentOrders.filter(o => o.status === 'delivered');
 
-                const selectedInTransit = row.orders.filter(o =>
-                  selectedIds.includes(o.id) &&
-                  (o.status === 'in-transit' || o.status === 'picked-up' || o.status === 'pending' || o.status === 'failed')
+                const selectedInTransit = row.paymentOrders.filter(o =>
+                  selectedIds.includes(o.id) && isInTransitSettlementStatus(o.status)
                 );
                 const inTransitOrders = selectedInTransit.length > 0
-                  ? selectedInTransit.filter(o => o.merchantPaymentStatus === statusFilter || (!o.merchantPaymentStatus && statusFilter === 'unpaid'))
-                  : row.orders.filter(o =>
-                      (o.status === 'in-transit' || o.status === 'picked-up' || o.status === 'pending' || o.status === 'failed') &&
-                      (o.merchantPaymentStatus === statusFilter || (!o.merchantPaymentStatus && statusFilter === 'unpaid'))
-                    );
+                  ? selectedInTransit
+                  : row.paymentOrders.filter(o => isInTransitSettlementStatus(o.status));
 
-                const selectedReturned = row.orders.filter(o => selectedIds.includes(o.id) && o.status === 'returned');
+                const selectedReturned = row.paymentOrders.filter(o => selectedIds.includes(o.id) && o.status === 'returned');
                 const returnedOrders = selectedReturned.length > 0
-                  ? selectedReturned.filter(o => o.merchantPaymentStatus === statusFilter || (!o.merchantPaymentStatus && statusFilter === 'unpaid'))
-                  : row.orders.filter(o =>
-                      o.status === 'returned' &&
-                      (o.merchantPaymentStatus === statusFilter || (!o.merchantPaymentStatus && statusFilter === 'unpaid'))
-                    );
+                  ? selectedReturned
+                  : row.paymentOrders.filter(o => o.status === 'returned');
 
                 const delUSD = deliveredOrders.filter(o => o.codCurrency === 'USD').reduce((sum, o) => sum + parseFloat(o.cod || 0), 0);
                 const delKHR = deliveredOrders.filter(o => o.codCurrency === 'KHR').reduce((sum, o) => sum + parseFloat(o.cod || 0), 0);
@@ -1619,7 +1587,7 @@ export default function PaymentWithShopPage() {
                                   <td style={{ textAlign: 'right', padding: '4px 4px', border: '1px solid #64748b', whiteSpace: 'nowrap' }}>{!isUSD ? `${codVal.toLocaleString()} ៛` : '0 ៛'}</td>
                                   <td style={{ textAlign: 'right', padding: '4px 4px', border: '1px solid #64748b', whiteSpace: 'nowrap' }}>${parseFloat(o.deliveryFee || 0).toFixed(2)}</td>
                                   <td style={{ padding: '4px 4px', border: '1px solid #64748b', textAlign: 'center', color: '#15803d', fontWeight: 700, whiteSpace: 'nowrap' }}>{lang === 'km' ? 'ជោគជ័យ' : 'Delivered'}</td>
-                                  <td style={{ padding: '4px 4px', border: '1px solid #64748b', textAlign: 'left', fontSize: 9, wordBreak: 'break-word' }}>{o.note || ''}</td>
+                                  <td style={{ padding: '4px 4px', border: '1px solid #64748b', textAlign: 'left', fontSize: 9, wordBreak: 'break-word' }}>{cleanNote(o.note)}</td>
                                 </tr>
                               );
                             })}
@@ -1662,10 +1630,7 @@ export default function PaymentWithShopPage() {
                               statusLabel = lang === 'km' ? 'កំពុងដឹក' : 'In Transit';
                             }
 
-                            const latestNote = o.histories
-                              ?.slice()
-                              .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-                              .find((h: any) => h.note)?.note || o.note || statusLabel;
+                            const latestNote = getLatestParcelNote(o, statusLabel);
 
                             return (
                               <tr key={o.id}>
@@ -1701,10 +1666,7 @@ export default function PaymentWithShopPage() {
                           returnedOrders.map((o, idx) => {
                             const isUSD = o.codCurrency === 'USD';
                             const codVal = parseFloat(o.cod || 0);
-                            const latestNote = o.histories
-                              ?.slice()
-                              .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-                              .find((h: any) => h.note)?.note || o.note || (lang === 'km' ? 'ត្រឡប់' : 'Returned');
+                            const latestNote = getLatestParcelNote(o, lang === 'km' ? 'ត្រឡប់' : 'Returned');
                             return (
                               <tr key={o.id}>
                                 <td style={{ textAlign: 'center', padding: '4px 3px', border: '1px solid #64748b', whiteSpace: 'nowrap' }}>{idx + 1}</td>

@@ -11,6 +11,11 @@ import { useSettings } from '@/lib/SettingsContext';
 import LocationMapModal from '@/components/ui/LocationMapModal';
 import { MdArrowBack, MdSave, MdMap, MdVisibility, MdVisibilityOff, MdOpenInNew, MdLink } from 'react-icons/md';
 import { parseMapLinkOrCoords, isShortGoogleMapsUrl, getGoogleMapsUrl } from '@/lib/geo-util';
+import {
+  sanitizePhoneInput,
+  isPhoneExceedingMaxDigits,
+  getPhoneMaxDigitsError,
+} from '@/lib/phone-util';
 
 export default function CreateShopPage() {
   const router = useRouter();
@@ -79,7 +84,8 @@ export default function CreateShopPage() {
   }, [router]);
 
   const handleFieldChange = (field: string, val: string) => {
-    setForm((prev) => ({ ...prev, [field]: val }));
+    const nextVal = field === 'phone' ? sanitizePhoneInput(val) : val;
+    setForm((prev) => ({ ...prev, [field]: nextVal }));
     if (errors[field]) {
       setErrors((prev) => {
         const next = { ...prev };
@@ -94,6 +100,7 @@ export default function CreateShopPage() {
     const errs: Record<string, string> = {};
     if (!form.name.trim()) errs.name = lang === 'km' ? 'សូមបញ្ចូលឈ្មោះហាង' : 'Please enter shop name';
     if (!form.phone.trim()) errs.phone = lang === 'km' ? 'សូមបញ្ចូលលេខទូរស័ព្ទ' : 'Please enter phone number';
+    else if (isPhoneExceedingMaxDigits(form.phone)) errs.phone = getPhoneMaxDigitsError(lang);
     if (form.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
       errs.email = lang === 'km' ? 'សូមបំពេញអ៊ីម៉ែលឱ្យបានត្រឹមត្រូវ' : 'Invalid email';
     }
@@ -289,8 +296,10 @@ export default function CreateShopPage() {
                       {lang === 'km' ? 'លេខទូរស័ព្ទ' : 'Phone'} <span style={{ color: 'var(--danger)' }}>*</span>
                     </label>
                     <input
+                      type="text"
+                      inputMode="tel"
                       className={`form-control ${errors.phone ? 'is-invalid' : ''}`}
-                      placeholder="012 345 678"
+                      placeholder="012345678"
                       value={form.phone}
                       onChange={(e) => handleFieldChange('phone', e.target.value)}
                     />

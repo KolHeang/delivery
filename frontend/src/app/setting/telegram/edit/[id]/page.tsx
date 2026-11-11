@@ -23,10 +23,12 @@ export default function EditTelegramPage() {
     merchantId: '',
     channelTitle: '',
     chatId: '',
+    messageThreadId: '',
     chatType: 'group',
     botToken: '',
     botUsername: '',
     notifyNewOrder: true,
+    notifyPickup: true,
     notifyDeliverySuccess: true,
     notifyDeliveryFailed: true,
     notifySettlement: true,
@@ -57,10 +59,12 @@ export default function EditTelegramPage() {
             merchantId: cfg.merchantId ? String(cfg.merchantId) : '',
             channelTitle: cfg.channelTitle || '',
             chatId: cfg.chatId || '',
+            messageThreadId: cfg.messageThreadId ? String(cfg.messageThreadId) : '',
             chatType: cfg.chatType || 'group',
             botToken: cfg.botToken || '',
             botUsername: cfg.botUsername || '',
             notifyNewOrder: cfg.notifyNewOrder ?? true,
+            notifyPickup: cfg.notifyPickup ?? true,
             notifyDeliverySuccess: cfg.notifyDeliverySuccess ?? true,
             notifyDeliveryFailed: cfg.notifyDeliveryFailed ?? true,
             notifySettlement: cfg.notifySettlement ?? true,
@@ -90,6 +94,9 @@ export default function EditTelegramPage() {
       const payload = {
         ...form,
         merchantId: form.merchantId ? parseInt(form.merchantId, 10) : undefined,
+        messageThreadId: form.messageThreadId.trim()
+          ? parseInt(form.messageThreadId.trim(), 10)
+          : null,
       };
       await api.patch(`/telegram/configs/${params.id}`, payload);
       router.push('/setting/telegram');
@@ -174,7 +181,7 @@ export default function EditTelegramPage() {
                   </div>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px', marginBottom: '20px' }}>
                   {/* Chat ID */}
                   <div className="form-group">
                     <label className="form-label" style={{ fontWeight: 'bold' }}>
@@ -191,6 +198,23 @@ export default function EditTelegramPage() {
                       }}
                     />
                     {errors.chatId && <div className="form-error-text">{errors.chatId}</div>}
+                  </div>
+
+                  {/* Topic / Thread ID */}
+                  <div className="form-group">
+                    <label className="form-label" style={{ fontWeight: 'bold' }}>
+                      {isKh ? 'Topic / Thread ID (បើប្រើ Topics)' : 'Topic / Thread ID (optional)'}
+                    </label>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      className="form-control"
+                      placeholder="e.g. 110, 108, 106, 113"
+                      value={form.messageThreadId}
+                      onChange={(e) =>
+                        setForm({ ...form, messageThreadId: e.target.value.replace(/\D/g, '') })
+                      }
+                    />
                   </div>
 
                   {/* Chat Type */}
@@ -253,6 +277,14 @@ export default function EditTelegramPage() {
                         onChange={(e) => setForm({ ...form, notifySettlement: e.target.checked })}
                       />
                       <span>{isKh ? 'ទូទាត់ប្រាក់' : 'Settlement'}</span>
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, cursor: 'pointer' }}>
+                      <input
+                        type="checkbox"
+                        checked={form.notifyPickup}
+                        onChange={(e) => setForm({ ...form, notifyPickup: e.target.checked })}
+                      />
+                      <span>{isKh ? 'សំណើទៅយកទំនិញ' : 'Pickup Request'}</span>
                     </label>
                     <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, cursor: 'pointer' }}>
                       <input

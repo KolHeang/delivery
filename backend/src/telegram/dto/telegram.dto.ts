@@ -1,5 +1,14 @@
-import { IsString, IsOptional, IsBoolean, IsNumber } from 'class-validator';
+import { IsString, IsOptional, IsBoolean, IsNumber, IsInt, Min } from 'class-validator';
+import { Transform } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
+
+const parseOptionalThreadId = (value: unknown, nullable = false) => {
+  if (value === '' || value === null || value === undefined) {
+    return nullable ? null : undefined;
+  }
+  const num = Number(String(value).trim());
+  return Number.isNaN(num) ? value : num;
+};
 
 export class CreateTelegramConfigDto {
   @ApiProperty({ required: false })
@@ -15,6 +24,13 @@ export class CreateTelegramConfigDto {
   @ApiProperty()
   @IsString()
   chatId: string;
+
+  @ApiProperty({ required: false, description: 'Optional Telegram Forum Topic / Thread ID' })
+  @IsOptional()
+  @Transform(({ value }) => parseOptionalThreadId(value, false))
+  @IsInt()
+  @Min(1)
+  messageThreadId?: number;
 
   @ApiProperty({ required: false, default: 'group' })
   @IsOptional()
@@ -35,6 +51,11 @@ export class CreateTelegramConfigDto {
   @IsOptional()
   @IsBoolean()
   notifyNewOrder?: boolean;
+
+  @ApiProperty({ required: false, default: true })
+  @IsOptional()
+  @IsBoolean()
+  notifyPickup?: boolean;
 
   @ApiProperty({ required: false, default: true })
   @IsOptional()
@@ -68,6 +89,13 @@ export class UpdateTelegramConfigDto {
   @IsString()
   chatId?: string;
 
+  @ApiProperty({ required: false, nullable: true, description: 'Optional Telegram Forum Topic / Thread ID' })
+  @IsOptional()
+  @Transform(({ value }) => parseOptionalThreadId(value, true))
+  @IsInt()
+  @Min(1)
+  messageThreadId?: number | null;
+
   @ApiProperty({ required: false })
   @IsOptional()
   @IsString()
@@ -87,6 +115,11 @@ export class UpdateTelegramConfigDto {
   @IsOptional()
   @IsBoolean()
   notifyNewOrder?: boolean;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsBoolean()
+  notifyPickup?: boolean;
 
   @ApiProperty({ required: false })
   @IsOptional()
@@ -118,6 +151,13 @@ export class SendTelegramMessageDto {
   @IsString()
   text: string;
 
+  @ApiProperty({ required: false, description: 'Optional Telegram Forum Topic / Thread ID' })
+  @IsOptional()
+  @Transform(({ value }) => parseOptionalThreadId(value, false))
+  @IsInt()
+  @Min(1)
+  messageThreadId?: number;
+
   @ApiProperty({ required: false })
   @IsOptional()
   @IsString()
@@ -138,6 +178,13 @@ export class TestTelegramBotDto {
   @ApiProperty()
   @IsString()
   chatId: string;
+
+  @ApiProperty({ required: false, description: 'Optional Telegram Forum Topic / Thread ID' })
+  @IsOptional()
+  @Transform(({ value }) => parseOptionalThreadId(value, false))
+  @IsInt()
+  @Min(1)
+  messageThreadId?: number;
 
   @ApiProperty({ required: false })
   @IsOptional()

@@ -8,6 +8,11 @@ import Topbar from '@/components/layout/Topbar';
 import api from '@/lib/api';
 import { useLanguage } from '@/lib/LanguageContext';
 import {
+  sanitizePhoneInput,
+  isPhoneExceedingMaxDigits,
+  getPhoneMaxDigitsError,
+} from '@/lib/phone-util';
+import {
   MdArrowBack, MdRefresh, MdDirectionsBike, MdClose,
   MdDelete, MdPrint, MdCheckCircle, MdAdd, MdHourglassEmpty,
   MdLocalShipping, MdWarehouse,
@@ -70,7 +75,7 @@ export default function PickupRequestDetailPage() {
   const router = useRouter();
   const params = useParams();
   const id = Number(params.id);
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
 
   const [request, setRequest]   = useState<any>(null);
   const [parcels, setParcels]   = useState<any[]>([]);
@@ -166,6 +171,7 @@ export default function PickupRequestDetailPage() {
   const handleAddParcel = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.receiverPhone.trim()) { setFormError('Receiver phone is required'); return; }
+    if (isPhoneExceedingMaxDigits(form.receiverPhone)) { setFormError(getPhoneMaxDigitsError(lang)); return; }
     if (!form.receiverAddress.trim()) { setFormError('Receiver address is required'); return; }
     if (!form.zoneId) { setFormError('Zone is required'); return; }
     // capacity check
@@ -214,9 +220,10 @@ export default function PickupRequestDetailPage() {
     setBatchRows(r => r.length === 1 ? r : r.filter((_, i) => i !== idx));
 
   const updateBatchRow = (idx: number, field: string, value: string) => {
+    const nextValue = field === 'receiverPhone' ? sanitizePhoneInput(value) : value;
     setBatchRows(prev => prev.map((row, i) => {
       if (i !== idx) return row;
-      const updated = { ...row, [field]: value };
+      const updated = { ...row, [field]: nextValue };
       // auto-fill delivery fee when zone changes
       if (field === 'zoneId' && zones.length && request) {
         const zone = zones.find((z: any) => String(z.id) === value);
@@ -235,6 +242,11 @@ export default function PickupRequestDetailPage() {
     const invalid = batchRows.findIndex(r => !r.receiverPhone.trim() || !r.receiverAddress.trim());
     if (invalid !== -1) {
       alert(`Row ${invalid + 1}: Address and Phone are required.`);
+      return;
+    }
+    const exceeding = batchRows.findIndex(r => isPhoneExceedingMaxDigits(r.receiverPhone));
+    if (exceeding !== -1) {
+      alert(`Row ${exceeding + 1}: ${getPhoneMaxDigitsError(lang)}`);
       return;
     }
     // capacity check
@@ -623,7 +635,7 @@ export default function PickupRequestDetailPage() {
                           <input type="text" value={form.receiverName} onChange={e => setForm(f => ({ ...f, receiverName: e.target.value }))} placeholder="Customer name" style={inputStyle} />
                         </FormField>
                         <FormField label={`${t('receiverPhone')} *`}>
-                          <input type="text" value={form.receiverPhone} onChange={e => setForm(f => ({ ...f, receiverPhone: e.target.value }))} placeholder="Phone number" required style={inputStyle} />
+                          <input type="text" inputMode="tel" value={form.receiverPhone} onChange={e => setForm(f => ({ ...f, receiverPhone: sanitizePhoneInput(e.target.value) }))} placeholder="e.g. 012345678" required style={inputStyle} />
                         </FormField>
                         <FormField label={`${t('receiverAddress')} *`}>
                           <input type="text" value={form.receiverAddress} onChange={e => setForm(f => ({ ...f, receiverAddress: e.target.value }))} placeholder="Delivery address" required style={inputStyle} />
@@ -713,10 +725,10 @@ export default function PickupRequestDetailPage() {
                                   {/* Phone */}
                                   <td style={{ padding: '6px 6px' }}>
                                     <input
-                                      type="text" value={row.receiverPhone}
-                                      onChange={e => updateBatchRow(idx, 'receiverPhone', e.target.value)}
+                                      type="text" inputMode="tel" value={row.receiverPhone}
+                                      onChange={e => updateBatchRow(idx, 'receiverPhone', sanitizePhoneInput(e.target.value))}
                                       placeholder="e.g. 012345678"
-                                      style={{ ...batchCellStyle, width: '100%', borderColor: !row.receiverPhone.trim() ? '#fca5a5' : '#cbd5e1' }}
+                                      style={{ ...batchCellStyle, width: '100%', borderColor: (!row.receiverPhone.trim() || isPhoneExceedingMaxDigits(row.receiverPhone)) ? '#fca5a5' : '#cbd5e1' }}
                                     />
                                   </td>
                                   {/* Delivery Fee */}

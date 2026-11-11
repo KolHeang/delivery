@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsNotEmpty, IsString, IsOptional } from 'class-validator';
+import { MaxPhoneDigits } from '../../../common/phone.util';
 
 export class UpdateMerchantProfileDto {
   @ApiProperty({ example: 'Phnom Penh Fashion Store', required: false, description: 'Store or merchant name in English' })
@@ -10,6 +11,7 @@ export class UpdateMerchantProfileDto {
   @ApiProperty({ example: '012345678', required: false, description: 'Contact phone number' })
   @IsOptional()
   @IsString()
+  @MaxPhoneDigits()
   phone?: string;
 
   @ApiProperty({ example: 'shop@store.com', required: false, description: 'Contact email' })
@@ -56,6 +58,7 @@ export class UpdateParcelAddressDto {
   @ApiProperty({ example: '098765432', required: false, description: 'New receiver phone number' })
   @IsOptional()
   @IsString()
+  @MaxPhoneDigits()
   receiverPhone?: string;
 
   @ApiProperty({ example: 'Srey Mao', required: false, description: 'New receiver contact name' })

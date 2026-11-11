@@ -8,6 +8,11 @@ import Topbar from '@/components/layout/Topbar';
 import api from '@/lib/api';
 import { useLanguage } from '@/lib/LanguageContext';
 import FormField from '@/components/ui/FormField';
+import {
+  sanitizePhoneInput,
+  isPhoneExceedingMaxDigits,
+  getPhoneMaxDigitsError,
+} from '@/lib/phone-util';
 import { MdArrowBack, MdSave } from 'react-icons/md';
 
 const SIZE_OPTIONS = ['small', 'medium', 'large'];
@@ -73,7 +78,8 @@ export default function EditOrderPage() {
   }, [params.id, router]);
 
   const f = (k: string) => (e: any) => {
-    setForm((p: any) => ({ ...p, [k]: e.target.value }));
+    const val = k === 'receiverPhone' ? sanitizePhoneInput(e.target.value) : e.target.value;
+    setForm((p: any) => ({ ...p, [k]: val }));
     if (errors[k]) {
       setErrors(prev => {
         const next = { ...prev };
@@ -88,6 +94,8 @@ export default function EditOrderPage() {
     const errs: Record<string, string> = {};
     if (!form.receiverPhone || !String(form.receiverPhone).trim()) {
       errs.receiverPhone = lang === 'km' ? 'សូមបំពេញលេខទូរស័ព្ទអ្នកទទួល' : 'Receiver phone is required';
+    } else if (isPhoneExceedingMaxDigits(String(form.receiverPhone))) {
+      errs.receiverPhone = getPhoneMaxDigitsError(lang);
     }
     if (!form.receiverAddress || !String(form.receiverAddress).trim()) {
       errs.receiverAddress = lang === 'km' ? 'សូមបំពេញអាសយដ្ឋានអ្នកទទួល' : 'Receiver address is required';
@@ -161,6 +169,8 @@ export default function EditOrderPage() {
                   </div>
                   <FormField label={lang === 'km' ? 'លេខទូរស័ព្ទអ្នកទទួល' : 'Receiver Phone'} required error={errors.receiverPhone}>
                     <input
+                      type="text"
+                      inputMode="tel"
                       className="form-control"
                       value={form.receiverPhone || ''}
                       onChange={f('receiverPhone')}

@@ -8,6 +8,11 @@ import Topbar from '@/components/layout/Topbar';
 import api from '@/lib/api';
 import { useLanguage } from '@/lib/LanguageContext';
 import FormField from '@/components/ui/FormField';
+import {
+  sanitizePhoneInput,
+  isPhoneExceedingMaxDigits,
+  getPhoneMaxDigitsError,
+} from '@/lib/phone-util';
 import { MdArrowBack, MdSave } from 'react-icons/md';
 
 export default function CreateCustomerPage() {
@@ -22,7 +27,8 @@ export default function CreateCustomerPage() {
   }, [router]);
 
   const f = (k: string) => (e: any) => {
-    setForm(p => ({ ...p, [k]: e.target.value }));
+    const val = k === 'phone' ? sanitizePhoneInput(e.target.value) : e.target.value;
+    setForm(p => ({ ...p, [k]: val }));
     if (errors[k]) {
       setErrors(prev => {
         const next = { ...prev };
@@ -40,6 +46,8 @@ export default function CreateCustomerPage() {
     }
     if (!form.phone.trim()) {
       errs.phone = lang === 'km' ? 'សូមបំពេញលេខទូរស័ព្ទ' : 'Phone number is required';
+    } else if (isPhoneExceedingMaxDigits(form.phone)) {
+      errs.phone = getPhoneMaxDigitsError(lang);
     }
     if (form.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
       errs.email = lang === 'km' ? 'សូមបំពេញអ៊ីម៉ែលត្រឹមត្រូវ' : 'Please enter a valid email';
@@ -92,10 +100,12 @@ export default function CreateCustomerPage() {
                   </FormField>
                   <FormField label={t('phone')} required error={errors.phone}>
                     <input
+                      type="text"
+                      inputMode="tel"
                       className="form-control"
                       value={form.phone}
                       onChange={f('phone')}
-                      placeholder="e.g. 012-345-678"
+                      placeholder="e.g. 012345678"
                     />
                   </FormField>
                 </div>

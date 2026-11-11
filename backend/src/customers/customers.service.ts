@@ -4,6 +4,7 @@ import { Repository, ILike } from 'typeorm';
 import { Customer } from './entities/customer.entity';
 import { CreateCustomerDto, UpdateCustomerDto } from './dto/customer.dto';
 import { PaginatedResult } from '../interface/pagination.interface';
+import { assertValidPhoneMaxDigits } from '../common/phone.util';
 
 @Injectable()
 export class CustomersService {
@@ -53,10 +54,14 @@ export class CustomersService {
   }
 
   create(dto: CreateCustomerDto): Promise<Customer> {
+    assertValidPhoneMaxDigits(dto.phone);
     return this.repo.save(this.repo.create(dto));
   }
 
   async update(id: number, dto: UpdateCustomerDto, tenantId?: number): Promise<Customer> {
+    if (dto.phone !== undefined) {
+      assertValidPhoneMaxDigits(dto.phone);
+    }
     await this.findOne(id, tenantId);
     await this.repo.update(id, dto);
     return this.findOne(id, tenantId);

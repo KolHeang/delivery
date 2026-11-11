@@ -26,6 +26,15 @@ import { FirebaseService } from '../../firebase/firebase.service';
 import { TrackingGateway } from '../../tracking/tracking.gateway';
 import { formatDriverTask } from './utils/task-formatter.util';
 import { formatMerchantDelivery, formatMerchantPickupRequest } from '../merchant/utils/delivery-formatter.util';
+import { cleanParcelNote } from '../../common/note.util';
+import { assertValidPhoneMaxDigits } from '../../common/phone.util';
+import { TelegramService } from '../../telegram/telegram.service';
+import {
+  escapeTelegramHtml,
+  formatParcelBatchTerminalTelegramMessage,
+  formatParcelTerminalTelegramMessage,
+  isTerminalParcelStatus,
+} from '../../telegram/telegram.util';
 
 export interface DriverFinancialFilterOptions {
   period?: string;
@@ -163,6 +172,7 @@ export class DriverService {
     private readonly notificationRepo: Repository<DriverNotification>,
     private readonly firebaseService: FirebaseService,
     @Optional() private readonly trackingGateway?: TrackingGateway,
+    @Optional() private readonly telegramService?: TelegramService,
   ) { }
 
   async getProfile(driverId: number) {
@@ -241,6 +251,9 @@ export class DriverService {
       joinDate?: string;
     },
   ) {
+    if (dto.phone !== undefined) {
+      assertValidPhoneMaxDigits(dto.phone);
+    }
     const updateData: any = {};
     if (dto.name !== undefined) updateData.name = dto.name;
     if (dto.nameKh !== undefined) updateData.nameKh = dto.nameKh;
@@ -667,10 +680,75 @@ export class DriverService {
     };
   }
 
+  private async notifyParcelTerminalTelegram(parcel: any) {
+    if (
+      !isTerminalParcelStatus(parcel?.status) ||
+      !this.telegramService ||
+      typeof this.telegramService.notifyTopic !== 'function'
+    ) {
+      return;
+    }
+    try {
+      await this.telegramService.notifyTopic(
+        'parcels',
+        formatParcelTerminalTelegramMessage(parcel),
+        {
+          eventType: 'DELIVERY_STATUS',
+          parcelOutcome: parcel.status === 'delivered' ? 'delivered' : 'failed',
+          merchantId: parcel.merchantId ?? undefined,
+          tenantId: parcel.tenantId ?? undefined,
+        },
+      );
+    } catch {
+      // Non-blocking notification
+    }
+  }
+
+  private async notifyParcelsBatchTerminalTelegram(parcels: any[]) {
+    if (
+      !parcels.length ||
+      !this.telegramService ||
+      typeof this.telegramService.notifyTopic !== 'function'
+    ) {
+      return;
+    }
+    try {
+      const hasDelivered = parcels.some((p) => p.status === 'delivered');
+      const allDelivered = parcels.every((p) => p.status === 'delivered');
+      await this.telegramService.notifyTopic(
+        'parcels',
+        formatParcelBatchTerminalTelegramMessage(parcels),
+        {
+          eventType: 'DELIVERY_STATUS',
+          parcelOutcome: allDelivered
+            ? 'delivered'
+            : hasDelivered
+              ? 'delivered'
+              : 'failed',
+          tenantId: parcels[0]?.tenantId ?? undefined,
+        },
+      );
+    } catch {
+      // Non-blocking notification
+    }
+  }
+
   async updateParcelStatus(
     driverId: number,
     parcelId: number,
     dto: UpdateParcelStatusDto,
+  ) {
+    return this.updateParcelStatusInternal(driverId, parcelId, dto);
+  }
+
+  private async updateParcelStatusInternal(
+    driverId: number,
+    parcelId: number,
+    dto: UpdateParcelStatusDto,
+    options?: {
+      suppressTelegram?: boolean;
+      collectedTerminal?: any[];
+    },
   ) {
     let parcel = await this.parcelRepo.findOne({
       where: [
@@ -730,9 +808,14 @@ export class DriverService {
       }
     }
 
-    let finalNote = dto.remark !== undefined ? dto.remark : dto.note;
-    if (dto.reason) {
-      finalNote = finalNote ? `[Reason: ${dto.reason}] ${finalNote}` : `[Reason: ${dto.reason}]`;
+    const rawNote = dto.remark !== undefined ? dto.remark : dto.note;
+    let finalNote =
+      typeof rawNote === 'string' ? cleanParcelNote(rawNote) : rawNote;
+    const cleanReason = typeof dto.reason === 'string' ? dto.reason.trim() : '';
+    if (cleanReason && cleanReason.toLowerCase() !== 'other') {
+      finalNote = finalNote ? `[Reason: ${cleanReason}] ${finalNote}` : `[Reason: ${cleanReason}]`;
+    } else if (cleanReason.toLowerCase() === 'other' && finalNote === '') {
+      finalNote = undefined;
     }
     const updates: Partial<Parcel> = {
       status: dto.status as any,
@@ -755,14 +838,17 @@ export class DriverService {
     if (dto.returnPhoto) updates.returnPhoto = dto.returnPhoto;
     if (finalNote !== undefined) updates.note = finalNote;
 
+    const previousStatus = parcel.status;
+
     await this.parcelRepo.update(parcelId, updates);
 
     if (dto.status !== parcel.status || finalNote) {
       try {
+        const fallbackNote = cleanParcelNote(parcel.note) || undefined;
         const history = this.historyRepo.create({
           parcelId,
           status: dto.status,
-          note: finalNote || parcel.note || undefined,
+          note: finalNote || fallbackNote,
         });
         await this.historyRepo.save(history);
       } catch (err) {
@@ -799,7 +885,7 @@ export class DriverService {
 
     const updated = await this.parcelRepo.findOne({
       where: { id: parcelId },
-      relations: { customer: true, merchant: true, zone: true },
+      relations: { customer: true, merchant: true, zone: true, driver: true },
     });
     if (updated) {
       try {
@@ -809,6 +895,31 @@ export class DriverService {
         try {
           this.trackingGateway?.notifyMerchantDelivery(updated.merchantId, formatMerchantDelivery(updated));
         } catch (e) { }
+      }
+    }
+
+    if (dto.status !== previousStatus && isTerminalParcelStatus(dto.status)) {
+      const snapshot: any = {
+        ...(updated || parcel),
+        status: dto.status,
+        note: finalNote !== undefined ? finalNote : (updated?.note ?? parcel.note),
+        paymentMethod: dto.paymentMethod || updated?.paymentMethod || parcel.paymentMethod,
+      };
+      if (
+        !snapshot.driver &&
+        this.userRepo &&
+        typeof this.userRepo.findOne === 'function'
+      ) {
+        try {
+          snapshot.driver = await this.userRepo.findOne({ where: { id: driverId } });
+        } catch {
+          // Non-blocking fallback
+        }
+      }
+      if (options?.suppressTelegram) {
+        options.collectedTerminal?.push(snapshot);
+      } else {
+        await this.notifyParcelTerminalTelegram(snapshot);
       }
     }
 
@@ -1519,6 +1630,37 @@ export class DriverService {
         );
       } catch (e) { }
     }
+
+    if (
+      this.telegramService &&
+      typeof this.telegramService.notifyTopic === 'function'
+    ) {
+      try {
+        const src = reloaded || saved;
+        const shopName =
+          src.merchant?.nameKh || src.merchant?.name || `Shop #${src.merchantId}`;
+        const driverName =
+          src.pickupDriver?.nameKh || src.pickupDriver?.name || `Driver #${driverId}`;
+        const lines = [
+          `✅ <b>បានទៅយកទំនិញរួចរាល់ #${saved.id}</b>`,
+          ``,
+          `- 🏪 ហាង: ${escapeTelegramHtml(shopName)}`,
+          `- 🛵 អ្នកដឹកជញ្ជូន: ${escapeTelegramHtml(driverName)}${src.pickupDriver?.phone ? ` (${escapeTelegramHtml(src.pickupDriver.phone)})` : ''}`,
+          `- 📦 ចំនួនជាក់ស្តែង: ${saved.actualQuantity ?? dto.actualQuantity} / ${src.declaredQuantity ?? '-'} កញ្ចប់`,
+          ...(saved.driverNote
+            ? [`- 📝 កំណត់ចំណាំ: ${escapeTelegramHtml(saved.driverNote)}`]
+            : []),
+        ];
+        await this.telegramService.notifyTopic('pickup', lines.join('\n'), {
+          eventType: 'PICKUP_REQUEST',
+          merchantId: src.merchantId,
+          tenantId: src.tenantId ?? src.merchant?.tenantId,
+        });
+      } catch {
+        // Non-blocking notification
+      }
+    }
+
     return saved;
   }
 
@@ -1783,6 +1925,18 @@ export class DriverService {
     rawCode: string,
     dto: UpdateParcelStatusDto,
   ) {
+    return this.updateScannedParcelStatusInternal(driverId, rawCode, dto);
+  }
+
+  private async updateScannedParcelStatusInternal(
+    driverId: number,
+    rawCode: string,
+    dto: UpdateParcelStatusDto,
+    options?: {
+      suppressTelegram?: boolean;
+      collectedTerminal?: any[];
+    },
+  ) {
     const { parcel, scanInfo } = await this.scanParcel(driverId, rawCode);
 
     // If driver 2 scans a parcel in reassignable state and immediately updates status:
@@ -1791,7 +1945,7 @@ export class DriverService {
       await this.claimScannedParcel(driverId, rawCode);
     }
 
-    return this.updateParcelStatus(driverId, parcel.id, dto);
+    return this.updateParcelStatusInternal(driverId, parcel.id, dto, options);
   }
 
   /**
@@ -1929,6 +2083,9 @@ export class DriverService {
       ),
     );
 
+    const suppressIndividual = codes.length > 1;
+    const collectedTerminal: any[] = [];
+
     const successful: Array<{
       code: string;
       parcelId: number;
@@ -1943,7 +2100,14 @@ export class DriverService {
 
     for (const code of codes) {
       try {
-        const updateRes = await this.updateScannedParcelStatus(driverId, code, dto);
+        const updateRes = await this.updateScannedParcelStatusInternal(
+          driverId,
+          code,
+          dto,
+          suppressIndividual
+            ? { suppressTelegram: true, collectedTerminal }
+            : undefined,
+        );
         if (!updateRes) {
           throw new BadRequestException('Failed to update parcel status');
         }
@@ -1959,6 +2123,14 @@ export class DriverService {
           code,
           error: err.message || 'Failed to update status',
         });
+      }
+    }
+
+    if (suppressIndividual) {
+      if (collectedTerminal.length === 1) {
+        await this.notifyParcelTerminalTelegram(collectedTerminal[0]);
+      } else if (collectedTerminal.length > 1) {
+        await this.notifyParcelsBatchTerminalTelegram(collectedTerminal);
       }
     }
 
@@ -2313,7 +2485,7 @@ export class DriverService {
         zoneName: p.zone?.name || 'General',
         merchantName: p.merchant?.nameKh || p.merchant?.name || '-',
         merchantPhone: p.merchant?.phone || '-',
-        note: p.note || '',
+        note: cleanParcelNote(p.note) || '',
         deliveredAt: p.deliveredAt,
         createdAt: p.createdAt,
         updatedAt: p.updatedAt,
@@ -2774,6 +2946,33 @@ export class DriverService {
     payment.note = payment.note ? `${payment.note}\n${problemNote}` : problemNote;
     const saved = await this.driverPaymentRepo.save(payment);
 
+    if (
+      this.telegramService &&
+      typeof this.telegramService.notifyTopic === 'function'
+    ) {
+      try {
+        const driver = await this.userRepo?.findOne?.({
+          where: { id: driverId },
+          select: { id: true, name: true, nameKh: true, phone: true, tenantId: true },
+        });
+        const driverName = driver?.nameKh || driver?.name || `Driver #${driverId}`;
+        const lines = [
+          `⚠️ <b>អ្នកដឹកជញ្ជូនរាយការណ៍បញ្ហាទូទាត់ប្រាក់</b>`,
+          ``,
+          `- 🛵 អ្នកដឹកជញ្ជូន: ${escapeTelegramHtml(driverName)}${driver?.phone ? ` (${escapeTelegramHtml(driver.phone)})` : ''}`,
+          `- 🧾 លេខយោង: ${escapeTelegramHtml(saved.reference || `#${saved.id}`)}`,
+          `- ❗ មូលហេតុ: ${escapeTelegramHtml(reason)}`,
+          ...(note ? [`- 📝 កំណត់ចំណាំ: ${escapeTelegramHtml(note)}`] : []),
+        ];
+        await this.telegramService.notifyTopic('driver_payment', lines.join('\n'), {
+          eventType: 'DRIVER_PAYMENT',
+          tenantId: saved.tenantId ?? driver?.tenantId,
+        });
+      } catch {
+        // Non-blocking notification
+      }
+    }
+
     return {
       status: true,
       message: 'Settlement marked as problem successfully',
@@ -2804,6 +3003,38 @@ export class DriverService {
     });
 
     const saved = await this.driverPaymentRepo.save(payment);
+
+    if (
+      this.telegramService &&
+      typeof this.telegramService.notifyTopic === 'function'
+    ) {
+      try {
+        const cleanAmount = Number(saved.amount) || 0;
+        const curr = String(saved.currency || 'KHR').toUpperCase();
+        const formattedAmount =
+          curr === 'KHR'
+            ? `${Math.round(cleanAmount).toLocaleString()} រៀល`
+            : `$ ${cleanAmount.toFixed(2)} USD`;
+        const driverName = driver.nameKh || driver.name || `Driver #${driverId}`;
+        const parcelCount = Array.isArray(saved.parcelIds) ? saved.parcelIds.length : 0;
+        const lines = [
+          `💵 <b>សំណើទូទាត់ប្រាក់ពីអ្នកដឹកជញ្ជូន</b>`,
+          ``,
+          `- 🛵 អ្នកដឹកជញ្ជូន: ${escapeTelegramHtml(driverName)}${driver.phone ? ` (${escapeTelegramHtml(driver.phone)})` : ''}`,
+          `- 🧾 លេខយោង: ${escapeTelegramHtml(saved.reference || `#${saved.id}`)}`,
+          `- 📊 ស្ថានភាព: Pending`,
+          ...(parcelCount > 0 ? [`- 📦 ចំនួនកញ្ចប់: ${parcelCount} កញ្ចប់`] : []),
+          `- 💵 <b>ទឹកប្រាក់ស្នើសុំ: ${formattedAmount}</b>`,
+          ...(saved.note ? [`- 📝 កំណត់ចំណាំ: ${escapeTelegramHtml(saved.note)}`] : []),
+        ];
+        await this.telegramService.notifyTopic('driver_payment', lines.join('\n'), {
+          eventType: 'DRIVER_PAYMENT',
+          tenantId: driver.tenantId ?? undefined,
+        });
+      } catch {
+        // Non-blocking notification
+      }
+    }
 
     return {
       status: true,

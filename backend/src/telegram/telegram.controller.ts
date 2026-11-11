@@ -84,6 +84,7 @@ export class TelegramController {
     const tenantId = req?.user?.tenantId;
     return this.telegramService.sendMessage(dto.chatId, dto.text, {
       botToken: dto.botToken,
+      messageThreadId: dto.messageThreadId,
       eventType: dto.eventType,
       merchantId: dto.merchantId,
       tenantId,
@@ -94,7 +95,11 @@ export class TelegramController {
   @RequirePermissions('settings.telegram', 'settings.general', 'settings.manage')
   @Post('test')
   testConnection(@Body() dto: TestTelegramBotDto) {
-    return this.telegramService.testConnection(dto.chatId, dto.botToken);
+    return this.telegramService.testConnection(
+      dto.chatId,
+      dto.botToken,
+      dto.messageThreadId,
+    );
   }
 
   @ApiOperation({ summary: 'Get Telegram notification logs' })

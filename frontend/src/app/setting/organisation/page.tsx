@@ -9,6 +9,11 @@ import api from '@/lib/api';
 import { useLanguage } from '@/lib/LanguageContext';
 import { useTenant } from '@/lib/TenantContext';
 import { applyBrandTheme } from '@/lib/theme';
+import {
+  sanitizePhoneInput,
+  isPhoneExceedingMaxDigits,
+  getPhoneMaxDigitsError,
+} from '@/lib/phone-util';
 import { MdCloudUpload, MdDeleteOutline, MdBusiness } from 'react-icons/md';
 
 const PRESET_BRAND_COLORS = [
@@ -44,6 +49,8 @@ export default function OrganisationSettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
+  const [initialPhone, setInitialPhone] = useState('');
+  const [phoneError, setPhoneError] = useState('');
 
   const triggerColorUpdate = (color: string) => {
     setForm(prev => ({ ...prev, primaryColor: color }));
@@ -68,9 +75,11 @@ export default function OrganisationSettingsPage() {
           const existingLogo = res.data.logo || (tenant?.logoUrl || '');
           const defaultColor = res.data.primaryColor || res.data.primary_color || tenant?.primaryColor || '#2563eb';
 
+          const loadedPhone = res.data.phone || (tenant?.phone || '');
+          setInitialPhone(loadedPhone);
           setForm({
             name: defaultName,
-            phone: res.data.phone || (tenant?.phone || ''),
+            phone: loadedPhone,
             email: res.data.email || (tenant?.email || ''),
             website: res.data.website || '',
             address: res.data.address || '',
@@ -148,6 +157,12 @@ export default function OrganisationSettingsPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const isUntouchedLegacyDefault = form.phone === initialPhone && initialPhone.trim().startsWith('+855');
+    if (!isUntouchedLegacyDefault && isPhoneExceedingMaxDigits(form.phone)) {
+      setPhoneError(getPhoneMaxDigitsError(lang));
+      return;
+    }
+    setPhoneError('');
     setSaving(true);
     setSuccessMsg('');
     try {
@@ -411,11 +426,16 @@ export default function OrganisationSettingsPage() {
                     <label className="form-label">{t('orgPhone')} <span>*</span></label>
                     <input
                       type="text"
-                      className="form-control"
+                      inputMode="tel"
+                      className={`form-control ${phoneError ? 'is-invalid' : ''}`}
                       value={form.phone}
-                      onChange={e => setForm({ ...form, phone: e.target.value })}
+                      onChange={e => {
+                        setForm({ ...form, phone: sanitizePhoneInput(e.target.value) });
+                        if (phoneError) setPhoneError('');
+                      }}
                       required
                     />
+                    {phoneError && <div className="form-error-text">{phoneError}</div>}
                   </div>
 
                   <div className="form-group">

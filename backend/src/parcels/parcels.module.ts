@@ -9,11 +9,13 @@ import { ParcelsController } from './parcels.controller';
 import { Zone } from '../zones/entities/zone.entity';
 import { User } from '../users/entities/users.entity';
 import { TrackingModule } from '../tracking/tracking.module';
+import { TelegramModule } from '../telegram/telegram.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Parcel, ParcelEvent, PickupRequest, Zone, User]),
     TrackingModule,
+    TelegramModule,
   ],
   controllers: [ParcelsController],
   providers: [ParcelsService],

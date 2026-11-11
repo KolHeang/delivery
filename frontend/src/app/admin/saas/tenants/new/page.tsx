@@ -8,6 +8,11 @@ import { saasApi, Plan } from '@/lib/saas-api';
 import api from '@/lib/api';
 import { getUser, clearAuth } from '@/lib/auth';
 import {
+  sanitizePhoneInput,
+  isPhoneExceedingMaxDigits,
+  getPhoneMaxDigitsError,
+} from '@/lib/phone-util';
+import {
   MdDashboard,
   MdBusiness,
   MdArrowBack,
@@ -239,6 +244,8 @@ export default function CreateTenantPage() {
     }
     if (!companyForm.phone.trim()) {
       errs.phone = 'សូមបំពេញលេខទូរស័ព្ទ';
+    } else if (isPhoneExceedingMaxDigits(companyForm.phone)) {
+      errs.phone = getPhoneMaxDigitsError('km');
     }
     if (!companyForm.email.trim()) {
       errs.email = 'សូមបំពេញអ៊ីម៉ែល';
@@ -775,11 +782,12 @@ export default function CreateTenantPage() {
                       </label>
                       <input
                         type="text"
+                        inputMode="tel"
                         className={`form-control ${errors.phone ? 'is-invalid' : ''}`}
-                        placeholder="012 345 678"
+                        placeholder="012345678"
                         value={companyForm.phone}
                         onChange={(e) => {
-                          setCompanyForm({ ...companyForm, phone: e.target.value });
+                          setCompanyForm({ ...companyForm, phone: sanitizePhoneInput(e.target.value) });
                           if (errors.phone) setErrors(prev => { const n = { ...prev }; delete n.phone; return n; });
                         }}
                       />

@@ -37,6 +37,15 @@ import {
   formatMerchantPickupRequest,
   formatMerchantSettlement,
 } from './utils/delivery-formatter.util';
+import { cleanParcelNote } from '../../common/note.util';
+import { assertValidPhoneMaxDigits } from '../../common/phone.util';
+import { TelegramService } from '../../telegram/telegram.service';
+import {
+  escapeTelegramHtml,
+  formatParcelBatchCreatedTelegramMessage,
+  formatParcelCreatedTelegramMessage,
+  formatParcelTerminalTelegramMessage,
+} from '../../telegram/telegram.util';
 
 
 export interface MobileMerchantFilterOptions {
@@ -163,6 +172,7 @@ export class MerchantService {
     private readonly firebaseService: FirebaseService,
     @Optional() private readonly trackingGateway?: TrackingGateway,
     @Optional() private readonly trackingService?: TrackingService,
+    @Optional() private readonly telegramService?: TelegramService,
   ) {}
 
   async getProfile(merchantId: number) {
@@ -199,6 +209,9 @@ export class MerchantService {
   }
 
   async updateProfile(merchantId: number, dto: { name?: string; phone?: string; email?: string; photo?: string; address?: string }) {
+    if (dto.phone !== undefined) {
+      assertValidPhoneMaxDigits(dto.phone);
+    }
     const updateData: any = {};
     if (dto.name !== undefined) updateData.name = dto.name;
     if (dto.phone !== undefined) updateData.phone = dto.phone;
@@ -594,7 +607,10 @@ export class MerchantService {
         isDone: parcel.status === 'delivered' || !!terminalEvent,
         isCurrent: parcel.status === 'delivered' || !!terminalEvent,
         isTerminalFailed: ['failed', 'returned', 'cancelled'].includes(parcel.status),
-        note: deliveredEvent?.note || terminalEvent?.note || 'រង់ចាំប្រគល់ជូន',
+        note:
+          cleanParcelNote(deliveredEvent?.note) ||
+          cleanParcelNote(terminalEvent?.note) ||
+          'រង់ចាំប្រគល់ជូន',
       },
     ];
 
@@ -617,7 +633,7 @@ export class MerchantService {
           cod: parcel.cod,
           deliveryFee: parcel.deliveryFee,
           total: Number(parcel.cod || 0) + Number(parcel.deliveryFee || 0),
-          note: parcel.note,
+          note: cleanParcelNote(parcel.note),
           createdAt: parcel['createdAt'],
           updatedAt: parcel['updatedAt'],
         },
@@ -651,7 +667,7 @@ export class MerchantService {
         events: events.map((e) => ({
           id: e.id,
           status: e.status,
-          note: e.note,
+          note: cleanParcelNote(e.note),
           createdAt: e.createdAt,
         })),
       },
@@ -687,6 +703,39 @@ export class MerchantService {
       await this.eventRepo.save(event);
     } catch (e) {}
 
+    if (
+      this.telegramService &&
+      typeof this.telegramService.notifyTopic === 'function'
+    ) {
+      try {
+        let merchant = parcel.merchant;
+        if (
+          !merchant &&
+          this.merchantRepo &&
+          typeof this.merchantRepo.findOne === 'function'
+        ) {
+          merchant =
+            (await this.merchantRepo.findOne({ where: { id: merchantId } })) ||
+            (undefined as any);
+        }
+        await this.telegramService.notifyTopic(
+          'parcels',
+          formatParcelTerminalTelegramMessage(
+            { ...parcel, status: 'cancelled', merchant },
+            reason || parcel.note,
+          ),
+          {
+            eventType: 'DELIVERY_STATUS',
+            parcelOutcome: 'failed',
+            merchantId,
+            tenantId: parcel.tenantId ?? merchant?.tenantId,
+          },
+        );
+      } catch {
+        // Non-blocking notification
+      }
+    }
+
     return { success: true, message: 'កញ្ចប់ឥវ៉ាន់ត្រូវបានលុបចោលដោយជោគជ័យ', parcel };
   }
 
@@ -695,6 +744,9 @@ export class MerchantService {
     parcelId: number,
     dto: { receiverAddress?: string; receiverPhone?: string; receiverName?: string },
   ) {
+    if (dto.receiverPhone !== undefined) {
+      assertValidPhoneMaxDigits(dto.receiverPhone);
+    }
     const parcel = await this.parcelRepo.findOne({
       where: { id: parcelId, merchantId },
       relations: { driver: true },
@@ -854,6 +906,16 @@ export class MerchantService {
   }
 
   async createParcel(merchantId: number, dto: CreateParcelDto) {
+    return this.createParcelInternal(merchantId, dto, false);
+  }
+
+  private async createParcelInternal(
+    merchantId: number,
+    dto: CreateParcelDto,
+    suppressTelegram = false,
+    collectedForTelegram?: any[],
+  ): Promise<Parcel> {
+    assertValidPhoneMaxDigits(dto.receiverPhone);
     if (!dto.trackingCode) {
       dto.trackingCode = await this.generateNextTrackingCode();
     }
@@ -892,6 +954,35 @@ export class MerchantService {
       await this.eventRepo.save(event);
     } catch (e) {}
 
+    const snapshot = {
+      ...saved,
+      merchant: merchant ?? saved.merchant,
+      merchantId: saved.merchantId ?? merchantId,
+      tenantId: saved.tenantId ?? merchant?.tenantId,
+    };
+
+    if (suppressTelegram) {
+      collectedForTelegram?.push(snapshot);
+    } else if (
+      this.telegramService &&
+      typeof this.telegramService.notifyTopic === 'function'
+    ) {
+      try {
+        await this.telegramService.notifyTopic(
+          'parcels',
+          formatParcelCreatedTelegramMessage(snapshot),
+          {
+            eventType: 'ORDER_CREATED',
+            parcelOutcome: 'created',
+            merchantId,
+            tenantId: snapshot.tenantId ?? undefined,
+          },
+        );
+      } catch {
+        // Non-blocking notification
+      }
+    }
+
     return saved;
   }
 
@@ -900,11 +991,44 @@ export class MerchantService {
       throw new BadRequestException('ត្រូវបញ្ចូលបញ្ជីកញ្ចប់ឥវ៉ាន់យ៉ាងហោចណាស់ ១');
     }
 
+    for (const dto of dtos) {
+      assertValidPhoneMaxDigits(dto?.receiverPhone);
+    }
+
+    const suppressIndividual = dtos.length > 1;
+    const telegramSnapshots: any[] = [];
     const createdParcels: Parcel[] = [];
 
     for (const dto of dtos) {
-      const parcel = await this.createParcel(merchantId, dto);
+      const parcel = await this.createParcelInternal(
+        merchantId,
+        dto,
+        suppressIndividual,
+        telegramSnapshots,
+      );
       createdParcels.push(parcel);
+    }
+
+    if (
+      suppressIndividual &&
+      telegramSnapshots.length > 0 &&
+      this.telegramService &&
+      typeof this.telegramService.notifyTopic === 'function'
+    ) {
+      try {
+        await this.telegramService.notifyTopic(
+          'parcels',
+          formatParcelBatchCreatedTelegramMessage(telegramSnapshots),
+          {
+            eventType: 'ORDER_CREATED',
+            parcelOutcome: 'created',
+            merchantId,
+            tenantId: telegramSnapshots[0]?.tenantId ?? undefined,
+          },
+        );
+      } catch {
+        // Non-blocking notification
+      }
     }
 
     return {
@@ -1898,6 +2022,51 @@ export class MerchantService {
       formatted,
       'pickup_request_created',
     );
+
+    if (
+      this.telegramService &&
+      typeof this.telegramService.notifyTopic === 'function'
+    ) {
+      try {
+        const pickupDate = new Date(saved.pickupTime);
+        const formattedPickupTime = !isNaN(pickupDate.getTime())
+          ? pickupDate.toLocaleString('en-GB', {
+              timeZone: 'Asia/Phnom_Penh',
+              day: '2-digit',
+              month: '2-digit',
+              year: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit',
+            })
+          : String(dto.pickupTime);
+        const branchName = reloaded?.branch?.name;
+        const lines = [
+          `🛵 <b>សំណើទៅយកទំនិញថ្មី #${saved.id}</b>`,
+          ``,
+          `- 🏪 ហាង: ${escapeTelegramHtml(merchant.nameKh || merchant.name)}`,
+          ...(merchant.phone
+            ? [`- 📞 លេខទូរស័ព្ទ: ${escapeTelegramHtml(merchant.phone)}`]
+            : []),
+          ...(branchName
+            ? [`- 🏢 សាខា: ${escapeTelegramHtml(branchName)}`]
+            : []),
+          `- 📍 ទីតាំងយក: ${escapeTelegramHtml(saved.pickupAddress || merchant.address || '-')}`,
+          `- 📦 ចំនួនកញ្ចប់ប៉ាន់ស្មាន: ${saved.declaredQuantity} កញ្ចប់`,
+          `- ⏰ ម៉ោងណាត់យក: ${escapeTelegramHtml(formattedPickupTime)}`,
+          ...(saved.note
+            ? [`- 📝 កំណត់ចំណាំ: ${escapeTelegramHtml(saved.note)}`]
+            : []),
+        ];
+        await this.telegramService.notifyTopic('pickup', lines.join('\n'), {
+          eventType: 'PICKUP_REQUEST',
+          merchantId,
+          tenantId: merchant.tenantId,
+        });
+      } catch {
+        // Non-blocking notification
+      }
+    }
+
     return formatted;
   }
 
@@ -1924,6 +2093,32 @@ export class MerchantService {
       formatted,
       'pickup_request_updated',
     );
+
+    if (
+      this.telegramService &&
+      typeof this.telegramService.notifyTopic === 'function'
+    ) {
+      try {
+        const shopName =
+          request.merchant?.nameKh || request.merchant?.name || `Shop #${merchantId}`;
+        const lines = [
+          `🚫 <b>សំណើទៅយកទំនិញត្រូវបានបោះបង់ #${saved.id}</b>`,
+          ``,
+          `- 🏪 ហាង: ${escapeTelegramHtml(shopName)}`,
+          ...(request.merchant?.phone
+            ? [`- 📞 លេខទូរស័ព្ទ: ${escapeTelegramHtml(request.merchant.phone)}`]
+            : []),
+          `- 📦 ចំនួនប្រកាស: ${saved.declaredQuantity} កញ្ចប់`,
+        ];
+        await this.telegramService.notifyTopic('pickup', lines.join('\n'), {
+          eventType: 'PICKUP_REQUEST',
+          merchantId,
+          tenantId: request.tenantId ?? request.merchant?.tenantId,
+        });
+      } catch {
+        // Non-blocking notification
+      }
+    }
 
     return { success: true, message: 'សំណើទៅយកត្រូវបានលុបចោលដោយជោគជ័យ', request: formatted };
   }

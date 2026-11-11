@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, ILike } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import { SaasAdmin } from './saas-admin.entity';
+import { assertValidPhoneMaxDigits } from '../../common/phone.util';
 import * as bcrypt from 'bcrypt';
 
 @Injectable()
@@ -123,6 +124,7 @@ export class SaasAdminsService {
     phone?: string;
     role?: string;
   }): Promise<SaasAdmin> {
+    assertValidPhoneMaxDigits(data.phone);
     const normalizedEmail = data.email.trim().toLowerCase();
     const existing = await this.saasAdminRepo.findOne({ where: { email: normalizedEmail } });
     if (existing) {
@@ -143,6 +145,9 @@ export class SaasAdminsService {
   }
 
   async update(id: number, data: Partial<{ name: string; email: string; phone: string; role: string; isActive: boolean; password?: string }>): Promise<SaasAdmin> {
+    if (data.phone !== undefined) {
+      assertValidPhoneMaxDigits(data.phone);
+    }
     const admin = await this.findOne(id);
 
     if (data.email && data.email.toLowerCase() !== admin.email) {

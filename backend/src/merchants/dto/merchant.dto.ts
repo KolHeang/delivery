@@ -8,12 +8,13 @@ import {
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
+import { MaxPhoneDigits } from '../../common/phone.util';
 
 export class CreateMerchantDto {
   @ApiProperty() @IsNotEmpty() @IsString() name: string;
   @ApiProperty({ required: false }) @IsOptional() @IsString() nameKh?: string;
   @ApiProperty({ required: false }) @IsOptional() @IsString() contact?: string;
-  @ApiProperty() @IsNotEmpty() @IsString() phone: string;
+  @ApiProperty() @IsNotEmpty() @IsString() @MaxPhoneDigits() phone: string;
   @ApiProperty({ required: false }) @IsOptional() @IsString() email?: string;
   @ApiProperty({ required: false, description: 'Merchant login password' })
   @IsOptional()

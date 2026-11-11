@@ -48,6 +48,12 @@ const cleanText = (val: any): string => {
   return s;
 };
 
+const cleanNote = (val: any): string => {
+  const s = cleanText(val);
+  if (!s) return '';
+  return s.replace(/\[Reason:\s*Other\]\s*/gi, '').trim();
+};
+
 type TabKey = 'all' | 'delivered' | 'transit' | 'returned';
 
 export default function ReportPaymentCustomerPage() {
@@ -136,7 +142,7 @@ export default function ReportPaymentCustomerPage() {
       o.trackingCode?.toLowerCase().includes(q) ||
       o.receiverPhone?.toLowerCase().includes(q) ||
       o.receiverAddress?.toLowerCase().includes(q) ||
-      o.note?.toLowerCase().includes(q)
+      cleanNote(o.note).toLowerCase().includes(q)
     );
   }, [activeTab, search, deliveredOrders, inTransitOrders, returnedOrders]);
 
@@ -252,9 +258,12 @@ export default function ReportPaymentCustomerPage() {
       ? timeline
           .slice()
           .sort((a: any, b: any) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
-          .find((h: any) => cleanText(h.note || h.description))
+          .find((h: any) => cleanNote(h.note) || cleanNote(h.description))
       : null;
-    return cleanText(timelineNote?.note || timelineNote?.description || o.note || o.reason) || fallback;
+    const resolvedTimeline = cleanNote(timelineNote?.note) || cleanNote(timelineNote?.description);
+    const rawReason = cleanNote(o.reason);
+    const safeReason = rawReason.toLowerCase() === 'other' ? '' : rawReason;
+    return resolvedTimeline || cleanNote(o.note) || safeReason || fallback;
   };
 
   const getStatusMeta = (status: string) => {
@@ -952,7 +961,7 @@ export default function ReportPaymentCustomerPage() {
                         <td style={{ textAlign: 'right', padding: '5px 5px', border: '1px solid #cbd5e1', whiteSpace: 'nowrap', fontWeight: isUSD && codVal > 0 ? 600 : 400 }}>{isUSD ? `$${codVal.toFixed(2)}` : '$0.00'}</td>
                         <td style={{ textAlign: 'right', padding: '5px 5px', border: '1px solid #cbd5e1', whiteSpace: 'nowrap', fontWeight: !isUSD && codVal > 0 ? 600 : 400 }}>{!isUSD ? `${codVal.toLocaleString()} ៛` : '0 ៛'}</td>
                         <td style={{ textAlign: 'right', padding: '5px 5px', border: '1px solid #cbd5e1', whiteSpace: 'nowrap' }}>${parseFloat(o.deliveryFee || 0).toFixed(2)}</td>
-                        <td style={{ padding: '5px 5px', border: '1px solid #cbd5e1', fontSize: 9.5 }}>{cleanText(o.note)}</td>
+                        <td style={{ padding: '5px 5px', border: '1px solid #cbd5e1', fontSize: 9.5 }}>{cleanNote(o.note)}</td>
                       </tr>
                     );
                   })}

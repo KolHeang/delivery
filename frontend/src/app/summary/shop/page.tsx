@@ -29,7 +29,7 @@ interface ShopSummary {
 
 export default function ShopSummaryPage() {
   const router = useRouter();
-  const { lang } = useLanguage();
+  const { t, lang } = useLanguage();
 
   const [data, setData] = useState<ShopSummary[]>([]);
   const [loading, setLoading] = useState(false);
@@ -93,7 +93,7 @@ export default function ShopSummaryPage() {
     <div className="app-layout">
       <Sidebar />
       <div className="main-content">
-        <Topbar title={lang === 'km' ? 'សង្ខេបហាង' : 'Shop Summary'} subtitle={lang === 'km' ? `${filtered.length} ហាង` : `${filtered.length} shops`} />
+        <Topbar title={t('shopSummary')} subtitle={lang === 'km' ? `${filtered.length} ហាង` : `${filtered.length} merchants`} />
 
         <div className="page-content">
           {/* Filter Card */}
@@ -162,7 +162,7 @@ export default function ShopSummaryPage() {
           {/* Table Card */}
           <div className="card">
             <div className="card-header">
-              <span className="card-title">🏪 {lang === 'km' ? 'សង្ខេបហាង' : 'Shop Summary'}</span>
+              <span className="card-title">🏪 {t('shopSummary')}</span>
               <div className="search-input-wrapper" style={{ maxWidth: 280 }}>
                 <MdSearch className="search-icon" />
                 <input

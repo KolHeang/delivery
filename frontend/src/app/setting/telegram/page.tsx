@@ -37,7 +37,7 @@ export default function TelegramSettingsPage() {
   const [showLogsModal, setShowLogsModal] = useState(false);
 
   // Test Modal State
-  const [testChatId, setTestChatId] = useState('761552994');
+  const [testChatId, setTestChatId] = useState('');
   const [testThreadId, setTestThreadId] = useState('');
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<{ success?: boolean; message?: string; error?: string } | null>(null);
@@ -175,6 +175,9 @@ export default function TelegramSettingsPage() {
                 <button
                   className="btn btn-secondary btn-sm"
                   onClick={() => {
+                    if (!testChatId && configs.length > 0 && configs[0]?.chatId) {
+                      setTestChatId(configs[0].chatId);
+                    }
                     setTestThreadId('');
                     setTestResult(null);
                     setShowTestModal(true);
@@ -233,11 +236,28 @@ export default function TelegramSettingsPage() {
                           </td>
                           <td style={{ fontFamily: 'monospace', fontSize: 13, fontWeight: 600 }}>
                             <div>{cfg.chatId}</div>
-                            {cfg.messageThreadId ? (
-                              <div style={{ fontSize: 11, color: '#0284c7', marginTop: 2 }}>
-                                Topic #{cfg.messageThreadId}
+                            {(cfg.messageThreadId ||
+                              cfg.pickupTopicId ||
+                              cfg.driverPaymentTopicId ||
+                              cfg.merchantPaymentTopicId ||
+                              cfg.parcelsTopicId) && (
+                              <div
+                                style={{
+                                  display: 'flex',
+                                  flexWrap: 'wrap',
+                                  gap: 4,
+                                  marginTop: 4,
+                                  fontSize: 11,
+                                  color: '#0284c7',
+                                }}
+                              >
+                                {cfg.messageThreadId && <span>Default #{cfg.messageThreadId}</span>}
+                                {cfg.pickupTopicId && <span>🛵 #{cfg.pickupTopicId}</span>}
+                                {cfg.driverPaymentTopicId && <span>💵 #{cfg.driverPaymentTopicId}</span>}
+                                {cfg.merchantPaymentTopicId && <span>🏪 #{cfg.merchantPaymentTopicId}</span>}
+                                {cfg.parcelsTopicId && <span>📦 #{cfg.parcelsTopicId}</span>}
                               </div>
-                            ) : null}
+                            )}
                           </td>
                           <td>
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
@@ -286,7 +306,13 @@ export default function TelegramSettingsPage() {
                                 title={isKh ? 'តេស្តផ្ញើសារ' : 'Send Test Ping'}
                                 onClick={() => {
                                   setTestChatId(cfg.chatId);
-                                  setTestThreadId(cfg.messageThreadId ? String(cfg.messageThreadId) : '');
+                                  const defaultTopic =
+                                    cfg.pickupTopicId ||
+                                    cfg.parcelsTopicId ||
+                                    cfg.driverPaymentTopicId ||
+                                    cfg.merchantPaymentTopicId ||
+                                    cfg.messageThreadId;
+                                  setTestThreadId(defaultTopic ? String(defaultTopic) : '');
                                   setTestResult(null);
                                   setShowTestModal(true);
                                 }}
@@ -356,7 +382,7 @@ export default function TelegramSettingsPage() {
               <input
                 type="text"
                 className="form-control"
-                placeholder="761552994"
+                placeholder="-100xxxxxxxxxx"
                 value={testChatId}
                 onChange={(e) => setTestChatId(e.target.value)}
               />
@@ -364,13 +390,14 @@ export default function TelegramSettingsPage() {
 
             <div className="form-group" style={{ marginTop: 10 }}>
               <label className="form-label">
-                {isKh ? 'Topic / Thread ID (បើប្រើ Telegram Topics):' : 'Topic / Thread ID (optional):'}
+                {isKh ? 'Topic / Thread ID (បើប្រើ Telegram Topics - ១ លេខ):' : 'Topic / Thread ID (optional, single number):'}
               </label>
               <input
                 type="text"
                 inputMode="numeric"
+                maxLength={10}
                 className="form-control"
-                placeholder="e.g. 110, 108, 106, 113"
+                placeholder="110"
                 value={testThreadId}
                 onChange={(e) => setTestThreadId(e.target.value.replace(/\D/g, ''))}
               />

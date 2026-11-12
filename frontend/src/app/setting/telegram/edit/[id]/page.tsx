@@ -24,6 +24,10 @@ export default function EditTelegramPage() {
     channelTitle: '',
     chatId: '',
     messageThreadId: '',
+    pickupTopicId: '',
+    driverPaymentTopicId: '',
+    merchantPaymentTopicId: '',
+    parcelsTopicId: '',
     chatType: 'group',
     botToken: '',
     botUsername: '',
@@ -60,6 +64,10 @@ export default function EditTelegramPage() {
             channelTitle: cfg.channelTitle || '',
             chatId: cfg.chatId || '',
             messageThreadId: cfg.messageThreadId ? String(cfg.messageThreadId) : '',
+            pickupTopicId: cfg.pickupTopicId ? String(cfg.pickupTopicId) : '',
+            driverPaymentTopicId: cfg.driverPaymentTopicId ? String(cfg.driverPaymentTopicId) : '',
+            merchantPaymentTopicId: cfg.merchantPaymentTopicId ? String(cfg.merchantPaymentTopicId) : '',
+            parcelsTopicId: cfg.parcelsTopicId ? String(cfg.parcelsTopicId) : '',
             chatType: cfg.chatType || 'group',
             botToken: cfg.botToken || '',
             botUsername: cfg.botUsername || '',
@@ -83,8 +91,36 @@ export default function EditTelegramPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const nextErrors: Record<string, string> = {};
     if (!form.chatId.trim()) {
-      setErrors({ chatId: isKh ? 'សូមបញ្ចូល Telegram Chat ID' : 'Please provide Telegram Chat ID' });
+      nextErrors.chatId = isKh ? 'សូមបញ្ចូល Telegram Chat ID' : 'Please provide Telegram Chat ID';
+    }
+
+    const parseTopic = (key: keyof typeof form): number | null => {
+      const raw = String(form[key] || '').trim();
+      if (!raw) return null;
+      if (!/^\d+$/.test(raw)) {
+        nextErrors[key] = isKh ? 'សូមបញ្ចូលតែលេខ Topic ទោលប៉ុណ្ណោះ' : 'Enter a single numeric Topic ID';
+        return null;
+      }
+      const num = parseInt(raw, 10);
+      if (!Number.isSafeInteger(num) || num < 1 || num > 2147483647) {
+        nextErrors[key] = isKh
+          ? 'លេខ Topic ត្រូវនៅចន្លោះ 1 ដល់ 2147483647 (ដាក់បានតែ ១ លេខ)'
+          : 'Topic ID must be between 1 and 2,147,483,647';
+        return null;
+      }
+      return num;
+    };
+
+    const messageThreadId = parseTopic('messageThreadId');
+    const pickupTopicId = parseTopic('pickupTopicId');
+    const driverPaymentTopicId = parseTopic('driverPaymentTopicId');
+    const merchantPaymentTopicId = parseTopic('merchantPaymentTopicId');
+    const parcelsTopicId = parseTopic('parcelsTopicId');
+
+    if (Object.keys(nextErrors).length > 0) {
+      setErrors(nextErrors);
       return;
     }
     setErrors({});
@@ -93,10 +129,14 @@ export default function EditTelegramPage() {
     try {
       const payload = {
         ...form,
-        merchantId: form.merchantId ? parseInt(form.merchantId, 10) : undefined,
-        messageThreadId: form.messageThreadId.trim()
-          ? parseInt(form.messageThreadId.trim(), 10)
-          : null,
+        chatId: form.chatId.trim(),
+        botToken: form.botToken.trim(),
+        merchantId: form.merchantId ? parseInt(form.merchantId, 10) : null,
+        messageThreadId,
+        pickupTopicId,
+        driverPaymentTopicId,
+        merchantPaymentTopicId,
+        parcelsTopicId,
       };
       await api.patch(`/telegram/configs/${params.id}`, payload);
       router.push('/setting/telegram');
@@ -190,11 +230,11 @@ export default function EditTelegramPage() {
                     <input
                       type="text"
                       className={`form-control ${errors.chatId ? 'is-invalid' : ''}`}
-                      placeholder="761552994 or -100xxxxxxxxxx"
+                      placeholder="e.g. -100xxxxxxxxxx"
                       value={form.chatId}
                       onChange={(e) => {
                         setForm({ ...form, chatId: e.target.value });
-                        if (errors.chatId) setErrors({});
+                        if (errors.chatId) setErrors({ ...errors, chatId: '' });
                       }}
                     />
                     {errors.chatId && <div className="form-error-text">{errors.chatId}</div>}
@@ -203,18 +243,21 @@ export default function EditTelegramPage() {
                   {/* Topic / Thread ID */}
                   <div className="form-group">
                     <label className="form-label" style={{ fontWeight: 'bold' }}>
-                      {isKh ? 'Topic / Thread ID (បើប្រើ Topics)' : 'Topic / Thread ID (optional)'}
+                      {isKh ? 'Topic / Thread ID ទូទៅ (ជម្រើសបន្ថែម)' : 'Default Topic / Thread ID (optional)'}
                     </label>
                     <input
                       type="text"
                       inputMode="numeric"
-                      className="form-control"
-                      placeholder="e.g. 110, 108, 106, 113"
+                      maxLength={10}
+                      className={`form-control ${errors.messageThreadId ? 'is-invalid' : ''}`}
+                      placeholder={isKh ? 'ទុកទទេ បើកំណត់តាមប្រភេទខាងក្រោម' : 'Leave blank if set per event'}
                       value={form.messageThreadId}
-                      onChange={(e) =>
-                        setForm({ ...form, messageThreadId: e.target.value.replace(/\D/g, '') })
-                      }
+                      onChange={(e) => {
+                        setForm({ ...form, messageThreadId: e.target.value.replace(/\D/g, '') });
+                        if (errors.messageThreadId) setErrors({ ...errors, messageThreadId: '' });
+                      }}
                     />
+                    {errors.messageThreadId && <div className="form-error-text">{errors.messageThreadId}</div>}
                   </div>
 
                   {/* Chat Type */}
@@ -234,6 +277,106 @@ export default function EditTelegramPage() {
                   </div>
                 </div>
 
+                {/* Per-Event Forum Topic IDs */}
+                <div
+                  style={{
+                    background: '#f8fafc',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: 10,
+                    padding: '16px 18px',
+                    marginBottom: '20px',
+                  }}
+                >
+                  <div style={{ fontWeight: 700, fontSize: 13.5, color: 'var(--text-primary)', marginBottom: 4 }}>
+                    {isKh
+                      ? 'Topic IDs តាមប្រភេទសារ (សម្រាប់ Group បើក Topics)'
+                      : 'Per-Event Forum Topic IDs (for Supergroups with Topics)'}
+                  </div>
+                  <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 14 }}>
+                    {isKh
+                      ? 'បញ្ចូលតែ ១ លេខគត់ក្នុង ១ ប្រអប់ (ឧ. 110)។ បើទុកទទេ ប្រព័ន្ធនឹងប្រើ Topic ID ទូទៅ ឬ Default ពីម៉ាស៊ីនមេ (110, 108, 106, 113)។'
+                      : 'Enter one single numeric Topic ID per field. Leave blank to fall back to the Default Topic ID or server defaults (110, 108, 106, 113).'}
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(195px, 1fr))', gap: '16px' }}>
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label className="form-label" style={{ fontWeight: 600, fontSize: 12.5 }}>
+                        🛵 {isKh ? 'Topic សំណើទៅយក (Pickup)' : 'Pickup Topic ID'}
+                      </label>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        maxLength={10}
+                        className={`form-control ${errors.pickupTopicId ? 'is-invalid' : ''}`}
+                        placeholder={isKh ? 'ឧ. 110' : 'e.g. 110'}
+                        value={form.pickupTopicId}
+                        onChange={(e) => {
+                          setForm({ ...form, pickupTopicId: e.target.value.replace(/\D/g, '') });
+                          if (errors.pickupTopicId) setErrors({ ...errors, pickupTopicId: '' });
+                        }}
+                      />
+                      {errors.pickupTopicId && <div className="form-error-text">{errors.pickupTopicId}</div>}
+                    </div>
+
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label className="form-label" style={{ fontWeight: 600, fontSize: 12.5 }}>
+                        💵 {isKh ? 'Topic ទូទាត់អ្នកដឹក (Driver Pay)' : 'Driver Payment Topic ID'}
+                      </label>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        maxLength={10}
+                        className={`form-control ${errors.driverPaymentTopicId ? 'is-invalid' : ''}`}
+                        placeholder={isKh ? 'ឧ. 108' : 'e.g. 108'}
+                        value={form.driverPaymentTopicId}
+                        onChange={(e) => {
+                          setForm({ ...form, driverPaymentTopicId: e.target.value.replace(/\D/g, '') });
+                          if (errors.driverPaymentTopicId) setErrors({ ...errors, driverPaymentTopicId: '' });
+                        }}
+                      />
+                      {errors.driverPaymentTopicId && <div className="form-error-text">{errors.driverPaymentTopicId}</div>}
+                    </div>
+
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label className="form-label" style={{ fontWeight: 600, fontSize: 12.5 }}>
+                        🏪 {isKh ? 'Topic ទូទាត់ហាង (Merchant Pay)' : 'Merchant Payment Topic ID'}
+                      </label>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        maxLength={10}
+                        className={`form-control ${errors.merchantPaymentTopicId ? 'is-invalid' : ''}`}
+                        placeholder={isKh ? 'ឧ. 106' : 'e.g. 106'}
+                        value={form.merchantPaymentTopicId}
+                        onChange={(e) => {
+                          setForm({ ...form, merchantPaymentTopicId: e.target.value.replace(/\D/g, '') });
+                          if (errors.merchantPaymentTopicId) setErrors({ ...errors, merchantPaymentTopicId: '' });
+                        }}
+                      />
+                      {errors.merchantPaymentTopicId && <div className="form-error-text">{errors.merchantPaymentTopicId}</div>}
+                    </div>
+
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label className="form-label" style={{ fontWeight: 600, fontSize: 12.5 }}>
+                        📦 {isKh ? 'Topic កញ្ចប់ទំនិញ (Parcels)' : 'Parcels / Status Topic ID'}
+                      </label>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        maxLength={10}
+                        className={`form-control ${errors.parcelsTopicId ? 'is-invalid' : ''}`}
+                        placeholder={isKh ? 'ឧ. 113' : 'e.g. 113'}
+                        value={form.parcelsTopicId}
+                        onChange={(e) => {
+                          setForm({ ...form, parcelsTopicId: e.target.value.replace(/\D/g, '') });
+                          if (errors.parcelsTopicId) setErrors({ ...errors, parcelsTopicId: '' });
+                        }}
+                      />
+                      {errors.parcelsTopicId && <div className="form-error-text">{errors.parcelsTopicId}</div>}
+                    </div>
+                  </div>
+                </div>
+
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
                   {/* Bot Token */}
                   <div className="form-group">
@@ -243,7 +386,11 @@ export default function EditTelegramPage() {
                     <input
                       type="text"
                       className="form-control"
-                      placeholder="8865607029:AAFNqjym-HChsCvxSi3AbzA9ODsfR4ikkVw"
+                      placeholder={
+                        isKh
+                          ? 'ទុកទទេ ដើម្បីប្រើ Bot ដើម (ឬ 123456789:ABCdef...)'
+                          : 'Leave blank for default bot (or 123456789:ABCdef...)'
+                      }
                       value={form.botToken}
                       onChange={(e) => setForm({ ...form, botToken: e.target.value })}
                     />

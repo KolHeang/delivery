@@ -33,6 +33,29 @@ export class TelegramService {
     return resolveEnvTelegramTopicId(topic);
   }
 
+  private resolveConfigTopicThreadId(
+    cfg: Partial<TelegramConfig> | undefined,
+    topic: TelegramTopicKey,
+    fallbackThreadId?: number,
+  ): number | undefined {
+    const specificRaw =
+      topic === 'pickup'
+        ? cfg?.pickupTopicId
+        : topic === 'driver_payment'
+          ? cfg?.driverPaymentTopicId
+          : topic === 'merchant_payment'
+            ? cfg?.merchantPaymentTopicId
+            : topic === 'parcels'
+              ? cfg?.parcelsTopicId
+              : undefined;
+
+    return (
+      normalizeTelegramThreadId(specificRaw) ??
+      normalizeTelegramThreadId(cfg?.messageThreadId) ??
+      fallbackThreadId
+    );
+  }
+
   /**
    * Send a raw Telegram message (with optional forum topic message_thread_id)
    * and automatically record a log.
@@ -207,7 +230,13 @@ export class TelegramService {
       }
     }
 
+    const configuredChats = new Set<string>();
     for (const cfg of globalConfigs) {
+      const normalizedConfigChat = normalizeTelegramChatId(cfg.chatId);
+      if (normalizedConfigChat) {
+        configuredChats.add(normalizedConfigChat);
+      }
+
       let shouldSend = true;
       if (topic === 'pickup') {
         shouldSend = cfg.notifyPickup !== false;
@@ -224,8 +253,7 @@ export class TelegramService {
       }
       if (!shouldSend) continue;
 
-      const resolvedThreadId =
-        normalizeTelegramThreadId(cfg.messageThreadId) ?? topicThreadId;
+      const resolvedThreadId = this.resolveConfigTopicThreadId(cfg, topic, topicThreadId);
       await sendUnique(
         cfg.chatId,
         resolvedThreadId,
@@ -234,9 +262,10 @@ export class TelegramService {
       );
     }
 
-    // 2. Always deliver to system env chat ID (with topic thread ID) unless already sent above
+    // 2. Deliver to system env chat ID (with topic thread ID) unless already managed/sent above
     const fallbackChatId = (options?.chatId || this.getDefaultChatId()).trim();
-    if (fallbackChatId) {
+    const normalizedFallbackChat = normalizeTelegramChatId(fallbackChatId);
+    if (fallbackChatId && (!normalizedFallbackChat || !configuredChats.has(normalizedFallbackChat))) {
       await sendUnique(
         fallbackChatId,
         topicThreadId,
@@ -282,11 +311,19 @@ export class TelegramService {
 
       if (shouldSend) {
         const normalizedChat = normalizeTelegramChatId(cfg.chatId);
-        const resolvedThreadId =
-          normalizeTelegramThreadId(cfg.messageThreadId) ??
-          (eventType === 'PAYMENT_SETTLEMENT' && envChatId && normalizedChat === envChatId
+        const topicKey: TelegramTopicKey | null =
+          eventType === 'PAYMENT_SETTLEMENT'
+            ? 'merchant_payment'
+            : eventType === 'ORDER_CREATED' || eventType === 'DELIVERY_STATUS'
+              ? 'parcels'
+              : null;
+        const fallbackThread =
+          eventType === 'PAYMENT_SETTLEMENT' && envChatId && normalizedChat === envChatId
             ? merchantTopicId
-            : undefined);
+            : undefined;
+        const resolvedThreadId = topicKey
+          ? this.resolveConfigTopicThreadId(cfg, topicKey, fallbackThread)
+          : normalizeTelegramThreadId(cfg.messageThreadId);
 
         const dedupKey = `${normalizedChat}::${resolvedThreadId ?? ''}`;
         if (!sentKeys.has(dedupKey) && normalizedChat) {
@@ -354,10 +391,15 @@ export class TelegramService {
   // --- CRUD for Telegram Configs ---
 
   async createConfig(dto: CreateTelegramConfigDto, tenantId?: number): Promise<TelegramConfig> {
-    const cfg = this.configRepo.create({
-      ...dto,
+    const payload: Partial<TelegramConfig> = {
       tenantId: tenantId || undefined,
-    });
+    };
+    for (const [key, val] of Object.entries(dto)) {
+      if (val !== undefined) {
+        (payload as any)[key] = val;
+      }
+    }
+    const cfg = this.configRepo.create(payload);
     return this.configRepo.save(cfg);
   }
 
@@ -380,7 +422,11 @@ export class TelegramService {
 
   async updateConfig(id: number, dto: UpdateTelegramConfigDto): Promise<TelegramConfig> {
     const cfg = await this.findOneConfig(id);
-    Object.assign(cfg, dto);
+    for (const [key, val] of Object.entries(dto)) {
+      if (val !== undefined) {
+        (cfg as any)[key] = val;
+      }
+    }
     return this.configRepo.save(cfg);
   }
 

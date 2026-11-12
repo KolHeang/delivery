@@ -133,7 +133,7 @@ describe('Parcels & Merchant TELEGRAM_TOPIC_PARCELS notifications', () => {
     expect(telegramService.notifyTopic).toHaveBeenCalledTimes(1);
     expect(telegramService.notifyTopic).toHaveBeenLastCalledWith(
       'parcels',
-      expect.stringContaining('ដឹកជញ្ជូនជោគជ័យ #CO-NEW-1'),
+      expect.stringContaining('<code>CO-NEW-1</code>'),
       expect.objectContaining({
         eventType: 'DELIVERY_STATUS',
         parcelOutcome: 'delivered',
@@ -311,7 +311,7 @@ describe('Parcels & Merchant TELEGRAM_TOPIC_PARCELS notifications', () => {
     expect(telegramService.notifyTopic).toHaveBeenCalledTimes(1);
     expect(telegramService.notifyTopic).toHaveBeenLastCalledWith(
       'parcels',
-      expect.stringContaining('ត្រូវបានបោះបង់ #M-1'),
+      expect.stringContaining('<code>M-1</code>'),
       expect.objectContaining({
         eventType: 'DELIVERY_STATUS',
         parcelOutcome: 'failed',

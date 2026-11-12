@@ -1,9 +1,14 @@
-import { IsString, IsOptional, IsBoolean, IsNumber, IsInt, Min } from 'class-validator';
+import { IsString, IsOptional, IsBoolean, IsNumber, IsInt, Min, Max } from 'class-validator';
 import { Transform } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
 
-const parseOptionalThreadId = (value: unknown, nullable = false) => {
-  if (value === '' || value === null || value === undefined) {
+const MAX_PG_INT = 2147483647;
+
+const parseOptionalPositiveInt = (value: unknown, nullable = false) => {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (value === '' || value === null) {
     return nullable ? null : undefined;
   }
   const num = Number(String(value).trim());
@@ -13,7 +18,10 @@ const parseOptionalThreadId = (value: unknown, nullable = false) => {
 export class CreateTelegramConfigDto {
   @ApiProperty({ required: false })
   @IsOptional()
-  @IsNumber()
+  @Transform(({ value }) => parseOptionalPositiveInt(value, false))
+  @IsInt()
+  @Min(1)
+  @Max(MAX_PG_INT)
   merchantId?: number;
 
   @ApiProperty({ required: false })
@@ -25,12 +33,45 @@ export class CreateTelegramConfigDto {
   @IsString()
   chatId: string;
 
-  @ApiProperty({ required: false, description: 'Optional Telegram Forum Topic / Thread ID' })
+  @ApiProperty({ required: false, description: 'Optional default Telegram Forum Topic / Thread ID' })
   @IsOptional()
-  @Transform(({ value }) => parseOptionalThreadId(value, false))
+  @Transform(({ value }) => parseOptionalPositiveInt(value, false))
   @IsInt()
   @Min(1)
+  @Max(MAX_PG_INT)
   messageThreadId?: number;
+
+  @ApiProperty({ required: false, description: 'Optional Topic ID for Pickup Requests (e.g. 110)' })
+  @IsOptional()
+  @Transform(({ value }) => parseOptionalPositiveInt(value, false))
+  @IsInt()
+  @Min(1)
+  @Max(MAX_PG_INT)
+  pickupTopicId?: number;
+
+  @ApiProperty({ required: false, description: 'Optional Topic ID for Driver Settlements (e.g. 108)' })
+  @IsOptional()
+  @Transform(({ value }) => parseOptionalPositiveInt(value, false))
+  @IsInt()
+  @Min(1)
+  @Max(MAX_PG_INT)
+  driverPaymentTopicId?: number;
+
+  @ApiProperty({ required: false, description: 'Optional Topic ID for Merchant Settlements (e.g. 106)' })
+  @IsOptional()
+  @Transform(({ value }) => parseOptionalPositiveInt(value, false))
+  @IsInt()
+  @Min(1)
+  @Max(MAX_PG_INT)
+  merchantPaymentTopicId?: number;
+
+  @ApiProperty({ required: false, description: 'Optional Topic ID for Parcels & Delivery Status (e.g. 113)' })
+  @IsOptional()
+  @Transform(({ value }) => parseOptionalPositiveInt(value, false))
+  @IsInt()
+  @Min(1)
+  @Max(MAX_PG_INT)
+  parcelsTopicId?: number;
 
   @ApiProperty({ required: false, default: 'group' })
   @IsOptional()
@@ -79,6 +120,14 @@ export class CreateTelegramConfigDto {
 }
 
 export class UpdateTelegramConfigDto {
+  @ApiProperty({ required: false, nullable: true })
+  @IsOptional()
+  @Transform(({ value }) => parseOptionalPositiveInt(value, true))
+  @IsInt()
+  @Min(1)
+  @Max(MAX_PG_INT)
+  merchantId?: number | null;
+
   @ApiProperty({ required: false })
   @IsOptional()
   @IsString()
@@ -89,12 +138,45 @@ export class UpdateTelegramConfigDto {
   @IsString()
   chatId?: string;
 
-  @ApiProperty({ required: false, nullable: true, description: 'Optional Telegram Forum Topic / Thread ID' })
+  @ApiProperty({ required: false, nullable: true, description: 'Optional default Telegram Forum Topic / Thread ID' })
   @IsOptional()
-  @Transform(({ value }) => parseOptionalThreadId(value, true))
+  @Transform(({ value }) => parseOptionalPositiveInt(value, true))
   @IsInt()
   @Min(1)
+  @Max(MAX_PG_INT)
   messageThreadId?: number | null;
+
+  @ApiProperty({ required: false, nullable: true, description: 'Optional Topic ID for Pickup Requests (e.g. 110)' })
+  @IsOptional()
+  @Transform(({ value }) => parseOptionalPositiveInt(value, true))
+  @IsInt()
+  @Min(1)
+  @Max(MAX_PG_INT)
+  pickupTopicId?: number | null;
+
+  @ApiProperty({ required: false, nullable: true, description: 'Optional Topic ID for Driver Settlements (e.g. 108)' })
+  @IsOptional()
+  @Transform(({ value }) => parseOptionalPositiveInt(value, true))
+  @IsInt()
+  @Min(1)
+  @Max(MAX_PG_INT)
+  driverPaymentTopicId?: number | null;
+
+  @ApiProperty({ required: false, nullable: true, description: 'Optional Topic ID for Merchant Settlements (e.g. 106)' })
+  @IsOptional()
+  @Transform(({ value }) => parseOptionalPositiveInt(value, true))
+  @IsInt()
+  @Min(1)
+  @Max(MAX_PG_INT)
+  merchantPaymentTopicId?: number | null;
+
+  @ApiProperty({ required: false, nullable: true, description: 'Optional Topic ID for Parcels & Delivery Status (e.g. 113)' })
+  @IsOptional()
+  @Transform(({ value }) => parseOptionalPositiveInt(value, true))
+  @IsInt()
+  @Min(1)
+  @Max(MAX_PG_INT)
+  parcelsTopicId?: number | null;
 
   @ApiProperty({ required: false })
   @IsOptional()
@@ -153,9 +235,10 @@ export class SendTelegramMessageDto {
 
   @ApiProperty({ required: false, description: 'Optional Telegram Forum Topic / Thread ID' })
   @IsOptional()
-  @Transform(({ value }) => parseOptionalThreadId(value, false))
+  @Transform(({ value }) => parseOptionalPositiveInt(value, false))
   @IsInt()
   @Min(1)
+  @Max(MAX_PG_INT)
   messageThreadId?: number;
 
   @ApiProperty({ required: false })
@@ -181,9 +264,10 @@ export class TestTelegramBotDto {
 
   @ApiProperty({ required: false, description: 'Optional Telegram Forum Topic / Thread ID' })
   @IsOptional()
-  @Transform(({ value }) => parseOptionalThreadId(value, false))
+  @Transform(({ value }) => parseOptionalPositiveInt(value, false))
   @IsInt()
   @Min(1)
+  @Max(MAX_PG_INT)
   messageThreadId?: number;
 
   @ApiProperty({ required: false })

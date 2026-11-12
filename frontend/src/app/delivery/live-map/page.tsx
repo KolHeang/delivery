@@ -58,7 +58,7 @@ const MAP_TILES = {
 };
 
 export default function AdminLiveFleetMapPage() {
-  const { lang } = useLanguage();
+  const { t, lang } = useLanguage();
   const [drivers, setDrivers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedDriver, setSelectedDriver] = useState<any | null>(null);
@@ -395,7 +395,7 @@ export default function AdminLiveFleetMapPage() {
 
       <div className="live-map-main" style={{ flex: 1, marginLeft: 'var(--sidebar-width, 260px)', transition: 'margin-left 0.2s ease', display: 'flex', flexDirection: 'column', minWidth: 0, height: '100vh' }}>
         <Topbar
-          title={lang === 'km' ? 'ផែនទីតាមដានអ្នកដឹកជញ្ជូន' : 'Live Driver Fleet Tracking'}
+          title={t('liveRiderMap')}
           subtitle={lang === 'km' ? 'តាមដានចលនា ទីតាំងជាក់ស្តែង និងកញ្ចប់ឥវ៉ាន់របស់អ្នកដឹកទាំងអស់' : 'Real-time GPS movement, active tasks & dispatch status of all drivers'}
         />
 

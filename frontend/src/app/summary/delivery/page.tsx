@@ -94,7 +94,7 @@ export default function DeliverySummaryPage() {
     <div className="app-layout">
       <Sidebar />
       <div className="main-content">
-        <Topbar title={lang === 'km' ? 'សង្ខេបការដឹកជញ្ជូន' : 'Delivery Summary'} subtitle={lang === 'km' ? `${filtered.length} អ្នកដឹក` : `${filtered.length} drivers`} />
+        <Topbar title={t('deliverySummary')} subtitle={lang === 'km' ? `${filtered.length} អ្នកដឹក` : `${filtered.length} drivers`} />
 
         <div className="page-content">
           {/* Filter Card */}
@@ -159,7 +159,7 @@ export default function DeliverySummaryPage() {
           {/* Table Card */}
           <div className="card">
             <div className="card-header">
-              <span className="card-title">🚚 {lang === 'km' ? 'សង្ខេបអ្នកដឹក' : 'Delivery Summary'}</span>
+              <span className="card-title">🚚 {t('deliverySummary')}</span>
               <div className="search-input-wrapper" style={{ maxWidth: 280 }}>
                 <MdSearch className="search-icon" />
                 <input

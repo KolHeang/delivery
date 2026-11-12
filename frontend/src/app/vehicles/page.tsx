@@ -48,7 +48,7 @@ export default function VehiclesPage() {
   const openEdit = (i: any) => { router.push(`/vehicles/edit/${i.id}`); };
 
   const del = async (id: number) => {
-    if (!confirm('Delete this vehicle?')) return;
+    if (!confirm(lang === 'km' ? 'លុបយានយន្តនេះ?' : 'Delete this vehicle?')) return;
     try { await api.delete(`/vehicles/${id}`); await load(); } catch {}
   };
 
@@ -58,24 +58,24 @@ export default function VehiclesPage() {
     <div className="app-layout">
       <Sidebar />
       <div className="main-content">
-        <Topbar title="Vehicles" subtitle={`${totalItems} vehicles in fleet`} />
+        <Topbar title={t('vehiclesTitle')} subtitle={lang === 'km' ? `${totalItems} យានយន្ត` : `${totalItems} vehicles in fleet`} />
         <div className="page-content">
           <div className="card">
             <div className="card-header">
-              <span className="card-title">🚗 Vehicles List</span>
-              <button className="btn btn-primary btn-sm" onClick={openCreate}><FiPlusCircle size={14} /> Add Vehicle</button>
+              <span className="card-title">🚗 {t('vehiclesListTitle')}</span>
+              <button className="btn btn-primary btn-sm" onClick={openCreate}><FiPlusCircle size={14} /> {t('addVehicle')}</button>
             </div>
             <div style={{ overflowX: 'auto' }}>
               <table>
                 <thead>
                   <tr>
                     <th style={{ width: 60, textAlign: 'center' }}>{lang === 'km' ? 'ល.រ' : 'No.'}</th>
-                    <th>Type</th>
-                    <th>Plate</th>
-                    <th>Brand & Model</th>
-                    <th>Year</th>
-                    <th>Status</th>
-                    <th style={{ width: 100, textAlign: 'center' }}>Actions</th>
+                    <th>{t('vehicleType')}</th>
+                    <th>{t('plate')}</th>
+                    <th>{t('brand')} &amp; {t('model')}</th>
+                    <th>{t('year')}</th>
+                    <th>{t('status')}</th>
+                    <th style={{ width: 100, textAlign: 'center' }}>{t('actions')}</th>
                   </tr>
                 </thead>
                 <tbody>

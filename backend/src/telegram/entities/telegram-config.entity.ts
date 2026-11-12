@@ -36,7 +36,19 @@ export class TelegramConfig {
   chatId: string; // e.g. "761552994" or "-100123456789" or "@username"
 
   @Column({ name: 'message_thread_id', type: 'int', nullable: true })
-  messageThreadId: number | null; // Optional Forum Topic / Thread ID (e.g. 110, 108, 106)
+  messageThreadId: number | null; // Optional default / fallback Forum Topic ID
+
+  @Column({ name: 'pickup_topic_id', type: 'int', nullable: true })
+  pickupTopicId: number | null; // Forum Topic ID for Pickup Requests (e.g. 110)
+
+  @Column({ name: 'driver_payment_topic_id', type: 'int', nullable: true })
+  driverPaymentTopicId: number | null; // Forum Topic ID for Driver Settlements (e.g. 108)
+
+  @Column({ name: 'merchant_payment_topic_id', type: 'int', nullable: true })
+  merchantPaymentTopicId: number | null; // Forum Topic ID for Merchant Settlements (e.g. 106)
+
+  @Column({ name: 'parcels_topic_id', type: 'int', nullable: true })
+  parcelsTopicId: number | null; // Forum Topic ID for Parcels & Delivery Status (e.g. 113)
 
   @Column({ name: 'chat_type', type: 'varchar', default: 'group' })
   chatType: string; // 'group' | 'channel' | 'private'

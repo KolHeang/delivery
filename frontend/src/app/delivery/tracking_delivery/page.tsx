@@ -28,7 +28,7 @@ import { useLanguage } from "@/lib/LanguageContext";
 
 const trackingTranslations = {
   en: {
-    title: "Tracking",
+    title: "Parcel Tracking",
     subtitle: "Track the real-time status and route of any parcel",
     placeholder: "Enter Tracking Code (e.g. CO30220626) or Receiver Phone...",
     btnTrack: "Track Parcel",
@@ -52,7 +52,7 @@ const trackingTranslations = {
     custodian: "Current Custodian",
   },
   km: {
-    title: "តាមដានការដឹកជញ្ជូន",
+    title: "តាមដានកញ្ចប់",
     subtitle: "តាមដានស្ថានភាពជាក់ស្តែង និងទីតាំងនៃការដឹកជញ្ជូន",
     placeholder: "បញ្ចូលលេខកូដតាមដាន (ឧ. CO30220626) ឬ លេខទូរស័ព្ទ...",
     btnTrack: "ស្វែងរកទំនិញ",

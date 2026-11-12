@@ -98,7 +98,7 @@ export default function PickUpSummaryPage() {
     <div className="app-layout">
       <Sidebar />
       <div className="main-content">
-        <Topbar title={lang === 'km' ? 'សង្ខេបការប្រមូលអីវ៉ាន់' : 'Pick Up Summary'} subtitle={lang === 'km' ? `${filtered.length} អ្នកប្រមូល` : `${filtered.length} drivers`} />
+        <Topbar title={t('pickupSummary')} subtitle={lang === 'km' ? `${filtered.length} អ្នកប្រមូល` : `${filtered.length} drivers`} />
 
         <div className="page-content">
           {/* Filter Card */}
@@ -167,7 +167,7 @@ export default function PickUpSummaryPage() {
           {/* Table Card */}
           <div className="card">
             <div className="card-header">
-              <span className="card-title">🚗 {lang === 'km' ? 'សង្ខេបអ្នកប្រមូលកញ្ចប់' : 'Pick Up Summary'}</span>
+              <span className="card-title">🚗 {t('pickupSummary')}</span>
               <div className="search-input-wrapper" style={{ maxWidth: 280 }}>
                 <MdSearch className="search-icon" />
                 <input

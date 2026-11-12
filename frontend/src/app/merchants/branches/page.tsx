@@ -15,7 +15,7 @@ import { TableSkeleton } from '@/components/ui/Skeleton';
 
 export default function BranchesPage() {
   const router = useRouter();
-  const { lang } = useLanguage();
+  const { t, lang } = useLanguage();
 
   const [branches, setBranches] = useState<any[]>([]);
   const [totalItems, setTotalItems] = useState(0);
@@ -117,7 +117,7 @@ export default function BranchesPage() {
       <Sidebar />
       <div className="main-content">
         <Topbar
-          title={lang === 'km' ? '🏢 បញ្ជីសាខាហាង' : '🏢 Branch Management'}
+          title={`🏢 ${t('merchantBranches')}`}
           subtitle={`${totalItems} ${lang === 'km' ? 'សាខាសរុប' : 'branches'}`}
         />
 
@@ -161,7 +161,7 @@ export default function BranchesPage() {
           <div className="card">
             <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span className="card-title">
-                🏢 {lang === 'km' ? 'តារាងសាខាទាំងអស់' : 'All Branches'}
+                🏢 {t('merchantBranches')}
               </span>
               {hasPermission('branches.create, merchants.update') && (
                 <button className="btn btn-primary btn-sm" onClick={openCreatePage}>

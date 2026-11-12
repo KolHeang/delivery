@@ -72,7 +72,7 @@ export default function Sidebar() {
         { href: '/delivery/assigndeliveryby', label: t('processForAssign'), permission: 'parcels.update' },
         { href: '/delivery/complete', label: t('completePackage'), permission: 'parcels.update' },
         { href: '/delivery/tracking_delivery', label: t('tracking'), permission: 'parcels.read' },
-        { href: '/delivery/live-map', label: lang === 'km' ? 'ផែនទីតាមដាន' : 'Live Fleet Map', permission: 'parcels.read' },
+        { href: '/delivery/live-map', label: t('liveRiderMap'), permission: 'parcels.read' },
       ],
     },
     {
@@ -82,7 +82,7 @@ export default function Sidebar() {
       permission: 'merchants.read, branches.read',
       items: [
         { href: '/merchants', label: t('shopList'), permission: 'merchants.read' },
-        { href: '/merchants/branches', label: lang === 'km' ? 'បញ្ជីសាខា' : 'Branch List', permission: 'branches.read, merchants.read' },
+        { href: '/merchants/branches', label: t('merchantBranches'), permission: 'branches.read, merchants.read' },
       ],
     },
     {
@@ -92,7 +92,7 @@ export default function Sidebar() {
       permission: 'users.read, vehicles.read',
       items: [
         { href: '/user', label: t('staffList') || 'List Staff', permission: 'users.read' },
-        { href: '/vehicles', label: lang === 'km' ? 'យានយន្ត' : 'Vehicles', permission: 'vehicles.read' },
+        { href: '/vehicles', label: t('vehiclesTitle'), permission: 'vehicles.read' },
       ],
     },
     {

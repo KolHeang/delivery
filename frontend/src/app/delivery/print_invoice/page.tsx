@@ -73,7 +73,7 @@ export default function PrintInvoicePage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(50); // Default to 50 for quick batch selection
 
-  const { lang } = useLanguage();
+  const { t, lang } = useLanguage();
   const { tenant } = useTenant();
   const [isDirectMode, setIsDirectMode] = useState(false);
   const [directIds, setDirectIds] = useState<string>('');
@@ -457,7 +457,7 @@ export default function PrintInvoicePage() {
           </header>
         ) : (
           <Topbar 
-            title={lang === 'km' ? 'បោះពុម្ពវិក្កយបត្រ' : 'Print Invoice Delivery'} 
+            title={t('printInvoiceDelivery')} 
             subtitle={lang === 'km' ? 'បោះពុម្ពស្លាកវិក្កយបត្រ និង QR Code សម្រាប់បិទលើកញ្ចប់ទំនិញ' : 'Print delivery invoice and QR code parcel labels'} 
           />
         )}

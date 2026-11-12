@@ -136,13 +136,13 @@ export default function CreatePlanPage() {
     {
       key: 'summary',
       icon: MdBarChart,
-      label: tr('តារាងសង្ខេប', 'Summary Overview'),
-      desc: tr('សង្ខេបហាង សង្ខេបការដឹក និងសង្ខេបការទៅយក', 'Shop overview, delivery and pickup summaries'),
+      label: tr('សង្ខេបប្រតិបត្តិការ', 'Operations Overview'),
+      desc: tr('សង្ខេបតាមហាង សង្ខេបការដឹកជញ្ជូន និងសង្ខេបការប្រមូលកញ្ចប់', 'Merchant overview, delivery and pickup overviews'),
     },
     {
       key: 'delivery',
       icon: MdLocalShipping,
-      label: tr('គ្រប់គ្រងការដឹក', 'Delivery Operations'),
+      label: tr('គ្រប់គ្រងការដឹកជញ្ជូន', 'Delivery Management'),
       desc: tr('កត់ត្រាទំនិញ បញ្ជីដឹក វិក្កយបត្រ បាកូដ និងចែកអ្នកដឹក', 'Parcels, delivery list, barcode labels and driver dispatch'),
     },
     {
@@ -160,13 +160,13 @@ export default function CreatePlanPage() {
     {
       key: 'payment',
       icon: MdAccountBalanceWallet,
-      label: tr('ការទូទាត់ប្រាក់ COD', 'Payment Settlement'),
+      label: tr('ការប្រមូល និងទូទាត់ប្រាក់', 'Collections & Settlements'),
       desc: tr('ទូទាត់ប្រាក់ជាមួយអ្នកដឹក និងទូទាត់ប្រាក់ជូនហាង', 'Cash settlements with delivery drivers and merchant shops'),
     },
     {
       key: 'accounting',
       icon: MdReceipt,
-      label: tr('គណនេយ្យ ចំណូល-ចំណាយ', 'Accounting Ledger'),
+      label: tr('ហិរញ្ញវត្ថុ និងគណនេយ្យ', 'Finance & Accounting'),
       desc: tr('កត់ត្រាចំណាយទូទៅ ចំណូលផ្សេងៗ និងតារាងតុល្យការ', 'Income tracking, operational expense records, and ledgers'),
     },
     {
@@ -178,7 +178,7 @@ export default function CreatePlanPage() {
     {
       key: 'settings',
       icon: MdSettings,
-      label: tr('ការកំណត់ផ្សេងៗ', 'System Settings'),
+      label: tr('ការកំណត់ប្រព័ន្ធ', 'System Settings'),
       desc: tr('តំបន់ដឹក សិទ្ធិអ្នកប្រើប្រាស់ ការកំណត់អង្គភាព និងទូទៅ', 'Delivery zones, user roles, organisation and system setup'),
     },
     {

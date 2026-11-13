@@ -7,6 +7,7 @@ import Sidebar from '@/components/layout/Sidebar';
 import Topbar from '@/components/layout/Topbar';
 import api from '@/lib/api';
 import { useLanguage } from '@/lib/LanguageContext';
+import { getPickupRequestStatusLabel } from '@/lib/status';
 import { TableSkeleton } from '@/components/ui/Skeleton';
 import Pagination from '@/components/ui/Pagination';
 import {
@@ -16,16 +17,16 @@ import {
 
 const PAGE_SIZE_OPTIONS = [20, 50, 100];
 
-const STATUS_COLORS: Record<string, { bg: string; color: string; label: string }> = {
-  pending:    { bg: '#fef3c7', color: '#d97706', label: 'Pending' },
-  assigned:   { bg: '#dbeafe', color: '#2563eb', label: 'Assigned' },
-  'picked-up':{ bg: '#f3e8ff', color: '#7c3aed', label: 'Picked Up' },
-  completed:  { bg: '#dcfce7', color: '#16a34a', label: 'Completed' },
-  cancelled:  { bg: '#fee2e2', color: '#dc2626', label: 'Cancelled' },
+const STATUS_COLORS: Record<string, { bg: string; color: string }> = {
+  pending:    { bg: '#fef3c7', color: '#d97706' },
+  assigned:   { bg: '#dbeafe', color: '#2563eb' },
+  'picked-up':{ bg: '#f3e8ff', color: '#7c3aed' },
+  completed:  { bg: '#dcfce7', color: '#16a34a' },
+  cancelled:  { bg: '#fee2e2', color: '#dc2626' },
 };
 
-function StatusBadge({ status }: { status: string }) {
-  const cfg = STATUS_COLORS[status] ?? { bg: '#f3f4f6', color: '#6b7280', label: status };
+function StatusBadge({ status, lang }: { status: string; lang: string }) {
+  const cfg = STATUS_COLORS[status] ?? { bg: '#f3f4f6', color: '#6b7280' };
   return (
     <span style={{
       display: 'inline-flex', alignItems: 'center', gap: 5,
@@ -36,7 +37,7 @@ function StatusBadge({ status }: { status: string }) {
       {status === 'assigned' && <MdDirectionsBike size={13} />}
       {status === 'picked-up' && <MdLocalShipping size={13} />}
       {status === 'completed' && <MdCheckCircle size={13} />}
-      {cfg.label}
+      {getPickupRequestStatusLabel(status, lang)}
     </span>
   );
 }
@@ -115,7 +116,7 @@ export default function PickupRequestsPage() {
                   </div>
                 </div>
               <button className="btn btn-outline" onClick={load} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <MdRefresh size={16} /> Refresh
+                <MdRefresh size={16} /> {lang === 'km' ? 'ផ្ទុកឡើងវិញ' : 'Refresh'}
               </button>
             </div>
 
@@ -148,14 +149,14 @@ export default function PickupRequestsPage() {
               >
                 {statuses.map(s => (
                   <option key={s} value={s}>
-                    {s === '' ? t('allStatuses') : (STATUS_COLORS[s]?.label ?? s)}
+                    {s === '' ? t('allStatuses') : getPickupRequestStatusLabel(s, lang)}
                   </option>
                 ))}
               </select>
 
               {/* Page size */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-                <span style={{ fontSize: 12, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>Rows:</span>
+                <span style={{ fontSize: 12, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{lang === 'km' ? 'ចំនួនជួរ៖' : 'Rows:'}</span>
                 {PAGE_SIZE_OPTIONS.map(sz => (
                   <button key={sz} onClick={() => setPageSize(sz)} style={{
                     padding: '5px 10px', borderRadius: 8,
@@ -294,7 +295,7 @@ export default function PickupRequestsPage() {
                             </div>
                           </td>
                           <td style={{ padding: '12px 10px', fontSize: 12, color: '#64748b', border: 'none' }}>{formatDate(r.pickupTime)}</td>
-                          <td style={{ padding: '12px 10px', textAlign: 'center', border: 'none' }}><StatusBadge status={r.status} /></td>
+                          <td style={{ padding: '12px 10px', textAlign: 'center', border: 'none' }}><StatusBadge status={r.status} lang={lang} /></td>
                           <td style={{ padding: '12px 10px', textAlign: 'center', border: 'none' }}>
                             <button
                               className="btn btn-primary btn-sm"

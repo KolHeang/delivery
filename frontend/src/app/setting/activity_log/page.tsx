@@ -152,7 +152,7 @@ export default function ActivityLogsPage() {
       <Sidebar />
       <div className="main-content">
         <Topbar 
-          title={isKh ? 'ប្រវត្តិកត់ត្រាសកម្មភាព' : 'Activity Audit Logs'} 
+          title={isKh ? 'ប្រវត្តិសកម្មភាព' : 'Activity Log'} 
           subtitle={isKh ? 'ពិនិត្យមើលរាល់សកម្មភាព និងការកែប្រែទិន្នន័យរបស់បុគ្គលិកក្នុងប្រព័ន្ធ' : 'Track and audit user actions, creations, updates and deletions'} 
         />
         

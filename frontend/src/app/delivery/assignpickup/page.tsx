@@ -183,7 +183,7 @@ export default function AssignPickupPage() {
                     )}
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-                    <span style={{ fontSize: 12, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>Rows:</span>
+                    <span style={{ fontSize: 12, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{lang === 'km' ? 'ចំនួនជួរ៖' : 'Rows:'}</span>
                     {PAGE_SIZE_OPTIONS.map(size => (
                       <button key={size} onClick={() => setPageSize(size)} style={{
                         padding: '5px 10px', borderRadius: 8,
@@ -278,7 +278,7 @@ export default function AssignPickupPage() {
               <div className="card" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
                 {/* Driver header */}
                 <div className="card-header" style={{ padding: '16px 20px', background: 'var(--bg-primary)' }}>
-                  <span className="card-title" style={{ fontSize: 15 }}>{lang === 'km' ? 'ជ្រើសរើសអ្នកដឹក' : t('assignPickupDriver')}</span>
+                  <span className="card-title" style={{ fontSize: 15 }}>{lang === 'km' ? 'ជ្រើសរើសអ្នកប្រមូលកញ្ចប់' : t('assignPickupDriver')}</span>
                   {selectedDriver && (
                     <button onClick={() => setSelectedDriver(null)} style={{ fontSize: 12, color: 'var(--danger)', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 8, padding: '4px 10px', cursor: 'pointer', fontWeight: 600 }}>
                       {lang === 'km' ? 'សម្អាត' : 'Clear'}
@@ -291,7 +291,7 @@ export default function AssignPickupPage() {
                   <div style={{ position: 'relative' }}>
                     <MdSearch size={16} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
                     <input type="text"
-                      placeholder={lang === 'km' ? 'ស្វែងរកឈ្មោះអ្នកដឹក, តំបន់...' : 'Search driver name, zone...'}
+                      placeholder={lang === 'km' ? 'ស្វែងរកឈ្មោះអ្នកប្រមូលកញ្ចប់, តំបន់...' : 'Search pickup rider, zone...'}
                       value={driverSearch}
                       onChange={e => setDriverSearch(e.target.value)}
                       style={{
@@ -311,7 +311,7 @@ export default function AssignPickupPage() {
                   </div>
                   {driverSearch && (
                     <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 6 }}>
-                      {filteredDrivers.length} {lang === 'km' ? 'អ្នកដឹកត្រូវបានរកឃើញ' : 'drivers found'}
+                      {filteredDrivers.length} {lang === 'km' ? 'អ្នកប្រមូលកញ្ចប់ត្រូវបានរកឃើញ' : 'pickup riders found'}
                     </div>
                   )}
                 </div>
@@ -319,7 +319,7 @@ export default function AssignPickupPage() {
                 <div style={{ flex: 1, overflowY: 'auto', padding: 12 }}>
                   {filteredDrivers.length === 0 ? (
                     <div style={{ padding: '36px 16px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
-                      {lang === 'km' ? 'មិនមានអ្នកដឹកទំនេរទេ' : 'No available drivers'}
+                      {lang === 'km' ? 'មិនមានអ្នកប្រមូលកញ្ចប់ទំនេរទេ' : 'No available pickup riders'}
                     </div>
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -394,7 +394,7 @@ export default function AssignPickupPage() {
                     </div>
                     <div style={{ textAlign: 'right' }}>
                       <div style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 500 }}>
-                        {lang === 'km' ? 'អ្នកដឹកដែលបានចាត់' : 'Pickup Driver'}
+                        {lang === 'km' ? 'អ្នកប្រមូលកញ្ចប់ដែលបានចាត់' : 'Pickup Rider'}
                       </div>
                       <div style={{ fontSize: 14, fontWeight: 700, color: selectedDriver ? 'var(--accent)' : 'var(--danger)' }}>
                         {selectedDriver ? (lang === 'km' ? (drivers.find(d => d.id === selectedDriver)?.nameKh || drivers.find(d => d.id === selectedDriver)?.name) : drivers.find(d => d.id === selectedDriver)?.name) : (lang === 'km' ? 'មិនទាន់ជ្រើស' : 'None selected')}

@@ -175,7 +175,7 @@ export default function BranchesPage() {
                 <thead>
                   <tr>
                     <th style={{ width: 60, textAlign: 'center' }}>{lang === 'km' ? 'ល.រ' : 'No.'}</th>
-                    <th style={{ width: 60, textAlign: 'center' }}>Default</th>
+                    <th style={{ width: 60, textAlign: 'center' }}>{lang === 'km' ? 'លំនាំដើម' : 'Default'}</th>
                     <th>{lang === 'km' ? 'ហាងមេ' : 'Merchant'}</th>
                     <th>{lang === 'km' ? 'ឈ្មោះសាខា' : 'Branch Name'}</th>
                     <th>{lang === 'km' ? 'កូដ' : 'Code'}</th>
@@ -202,7 +202,11 @@ export default function BranchesPage() {
                         </td>
                         <td style={{ textAlign: 'center' }}>
                           <button
-                            title={b.isDefault ? 'Default Branch' : 'Set as Default'}
+                            title={
+                              b.isDefault
+                                ? (lang === 'km' ? 'សាខាលំនាំដើម' : 'Default Branch')
+                                : (lang === 'km' ? 'កំណត់ជាសាខាលំនាំដើម' : 'Set as Default')
+                            }
                             className="btn btn-ghost btn-icon btn-sm"
                             style={{ color: b.isDefault ? '#16a34a' : '#cbd5e1' }}
                             onClick={() => !b.isDefault && handleSetDefault(b)}

@@ -436,7 +436,7 @@ export default function FirebaseSettingsListPage() {
       <Sidebar />
       <div className="main-content">
         <Topbar
-          title={tr('Firebase & ការជូនដំណឹង (Push Notifications)', 'Firebase & Push Notifications')}
+          title={tr('ការភ្ជាប់ Firebase', 'Firebase Integration')}
           subtitle={tr(
             'តាមដានស្ថានភាព Push Notification និងគ្រប់គ្រងគណនី Firebase',
             'Monitor push notification logs and manage Firebase credentials',

@@ -37,9 +37,9 @@ const trackingTranslations = {
     trackingCode: "Tracking Code",
     from: "From Merchant",
     to: "To Customer",
-    assignedDrivers: "Assigned Driver",
-    pickupDriver: "Pickup Driver",
-    deliveryDriver: "Delivery Driver",
+    assignedDrivers: "Assigned Rider",
+    pickupDriver: "Pickup Rider",
+    deliveryDriver: "Rider",
     currentStatus: "Current Status",
     detailedHistory: "Full Status Activity Log",
     copied: "Copied!",
@@ -62,8 +62,8 @@ const trackingTranslations = {
     from: "ហាងផ្ញើ (Merchant)",
     to: "អតិថិជនទទួល (Customer)",
     assignedDrivers: "អ្នកដឹកជញ្ជូន",
-    pickupDriver: "អ្នកទៅយកពីហាង",
-    deliveryDriver: "អ្នកដឹកជូនភ្ញៀវ",
+    pickupDriver: "អ្នកប្រមូលកញ្ចប់",
+    deliveryDriver: "អ្នកដឹកជញ្ជូន",
     currentStatus: "ស្ថានភាពបច្ចុប្បន្ន",
     detailedHistory: "ប្រវត្តិស្ថានភាពលម្អិតទាំងអស់",
     copied: "បានចម្លង!",
@@ -190,16 +190,16 @@ function TrackingPageContent() {
     {
       stage: 3,
       titleKh: "បានចាត់តាំង",
-      titleEn: "Driver Assigned",
+      titleEn: "Rider Assigned",
       descKh: "បានចាត់តាំងអ្នកដឹកជញ្ជូន",
-      descEn: "Assigned to driver",
+      descEn: "Assigned to rider",
       icon: <MdAssignmentInd size={20} />,
     },
     {
       stage: 4,
       titleKh: "កំពុងដឹកជញ្ជូន",
       titleEn: "In Transit",
-      descKh: "អ្នកដឹកកំពុងធ្វើដំណើរទៅកាន់ភ្ញៀវ",
+      descKh: "អ្នកដឹកជញ្ជូនកំពុងធ្វើដំណើរទៅកាន់ភ្ញៀវ",
       descEn: "On the way to customer",
       icon: <MdLocalShipping size={20} />,
     },
@@ -209,8 +209,8 @@ function TrackingPageContent() {
         order?.status === "failed"
           ? "បរាជ័យ"
           : order?.status === "returned"
-            ? "ប្រគល់មកវិញ"
-            : "ដឹកជោគជ័យ",
+            ? "បានត្រឡប់"
+            : "បានដឹកជោគជ័យ",
       titleEn:
         order?.status === "failed"
           ? "Failed"
@@ -900,7 +900,7 @@ function TrackingPageContent() {
                   >
                     <MdLocalShipping size={20} color="#7c3aed" />
                     <span style={{ fontSize: 14, fontWeight: 700, color: "#0f172a" }}>
-                      {lang === "km" ? "អ្នកដឹកជញ្ជូន និងទីតាំង" : "Driver & Custodian"}
+                      {lang === "km" ? "អ្នកដឹកជញ្ជូន និងទីតាំង" : "Rider & Custodian"}
                     </span>
                   </div>
 
@@ -959,7 +959,7 @@ function TrackingPageContent() {
                           marginTop: 4,
                         }}
                       >
-                        {lang === "km" ? "មិនទាន់ចាត់តាំងអ្នកដឹក" : "Not assigned yet"}
+                        {lang === "km" ? "មិនទាន់ចាត់តាំងអ្នកដឹកជញ្ជូន" : "Not assigned yet"}
                       </div>
                     )}
                   </div>
@@ -1012,7 +1012,7 @@ function TrackingPageContent() {
                       {order.status === "delivered"
                         ? order.receiverName || "Customer"
                         : order.status === "in-transit"
-                          ? order.driver?.name || "Delivery Driver"
+                          ? order.driver?.name || "Rider"
                           : order.status === "in-warehouse"
                             ? "EBS Warehouse Hub"
                             : order.merchant?.name || "Merchant"}

@@ -320,7 +320,7 @@ export default function EditTelegramPage() {
 
                     <div className="form-group" style={{ marginBottom: 0 }}>
                       <label className="form-label" style={{ fontWeight: 600, fontSize: 12.5 }}>
-                        💵 {isKh ? 'Topic ទូទាត់អ្នកដឹក (Driver Pay)' : 'Driver Payment Topic ID'}
+                        💵 {isKh ? 'Topic ទូទាត់អ្នកដឹកជញ្ជូន (Rider Payout)' : 'Rider Payout Topic ID'}
                       </label>
                       <input
                         type="text"
@@ -447,7 +447,7 @@ export default function EditTelegramPage() {
                         checked={form.notifyDeliverySuccess}
                         onChange={(e) => setForm({ ...form, notifyDeliverySuccess: e.target.checked })}
                       />
-                      <span>{isKh ? 'ដឹកជោគជ័យ' : 'Delivery Success'}</span>
+                      <span>{isKh ? 'បានដឹកជោគជ័យ' : 'Delivery Success'}</span>
                     </label>
                     <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, cursor: 'pointer' }}>
                       <input
@@ -455,7 +455,7 @@ export default function EditTelegramPage() {
                         checked={form.notifyDeliveryFailed}
                         onChange={(e) => setForm({ ...form, notifyDeliveryFailed: e.target.checked })}
                       />
-                      <span>{isKh ? 'ដឹកមិនជោគជ័យ' : 'Delivery Failed'}</span>
+                      <span>{isKh ? 'បរាជ័យ' : 'Delivery Failed'}</span>
                     </label>
                   </div>
                 </div>

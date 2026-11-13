@@ -10,19 +10,17 @@ import { useLanguage } from '@/lib/LanguageContext';
 import DateInput, { formatDateToDDMMYYYY } from '@/components/ui/DateInput';
 import { MdPrint, MdSearch, MdArrowBack } from 'react-icons/md';
 import ReportHeader from '@/components/ui/ReportHeader';
+import { getParcelStatusBadgeColor, getParcelStatusLabel } from '@/lib/status';
 
 interface Row { id: number; trackingCode: string; shopName: string; stockIn: number; stockOut: number; remain: number; status: string; }
 
-const statusBadge = (status: string) => {
-  const s = (status || '').toLowerCase();
-  const color = s === 'delivered' ? '#10b981' : s === 'failed' ? '#ef4444' : s === 'picked-up' ? '#3b82f6' : s === 'returned' ? '#f59e0b' : s === 'in-transit' ? '#8b5cf6' : '#64748b';
-  if (!status) return null;
-  return <span style={{ padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 700, background: color, color: '#fff', textTransform: 'capitalize' }}>{status}</span>;
-};
-
 export default function Rpt8Page() {
   const router = useRouter();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
+  const statusBadge = (status: string) => {
+    if (!status) return null;
+    return <span style={{ padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 700, background: getParcelStatusBadgeColor(status), color: '#fff', whiteSpace: 'nowrap' }}>{getParcelStatusLabel(status, lang)}</span>;
+  };
   const [startDate, setStartDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [endDate, setEndDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [rows, setRows] = useState<Row[]>([]);

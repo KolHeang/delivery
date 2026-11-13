@@ -268,21 +268,30 @@ export default function ReportPaymentCustomerPage() {
 
   const getStatusMeta = (status: string) => {
     if (status === 'delivered') {
-      return { label: 'ដឹកជោគជ័យ', bg: '#dcfce7', color: '#15803d', border: '#86efac', accent: '#16a34a' };
+      return { label: 'បានដឹកជោគជ័យ', bg: '#dcfce7', color: '#15803d', border: '#86efac', accent: '#16a34a' };
     }
     if (status === 'failed') {
-      return { label: 'មិនជោគជ័យ', bg: '#fee2e2', color: '#b91c1c', border: '#fca5a5', accent: '#ef4444' };
+      return { label: 'បរាជ័យ', bg: '#fee2e2', color: '#b91c1c', border: '#fca5a5', accent: '#ef4444' };
     }
-    if (status === 'returned' || status === 'cancelled') {
-      return { label: 'ត្រឡប់ទៅហាង', bg: '#ffe4e6', color: '#be123c', border: '#fda4af', accent: '#e11d48' };
+    if (status === 'returned') {
+      return { label: 'បានត្រឡប់', bg: '#ffe4e6', color: '#be123c', border: '#fda4af', accent: '#e11d48' };
+    }
+    if (status === 'cancelled') {
+      return { label: 'បានលុបចោល', bg: '#ffe4e6', color: '#be123c', border: '#fda4af', accent: '#e11d48' };
     }
     if (status === 'pending') {
-      return { label: 'រង់ចាំ', bg: '#fef3c7', color: '#b45309', border: '#fcd34d', accent: '#f59e0b' };
+      return { label: 'កំពុងរង់ចាំ', bg: '#fef3c7', color: '#b45309', border: '#fcd34d', accent: '#f59e0b' };
     }
-    if (status === 'picked-up' || status === 'in-warehouse') {
+    if (status === 'picked-up') {
+      return { label: 'បានប្រមូល', bg: '#e0f2fe', color: '#0369a1', border: '#7dd3fc', accent: '#0284c7' };
+    }
+    if (status === 'in-warehouse') {
       return { label: 'ក្នុងឃ្លាំង', bg: '#e0f2fe', color: '#0369a1', border: '#7dd3fc', accent: '#0284c7' };
     }
-    return { label: 'កំពុងដឹក', bg: '#fef3c7', color: '#b45309', border: '#fcd34d', accent: '#f59e0b' };
+    if (status === 'assigned') {
+      return { label: 'បានចាត់តាំង', bg: '#fef3c7', color: '#b45309', border: '#fcd34d', accent: '#f59e0b' };
+    }
+    return { label: 'កំពុងដឹកជញ្ជូន', bg: '#fef3c7', color: '#b45309', border: '#fcd34d', accent: '#f59e0b' };
   };
 
   return (
@@ -558,9 +567,9 @@ export default function ReportPaymentCustomerPage() {
           }}>
             {[
               { key: 'all' as TabKey, label: 'ទាំងអស់', count: orders.length, activeBg: '#1e293b', activeColor: '#fff' },
-              { key: 'delivered' as TabKey, label: 'ជោគជ័យ', count: deliveredOrders.length, activeBg: '#16a34a', activeColor: '#fff' },
+              { key: 'delivered' as TabKey, label: 'បានដឹកជោគជ័យ', count: deliveredOrders.length, activeBg: '#16a34a', activeColor: '#fff' },
               { key: 'transit' as TabKey, label: 'ដឹកបន្ត', count: inTransitOrders.length, activeBg: '#d97706', activeColor: '#fff' },
-              { key: 'returned' as TabKey, label: 'ត្រឡប់', count: returnedOrders.length, activeBg: '#dc2626', activeColor: '#fff' },
+              { key: 'returned' as TabKey, label: 'បានត្រឡប់', count: returnedOrders.length, activeBg: '#dc2626', activeColor: '#fff' },
             ].map(tab => {
               const isActive = activeTab === tab.key;
               return (
@@ -1017,7 +1026,7 @@ export default function ReportPaymentCustomerPage() {
                   {returnedOrders.map((o: any, idx: number) => {
                     const isUSD = o.codCurrency === 'USD';
                     const codVal = parseFloat(o.cod || 0);
-                    const latestNote = getOrderLatestNote(o, 'ត្រឡប់ទៅហាង');
+                    const latestNote = getOrderLatestNote(o, 'បានត្រឡប់');
                     return (
                       <tr key={o.id}>
                         <td style={{ textAlign: 'center', padding: '5px 4px', border: '1px solid #cbd5e1' }}>{idx + 1}</td>

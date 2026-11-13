@@ -1296,7 +1296,7 @@ export default function TenantDetailPage() {
                       </div>
 
                       <div style={{ background: '#f8fafc', borderRadius: 12, padding: '16px', border: '1px solid #e2e8f0', textAlign: 'center' }}>
-                        <div style={{ fontSize: 11.5, color: '#64748b', fontWeight: 600 }}>{tr('អ្នកដឹកជញ្ជូន', 'Drivers')}</div>
+                        <div style={{ fontSize: 11.5, color: '#64748b', fontWeight: 600 }}>{tr('អ្នកដឹកជញ្ជូន', 'Riders')}</div>
                         <div style={{ fontSize: 20, fontWeight: 800, color: '#0f172a', marginTop: 4 }}>
                           {currentPlan.maxDrivers || tr('មិនកំណត់', 'Unlimited')}
                         </div>

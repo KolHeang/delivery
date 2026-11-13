@@ -563,7 +563,7 @@ function PricingContent() {
                       <div style={{ width: 22, height: 22, borderRadius: '50%', background: '#ecfdf5', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                         <MdCheckCircle color="#10b981" size={16} />
                       </div>
-                      <span>អ្នកដឹកជញ្ជូនរហូតដល់ <strong>{plan.maxDrivers}</strong> Drivers</span>
+                      <span>អ្នកដឹកជញ្ជូនរហូតដល់ <strong>{plan.maxDrivers}</strong> នាក់</span>
                     </li>
                     <li style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13.5, color: '#334155' }}>
                       <div style={{ width: 22, height: 22, borderRadius: '50%', background: '#ecfdf5', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>

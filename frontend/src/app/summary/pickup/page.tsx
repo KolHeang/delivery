@@ -98,7 +98,7 @@ export default function PickUpSummaryPage() {
     <div className="app-layout">
       <Sidebar />
       <div className="main-content">
-        <Topbar title={t('pickupSummary')} subtitle={lang === 'km' ? `${filtered.length} អ្នកប្រមូល` : `${filtered.length} drivers`} />
+        <Topbar title={t('pickupSummary')} subtitle={lang === 'km' ? `${filtered.length} អ្នកប្រមូលកញ្ចប់` : `${filtered.length} pickup riders`} />
 
         <div className="page-content">
           {/* Filter Card */}
@@ -126,7 +126,7 @@ export default function PickUpSummaryPage() {
                 onChange={setEndDate}
               />
               <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label">{lang === 'km' ? 'អ្នកប្រមូល (Pickup Driver)' : 'Pickup Driver'}</label>
+                <label className="form-label">{lang === 'km' ? 'អ្នកប្រមូលកញ្ចប់ (Pickup Rider)' : 'Pickup Rider'}</label>
                 <select className="form-control" value={driverId} onChange={e => setDriverId(e.target.value)}>
                   <option value="">-- {lang === 'km' ? 'ទាំងអស់' : 'All'} --</option>
                   {drivers.map(d => <option key={d.id} value={d.id}>{d.name}{d.nameKh ? ` (${d.nameKh})` : ''}</option>)}
@@ -150,7 +150,7 @@ export default function PickUpSummaryPage() {
           {/* Summary Stats */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12, marginBottom: 16 }}>
             {[
-              { key: 'pickupDrivers', label: lang === 'km' ? 'អ្នកប្រមូលកញ្ចប់' : 'Pickup Drivers', value: filtered.length, color: 'var(--accent)', icon: '🚗' },
+              { key: 'pickupDrivers', label: lang === 'km' ? 'អ្នកប្រមូលកញ្ចប់' : 'Pickup Riders', value: filtered.length, color: 'var(--accent)', icon: '🚗' },
               { key: 'totalParcels', label: lang === 'km' ? 'សរុបកញ្ចប់' : 'Total Parcels', value: totalPackage, color: '#d97706', icon: '📦' },
               { key: 'totalFee', label: lang === 'km' ? 'សេវាដឹកសរុប' : 'Total Fee', value: `$${totalFee.toFixed(2)}`, color: 'var(--success)', icon: '💰' },
             ].map(s => (
@@ -184,7 +184,7 @@ export default function PickUpSummaryPage() {
                 <thead>
                   <tr>
                     <th style={{ width: 50, textAlign: 'center' }}>{lang === 'km' ? 'ល.រ' : 'No.'}</th>
-                    <th>{lang === 'km' ? 'អ្នកប្រមូលកញ្ចប់' : 'Pickup Driver'}</th>
+                    <th>{lang === 'km' ? 'អ្នកប្រមូលកញ្ចប់' : 'Pickup Rider'}</th>
                     <th style={{ textAlign: 'center' }}>{lang === 'km' ? 'ចំនួនហាង' : 'Shop Count'}</th>
                     <th style={{ textAlign: 'center' }}>{lang === 'km' ? 'ចំនួនកញ្ចប់' : 'Parcel Count'}</th>
                     <th style={{ textAlign: 'right', paddingRight: 24 }}>{lang === 'km' ? 'សេវាដឹក' : 'Delivery Fee'}</th>

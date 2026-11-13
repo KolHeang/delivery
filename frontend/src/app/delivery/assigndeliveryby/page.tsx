@@ -397,10 +397,10 @@ export default function AssignDeliveryPage() {
                       }}
                     >
                       <option value="">{lang === 'km' ? 'ស្ថានភាព ទាំងអស់' : 'All Status'}</option>
-                      <option value="pending">{lang === 'km' ? 'រង់ចាំ' : 'Pending'}</option>
+                      <option value="pending">{lang === 'km' ? 'កំពុងរង់ចាំ' : 'Pending'}</option>
                       <option value="in-warehouse">{lang === 'km' ? 'ក្នុងឃ្លាំង' : 'In Warehouse'}</option>
-                      <option value="assigned">{lang === 'km' ? 'បានចាត់ចែង' : 'Assigned'}</option>
-                      <option value="failed">{lang === 'km' ? 'មិនជោគជ័យ' : 'Failed'}</option>
+                      <option value="assigned">{lang === 'km' ? 'បានចាត់តាំង' : 'Assigned'}</option>
+                      <option value="failed">{lang === 'km' ? 'បរាជ័យ' : 'Failed'}</option>
                     </select>
                   </div>
 
@@ -417,9 +417,9 @@ export default function AssignDeliveryPage() {
                           width: '100%',
                           height: 34,
                         }}
-                        placeholder={lang === 'km' ? 'អ្នកដឹក ទាំងអស់' : 'All Drivers'}
+                        placeholder={lang === 'km' ? 'អ្នកដឹកជញ្ជូនទាំងអស់' : 'All Riders'}
                         options={[
-                          { value: '', label: lang === 'km' ? 'អ្នកដឹក ទាំងអស់' : 'All Drivers' },
+                          { value: '', label: lang === 'km' ? 'អ្នកដឹកជញ្ជូនទាំងអស់' : 'All Riders' },
                           ...drivers.map((d: any) => ({
                             value: String(d.id),
                             label: (lang === 'km' ? (d.nameKh || d.name) : (d.name || d.nameKh)),
@@ -457,7 +457,7 @@ export default function AssignDeliveryPage() {
 
                   {/* Page size selector */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginLeft: 'auto', flexShrink: 0 }}>
-                    <span style={{ fontSize: 11.5, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>Rows:</span>
+                    <span style={{ fontSize: 11.5, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{lang === 'km' ? 'ចំនួនជួរ៖' : 'Rows:'}</span>
                     {PAGE_SIZE_OPTIONS.map(size => (
                       <button
                         key={size}
@@ -498,7 +498,7 @@ export default function AssignDeliveryPage() {
                         <th style={{ background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, padding: '11px 14px', border: 'none', whiteSpace: 'nowrap' }}>{t('address')}</th>
                         <th style={{ background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, padding: '11px 14px', border: 'none', whiteSpace: 'nowrap' }}>{t('cod')}</th>
                         <th style={{ background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, padding: '11px 14px', border: 'none', whiteSpace: 'nowrap' }}>{t('deliveryFee')}</th>
-                        <th style={{ background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, padding: '11px 14px', border: 'none', whiteSpace: 'nowrap' }}>{lang === 'km' ? 'អ្នកដឹក' : 'Driver'}</th>
+                        <th style={{ background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, padding: '11px 14px', border: 'none', whiteSpace: 'nowrap' }}>{lang === 'km' ? 'អ្នកដឹកជញ្ជូន' : 'Rider'}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -627,7 +627,7 @@ export default function AssignDeliveryPage() {
                       {lang === 'km' ? 'ជំហានទី ២' : 'Step 2'}
                     </span>
                     <span className="card-title" style={{ fontSize: 15, fontWeight: 700 }}>
-                      {lang === 'km' ? 'ជ្រើសរើសអ្នកដឹក' : 'Select Driver'}
+                      {lang === 'km' ? 'ជ្រើសរើសអ្នកដឹកជញ្ជូន' : 'Select Rider'}
                     </span>
                   </div>
                   {selectedDriver && (
@@ -646,7 +646,7 @@ export default function AssignDeliveryPage() {
                     <MdSearch size={16} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
                     <input
                       type="text"
-                      placeholder={lang === 'km' ? 'ស្វែងរកឈ្មោះអ្នកដឹក, តំបន់...' : 'Search driver or zone...'}
+                      placeholder={lang === 'km' ? 'ស្វែងរកឈ្មោះអ្នកដឹកជញ្ជូន, តំបន់...' : 'Search rider or zone...'}
                       value={driverSearch}
                       onChange={e => setDriverSearch(e.target.value)}
                       style={{
@@ -683,11 +683,11 @@ export default function AssignDeliveryPage() {
                 <div style={{ flex: 1, overflowY: 'auto', padding: '10px 12px' }}>
                   {drivers.length === 0 ? (
                     <div style={{ padding: '36px 16px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
-                      {lang === 'km' ? 'មិនមានអ្នកដឹកទំនេរទេ' : 'No available drivers'}
+                      {lang === 'km' ? 'មិនមានអ្នកដឹកជញ្ជូនទំនេរទេ' : 'No available riders'}
                     </div>
                   ) : filteredDrivers.length === 0 ? (
                     <div style={{ padding: '36px 16px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
-                      {lang === 'km' ? 'រកមិនឃើញអ្នកដឹកទេ' : 'No drivers found'}
+                      {lang === 'km' ? 'រកមិនឃើញអ្នកដឹកជញ្ជូនទេ' : 'No riders found'}
                     </div>
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -780,7 +780,7 @@ export default function AssignDeliveryPage() {
                     </div>
                     <div style={{ textAlign: 'right' }}>
                       <div style={{ fontSize: 11.5, color: 'var(--text-muted)', fontWeight: 600 }}>
-                        {lang === 'km' ? 'អ្នកដឹកដែលបានចាត់' : 'Selected Driver'}
+                        {lang === 'km' ? 'អ្នកដឹកជញ្ជូនដែលបានចាត់' : 'Selected Rider'}
                       </div>
                       <div style={{ fontSize: 13, fontWeight: 700, color: currentSelectedDriverObj ? 'var(--accent)' : 'var(--text-muted)', marginTop: 2 }}>
                         {currentSelectedDriverObj ? (lang === 'km' ? (currentSelectedDriverObj.nameKh || currentSelectedDriverObj.name) : currentSelectedDriverObj.name) : (lang === 'km' ? 'មិនទាន់ជ្រើស' : 'None')}
@@ -810,7 +810,7 @@ export default function AssignDeliveryPage() {
                       : (selected.length === 0
                           ? (lang === 'km' ? 'សូមជ្រើសរើសកញ្ចប់អីវ៉ាន់' : 'Select parcels first')
                           : (!selectedDriver
-                              ? (lang === 'km' ? 'សូមជ្រើសរើសអ្នកដឹក' : 'Select a driver')
+                              ? (lang === 'km' ? 'សូមជ្រើសរើសអ្នកដឹកជញ្ជូន' : 'Select a rider')
                               : (lang === 'km' ? `ចាត់តាំងការដឹក (${selected.length} កញ្ចប់)` : `Assign Delivery (${selected.length})`)
                             )
                         )

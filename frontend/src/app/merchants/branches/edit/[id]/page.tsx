@@ -338,7 +338,7 @@ export default function EditBranchPage() {
                   </label>
                   <input
                     className="form-control"
-                    placeholder={lang === 'km' ? 'ចំណាំសម្រាប់ Driver ទៅយក' : 'Notes for driver pickup'}
+                    placeholder={lang === 'km' ? 'ចំណាំសម្រាប់អ្នកប្រមូលកញ្ចប់ទៅយក' : 'Notes for pickup rider'}
                     value={form.note}
                     onChange={(e) => setForm({ ...form, note: e.target.value })}
                     style={{ height: 42, fontSize: 14 }}
@@ -366,7 +366,7 @@ export default function EditBranchPage() {
                     style={{ width: 18, height: 18, cursor: 'pointer', accentColor: '#2563eb' }}
                   />
                   <label htmlFor="isDefaultBranch" style={{ cursor: 'pointer', margin: 0, fontSize: 13.5, fontWeight: 600, color: '#1e293b' }}>
-                    {lang === 'km' ? 'កំណត់ជាសាខាដើម' : 'Set as Default Branch'}
+                    {lang === 'km' ? 'កំណត់ជាសាខាលំនាំដើម' : 'Set as Default Branch'}
                     <span style={{ display: 'block', fontSize: 12, fontWeight: 400, color: '#64748b', marginTop: 2 }}>
                       {lang === 'km' ? 'ប្រើប្រាស់សាខានេះជាទីតាំងចម្បងរបស់ហាងសម្រាប់ទទួលការបញ្ជាទិញ' : 'Use this location as the primary shop branch for incoming orders'}
                     </span>

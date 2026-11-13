@@ -144,7 +144,7 @@ export default function TelegramSettingsPage() {
       <Sidebar />
       <div className="main-content">
         <Topbar
-          title={isKh ? 'ការកំណត់ Telegram' : 'Telegram Settings'}
+          title={isKh ? 'ការភ្ជាប់ Telegram' : 'Telegram Integration'}
           subtitle={isKh ? 'គ្រប់គ្រង និងកំណត់ការជូនដំណឹងតាម Telegram' : 'Manage and configure Telegram notifications'}
         />
 

@@ -59,7 +59,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
             msgStr = `សូមបញ្ចូលឈ្មោះពេញ`;
           } else if (cleanMsg === 'Email is required for Admin/Staff') {
             msgStr = `សូមបញ្ចូលអ៊ីមែលសម្រាប់ Admin/បុគ្គលិក`;
-          } else if (cleanMsg === 'Phone number is required for Driver') {
+          } else if (cleanMsg === 'Phone number is required for Driver' || cleanMsg === 'Phone number is required for Rider') {
             msgStr = `សូមបញ្ចូលលេខទូរស័ព្ទសម្រាប់អ្នកដឹកជញ្ជូន`;
           } else if (cleanMsg === 'Error saving staff') {
             msgStr = `មានកំហុសក្នុងការរក្សាទុកបុគ្គលិក`;

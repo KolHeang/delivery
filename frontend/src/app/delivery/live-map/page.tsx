@@ -242,10 +242,10 @@ export default function AdminLiveFleetMapPage() {
                   ? `<div style="position: absolute; width: 52px; height: 52px; border-radius: 50%; background: ${mainColor}22; animation: pulseRadar 2s infinite ease-out;"></div>`
                   : ''
               }
-              <!-- Driver Floating Name Tag -->
+              <!-- Rider Floating Name Tag -->
               <div style="position: absolute; top: -22px; background: #ffffff; color: #0f172a; padding: 2.5px 8px; border-radius: 9999px; font-size: 11px; font-weight: 700; white-space: nowrap; box-shadow: 0 2px 10px rgba(0,0,0,0.14); border: 1px solid rgba(0,0,0,0.06); display: flex; align-items: center; gap: 4px; pointer-events: none; z-index: 5;">
                 <span style="width: 7px; height: 7px; border-radius: 50%; background: ${mainColor}; display: inline-block;"></span>
-                <span>${driver.driverName || `Driver #${driver.driverId}`}</span>
+                <span>${driver.driverName || `Rider #${driver.driverId}`}</span>
                 ${speed > 0 ? `<span style="color: #64748b; font-size: 10px; font-weight: 600;">· ${speed}km/h</span>` : ''}
               </div>
               <!-- Driver Vehicle Circle Pin -->
@@ -396,7 +396,7 @@ export default function AdminLiveFleetMapPage() {
       <div className="live-map-main" style={{ flex: 1, marginLeft: 'var(--sidebar-width, 260px)', transition: 'margin-left 0.2s ease', display: 'flex', flexDirection: 'column', minWidth: 0, height: '100vh' }}>
         <Topbar
           title={t('liveRiderMap')}
-          subtitle={lang === 'km' ? 'តាមដានចលនា ទីតាំងជាក់ស្តែង និងកញ្ចប់ឥវ៉ាន់របស់អ្នកដឹកទាំងអស់' : 'Real-time GPS movement, active tasks & dispatch status of all drivers'}
+          subtitle={lang === 'km' ? 'តាមដានចលនា ទីតាំងជាក់ស្តែង និងកញ្ចប់ឥវ៉ាន់របស់អ្នកដឹកជញ្ជូនទាំងអស់' : 'Real-time GPS movement, active tasks & dispatch status of all riders'}
         />
 
         {/* Top Control & KPI Header Bar */}
@@ -432,7 +432,7 @@ export default function AdminLiveFleetMapPage() {
               }}
             >
               {isSidebarOpen ? <MdChevronLeft size={18} /> : <MdChevronRight size={18} />}
-              <span>{isSidebarOpen ? (lang === 'km' ? 'លាក់បញ្ជី Driver' : 'Hide Drivers') : (lang === 'km' ? 'បង្ហាញបញ្ជី Driver' : 'Show Drivers')}</span>
+              <span>{isSidebarOpen ? (lang === 'km' ? 'លាក់បញ្ជីអ្នកដឹកជញ្ជូន' : 'Hide Riders') : (lang === 'km' ? 'បង្ហាញបញ្ជីអ្នកដឹកជញ្ជូន' : 'Show Riders')}</span>
             </button>
 
             <div
@@ -564,7 +564,7 @@ export default function AdminLiveFleetMapPage() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <button
               onClick={handleFitAll}
-              title={lang === 'km' ? 'ពង្រីកផែនទីឱ្យឃើញ Driver ទាំងអស់' : 'Fit all drivers in view'}
+              title={lang === 'km' ? 'ពង្រីកផែនទីឱ្យឃើញអ្នកដឹកជញ្ជូនទាំងអស់' : 'Fit all riders in view'}
               style={{
                 background: '#ffffff',
                 border: '1px solid #cbd5e1',
@@ -905,7 +905,7 @@ export default function AdminLiveFleetMapPage() {
                     <div style={{ position: 'relative' }}>
                       <input
                         type="text"
-                        placeholder={lang === 'km' ? 'ស្វែងរក Driver តាមឈ្មោះ ឬលេខ...' : 'Search driver by name or phone...'}
+                        placeholder={lang === 'km' ? 'ស្វែងរកអ្នកដឹកជញ្ជូនតាមឈ្មោះ ឬលេខ...' : 'Search rider by name or phone...'}
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         style={{
@@ -946,7 +946,7 @@ export default function AdminLiveFleetMapPage() {
                     {filteredDrivers.length === 0 ? (
                       <div style={{ textAlign: 'center', padding: '40px 10px' }}>
                         <div style={{ fontSize: 13.5, fontWeight: 700, color: '#334155', marginBottom: 4 }}>
-                          {loading ? (lang === 'km' ? 'កំពុងទាញយក...' : 'Loading...') : (lang === 'km' ? 'មិនមាន Driver ក្នុងបញ្ជី' : 'No drivers found')}
+                          {loading ? (lang === 'km' ? 'កំពុងទាញយក...' : 'Loading...') : (lang === 'km' ? 'មិនមានអ្នកដឹកជញ្ជូនក្នុងបញ្ជី' : 'No riders found')}
                         </div>
                         <p style={{ fontSize: 11.5, color: '#64748b', margin: '0 0 14px' }}>
                           {lang === 'km' ? 'ចុចប៊ូតុង "តេស្តចលនា" ដើម្បីមើលការបង្ហាញ' : 'Click "Simulate GPS" to test fleet tracking'}

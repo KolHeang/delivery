@@ -7,6 +7,12 @@ import Sidebar from '@/components/layout/Sidebar';
 import Topbar from '@/components/layout/Topbar';
 import api from '@/lib/api';
 import { useLanguage } from '@/lib/LanguageContext';
+import type { Language } from '@/lib/i18n';
+import {
+  getPickupRequestStatusLabel,
+  getParcelStatusLabel,
+  getParcelStatusBadgeColor,
+} from '@/lib/status';
 import {
   sanitizePhoneInput,
   isPhoneExceedingMaxDigits,
@@ -41,7 +47,7 @@ const STATUS_COLORS: Record<string, { bg: string; color: string }> = {
   cancelled:   { bg: '#fee2e2', color: '#dc2626' },
 };
 
-function StatusBadge({ status }: { status: string }) {
+function StatusBadge({ status, lang }: { status: string; lang: Language }) {
   const c = STATUS_COLORS[status] ?? { bg: '#f3f4f6', color: '#6b7280' };
   return (
     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 12px', borderRadius: 999, fontSize: 12, fontWeight: 700, background: c.bg, color: c.color }}>
@@ -49,7 +55,7 @@ function StatusBadge({ status }: { status: string }) {
       {status === 'assigned' && <MdDirectionsBike size={13} />}
       {status === 'picked-up' && <MdLocalShipping size={13} />}
       {status === 'completed' && <MdCheckCircle size={13} />}
-      {status}
+      {getPickupRequestStatusLabel(status, lang)}
     </span>
   );
 }
@@ -389,18 +395,18 @@ export default function PickupRequestDetailPage() {
                   <div style={{ flex: '1 1 280px' }}>
                     <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>Request Info</div>
                     <InfoRow label="Request ID" value={`#${request.id}`} />
-                    <InfoRow label={t('status')} value={<StatusBadge status={request.status} />} />
+                    <InfoRow label={t('status')} value={<StatusBadge status={request.status} lang={lang} />} />
                     <InfoRow label={t('merchant')} value={<><span style={{ fontWeight: 700 }}>{request.merchant?.name}</span>{request.merchant?.nameKh && <span style={{ fontSize: 12, color: 'var(--text-muted)', marginLeft: 6 }}>({request.merchant.nameKh})</span>}</>} />
                     <InfoRow label={t('location')} value={request.pickupAddress || ''} />
                     <InfoRow label={t('scheduledAt')} value={formatDate(request.pickupTime)} />
                     <InfoRow label={t('pickedUpAt')} value={formatDate(request.pickedUpAt)} />
                     <InfoRow label={t('note')} value={request.note || ''} />
-                    {request.driverNote && <InfoRow label="Driver Note" value={<span style={{ color: '#16a34a' }}>{request.driverNote}</span>} />}
+                    {request.driverNote && <InfoRow label={lang === 'km' ? 'កំណត់ចំណាំអ្នកប្រមូលកញ្ចប់' : 'Pickup Rider Note'} value={<span style={{ color: '#16a34a' }}>{request.driverNote}</span>} />}
                   </div>
 
                   {/* Driver */}
                   <div style={{ flex: '1 1 220px' }}>
-                    <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>Pickup Driver</div>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>{lang === 'km' ? 'អ្នកប្រមូលកញ្ចប់' : 'Pickup Rider'}</div>
                     {request.pickupDriver ? (
                       <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', borderRadius: 12, background: '#f0f9ff', border: '1.5px solid #bae6fd' }}>
                         <div style={{ width: 44, height: 44, borderRadius: '50%', background: '#0284c7', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 18 }}>
@@ -414,7 +420,7 @@ export default function PickupRequestDetailPage() {
                       </div>
                     ) : (
                       <div style={{ padding: '14px 16px', borderRadius: 12, background: '#fef9c3', border: '1.5px dashed #fbbf24', color: '#92400e', fontSize: 13, fontWeight: 600, textAlign: 'center' }}>
-                        ⚠️ No driver assigned yet
+                        ⚠️ {lang === 'km' ? 'មិនទាន់មានអ្នកប្រមូលកញ្ចប់ត្រូវបានចាត់តាំង' : 'No pickup rider assigned yet'}
                       </div>
                     )}
                   </div>
@@ -553,8 +559,8 @@ export default function PickupRequestDetailPage() {
                               <td style={{ fontWeight: 700, fontSize: 13 }}>{formatCOD(p.cod, p.codCurrency)}</td>
                               <td style={{ color: 'var(--success)', fontWeight: 700, fontSize: 13 }}>${parseFloat(p.deliveryFee || 0).toFixed(2)}</td>
                               <td>
-                                <span style={{ fontSize: 11, padding: '3px 8px', borderRadius: 999, fontWeight: 700, background: '#dcfce7', color: '#16a34a' }}>
-                                  {p.status}
+                                <span style={{ fontSize: 11, padding: '3px 8px', borderRadius: 999, fontWeight: 700, background: getParcelStatusBadgeColor(p.status), color: '#fff' }}>
+                                  {getParcelStatusLabel(p.status, lang)}
                                 </span>
                               </td>
                               <td>
@@ -773,7 +779,7 @@ export default function PickupRequestDetailPage() {
                                       onChange={e => updateBatchRow(idx, 'pickupDriverId', e.target.value)}
                                       style={{ ...batchCellStyle, width: '100%' }}
                                     >
-                                      <option value="">— Select Driver —</option>
+                                      <option value="">{lang === 'km' ? '— ជ្រើសរើសអ្នកប្រមូលកញ្ចប់ —' : '— Select Pickup Rider —'}</option>
                                       {drivers.map((d: any) => (
                                         <option key={d.id} value={d.id}>{d.name}{d.nameKh ? ` (${d.nameKh})` : ''}</option>
                                       ))}
@@ -786,7 +792,7 @@ export default function PickupRequestDetailPage() {
                                       onChange={e => updateBatchRow(idx, 'deliveryDriverId', e.target.value)}
                                       style={{ ...batchCellStyle, width: '100%' }}
                                     >
-                                      <option value="">— Select Driver —</option>
+                                      <option value="">{lang === 'km' ? '— ជ្រើសរើសអ្នកដឹកជញ្ជូន —' : '— Select Rider —'}</option>
                                       {drivers.map((d: any) => (
                                         <option key={d.id} value={d.id}>{d.name}{d.nameKh ? ` (${d.nameKh})` : ''}</option>
                                       ))}
@@ -866,7 +872,7 @@ export default function PickupRequestDetailPage() {
               </div>
               <div>
                 <div style={{ fontWeight: 800, fontSize: 17 }}>{t('assignDriverTitle')}</div>
-                <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>Select a driver for pickup request #{id}</div>
+                <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>{lang === 'km' ? `ជ្រើសរើសអ្នកប្រមូលកញ្ចប់សម្រាប់សំណើ #${id}` : `Select a pickup rider for pickup request #${id}`}</div>
               </div>
             </div>
 

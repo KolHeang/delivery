@@ -69,7 +69,7 @@ const FINANCIAL_REPORTS = [
     key: '2', icon: '/3d/3d_money_bag.png', color: '#16a34a', bg: '#f0fdf4',
     titleKey: 'frpt2Title',
     permission: 'reports.financial_collection',
-    desc: { en: 'Daily amount collected by driver', km: 'ទឹកប្រាក់ប្រមូលប្រចាំថ្ងៃ' },
+    desc: { en: 'Daily amount collected by rider', km: 'ទឹកប្រាក់ប្រមូលប្រចាំថ្ងៃ' },
   },
   {
     key: '3', icon: '/3d/3d_khr_coin.png', color: '#7c3aed', bg: '#f5f3ff',

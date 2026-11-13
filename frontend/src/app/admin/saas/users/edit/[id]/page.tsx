@@ -224,7 +224,7 @@ export default function EditSaasAdminPage() {
                     onChange={(e) => setAdminForm({ ...adminForm, role: e.target.value })}
                   >
                     <option value="super_admin">{tr('Super Admin — សិទ្ធិពេញលេញលើ SaaS', 'Super Admin — Full SaaS Access')}</option>
-                    <option value="finance_admin">{tr('Finance Admin — គ្រប់គ្រងការទូទាត់ & គម្រោង', 'Finance Admin — Billing & Plans')}</option>
+                    <option value="finance_admin">{tr('Finance Admin — គម្រោងប្រើប្រាស់ និងវិក្កយបត្រ', 'Finance Admin — Subscription & Billing')}</option>
                     <option value="support_admin">{tr('Support Admin — ជំនួយការបច្ចេកទេស', 'Support Admin — Technical Support')}</option>
                   </select>
                 </div>

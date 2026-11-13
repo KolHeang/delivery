@@ -94,7 +94,7 @@ export default function DeliverySummaryPage() {
     <div className="app-layout">
       <Sidebar />
       <div className="main-content">
-        <Topbar title={t('deliverySummary')} subtitle={lang === 'km' ? `${filtered.length} អ្នកដឹក` : `${filtered.length} drivers`} />
+        <Topbar title={t('deliverySummary')} subtitle={lang === 'km' ? `${filtered.length} អ្នកដឹកជញ្ជូន` : `${filtered.length} riders`} />
 
         <div className="page-content">
           {/* Filter Card */}
@@ -122,7 +122,7 @@ export default function DeliverySummaryPage() {
                 onChange={setEndDate}
               />
               <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label">{lang === 'km' ? 'អ្នកដឹក (Driver)' : 'Driver'}</label>
+                <label className="form-label">{lang === 'km' ? 'អ្នកដឹកជញ្ជូន (Rider)' : 'Rider'}</label>
                 <select className="form-control" value={driverId} onChange={e => setDriverId(e.target.value)}>
                   <option value="">-- {lang === 'km' ? 'ទាំងអស់' : 'All'} --</option>
                   {drivers.map(d => <option key={d.id} value={d.id}>{d.name}{d.nameKh ? ` (${d.nameKh})` : ''}</option>)}
@@ -139,9 +139,9 @@ export default function DeliverySummaryPage() {
           {/* Summary Stats */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12, marginBottom: 16 }}>
             {[
-              { key: 'delivered', label: lang === 'km' ? 'ដឹកជញ្ជូនរួច' : 'Delivered', value: totalDelivered, color: 'var(--success)', icon: '✅' },
+              { key: 'delivered', label: lang === 'km' ? 'បានដឹកជោគជ័យ' : 'Delivered', value: totalDelivered, color: 'var(--success)', icon: '✅' },
               { key: 'failed', label: lang === 'km' ? 'បរាជ័យ' : 'Failed', value: totalFailed, color: 'var(--danger)', icon: '❌' },
-              { key: 'returned', label: lang === 'km' ? 'បង្វិលត្រឡប់' : 'Returned', value: totalReturned, color: '#d97706', icon: '↩️' },
+              { key: 'returned', label: lang === 'km' ? 'បានត្រឡប់' : 'Returned', value: totalReturned, color: '#d97706', icon: '↩️' },
               { key: 'codUsd', label: lang === 'km' ? 'COD (USD)' : 'COD (USD)', value: `$${totalCodUSD.toFixed(2)}`, color: 'var(--accent)', icon: '💵' },
               { key: 'codKhr', label: lang === 'km' ? 'COD (KHR)' : 'COD (KHR)', value: `៛${totalCodKHR.toLocaleString()}`, color: '#7c3aed', icon: '💴' },
               { key: 'deliveryFee', label: lang === 'km' ? 'សេវាដឹកសរុប' : 'Delivery Fee', value: `$${totalFee.toFixed(2)}`, color: 'var(--success)', icon: '💰' },
@@ -164,7 +164,7 @@ export default function DeliverySummaryPage() {
                 <MdSearch className="search-icon" />
                 <input
                   className="form-control search-input"
-                  placeholder={lang === 'km' ? 'ស្វែងរកអ្នកដឹក...' : 'Search driver...'}
+                  placeholder={lang === 'km' ? 'ស្វែងរកអ្នកដឹកជញ្ជូន...' : 'Search rider...'}
                   value={search}
                   onChange={e => setSearch(e.target.value)}
                 />
@@ -176,10 +176,10 @@ export default function DeliverySummaryPage() {
                 <thead>
                   <tr style={{ background: 'var(--sidebar-bg, #1565D8)' }}>
                     <th style={{ padding: '12px 10px', textAlign: 'center', background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'ល.រ' : 'No.'}</th>
-                    <th style={{ padding: '12px 10px', textAlign: 'left', background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'ឈ្មោះអ្នកដឹក' : 'Driver Name'}</th>
-                    <th style={{ padding: '12px 10px', textAlign: 'center', background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'ដឹកជញ្ជូនរួច' : 'Delivered'}</th>
+                    <th style={{ padding: '12px 10px', textAlign: 'left', background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'ឈ្មោះអ្នកដឹកជញ្ជូន' : 'Rider Name'}</th>
+                    <th style={{ padding: '12px 10px', textAlign: 'center', background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'បានដឹកជោគជ័យ' : 'Delivered'}</th>
                     <th style={{ padding: '12px 10px', textAlign: 'center', background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'បរាជ័យ' : 'Failed'}</th>
-                    <th style={{ padding: '12px 10px', textAlign: 'center', background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'ប្រគល់' : 'Returned'}</th>
+                    <th style={{ padding: '12px 10px', textAlign: 'center', background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'បានត្រឡប់' : 'Returned'}</th>
                     <th style={{ padding: '12px 10px', textAlign: 'right', background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'COD ($)' : 'COD ($)'}</th>
                     <th style={{ padding: '12px 10px', textAlign: 'right', background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'COD (៛)' : 'COD (៛)'}</th>
                     <th style={{ padding: '12px 10px', textAlign: 'right', background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'សេវាដឹក' : 'Delivery Fee'}</th>

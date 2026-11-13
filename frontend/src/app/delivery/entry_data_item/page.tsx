@@ -411,7 +411,7 @@ export default function BatchEntryPage() {
                           onChange={e => handleRowChange(idx, 'pickupId', e.target.value)}
                           style={{ height: 38, fontSize: 12.5 }}
                         >
-                          <option value="">{lang === 'km' ? '— ជ្រើសរើសអ្នកដឹក —' : '— Select Driver —'}</option>
+                          <option value="">{lang === 'km' ? '— ជ្រើសរើសអ្នកប្រមូលកញ្ចប់ —' : '— Select Pickup Rider —'}</option>
                           {drivers.map(d => (
                             <option key={d.id} value={d.id}>
                               {lang === 'km' ? (d.nameKh || d.name) : (d.name || d.nameKh)}
@@ -426,7 +426,7 @@ export default function BatchEntryPage() {
                           onChange={e => handleRowChange(idx, 'driverId', e.target.value)}
                           style={{ height: 38, fontSize: 12.5 }}
                         >
-                          <option value="">{lang === 'km' ? '— ជ្រើសរើសអ្នកដឹក —' : '— Select Driver —'}</option>
+                          <option value="">{lang === 'km' ? '— ជ្រើសរើសអ្នកដឹកជញ្ជូន —' : '— Select Rider —'}</option>
                           {drivers.map(d => (
                             <option key={d.id} value={d.id}>
                               {lang === 'km' ? (d.nameKh || d.name) : (d.name || d.nameKh)}

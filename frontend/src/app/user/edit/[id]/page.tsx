@@ -333,7 +333,7 @@ export default function EditStaffPage() {
                     <select className="form-control" value={form.role} onChange={f('role')}>
                       {roles.map((r: any) => {
                         const n = (r.name || '').toLowerCase();
-                        const label = n === 'admin' ? 'អ្នកគ្រប់គ្រង (Admin)' : n === 'staff' ? 'បុគ្គលិក (Staff)' : n === 'driver' ? 'អ្នកដឹកជញ្ជូន (Driver)' : (r.name.charAt(0).toUpperCase() + r.name.slice(1));
+                        const label = n === 'admin' ? 'អ្នកគ្រប់គ្រង (Admin)' : n === 'staff' ? 'បុគ្គលិក (Staff)' : n === 'driver' ? 'អ្នកដឹកជញ្ជូន (Rider)' : (r.name.charAt(0).toUpperCase() + r.name.slice(1));
                         return (
                           <option key={r.id} value={r.name}>
                             {label}
@@ -458,7 +458,7 @@ export default function EditStaffPage() {
                   {form.role === 'driver' && (
                     <div className="form-group">
                       <label className="form-label" style={{ fontWeight: 600, color: '#16a34a' }}>
-                        {lang === 'km' ? 'ថ្លៃដឹកក្នុងមួយកញ្ចប់ (៛)' : 'Driver Fee / Parcel (KHR)'}
+                        {lang === 'km' ? 'ថ្លៃដឹកក្នុងមួយកញ្ចប់ (៛)' : 'Rider Fee / Parcel (KHR)'}
                       </label>
                       <input
                         type="number"

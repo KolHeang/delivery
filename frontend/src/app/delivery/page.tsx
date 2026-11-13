@@ -16,6 +16,7 @@ import DateInput, { formatDateToDDMMYYYY, getLocalDateString } from '@/component
 import Pagination from '@/components/ui/Pagination';
 import { TableSkeleton } from '@/components/ui/Skeleton';
 import Thumbnail from '@/components/ui/Thumbnail';
+import { getParcelStatusLabel } from '@/lib/status';
 import SearchableSelect from '@/components/ui/SearchableSelect';
 
 const getLocalFirstDayOfMonthString = () => {
@@ -139,32 +140,7 @@ export default function DeliveriesPage() {
     return `${day}/${month}/${year} ${hoursStr}:${minutes}:${seconds} ${ampm}`;
   };
 
-  const getStatusLabel = (status: string) => {
-    if (lang === 'en') {
-      switch (status) {
-        case 'pending': return 'Pending';
-        case 'in-warehouse': return 'In Warehouse';
-        case 'assigned': return 'Assigned';
-        case 'picked-up': return 'Picked Up';
-        case 'in-transit': return 'In Transit';
-        case 'delivered': return 'Delivered';
-        case 'failed': return 'Failed';
-        case 'returned': return 'Returned';
-        default: return status;
-      }
-    }
-    switch (status) {
-      case 'pending': return 'រង់ចាំ';
-      case 'in-warehouse': return 'ក្នុងឃ្លាំង';
-      case 'assigned': return 'បានចាត់ចែង';
-      case 'picked-up': return 'បានប្រមូល';
-      case 'in-transit': return 'កំពុងដឹក';
-      case 'delivered': return 'បានដឹកជោគជ័យ';
-      case 'failed': return 'មិនជោគជ័យ';
-      case 'returned': return 'បានត្រឡប់';
-      default: return status;
-    }
-  };
+  const getStatusLabel = (status: string) => getParcelStatusLabel(status, lang);
 
   const toggleSelectRow = (id: number) => {
     setSelectedIds(prev =>
@@ -312,19 +288,19 @@ export default function DeliveriesPage() {
                   </select>
                 </div>
                 <DateInput
-                  labelEn="Start Date"
-                  labelKh="កាលបរិច្ឆេទបញ្ជូល"
+                  labelEn="Entry Date (From)"
+                  labelKh="កាលបរិច្ឆេទបញ្ចូល (ចាប់ពី)"
                   value={startDate}
                   onChange={(val: string) => { setStartDate(val); setCurrentPage(1); }}
                 />
                 <DateInput
-                  labelEn="End Date"
-                  labelKh="កាលបរិច្ឆេទបញ្ចប់"
+                  labelEn="Entry Date (To)"
+                  labelKh="កាលបរិច្ឆេទបញ្ចូល (ដល់)"
                   value={endDate}
                   onChange={(val: string) => { setEndDate(val); setCurrentPage(1); }}
                 />
                 <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label className="form-label" style={{ fontSize: 11, marginBottom: 4 }}>{lang === 'km' ? 'អ្នកដឹក' : 'Driver'}</label>
+                  <label className="form-label" style={{ fontSize: 11, marginBottom: 4 }}>{lang === 'km' ? 'អ្នកដឹកជញ្ជូន' : 'Rider'}</label>
                   <SearchableSelect
                     value={driverFilter}
                     onChange={(val: string) => { setDriverFilter(val); setCurrentPage(1); }}
@@ -399,8 +375,8 @@ export default function DeliveriesPage() {
                     <th style={{ minWidth: 120 }}>{lang === 'km' ? 'លេខទូរស័ព្ទ' : 'Receiver Phone'}</th>
                     <th style={{ minWidth: 100 }}>{lang === 'km' ? 'ចំនួន$' : 'Amount USD'}</th>
                     <th style={{ minWidth: 110 }}>{lang === 'km' ? 'ចំនួន៛' : 'Amount KHR'}</th>
-                    <th style={{ minWidth: 130 }}>{lang === 'km' ? 'អ្នកយកកញ្ចប់' : 'Pickup Driver'}</th>
-                    <th style={{ minWidth: 130 }}>{lang === 'km' ? 'អ្នកដឹក' : 'Delivery Driver'}</th>
+                    <th style={{ minWidth: 130 }}>{lang === 'km' ? 'អ្នកប្រមូលកញ្ចប់' : 'Pickup Rider'}</th>
+                    <th style={{ minWidth: 130 }}>{lang === 'km' ? 'អ្នកដឹកជញ្ជូន' : 'Rider'}</th>
                     <th style={{ textAlign: 'center', width: 100 }}>{lang === 'km' ? 'ស្ថានភាពដឹក ✓ ✕' : 'Delivery Status ✓ ✕'}</th>
                     <th style={{ minWidth: 130 }}>{lang === 'km' ? 'ស្ថានភាព' : 'Status'}</th>
                     <th style={{ minWidth: 160 }}>{lang === 'km' ? 'សម្គាល់' : 'Remarks/Notes'}</th>
@@ -669,14 +645,14 @@ export default function DeliveriesPage() {
           <hr className="divider" />
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 16, marginBottom: 16 }}>
             {[
-              { label: 'Status', value: <Badge status={viewModal.status} /> },
+              { label: lang === 'km' ? 'ស្ថានភាព' : 'Status', value: <Badge status={viewModal.status} /> },
               { label: 'COD', value: formatCOD(viewModal.cod, viewModal.codCurrency || 'USD') },
-              { label: 'Delivery Fee', value: `$${parseFloat(viewModal.deliveryFee).toFixed(2)}` },
-              { label: 'Pickup Driver', value: viewModal.pickupDriver?.name || 'None' },
-              { label: 'Delivery Driver', value: viewModal.driver?.name || 'Unassigned' },
+              { label: lang === 'km' ? 'ថ្លៃដឹកជញ្ជូន' : 'Delivery Fee', value: `$${parseFloat(viewModal.deliveryFee).toFixed(2)}` },
+              { label: lang === 'km' ? 'អ្នកប្រមូលកញ្ចប់' : 'Pickup Rider', value: viewModal.pickupDriver?.name || (lang === 'km' ? 'គ្មាន' : 'None') },
+              { label: lang === 'km' ? 'អ្នកដឹកជញ្ជូន' : 'Rider', value: viewModal.driver?.name || (lang === 'km' ? 'មិនទាន់ចាត់តាំង' : 'Unassigned') },
               { label: lang === 'km' ? 'ទូទាត់ហាង (Shop Payout)' : 'Shop Payout', value: <Badge status={viewModal.merchantPaymentStatus === 'paid' ? 'paid' : 'pending'} label={viewModal.merchantPaymentStatus === 'paid' ? (lang === 'km' ? 'ទូទាត់រួច' : 'Paid') : (lang === 'km' ? 'មិនទាន់ទូទាត់' : 'Unpaid')} /> },
-              { label: lang === 'km' ? 'ទូទាត់អ្នកដឹក (Driver Payout)' : 'Driver Payout', value: <Badge status={viewModal.driverPaymentStatus === 'paid' ? 'paid' : 'pending'} label={viewModal.driverPaymentStatus === 'paid' ? (lang === 'km' ? 'ទូទាត់រួច' : 'Paid') : (lang === 'km' ? 'មិនទាន់ទូទាត់' : 'Unpaid')} /> },
-              { label: 'Created', value: formatDateToDDMMYYYY(viewModal.createdAt) },
+              { label: lang === 'km' ? 'ទូទាត់អ្នកដឹកជញ្ជូន (Rider Payout)' : 'Rider Payout', value: <Badge status={viewModal.driverPaymentStatus === 'paid' ? 'paid' : 'pending'} label={viewModal.driverPaymentStatus === 'paid' ? (lang === 'km' ? 'ទូទាត់រួច' : 'Paid') : (lang === 'km' ? 'មិនទាន់ទូទាត់' : 'Unpaid')} /> },
+              { label: lang === 'km' ? 'ថ្ងៃបង្កើត' : 'Created', value: formatDateToDDMMYYYY(viewModal.createdAt) },
             ].map(({ label, value }) => (
               <div key={label}>
                 <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 4 }}>{label}</div>

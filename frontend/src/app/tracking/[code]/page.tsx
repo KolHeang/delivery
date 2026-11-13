@@ -207,7 +207,7 @@ export default function CustomerTrackingPage() {
         if (!driverMarkerRef.current) {
           driverMarkerRef.current = L.marker([driverLocation.lat, driverLocation.lng], { icon: driverIcon })
             .addTo(map)
-            .bindPopup(`<b>🛵 អ្នកដឹកជញ្ជូន:</b> ${trackingData?.driver?.name || 'Driver'}`);
+            .bindPopup(`<b>🛵 អ្នកដឹកជញ្ជូន:</b> ${trackingData?.driver?.name || 'Rider'}`);
         } else {
           driverMarkerRef.current.setLatLng([driverLocation.lat, driverLocation.lng]);
           driverMarkerRef.current.setIcon(driverIcon);
@@ -398,7 +398,7 @@ export default function CustomerTrackingPage() {
                     {trackingData?.eta?.minutes ? `ប្រហែល ${trackingData.eta.minutes} នាទីទៀត` : 'កំពុងរៀបចំចេញដំណើរ'}
                   </div>
                   <div style={{ fontSize: 12.5, opacity: 0.9, marginTop: 4 }}>
-                    {trackingData?.eta?.distanceKm ? `📍 ចម្ងាយសេសសល់: ${trackingData.eta.distanceKm} km` : 'អ្នកដឹកកំពុងរៀបចំកញ្ចប់ឥវ៉ាន់'}
+                    {trackingData?.eta?.distanceKm ? `📍 ចម្ងាយសេសសល់: ${trackingData.eta.distanceKm} km` : 'អ្នកដឹកជញ្ជូនកំពុងរៀបចំកញ្ចប់ឥវ៉ាន់'}
                   </div>
                 </div>
 
@@ -465,7 +465,7 @@ export default function CustomerTrackingPage() {
                     { step: 1, label: 'បានបង្កើត', sub: 'Created' },
                     { step: 2, label: 'បានទទួលពីហាង', sub: 'Picked Up' },
                     { step: 3, label: 'កំពុងដឹកជញ្ជូន', sub: 'Out for Delivery' },
-                    { step: 4, label: 'បានប្រគល់ជោគជ័យ', sub: 'Delivered' },
+                    { step: 4, label: 'បានដឹកជោគជ័យ', sub: 'Delivered' },
                   ].map((item) => {
                     const isDone = currentStep >= item.step;
                     const isCurrent = currentStep === item.step;
@@ -515,7 +515,7 @@ export default function CustomerTrackingPage() {
                   }}
                 >
                   <div style={{ fontSize: 12, fontWeight: 800, color: '#64748b', textTransform: 'uppercase', marginBottom: 14 }}>
-                    អ្នកដឹកជញ្ជូនរបស់អ្នក (Your Delivery Driver)
+                    អ្នកដឹកជញ្ជូនរបស់អ្នក (Your Rider)
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 16 }}>
                     <div
@@ -565,7 +565,7 @@ export default function CustomerTrackingPage() {
                       }}
                     >
                       <MdPhone size={18} />
-                      <span>ខលទាក់ទងអ្នកដឹក ({trackingData.driver.phone})</span>
+                      <span>ខលទាក់ទងអ្នកដឹកជញ្ជូន ({trackingData.driver.phone})</span>
                     </a>
                   )}
                 </div>

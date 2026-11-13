@@ -198,10 +198,10 @@ export default function BillingPage() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexWrap: 'wrap', gap: 16 }}>
           <div>
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 12px', borderRadius: 20, background: '#eff6ff', color: '#2563eb', fontSize: 12, fontWeight: 700, marginBottom: 8, border: '1px solid #dbeafe' }}>
-              <MdWorkspacePremium size={15} /> {tr('SaaS គម្រោង & វិក្កយបត្រ', 'SaaS Billing & Subscriptions')}
+              <MdWorkspacePremium size={15} /> {tr('SaaS គម្រោងប្រើប្រាស់ និងវិក្កយបត្រ', 'SaaS Subscription & Billing')}
             </div>
             <h1 style={{ fontSize: 26, fontWeight: 900, color: '#0f172a', margin: '0 0 6px', letterSpacing: '-0.4px' }}>
-              {tr('ការគ្រប់គ្រងគម្រោង & វិក្កយបត្រ', 'Plans & Billing Management')}
+              {tr('គម្រោងប្រើប្រាស់ និងវិក្កយបត្រ', 'Subscription & Billing')}
             </h1>
             <p style={{ fontSize: 13.5, color: '#64748b', margin: 0 }}>
               {tr('ពិនិត្យមើលស្ថានភាពនៃការជាវសេវា ដែនកំណត់ និងប្រវត្តិវិក្កយបត្ររបស់អ្នក', 'Review your subscription status, resource limits, and billing history')}
@@ -513,10 +513,10 @@ export default function BillingPage() {
                   </div>
                   <div>
                     <div style={{ color: '#64748b', fontSize: 12, fontWeight: 600, marginBottom: 2 }}>
-                      {tr('ចំនួនអ្នកបើកបរ', 'Drivers Limit')}
+                      {tr('ចំនួនអ្នកដឹកជញ្ជូន', 'Riders Limit')}
                     </div>
                     <div style={{ fontSize: 20, fontWeight: 900, color: '#0f172a' }}>
-                      {subInfo.limits?.maxDrivers || 25} <span style={{ fontSize: 12, fontWeight: 600, color: '#64748b' }}>{tr('នាក់', 'drivers')}</span>
+                      {subInfo.limits?.maxDrivers || 25} <span style={{ fontSize: 12, fontWeight: 600, color: '#64748b' }}>{tr('នាក់', 'riders')}</span>
                     </div>
                   </div>
                 </div>

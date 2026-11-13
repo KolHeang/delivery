@@ -177,7 +177,7 @@ export default function PaymentWithStaffPage() {
   };
 
   const handleDeletePayment = async (id: number) => {
-    if (!confirm(lang === 'km' ? 'តើអ្នកប្រាកដជាចង់បង្វិលការទូទាត់របស់អ្នកដឹកនេះថយក្រោយវិញទេ? វានឹងកំណត់ស្ថានភាពកញ្ចប់អីវ៉ាន់ទាំងអស់ទៅជាមិនទាន់ទូទាត់ឡើងវិញ។' : 'Are you sure you want to reverse this driver settlement? This will reset all associated orders back to unpaid.')) return;
+    if (!confirm(lang === 'km' ? 'តើអ្នកប្រាកដជាចង់បង្វិលការទូទាត់របស់អ្នកដឹកជញ្ជូននេះថយក្រោយវិញទេ? វានឹងកំណត់ស្ថានភាពកញ្ចប់អីវ៉ាន់ទាំងអស់ទៅជាមិនទាន់ទូទាត់ឡើងវិញ។' : 'Are you sure you want to reverse this rider settlement? This will reset all associated orders back to unpaid.')) return;
     try {
       await api.delete(`/payments/staff/${id}`);
       alert(lang === 'km' ? 'បានបង្វិលប្រតិបត្តិការដោយជោគជ័យ!' : 'Reversal completed successfully!');
@@ -339,7 +339,7 @@ export default function PaymentWithStaffPage() {
         currency: 'KHR',
         date: new Date().toISOString(),
         reference: `SETTLE-STAFF-${Date.now().toString().slice(-6)}`,
-        note: `Bulk settlement for ${activeSelectedIds.length} parcels (Driver fee: ${totalDriverFee.toLocaleString()} KHR)`,
+        note: `Bulk settlement for ${activeSelectedIds.length} parcels (Rider fee: ${totalDriverFee.toLocaleString()} KHR)`,
         parcelIds: allOrderIdsToSettle,
       });
       alert(lang === 'km' ? 'រក្សាទុកការទូទាត់បានជោគជ័យ!' : 'Payment settled successfully!');
@@ -433,7 +433,7 @@ export default function PaymentWithStaffPage() {
     <div className="app-layout">
       <Sidebar />
       <div className="main-content" style={{ background: '#f3f4f6', minHeight: '100vh', fontFamily: 'Kantumruy Pro, sans-serif' }}>
-        <Topbar title={lang === 'km' ? 'ទូទាត់ប្រាក់ជាមួយអ្នកដឹក' : 'Payment with Delivery'} subtitle={lang === 'km' ? 'ទូទាត់ប្រាក់ជាមួយអ្នកដឹកជញ្ជូន' : 'Settle payout with delivery drivers'} />
+        <Topbar title={lang === 'km' ? 'ទូទាត់ប្រាក់ជាមួយអ្នកដឹកជញ្ជូន' : 'Payment with Rider'} subtitle={lang === 'km' ? 'ទូទាត់ប្រាក់ជាមួយអ្នកដឹកជញ្ជូន' : 'Settle payout with riders'} />
         <div className="page-content" style={{ padding: 20 }}>
           <div className="card" style={{ padding: 20, marginBottom: 20 }}>
             <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
@@ -461,7 +461,7 @@ export default function PaymentWithStaffPage() {
       <div className="app-layout">
       <Sidebar />
       <div className="main-content" style={{ background: '#fff', minHeight: '100vh', fontFamily: 'Kantumruy Pro, sans-serif' }}>
-        <Topbar title={lang === 'km' ? 'ទូទាត់ប្រាក់ជាមួយអ្នកដឹក' : 'Payment with Delivery'} subtitle={lang === 'km' ? 'ទូទាត់ប្រាក់ជាមួយអ្នកដឹកជញ្ជូន' : 'Settle payout with delivery drivers'} />
+        <Topbar title={lang === 'km' ? 'ទូទាត់ប្រាក់ជាមួយអ្នកដឹកជញ្ជូន' : 'Payment with Rider'} subtitle={lang === 'km' ? 'ទូទាត់ប្រាក់ជាមួយអ្នកដឹកជញ្ជូន' : 'Settle payout with riders'} />
         
         {/* Tabs Bar */}
         <div style={{ display: 'flex', borderBottom: '1px solid #e5e7eb', padding: '0 24px', background: '#fff', gap: 20 }}>
@@ -511,16 +511,16 @@ export default function PaymentWithStaffPage() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 4, paddingLeft: 2 }}>
                   <span style={{ fontSize: 13, fontWeight: 700, color: '#475569' }}>
-                    {lang === 'km' ? 'បុគ្គលិកដឹកជញ្ជូន' : 'Delivery Driver'}
+                    {lang === 'km' ? 'អ្នកដឹកជញ្ជូន' : 'Rider'}
                   </span>
                 </div>
                 <SearchableSelect
                   value={driverId}
                   onChange={setDriverId}
                   style={{ minWidth: 230, height: 38, fontSize: 13 }}
-                  placeholder={lang === 'km' ? '-- ទាំងអស់ (All Drivers) --' : '-- All Drivers --'}
+                  placeholder={lang === 'km' ? '-- ទាំងអស់ (All Riders) --' : '-- All Riders --'}
                   options={[
-                    { value: '', label: lang === 'km' ? '-- ទាំងអស់ (All Drivers) --' : '-- All Drivers --' },
+                    { value: '', label: lang === 'km' ? '-- ទាំងអស់ (All Riders) --' : '-- All Riders --' },
                     ...drivers.map(d => ({
                       value: String(d.id),
                       label: (d.nameKh || d.name) + (d.phone ? ` (${d.phone})` : ''),
@@ -577,7 +577,7 @@ export default function PaymentWithStaffPage() {
                   className="btn btn-primary"
                   onClick={handleSavePayment} 
                   disabled={saving || (activeSelectedIds.length === 0 && unpaidFailedOrders.length === 0)}
-                  title={!driverId ? (lang === 'km' ? 'សូមជ្រើសរើសឈ្មោះអ្នកដឹកជាក់លាក់ដើម្បីទូទាត់' : 'Please select a specific driver to settle') : ''}
+                  title={!driverId ? (lang === 'km' ? 'សូមជ្រើសរើសឈ្មោះអ្នកដឹកជញ្ជូនជាក់លាក់ដើម្បីទូទាត់' : 'Please select a specific rider to settle') : ''}
                   style={{ 
                     height: 38, 
                     padding: '0 16px', 
@@ -600,7 +600,7 @@ export default function PaymentWithStaffPage() {
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
               <div style={{ width: 4, height: 20, background: '#16a34a', borderRadius: 2 }} />
               <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#16a34a' }}>
-                {lang === 'km' ? '១. ផ្នែកដឹកជោគជ័យ' : '1. Successful Deliveries'}
+                {lang === 'km' ? '១. ផ្នែកបានដឹកជោគជ័យ' : '1. Successful Deliveries'}
               </h3>
               <span style={{ background: '#dcfce7', color: '#16a34a', padding: '2px 10px', borderRadius: 12, fontSize: 12, fontWeight: 600 }}>
                 {deliveredVisibleOrders.length} {lang === 'km' ? 'កញ្ចប់' : 'parcels'}
@@ -625,13 +625,13 @@ export default function PaymentWithStaffPage() {
                       </th>
                       <th style={{ position: 'sticky', top: 0, zIndex: 10, padding: '12px 10px', textAlign: 'left', background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'លេខកូដ' : 'Tracking Code'}</th>
                       <th style={{ position: 'sticky', top: 0, zIndex: 10, padding: '12px 10px', textAlign: 'left', background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'កាលបរិច្ឆេទ' : 'Date'}</th>
-                      <th style={{ position: 'sticky', top: 0, zIndex: 10, padding: '12px 10px', textAlign: 'left', background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'អ្នកដឹក' : 'Driver'}</th>
+                      <th style={{ position: 'sticky', top: 0, zIndex: 10, padding: '12px 10px', textAlign: 'left', background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'អ្នកដឹកជញ្ជូន' : 'Rider'}</th>
                       <th style={{ position: 'sticky', top: 0, zIndex: 10, padding: '12px 10px', textAlign: 'left', background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'ឈ្មោះហាង' : 'Shop Name'}</th>
                       <th style={{ position: 'sticky', top: 0, zIndex: 10, padding: '12px 10px', textAlign: 'left', background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'លេខអ្នកទទួល' : 'Receiver Phone'}</th>
                       <th style={{ position: 'sticky', top: 0, zIndex: 10, padding: '12px 10px', textAlign: 'left', background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'អាសយដ្ឋាន' : 'Address'}</th>
                       <th style={{ position: 'sticky', top: 0, zIndex: 10, padding: '12px 10px', textAlign: 'right', background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'ប្រាក់បានបញ្ចូល' : 'Collected COD'}</th>
                       <th style={{ position: 'sticky', top: 0, zIndex: 10, padding: '12px 10px', textAlign: 'right', background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'ប្រាក់កម្រៃដឹក' : 'Delivery Fee'}</th>
-                      <th style={{ position: 'sticky', top: 0, zIndex: 10, padding: '12px 10px', textAlign: 'right', background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'កម្រៃអ្នកដឹក' : 'Driver Fee'}</th>
+                      <th style={{ position: 'sticky', top: 0, zIndex: 10, padding: '12px 10px', textAlign: 'right', background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'កម្រៃអ្នកដឹកជញ្ជូន' : 'Rider Fee'}</th>
                       <th style={{ position: 'sticky', top: 0, zIndex: 10, padding: '12px 10px', textAlign: 'left', background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none', minWidth: 140 }}>{lang === 'km' ? 'ចំណាំ / ផ្សេងៗ' : 'Notes / Remarks'}</th>
                       <th style={{ position: 'sticky', top: 0, zIndex: 10, padding: '12px 10px', textAlign: 'center', background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'ស្ថានភាព' : 'Status'}</th>
                     </tr>
@@ -747,7 +747,7 @@ export default function PaymentWithStaffPage() {
                             )}
                           </td>
                           <td style={{ padding: '12px 10px', textAlign: 'center', border: 'none' }}>
-                            <span style={{ background: '#dcfce7', color: '#16a34a', padding: '4px 10px', borderRadius: 6, fontSize: 11, fontWeight: 700 }}>{lang === 'km' ? 'ជោគជ័យ' : 'Delivered'}</span>
+                            <span style={{ background: '#dcfce7', color: '#16a34a', padding: '4px 10px', borderRadius: 6, fontSize: 11, fontWeight: 700 }}>{lang === 'km' ? 'បានដឹកជោគជ័យ' : 'Delivered'}</span>
                           </td>
                         </tr>
                       );
@@ -835,7 +835,7 @@ export default function PaymentWithStaffPage() {
                       </span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13 }}>
-                      <span style={{ fontWeight: 600, color: '#15803d' }}>{lang === 'km' ? 'កម្រៃអ្នកដឹក៖' : 'Driver Commission:'}</span>
+                      <span style={{ fontWeight: 600, color: '#15803d' }}>{lang === 'km' ? 'កម្រៃអ្នកដឹកជញ្ជូន៖' : 'Rider Commission:'}</span>
                       <span style={{ background: '#dcfce7', color: '#15803d', padding: '4px 12px', borderRadius: 6, fontWeight: 800, fontSize: 13 }}>
                         {driverEarnings.toLocaleString()} ៛
                       </span>
@@ -845,7 +845,7 @@ export default function PaymentWithStaffPage() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: '#f0fdf4', border: '1px solid #bbf7d0', padding: '6px 14px', borderRadius: 8 }}>
                     <div style={{ textAlign: 'right' }}>
                       <div style={{ fontSize: 12, fontWeight: 700, color: '#15803d' }}>
-                        {lang === 'km' ? 'ប្រាក់អ្នកដឹកត្រូវប្រគល់ជូនក្រុមហ៊ុន' : 'Net COD Return'}
+                        {lang === 'km' ? 'ប្រាក់អ្នកដឹកជញ្ជូនត្រូវប្រគល់ជូនក្រុមហ៊ុន' : 'Net COD Return'}
                       </div>
                       {deductionText && (
                         <div style={{ fontSize: 11, color: '#059669', fontWeight: 600 }}>
@@ -904,7 +904,7 @@ export default function PaymentWithStaffPage() {
                           <th style={{ position: 'sticky', top: 0, zIndex: 10, padding: '12px 10px', textAlign: 'center', width: 44, background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'ល.រ' : 'No.'}</th>
                           <th style={{ position: 'sticky', top: 0, zIndex: 10, padding: '12px 10px', textAlign: 'left', background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'លេខកូដ' : 'Tracking Code'}</th>
                           <th style={{ position: 'sticky', top: 0, zIndex: 10, padding: '12px 10px', textAlign: 'left', background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'កាលបរិច្ឆេទ' : 'Date'}</th>
-                          <th style={{ position: 'sticky', top: 0, zIndex: 10, padding: '12px 10px', textAlign: 'left', background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'អ្នកដឹក' : 'Driver'}</th>
+                          <th style={{ position: 'sticky', top: 0, zIndex: 10, padding: '12px 10px', textAlign: 'left', background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'អ្នកដឹកជញ្ជូន' : 'Rider'}</th>
                           <th style={{ position: 'sticky', top: 0, zIndex: 10, padding: '12px 10px', textAlign: 'left', background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'ឈ្មោះហាង' : 'Shop Name'}</th>
                           <th style={{ position: 'sticky', top: 0, zIndex: 10, padding: '12px 10px', textAlign: 'left', background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'លេខអ្នកទទួល' : 'Receiver Phone'}</th>
                           <th style={{ position: 'sticky', top: 0, zIndex: 10, padding: '12px 10px', textAlign: 'left', background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'អាសយដ្ឋាន' : 'Address'}</th>
@@ -922,25 +922,37 @@ export default function PaymentWithStaffPage() {
                             const latestNote = getLatestParcelNote(o);
                             let statusBadge = (
                               <span style={{ background: '#e0e7ff', color: '#4338ca', padding: '4px 10px', borderRadius: 6, fontSize: 11, fontWeight: 700 }}>
-                                {lang === 'km' ? 'កំពុងដឹក' : 'In Transit'}
+                                {lang === 'km' ? 'កំពុងដឹកជញ្ជូន' : 'In Transit'}
                               </span>
                             );
                             if (o.status === 'failed') {
                               statusBadge = (
                                 <span style={{ background: '#fee2e2', color: '#ef4444', padding: '4px 10px', borderRadius: 6, fontSize: 11, fontWeight: 700 }}>
-                                  {lang === 'km' ? 'ដឹកបន្ត (មិនជោគជ័យ)' : 'Failed (Redeliver)'}
+                                  {lang === 'km' ? 'បរាជ័យ' : 'Failed'}
                                 </span>
                               );
                             } else if (o.status === 'picked-up') {
                               statusBadge = (
                                 <span style={{ background: '#f3e8ff', color: '#7e22ce', padding: '4px 10px', borderRadius: 6, fontSize: 11, fontWeight: 700 }}>
-                                  {lang === 'km' ? 'បានយកកញ្ចប់' : 'Picked Up'}
+                                  {lang === 'km' ? 'បានប្រមូល' : 'Picked Up'}
+                                </span>
+                              );
+                            } else if (o.status === 'in-warehouse') {
+                              statusBadge = (
+                                <span style={{ background: '#e0f2fe', color: '#0369a1', padding: '4px 10px', borderRadius: 6, fontSize: 11, fontWeight: 700 }}>
+                                  {lang === 'km' ? 'ក្នុងឃ្លាំង' : 'In Warehouse'}
+                                </span>
+                              );
+                            } else if (o.status === 'assigned') {
+                              statusBadge = (
+                                <span style={{ background: '#fef3c7', color: '#b45309', padding: '4px 10px', borderRadius: 6, fontSize: 11, fontWeight: 700 }}>
+                                  {lang === 'km' ? 'បានចាត់តាំង' : 'Assigned'}
                                 </span>
                               );
                             } else if (o.status === 'pending') {
                               statusBadge = (
                                 <span style={{ background: '#f1f5f9', color: '#475569', padding: '4px 10px', borderRadius: 6, fontSize: 11, fontWeight: 700 }}>
-                                  {lang === 'km' ? 'រង់ចាំដឹក' : 'Pending'}
+                                  {lang === 'km' ? 'កំពុងរង់ចាំ' : 'Pending'}
                                 </span>
                               );
                             }
@@ -1011,7 +1023,7 @@ export default function PaymentWithStaffPage() {
                           <th style={{ position: 'sticky', top: 0, zIndex: 10, padding: '12px 10px', textAlign: 'center', width: 44, background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'ល.រ' : 'No.'}</th>
                           <th style={{ position: 'sticky', top: 0, zIndex: 10, padding: '12px 10px', textAlign: 'left', background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'លេខកូដ' : 'Tracking Code'}</th>
                           <th style={{ position: 'sticky', top: 0, zIndex: 10, padding: '12px 10px', textAlign: 'left', background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'កាលបរិច្ឆេទ' : 'Date'}</th>
-                          <th style={{ position: 'sticky', top: 0, zIndex: 10, padding: '12px 10px', textAlign: 'left', background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'អ្នកដឹក' : 'Driver'}</th>
+                          <th style={{ position: 'sticky', top: 0, zIndex: 10, padding: '12px 10px', textAlign: 'left', background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'អ្នកដឹកជញ្ជូន' : 'Rider'}</th>
                           <th style={{ position: 'sticky', top: 0, zIndex: 10, padding: '12px 10px', textAlign: 'left', background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'ឈ្មោះហាង' : 'Shop Name'}</th>
                           <th style={{ position: 'sticky', top: 0, zIndex: 10, padding: '12px 10px', textAlign: 'left', background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'លេខអ្នកទទួល' : 'Receiver Phone'}</th>
                           <th style={{ position: 'sticky', top: 0, zIndex: 10, padding: '12px 10px', textAlign: 'left', background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'អាសយដ្ឋាន' : 'Address'}</th>
@@ -1049,7 +1061,7 @@ export default function PaymentWithStaffPage() {
                                 </td>
                                 <td style={{ padding: '12px 10px', textAlign: 'center', border: 'none' }}>
                                   <span style={{ background: '#fee2e2', color: '#ef4444', padding: '4px 10px', borderRadius: 6, fontSize: 11, fontWeight: 700 }}>
-                                    {lang === 'km' ? 'បង្វិលត្រឡប់' : 'Returned'}
+                                    {lang === 'km' ? 'បានត្រឡប់' : 'Returned'}
                                   </span>
                                 </td>
                               </tr>
@@ -1094,7 +1106,7 @@ export default function PaymentWithStaffPage() {
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                   <span style={{ fontSize: 13, fontWeight: 700, color: '#64748b', paddingLeft: 2 }}>
-                    {lang === 'km' ? 'អ្នកដឹកជញ្ជូន' : 'Delivery Driver'}
+                    {lang === 'km' ? 'អ្នកដឹកជញ្ជូន' : 'Rider'}
                   </span>
                   <SearchableSelect
                     value={historyDriverId}
@@ -1156,7 +1168,7 @@ export default function PaymentWithStaffPage() {
                   <thead>
                     <tr style={{ background: 'var(--sidebar-bg, #1565D8)' }}>
                       <th style={{ padding: '12px 10px', background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none', textAlign: 'center', width: 50 }}>{lang === 'km' ? 'ល.រ' : 'No.'}</th>
-                      <th style={{ padding: '12px 10px', background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none', textAlign: 'left' }}>{lang === 'km' ? 'អ្នកដឹកជញ្ជូន' : 'Delivery Driver'}</th>
+                      <th style={{ padding: '12px 10px', background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none', textAlign: 'left' }}>{lang === 'km' ? 'អ្នកដឹកជញ្ជូន' : 'Rider'}</th>
                       <th style={{ padding: '12px 10px', background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none', textAlign: 'left' }}>{lang === 'km' ? 'លេខយោង' : 'Reference'}</th>
                       <th style={{ padding: '12px 10px', background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none', textAlign: 'left' }}>{lang === 'km' ? 'កាលបរិច្ឆេទ' : 'Date'}</th>
                       <th style={{ padding: '12px 10px', background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none', textAlign: 'right' }}>{lang === 'km' ? 'ទឹកប្រាក់' : 'Amount'}</th>
@@ -1334,16 +1346,16 @@ export default function PaymentWithStaffPage() {
               {lang === 'km' ? 'របាយការណ៍ទូទាត់ប្រចាំថ្ងៃ' : 'Daily Settlement Report'}
             </h2>
             <div style={{ marginTop: 3, fontSize: 11.5, fontWeight: 700, color: 'var(--sidebar-bg, #1565D8)' }}>
-              {lang === 'km' ? 'សម្រាប់អ្នកដឹកជញ្ជូន' : 'For Delivery Driver'}
+              {lang === 'km' ? 'សម្រាប់អ្នកដឹកជញ្ជូន' : 'For Rider'}
             </div>
           </div>
 
           {/* Right side: Driver & Date Info */}
           <div style={{ fontSize: 10.5, textAlign: 'right', lineHeight: 1.55, flex: 1 }}>
             <div style={{ whiteSpace: 'nowrap' }}>
-              <strong>{lang === 'km' ? 'ឈ្មោះអ្នកដឹក៖' : 'Driver:'}</strong>{' '}
+              <strong>{lang === 'km' ? 'ឈ្មោះអ្នកដឹកជញ្ជូន៖' : 'Rider:'}</strong>{' '}
               <span style={{ fontWeight: 700 }}>
-                {selectedDriver ? `${selectedDriver.name}${selectedDriver.nameKh ? ` (${selectedDriver.nameKh})` : ''}` : (lang === 'km' ? 'ទាំងអស់' : 'All Drivers')}
+                {selectedDriver ? `${selectedDriver.name}${selectedDriver.nameKh ? ` (${selectedDriver.nameKh})` : ''}` : (lang === 'km' ? 'ទាំងអស់' : 'All Riders')}
               </span>
             </div>
             {selectedDriver?.phone && (
@@ -1364,7 +1376,7 @@ export default function PaymentWithStaffPage() {
               <th rowSpan={2} style={{ backgroundColor: 'var(--sidebar-bg, #1565D8)', padding: '5px 4px', textAlign: 'center', border: '1px solid rgba(255, 255, 255, 0.35)', fontWeight: 700, color: '#ffffff' }}>{lang === 'km' ? 'អាសយដ្ឋាន' : 'Address'}</th>
               <th colSpan={2} style={{ backgroundColor: 'var(--sidebar-bg, #1565D8)', padding: '4px 4px', textAlign: 'center', border: '1px solid rgba(255, 255, 255, 0.35)', fontWeight: 700, color: '#ffffff', whiteSpace: 'nowrap', lineHeight: 1.25 }}>{lang === 'km' ? <>ទឹកប្រាក់ COD<br />(ដុល្លារ / ខ្មែរ)</> : <>COD Amount<br />(USD / KHR)</>}</th>
               <th rowSpan={2} style={{ backgroundColor: 'var(--sidebar-bg, #1565D8)', padding: '5px 4px', textAlign: 'center', border: '1px solid rgba(255, 255, 255, 0.35)', fontWeight: 700, color: '#ffffff', whiteSpace: 'nowrap' }}>{lang === 'km' ? 'សេវាដឹក' : 'Fee'}</th>
-              <th rowSpan={2} style={{ backgroundColor: 'var(--sidebar-bg, #1565D8)', padding: '5px 4px', textAlign: 'center', border: '1px solid rgba(255, 255, 255, 0.35)', fontWeight: 700, color: '#ffffff', whiteSpace: 'nowrap' }}>{lang === 'km' ? 'កម្រៃអ្នកដឹក' : 'Driver Fee'}</th>
+              <th rowSpan={2} style={{ backgroundColor: 'var(--sidebar-bg, #1565D8)', padding: '5px 4px', textAlign: 'center', border: '1px solid rgba(255, 255, 255, 0.35)', fontWeight: 700, color: '#ffffff', whiteSpace: 'nowrap' }}>{lang === 'km' ? 'កម្រៃអ្នកដឹកជញ្ជូន' : 'Rider Fee'}</th>
               <th rowSpan={2} style={{ backgroundColor: 'var(--sidebar-bg, #1565D8)', padding: '5px 4px', textAlign: 'center', border: '1px solid rgba(255, 255, 255, 0.35)', fontWeight: 700, color: '#ffffff', whiteSpace: 'nowrap' }}>{lang === 'km' ? 'ស្ថានភាព' : 'Status'}</th>
               <th rowSpan={2} style={{ width: 64, backgroundColor: 'var(--sidebar-bg, #1565D8)', padding: '5px 4px', textAlign: 'center', border: '1px solid rgba(255, 255, 255, 0.35)', fontWeight: 700, color: '#ffffff', whiteSpace: 'nowrap' }}>{lang === 'km' ? 'ផ្សេងៗ' : 'Remark'}</th>
             </tr>
@@ -1400,7 +1412,7 @@ export default function PaymentWithStaffPage() {
                       <td style={{ textAlign: 'right', padding: '4px 4px', border: '1px solid #64748b', whiteSpace: 'nowrap' }}>{!isUSD ? `${codVal.toLocaleString()} ៛` : '0 ៛'}</td>
                       <td style={{ textAlign: 'right', padding: '4px 4px', border: '1px solid #64748b', whiteSpace: 'nowrap' }}>${parseFloat(o.deliveryFee || 0).toFixed(2)}</td>
                       <td style={{ textAlign: 'right', padding: '4px 4px', border: '1px solid #64748b', fontWeight: 700, color: '#15803d', whiteSpace: 'nowrap' }}>{driverFeeVal.toLocaleString()} ៛</td>
-                      <td style={{ padding: '4px 4px', border: '1px solid #64748b', textAlign: 'center', color: '#15803d', fontWeight: 700, whiteSpace: 'nowrap' }}>{lang === 'km' ? 'ជោគជ័យ' : 'Delivered'}</td>
+                      <td style={{ padding: '4px 4px', border: '1px solid #64748b', textAlign: 'center', color: '#15803d', fontWeight: 700, whiteSpace: 'nowrap' }}>{lang === 'km' ? 'បានដឹកជោគជ័យ' : 'Delivered'}</td>
                       <td style={{ padding: '4px 4px', border: '1px solid #64748b', textAlign: 'left', fontSize: 9, wordBreak: 'break-word' }}>{cleanNote(o.note)}</td>
                     </tr>
                   );
@@ -1436,11 +1448,17 @@ export default function PaymentWithStaffPage() {
 
                 let statusLabel = '';
                 if (o.status === 'failed') {
-                  statusLabel = lang === 'km' ? 'មិនជោគជ័យ' : 'Failed';
+                  statusLabel = lang === 'km' ? 'បរាជ័យ' : 'Failed';
                 } else if (o.status === 'in-transit') {
-                  statusLabel = lang === 'km' ? 'កំពុងដឹក' : 'In Transit';
+                  statusLabel = lang === 'km' ? 'កំពុងដឹកជញ្ជូន' : 'In Transit';
                 } else if (o.status === 'picked-up') {
-                  statusLabel = lang === 'km' ? 'បានយកកញ្ចប់' : 'Picked Up';
+                  statusLabel = lang === 'km' ? 'បានប្រមូល' : 'Picked Up';
+                } else if (o.status === 'in-warehouse') {
+                  statusLabel = lang === 'km' ? 'ក្នុងឃ្លាំង' : 'In Warehouse';
+                } else if (o.status === 'assigned') {
+                  statusLabel = lang === 'km' ? 'បានចាត់តាំង' : 'Assigned';
+                } else if (o.status === 'pending') {
+                  statusLabel = lang === 'km' ? 'កំពុងរង់ចាំ' : 'Pending';
                 } else {
                   statusLabel = lang === 'km' ? 'ដឹកបន្ត' : 'Carried Forward';
                 }
@@ -1495,7 +1513,7 @@ export default function PaymentWithStaffPage() {
                     <td style={{ textAlign: 'right', padding: '4px 4px', border: '1px solid #64748b', whiteSpace: 'nowrap' }}>{!isUSD ? `${codVal.toLocaleString()} ៛` : '0 ៛'}</td>
                     <td style={{ textAlign: 'right', padding: '4px 4px', border: '1px solid #64748b', whiteSpace: 'nowrap' }}>$0.00</td>
                     <td style={{ textAlign: 'right', padding: '4px 4px', border: '1px solid #64748b', color: '#64748b', whiteSpace: 'nowrap' }}>0 ៛</td>
-                    <td style={{ padding: '4px 4px', border: '1px solid #64748b', textAlign: 'center', color: '#dc2626', fontWeight: 700, whiteSpace: 'nowrap' }}>{lang === 'km' ? 'បង្វិលត្រឡប់' : 'Returned'}</td>
+                    <td style={{ padding: '4px 4px', border: '1px solid #64748b', textAlign: 'center', color: '#dc2626', fontWeight: 700, whiteSpace: 'nowrap' }}>{lang === 'km' ? 'បានត្រឡប់' : 'Returned'}</td>
                     <td style={{ padding: '4px 4px', border: '1px solid #64748b', textAlign: 'left', color: '#475569', fontSize: 9, wordBreak: 'break-word' }}>{latestNote}</td>
                   </tr>
                 );
@@ -1513,7 +1531,7 @@ export default function PaymentWithStaffPage() {
                 <td style={{ padding: '6px 12px', border: '1px solid #475569', fontWeight: 700, textAlign: 'right', whiteSpace: 'nowrap' }}>${printCodUsd.toFixed(2)} / {printCodKhr.toLocaleString()} ៛</td>
               </tr>
               <tr>
-                <td style={{ padding: '6px 12px', border: '1px solid #475569', textAlign: 'right', backgroundColor: '#f8fafc', fontWeight: 600, color: '#15803d', whiteSpace: 'nowrap' }}>{lang === 'km' ? 'សរុបកម្រៃអ្នកដឹកទទួលបាន' : 'Total Driver Commission'}</td>
+                <td style={{ padding: '6px 12px', border: '1px solid #475569', textAlign: 'right', backgroundColor: '#f8fafc', fontWeight: 600, color: '#15803d', whiteSpace: 'nowrap' }}>{lang === 'km' ? 'សរុបកម្រៃអ្នកដឹកជញ្ជូនទទួលបាន' : 'Total Rider Commission'}</td>
                 <td style={{ padding: '6px 12px', border: '1px solid #475569', fontWeight: 700, color: '#15803d', textAlign: 'right', whiteSpace: 'nowrap' }}>
                   {printTotalDriverFee.toLocaleString()} ៛
                 </td>
@@ -1525,7 +1543,7 @@ export default function PaymentWithStaffPage() {
                   {printNetReturnUsd > 0 && printNetReturnKhr > 0 ? ' / ' : ''}
                   {printNetReturnKhr > 0 ? `${printNetReturnKhr.toLocaleString()} ៛` : ''}
                   {printNetReturnUsd === 0 && printNetReturnKhr === 0 ? '$0.00 / 0 ៛' : ''}
-                  {printNetReturnKhr < 0 ? `(${lang === 'km' ? 'ក្រុមហ៊ុនបើកជូន' : 'To driver'}: ${Math.abs(printNetReturnKhr).toLocaleString()} ៛)` : ''}
+                  {printNetReturnKhr < 0 ? `(${lang === 'km' ? 'ក្រុមហ៊ុនបើកជូន' : 'To rider'}: ${Math.abs(printNetReturnKhr).toLocaleString()} ៛)` : ''}
                 </td>
               </tr>
             </tbody>
@@ -1544,7 +1562,7 @@ export default function PaymentWithStaffPage() {
             <div style={{ fontSize: 11, color: '#475569' }}>..........................................</div>
           </div>
           <div style={{ textAlign: 'center', minWidth: 180 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, marginBottom: 42, color: '#0f172a' }}>{lang === 'km' ? 'ហត្ថលេខាអ្នកដឹកជញ្ជូន' : 'Driver Signature'}</div>
+            <div style={{ fontSize: 11, fontWeight: 700, marginBottom: 42, color: '#0f172a' }}>{lang === 'km' ? 'ហត្ថលេខាអ្នកដឹកជញ្ជូន' : 'Rider Signature'}</div>
             <div style={{ fontSize: 11, color: '#475569' }}>..........................................</div>
           </div>
         </div>

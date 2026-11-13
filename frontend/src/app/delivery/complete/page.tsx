@@ -31,8 +31,8 @@ const getLocalDateString = (d: Date = new Date()) => {
 };
 
 const FAILURE_REASONS = [
-  { value: 'អ្នកដឹកខូច App / ទូរស័ព្ទអស់ថ្ម', labelKm: 'អ្នកដឹកខូច App / ទូរស័ព្ទអស់ថ្ម', labelEn: 'Driver App crashed / phone dead' },
-  { value: 'អ្នកដឹកខូចម៉ូតូ / មានបញ្ហាបច្ចេកទេស', labelKm: 'អ្នកដឹកខូចម៉ូតូ / មានបញ្ហាបច្ចេកទេស', labelEn: 'Driver vehicle issue / breakdown' },
+  { value: 'អ្នកដឹកខូច App / ទូរស័ព្ទអស់ថ្ម', labelKm: 'អ្នកដឹកជញ្ជូនខូច App / ទូរស័ព្ទអស់ថ្ម', labelEn: 'Rider App crashed / phone dead' },
+  { value: 'អ្នកដឹកខូចម៉ូតូ / មានបញ្ហាបច្ចេកទេស', labelKm: 'អ្នកដឹកជញ្ជូនខូចម៉ូតូ / មានបញ្ហាបច្ចេកទេស', labelEn: 'Rider vehicle issue / breakdown' },
   { value: 'អតិថិជនមិនលើកទូរស័ព្ទ', labelKm: 'អតិថិជនមិនលើកទូរស័ព្ទ', labelEn: 'Customer did not answer phone' },
   { value: 'អតិថិជនសុំពន្យារពេលដឹក', labelKm: 'អតិថិជនសុំពន្យារពេលដឹក', labelEn: 'Customer requested reschedule' },
   { value: 'ទីតាំងមិនត្រឹមត្រូវ / ហៅមិនចូល', labelKm: 'ទីតាំងមិនត្រឹមត្រូវ / ហៅមិនចូល', labelEn: 'Wrong address / unreachable' },
@@ -460,12 +460,12 @@ export default function CompletePackagePage() {
                   }}
                 >
                   <option value="">{lang === 'km' ? '— ទាំងអស់ —' : '— All Statuses —'}</option>
-                  <option value="pending">{lang === 'km' ? 'រង់ចាំ' : 'Pending'}</option>
+                  <option value="pending">{lang === 'km' ? 'កំពុងរង់ចាំ' : 'Pending'}</option>
                   <option value="in-warehouse">{lang === 'km' ? 'ក្នុងឃ្លាំង' : 'In Warehouse'}</option>
-                  <option value="assigned">{lang === 'km' ? 'បានចាត់ចែង' : 'Assigned'}</option>
+                  <option value="assigned">{lang === 'km' ? 'បានចាត់តាំង' : 'Assigned'}</option>
                   <option value="picked-up">{lang === 'km' ? 'បានប្រមូល' : 'Picked Up'}</option>
-                  <option value="in-transit">{lang === 'km' ? 'កំពុងដឹក' : 'In Transit'}</option>
-                  <option value="failed">{lang === 'km' ? 'មិនបានសម្រេច' : 'Failed'}</option>
+                  <option value="in-transit">{lang === 'km' ? 'កំពុងដឹកជញ្ជូន' : 'In Transit'}</option>
+                  <option value="failed">{lang === 'km' ? 'បរាជ័យ' : 'Failed'}</option>
                 </select>
               </div>
 
@@ -517,15 +517,15 @@ export default function CompletePackagePage() {
               {/* Driver Filter */}
               <div style={{ flex: '1 1 200px', minWidth: '180px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
                 <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary, #475569)' }}>
-                  {lang === 'km' ? 'អ្នកដឹក៖' : 'Driver:'}
+                  {lang === 'km' ? 'អ្នកដឹកជញ្ជូន៖' : 'Rider:'}
                 </label>
                 <SearchableSelect
                   value={filterDriver}
                   onChange={setFilterDriver}
                   style={{ height: '38px', borderRadius: '8px' }}
-                  placeholder={lang === 'km' ? '— ជ្រើសរើសអ្នកដឹក —' : '— Select Driver —'}
+                  placeholder={lang === 'km' ? '— ជ្រើសរើសអ្នកដឹកជញ្ជូន —' : '— Select Rider —'}
                   options={[
-                    { value: '', label: lang === 'km' ? '— ជ្រើសរើសអ្នកដឹក —' : '— Select Driver —' },
+                    { value: '', label: lang === 'km' ? '— ជ្រើសរើសអ្នកដឹកជញ្ជូន —' : '— Select Rider —' },
                     ...drivers.map(d => ({
                       value: String(d.id),
                       label: (lang === 'km' && d.nameKh ? d.nameKh : d.name) + (d.phone ? ` (${d.phone})` : ''),
@@ -639,7 +639,7 @@ export default function CompletePackagePage() {
                       title={lang === 'km' ? 'កំណត់បានដឹកជោគជ័យទាំងអស់' : 'Set all delivered'}
                     >
                       <MdCheckCircle size={14} />
-                      {lang === 'km' ? 'ជោគជ័យ' : 'Delivered'}
+                      {lang === 'km' ? 'បានដឹកជោគជ័យ' : 'Delivered'}
                     </button>
                     <button
                       type="button"
@@ -657,10 +657,10 @@ export default function CompletePackagePage() {
                         alignItems: 'center',
                         gap: 4
                       }}
-                      title={lang === 'km' ? 'កំណត់មិនបានសម្រេចទាំងអស់' : 'Set all failed'}
+                      title={lang === 'km' ? 'កំណត់បរាជ័យទាំងអស់' : 'Set all failed'}
                     >
                       <MdCancel size={14} />
-                      {lang === 'km' ? 'មិនជោគជ័យ' : 'Failed'}
+                      {lang === 'km' ? 'បរាជ័យ' : 'Failed'}
                     </button>
                     <button
                       type="button"
@@ -678,10 +678,10 @@ export default function CompletePackagePage() {
                         alignItems: 'center',
                         gap: 4
                       }}
-                      title={lang === 'km' ? 'កំណត់បង្វិលត្រឡប់ទាំងអស់' : 'Set all returned'}
+                      title={lang === 'km' ? 'កំណត់បានត្រឡប់ទាំងអស់' : 'Set all returned'}
                     >
                       <MdAssignmentReturn size={14} />
-                      {lang === 'km' ? 'បង្វិលត្រឡប់' : 'Returned'}
+                      {lang === 'km' ? 'បានត្រឡប់' : 'Returned'}
                     </button>
                   </div>
                 )}
@@ -979,17 +979,17 @@ export default function CompletePackagePage() {
                                 outline: 'none'
                               }}
                             >
-                              <option value="assigned">{lang === 'km' ? 'បានចាត់ចែង' : 'Assigned'}</option>
-                              <option value="in-transit">{lang === 'km' ? 'កំពុងដឹក' : 'In Transit'}</option>
+                              <option value="assigned">{lang === 'km' ? 'បានចាត់តាំង' : 'Assigned'}</option>
+                              <option value="in-transit">{lang === 'km' ? 'កំពុងដឹកជញ្ជូន' : 'In Transit'}</option>
                               <option value="delivered">{lang === 'km' ? 'បានដឹកជោគជ័យ' : 'Delivered'}</option>
-                              <option value="failed">{lang === 'km' ? 'ដឹកមិនជោគជ័យ' : 'Failed / Issue'}</option>
-                              <option value="returned">{lang === 'km' ? 'បង្វិលត្រឡប់' : 'Return to Shop'}</option>
-                              <option value="cancelled">{lang === 'km' ? 'បោះបង់ការដឹក' : 'Cancelled'}</option>
+                              <option value="failed">{lang === 'km' ? 'បរាជ័យ' : 'Failed'}</option>
+                              <option value="returned">{lang === 'km' ? 'បានត្រឡប់' : 'Returned'}</option>
+                              <option value="cancelled">{lang === 'km' ? 'បានលុបចោល' : 'Cancelled'}</option>
                               {currentStatus === 'in-warehouse' && (
                                 <option value="in-warehouse">{lang === 'km' ? 'ក្នុងឃ្លាំង' : 'In Warehouse'}</option>
                               )}
                               {currentStatus === 'pending' && (
-                                <option value="pending">{lang === 'km' ? 'រង់ចាំ' : 'Pending'}</option>
+                                <option value="pending">{lang === 'km' ? 'កំពុងរង់ចាំ' : 'Pending'}</option>
                               )}
                               {currentStatus === 'picked-up' && (
                                 <option value="picked-up">{lang === 'km' ? 'បានប្រមូល' : 'Picked Up'}</option>

@@ -193,7 +193,7 @@ export default function EditPlanPage() {
       key: 'delivery',
       icon: MdLocalShipping,
       label: tr('គ្រប់គ្រងការដឹកជញ្ជូន', 'Delivery Management'),
-      desc: tr('កត់ត្រាទំនិញ បញ្ជីដឹក វិក្កយបត្រ បាកូដ និងចែកអ្នកដឹក', 'Parcels, delivery list, barcode labels and driver dispatch'),
+      desc: tr('កត់ត្រាទំនិញ បញ្ជីដឹក វិក្កយបត្រ បាកូដ និងចែកអ្នកដឹកជញ្ជូន', 'Parcels, delivery list, barcode labels and rider dispatch'),
     },
     {
       key: 'shops',
@@ -205,13 +205,13 @@ export default function EditPlanPage() {
       key: 'staff',
       icon: MdPeople,
       label: tr('គ្រប់គ្រងបុគ្គលិក & យានយន្ត', 'Staff & Fleet Management'),
-      desc: tr('បញ្ជីបុគ្គលិក អ្នកដឹកជញ្ជូន និងបញ្ជីយានយន្ត', 'Staff accounts, drivers directory, and vehicle fleet'),
+      desc: tr('បញ្ជីបុគ្គលិក អ្នកដឹកជញ្ជូន និងបញ្ជីយានយន្ត', 'Staff accounts, riders directory, and vehicle fleet'),
     },
     {
       key: 'payment',
       icon: MdAccountBalanceWallet,
       label: tr('ការប្រមូល និងទូទាត់ប្រាក់', 'Collections & Settlements'),
-      desc: tr('ទូទាត់ប្រាក់ជាមួយអ្នកដឹក និងទូទាត់ប្រាក់ជូនហាង', 'Cash settlements with delivery drivers and merchant shops'),
+      desc: tr('ទូទាត់ប្រាក់ជាមួយអ្នកដឹកជញ្ជូន និងទូទាត់ប្រាក់ជូនហាង', 'Cash settlements with riders and merchant shops'),
     },
     {
       key: 'accounting',
@@ -516,7 +516,7 @@ export default function EditPlanPage() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: '#334155' }}>
                     <MdLocalShipping size={17} color="#059669" />
-                    <span>{tr('ចំនួនអ្នកដឹកជញ្ជូន', 'Delivery Drivers')}</span>
+                    <span>{tr('ចំនួនអ្នកដឹកជញ្ជូន', 'Delivery Riders')}</span>
                   </div>
                   {Number(planForm.maxDrivers) === 0 && (
                     <span style={{ fontSize: 11, fontWeight: 700, color: '#10b981' }}>∞ Unlimited</span>
@@ -532,7 +532,7 @@ export default function EditPlanPage() {
                     style={{ height: 38, borderRadius: 8, paddingRight: 55, fontWeight: 700 }}
                   />
                   <span style={{ position: 'absolute', right: 12, top: 10, fontSize: 11.5, color: '#94a3b8', fontWeight: 600 }}>
-                    {tr('នាក់', 'drivers')}
+                    {tr('នាក់', 'riders')}
                   </span>
                 </div>
               </div>

@@ -16,6 +16,7 @@ import {
 import { MdHome, MdLocalPostOffice, MdSearch } from 'react-icons/md';
 import DateInput, { getLocalDateString } from '@/components/ui/DateInput';
 import { StatsSkeleton, ChartSkeleton, Skeleton } from '@/components/ui/Skeleton';
+import { getParcelStatusLabel } from '@/lib/status';
 
 const STATUS_COLORS: Record<string, string> = {
   pending: '#f59e0b', 'in-warehouse': '#0f766e', assigned: '#6366f1',
@@ -31,6 +32,7 @@ export default function DashboardPage() {
   const [recentOrders, setRecentOrders] = useState<any[]>([]);
   const [topDrivers, setTopDrivers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
@@ -80,6 +82,7 @@ export default function DashboardPage() {
 
   const load = useCallback(async (start?: string, end?: string) => {
     setLoading(true);
+    setLoadError(false);
     try {
       const params = new URLSearchParams();
       if (start) params.append('startDate', start);
@@ -98,9 +101,19 @@ export default function DashboardPage() {
       setTopDrivers(Array.isArray(d.data) ? d.data : (d.data?.result || []));
     } catch (err) {
       console.error('Failed to load dashboard:', err);
+      setLoadError(true);
     }
     setLoading(false);
   }, []);
+
+  const handleRetry = useCallback(() => {
+    if (rangeType === 'custom') {
+      if (customStart && customEnd) load(customStart, customEnd);
+    } else {
+      const { start, end } = getDates(rangeType);
+      load(start, end);
+    }
+  }, [rangeType, customStart, customEnd, load, getDates]);
 
   useEffect(() => {
     if (!isAuthenticated()) { router.push('/'); return; }
@@ -158,17 +171,6 @@ export default function DashboardPage() {
     </div>
   );
 
-  const STATUS_LABELS: Record<string, { km: string; en: string }> = {
-    pending: { km: 'រង់ចាំ', en: 'Pending' },
-    'in-warehouse': { km: 'ក្នុងឃ្លាំង', en: 'In Warehouse' },
-    assigned: { km: 'បានចាត់តាំង', en: 'Assigned' },
-    'picked-up': { km: 'ទទួលអីវ៉ាន់', en: 'Picked Up' },
-    'in-transit': { km: 'កំពុងដឹក', en: 'In Transit' },
-    delivered: { km: 'ដឹកជោគជ័យ', en: 'Delivered' },
-    failed: { km: 'បរាជ័យ', en: 'Failed' },
-    returned: { km: 'ត្រឡប់មកវិញ', en: 'Returned' },
-  };
-
   const formatDateTick = (dateStr: string) => {
     if (!dateStr) return '';
     const parts = dateStr.split('-');
@@ -182,11 +184,9 @@ export default function DashboardPage() {
     .filter((s: any) => parseInt(s.count) > 0)
     .map((s: any) => {
       const statusKey = s.status;
-      const labelObj = STATUS_LABELS[statusKey];
-      const label = lang === 'km' ? (labelObj?.km || statusKey) : (labelObj?.en || statusKey);
       return {
         rawStatus: statusKey,
-        name: label,
+        name: getParcelStatusLabel(statusKey, lang),
         value: parseInt(s.count),
       };
     });
@@ -199,6 +199,16 @@ export default function DashboardPage() {
       <div className="main-content">
         <Topbar title={t('dashboard')} subtitle={t('dashboardSubtitle')} />
         <div className="page-content">
+          {loadError && (
+            <div className="card" style={{ marginBottom: 16, padding: '12px 16px', background: '#fef2f2', border: '1px solid #fecaca', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+              <span style={{ color: '#b91c1c', fontWeight: 600, fontSize: 13 }}>
+                ⚠️ {lang === 'km' ? 'មិនអាចផ្ទុកទិន្នន័យផ្ទាំងគ្រប់គ្រងបានទេ។ សូមព្យាយាមម្ដងទៀត។' : 'Failed to load dashboard data. Please try again.'}
+              </span>
+              <button className="btn btn-outline btn-sm" onClick={handleRetry} style={{ borderColor: '#fca5a5', color: '#b91c1c', background: '#fff' }}>
+                {lang === 'km' ? 'ព្យាយាមម្ដងទៀត' : 'Retry'}
+              </button>
+            </div>
+          )}
           {/* Date Filter */}
           <div className="card" style={{ marginBottom: 20, padding: '12px 16px' }}>
             <div style={{ display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -436,7 +446,7 @@ export default function DashboardPage() {
                         stroke="#10b981"
                         strokeWidth={2.5}
                         fill="url(#colorDelivered)"
-                        name={lang === 'km' ? 'ដឹកជោគជ័យ' : 'Delivered'}
+                        name={getParcelStatusLabel('delivered', lang)}
                       />
                       <Area
                         type="monotone"
@@ -444,7 +454,7 @@ export default function DashboardPage() {
                         stroke="#ef4444"
                         strokeWidth={2}
                         fill="url(#colorFailed)"
-                        name={lang === 'km' ? 'បរាជ័យ' : 'Failed'}
+                        name={getParcelStatusLabel('failed', lang)}
                       />
                       <Legend
                         wrapperStyle={{ fontSize: '11.5px', fontWeight: '700', paddingTop: '10px' }}
@@ -453,11 +463,17 @@ export default function DashboardPage() {
                       />
                     </AreaChart>
                   </ResponsiveContainer>
+                ) : loadError ? (
+                  <div className="empty-state">
+                    <div className="empty-state-icon">⚠️</div>
+                    <div className="empty-state-title">{lang === 'km' ? 'មិនអាចផ្ទុកទិន្នន័យក្រាហ្វិកបានទេ' : 'Failed to load chart data'}</div>
+                    <button className="btn btn-outline btn-sm" style={{ marginTop: 8 }} onClick={handleRetry}>{lang === 'km' ? 'ព្យាយាមម្ដងទៀត' : 'Retry'}</button>
+                  </div>
                 ) : (
                   <div className="empty-state">
                     <div className="empty-state-icon">📊</div>
-                    <div className="empty-state-title">No chart data yet</div>
-                    <div className="empty-state-text">Data will appear as orders are created</div>
+                    <div className="empty-state-title">{lang === 'km' ? 'មិនទាន់មានទិន្នន័យក្រាហ្វិក' : 'No chart data yet'}</div>
+                    <div className="empty-state-text">{lang === 'km' ? 'ទិន្នន័យនឹងបង្ហាញពេលមានការបញ្ជាទិញ' : 'Data will appear as orders are created'}</div>
                   </div>
                 )}
               </div>
@@ -536,10 +552,16 @@ export default function DashboardPage() {
                       </div>
                     </div>
                   </>
+                ) : loadError ? (
+                  <div className="empty-state">
+                    <div className="empty-state-icon">⚠️</div>
+                    <div className="empty-state-title">{lang === 'km' ? 'មិនអាចផ្ទុកទិន្នន័យស្ថានភាពបានទេ' : 'Failed to load status data'}</div>
+                    <button className="btn btn-outline btn-sm" style={{ marginTop: 8 }} onClick={handleRetry}>{lang === 'km' ? 'ព្យាយាមម្ដងទៀត' : 'Retry'}</button>
+                  </div>
                 ) : (
                   <div className="empty-state">
                     <div className="empty-state-icon">🎨</div>
-                    <div className="empty-state-title">No status data yet</div>
+                    <div className="empty-state-title">{lang === 'km' ? 'មិនទាន់មានទិន្នន័យស្ថានភាព' : 'No status data yet'}</div>
                   </div>
                 )}
               </div>
@@ -553,7 +575,13 @@ export default function DashboardPage() {
             </div>
             <div style={{ padding: 16, display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 12 }}>
               {topDrivers.length === 0 ? (
-                <div className="empty-state" style={{ gridColumn: '1 / -1' }}><div className="empty-state-text">No driver data</div></div>
+                <div className="empty-state" style={{ gridColumn: '1 / -1' }}>
+                  <div className="empty-state-text">
+                    {loadError
+                      ? (lang === 'km' ? 'មិនអាចផ្ទុកទិន្នន័យអ្នកដឹកជញ្ជូនបានទេ' : 'Failed to load rider data')
+                      : (lang === 'km' ? 'មិនទាន់មានទិន្នន័យអ្នកដឹកជញ្ជូន' : 'No rider data')}
+                  </div>
+                </div>
               ) : topDrivers.map((d: any, i: number) => (
                 <div key={d.id} style={{
                   display: 'flex',

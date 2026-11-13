@@ -105,7 +105,7 @@ export default function ZonesPage() {
 
       <Sidebar />
       <div className="main-content">
-        <Topbar title={t('zoneType') || 'Zone Type'} subtitle={`${totalItems} ${lang === 'km' ? 'តំបន់ត្រូវបានកំណត់' : 'zones configured'}`} />
+        <Topbar title={t('zoneType') || 'Zone Types'} subtitle={`${totalItems} ${lang === 'km' ? 'តំបន់ត្រូវបានកំណត់' : 'zones configured'}`} />
         <div className="page-content">
           <div className="card">
             <div className="card-header">

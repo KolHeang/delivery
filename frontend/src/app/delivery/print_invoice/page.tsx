@@ -14,34 +14,19 @@ import DateInput, { getLocalDateString, formatDateToDDMMYYYY } from '@/component
 import { TableSkeleton } from '@/components/ui/Skeleton';
 import Thumbnail from '@/components/ui/Thumbnail';
 import SearchableSelect from '@/components/ui/SearchableSelect';
+import { getParcelStatusLabel, getParcelStatusBadgeColor } from '@/lib/status';
+import type { Language } from '@/lib/i18n';
 
 const formatCOD = (cod: any, currency: string) => {
   if (currency === 'KHR') return `${parseInt(cod || 0).toLocaleString()} ៛`;
   return `$${parseFloat(cod || 0).toFixed(2)}`;
 };
 
-const getStatusLabel = (status: string, lang: string) => {
-  switch (status) {
-    case 'pending':
-      return <span style={{ background: '#f59e0b', color: '#fff', padding: '3px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600, whiteSpace: 'nowrap' }}>{lang === 'km' ? 'រង់ចាំ' : 'Pending'}</span>;
-    case 'assigned':
-      return <span style={{ background: '#3b82f6', color: '#fff', padding: '3px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600, whiteSpace: 'nowrap' }}>{lang === 'km' ? 'ចាត់តាំងរួច' : 'Assigned'}</span>;
-    case 'picked-up':
-      return <span style={{ background: '#8b5cf6', color: '#fff', padding: '3px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600, whiteSpace: 'nowrap' }}>{lang === 'km' ? 'បានទទួល' : 'Picked Up'}</span>;
-    case 'in-warehouse':
-      return <span style={{ background: '#64748b', color: '#fff', padding: '3px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600, whiteSpace: 'nowrap' }}>{lang === 'km' ? 'ក្នុងឃ្លាំង' : 'In Warehouse'}</span>;
-    case 'in-transit':
-      return <span style={{ background: '#0d9488', color: '#fff', padding: '3px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600, whiteSpace: 'nowrap' }}>{lang === 'km' ? 'កំពុងដឹក' : 'In Transit'}</span>;
-    case 'delivered':
-      return <span style={{ background: '#10b981', color: '#fff', padding: '3px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600, whiteSpace: 'nowrap' }}>{lang === 'km' ? 'ជោគជ័យ' : 'Delivered'}</span>;
-    case 'failed':
-      return <span style={{ background: '#ef4444', color: '#fff', padding: '3px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600, whiteSpace: 'nowrap' }}>{lang === 'km' ? 'មិនជោគជ័យ' : 'Failed'}</span>;
-    case 'returned':
-      return <span style={{ background: '#6b7280', color: '#fff', padding: '3px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600, whiteSpace: 'nowrap' }}>{lang === 'km' ? 'បង្វិលត្រឡប់' : 'Returned'}</span>;
-    default:
-      return <span style={{ background: '#6b7280', color: '#fff', padding: '3px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600, whiteSpace: 'nowrap' }}>{status}</span>;
-  }
-};
+const getStatusLabel = (status: string, lang: string) => (
+  <span style={{ background: getParcelStatusBadgeColor(status), color: '#fff', padding: '3px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600, whiteSpace: 'nowrap' }}>
+    {getParcelStatusLabel(status, lang as Language)}
+  </span>
+);
 
 const getDriverLabel = (driver: any, lang: string) => {
   if (!driver) {
@@ -517,7 +502,7 @@ export default function PrintInvoicePage() {
 
                 {/* Driver Filter */}
                 <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label className="form-label">{lang === 'km' ? 'អ្នកដឹក' : 'Driver'}</label>
+                  <label className="form-label">{lang === 'km' ? 'អ្នកដឹកជញ្ជូន' : 'Rider'}</label>
                   <SearchableSelect
                     value={driverFilter}
                     onChange={(val: string) => { setDriverFilter(val); setCurrentPage(1); }}
@@ -556,14 +541,14 @@ export default function PrintInvoicePage() {
                     onChange={e => { setStatusFilter(e.target.value); setCurrentPage(1); }}
                   >
                     <option value="all">{lang === 'km' ? '-- ទាំងអស់ --' : '-- All --'}</option>
-                    <option value="pending">{lang === 'km' ? 'រង់ចាំ (Pending)' : 'Pending'}</option>
+                    <option value="pending">{lang === 'km' ? 'កំពុងរង់ចាំ (Pending)' : 'Pending'}</option>
                     <option value="in-warehouse">{lang === 'km' ? 'ក្នុងឃ្លាំង (In Warehouse)' : 'In Warehouse'}</option>
-                    <option value="assigned">{lang === 'km' ? 'ចាត់តាំងរួច (Assigned)' : 'Assigned'}</option>
-                    <option value="picked-up">{lang === 'km' ? 'បានទទួល (Picked Up)' : 'Picked Up'}</option>
-                    <option value="in-transit">{lang === 'km' ? 'កំពុងដឹក (In Transit)' : 'In Transit'}</option>
-                    <option value="delivered">{lang === 'km' ? 'ជោគជ័យ (Delivered)' : 'Delivered'}</option>
-                    <option value="failed">{lang === 'km' ? 'មិនជោគជ័យ (Failed)' : 'Failed'}</option>
-                    <option value="returned">{lang === 'km' ? 'បង្វិលត្រឡប់ (Returned)' : 'Returned'}</option>
+                    <option value="assigned">{lang === 'km' ? 'បានចាត់តាំង (Assigned)' : 'Assigned'}</option>
+                    <option value="picked-up">{lang === 'km' ? 'បានប្រមូល (Picked Up)' : 'Picked Up'}</option>
+                    <option value="in-transit">{lang === 'km' ? 'កំពុងដឹកជញ្ជូន (In Transit)' : 'In Transit'}</option>
+                    <option value="delivered">{lang === 'km' ? 'បានដឹកជោគជ័យ (Delivered)' : 'Delivered'}</option>
+                    <option value="failed">{lang === 'km' ? 'បរាជ័យ (Failed)' : 'Failed'}</option>
+                    <option value="returned">{lang === 'km' ? 'បានត្រឡប់ (Returned)' : 'Returned'}</option>
                   </select>
                 </div>
 
@@ -678,7 +663,7 @@ export default function PrintInvoicePage() {
                     <th style={{ width: 180 }}>{lang === 'km' ? 'អាសយដ្ឋាន' : 'Address'}</th>
                     <th style={{ width: 125 }}>{lang === 'km' ? 'លេខអ្នកទទួល' : 'Receiver Phone'}</th>
                     <th style={{ width: 135, textAlign: 'right' }}>{lang === 'km' ? 'ចំនួនប្រាក់' : 'Amount'}</th>
-                    <th style={{ width: 135 }}>{lang === 'km' ? 'អ្នកដឹក' : 'Driver'}</th>
+                    <th style={{ width: 135 }}>{lang === 'km' ? 'អ្នកដឹកជញ្ជូន' : 'Rider'}</th>
                     <th style={{ width: 105, textAlign: 'center' }}>{lang === 'km' ? 'ស្ថានភាព' : 'Status'}</th>
                   </tr>
                 </thead>

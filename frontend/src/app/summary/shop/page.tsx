@@ -143,9 +143,9 @@ export default function ShopSummaryPage() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12, marginBottom: 16 }}>
             {[
               { key: 'shops', label: lang === 'km' ? 'ហាង' : 'Shops', value: filtered.length, color: 'var(--accent)', icon: '🏪' },
-              { key: 'delivered', label: lang === 'km' ? 'ដឹកជញ្ជូនរួច' : 'Delivered', value: totalDelivered, color: 'var(--success)', icon: '✅' },
+              { key: 'delivered', label: lang === 'km' ? 'បានដឹកជោគជ័យ' : 'Delivered', value: totalDelivered, color: 'var(--success)', icon: '✅' },
               { key: 'failed', label: lang === 'km' ? 'បរាជ័យ' : 'Failed', value: totalFailed, color: 'var(--danger)', icon: '❌' },
-              { key: 'returned', label: lang === 'km' ? 'បង្វិលត្រឡប់' : 'Returned', value: totalReturned, color: '#d97706', icon: '↩️' },
+              { key: 'returned', label: lang === 'km' ? 'បានត្រឡប់' : 'Returned', value: totalReturned, color: '#d97706', icon: '↩️' },
               { key: 'codUsd', label: lang === 'km' ? 'COD (USD)' : 'COD (USD)', value: `$${totalCodUSD.toFixed(2)}`, color: 'var(--accent)', icon: '💵' },
               { key: 'deliveryFee', label: lang === 'km' ? 'សេវាដឹកសរុប' : 'Delivery Fee', value: `$${totalFee.toFixed(2)}`, color: 'var(--success)', icon: '💰' },
             ].map(s => (
@@ -180,9 +180,9 @@ export default function ShopSummaryPage() {
                   <tr style={{ background: 'var(--sidebar-bg, #1565D8)' }}>
                     <th style={{ width: 60, padding: '12px 10px', textAlign: 'center', background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'ល.រ' : 'No.'}</th>
                     <th style={{ padding: '12px 10px', textAlign: 'left', background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'ឈ្មោះហាង' : 'Shop Name'}</th>
-                    <th style={{ padding: '12px 10px', textAlign: 'center', background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'ដឹកជញ្ជូនរួច' : 'Delivered'}</th>
+                    <th style={{ padding: '12px 10px', textAlign: 'center', background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'បានដឹកជោគជ័យ' : 'Delivered'}</th>
                     <th style={{ padding: '12px 10px', textAlign: 'center', background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'បរាជ័យ' : 'Failed'}</th>
-                    <th style={{ padding: '12px 10px', textAlign: 'center', background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'ប្រគល់' : 'Returned'}</th>
+                    <th style={{ padding: '12px 10px', textAlign: 'center', background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'បានត្រឡប់' : 'Returned'}</th>
                     <th style={{ padding: '12px 10px', textAlign: 'right', background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'COD ($)' : 'COD ($)'}</th>
                     <th style={{ padding: '12px 10px', textAlign: 'right', background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'COD (៛)' : 'COD (៛)'}</th>
                     <th style={{ padding: '12px 10px', textAlign: 'right', background: 'var(--sidebar-bg, #1565D8)', color: '#ffffff', fontWeight: 700, fontSize: 13, border: 'none' }}>{lang === 'km' ? 'សេវាដឹក' : 'Delivery Fee'}</th>

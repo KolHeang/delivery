@@ -796,7 +796,7 @@ export default function PaymentWithShopPage() {
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
                 <div style={{ width: 4, height: 20, background: '#16a34a', borderRadius: 2 }} />
                 <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#16a34a' }}>
-                  {lang === 'km' ? '១. ផ្នែកដឹកជោគជ័យ' : '1. Successful Deliveries'}
+                  {lang === 'km' ? '១. ផ្នែកបានដឹកជោគជ័យ' : '1. Successful Deliveries'}
                 </h3>
                 <span style={{ background: '#dcfce7', color: '#16a34a', padding: '2px 10px', borderRadius: 12, fontSize: 12, fontWeight: 600 }}>
                   {eligibleOrders.length} {lang === 'km' ? 'កញ្ចប់' : 'parcels'}
@@ -943,7 +943,7 @@ export default function PaymentWithShopPage() {
 
                             <td style={{ padding: '12px 10px', textAlign: 'center', border: 'none' }}>
                               <span style={{ background: '#dcfce7', color: '#16a34a', padding: '4px 10px', borderRadius: 6, fontSize: 11, fontWeight: 700 }}>
-                                {lang === 'km' ? 'ជោគជ័យ' : 'Delivered'}
+                                {lang === 'km' ? 'បានដឹកជោគជ័យ' : 'Delivered'}
                               </span>
                             </td>
                           </tr>
@@ -1048,25 +1048,37 @@ export default function PaymentWithShopPage() {
                               const latestNote = getLatestParcelNote(o);
                               let statusBadge = (
                                 <span style={{ background: '#e0e7ff', color: '#4338ca', padding: '4px 10px', borderRadius: 6, fontSize: 11, fontWeight: 700 }}>
-                                  {lang === 'km' ? 'កំពុងដឹក' : 'In Transit'}
+                                  {lang === 'km' ? 'កំពុងដឹកជញ្ជូន' : 'In Transit'}
                                 </span>
                               );
                               if (o.status === 'failed') {
                                 statusBadge = (
                                   <span style={{ background: '#fee2e2', color: '#ef4444', padding: '4px 10px', borderRadius: 6, fontSize: 11, fontWeight: 700 }}>
-                                    {lang === 'km' ? 'ដឹកបន្ត (មិនជោគជ័យ)' : 'Failed (Redeliver)'}
+                                    {lang === 'km' ? 'បរាជ័យ' : 'Failed'}
                                   </span>
                                 );
                               } else if (o.status === 'picked-up') {
                                 statusBadge = (
                                   <span style={{ background: '#f3e8ff', color: '#7e22ce', padding: '4px 10px', borderRadius: 6, fontSize: 11, fontWeight: 700 }}>
+                                    {lang === 'km' ? 'បានប្រមូល' : 'Picked Up'}
+                                  </span>
+                                );
+                              } else if (o.status === 'in-warehouse') {
+                                statusBadge = (
+                                  <span style={{ background: '#e0f2fe', color: '#0369a1', padding: '4px 10px', borderRadius: 6, fontSize: 11, fontWeight: 700 }}>
                                     {lang === 'km' ? 'ក្នុងឃ្លាំង' : 'In Warehouse'}
+                                  </span>
+                                );
+                              } else if (o.status === 'assigned') {
+                                statusBadge = (
+                                  <span style={{ background: '#fef3c7', color: '#b45309', padding: '4px 10px', borderRadius: 6, fontSize: 11, fontWeight: 700 }}>
+                                    {lang === 'km' ? 'បានចាត់តាំង' : 'Assigned'}
                                   </span>
                                 );
                               } else if (o.status === 'pending') {
                                 statusBadge = (
                                   <span style={{ background: '#f1f5f9', color: '#475569', padding: '4px 10px', borderRadius: 6, fontSize: 11, fontWeight: 700 }}>
-                                    {lang === 'km' ? 'រង់ចាំដឹក' : 'Pending'}
+                                    {lang === 'km' ? 'កំពុងរង់ចាំ' : 'Pending'}
                                   </span>
                                 );
                               }
@@ -1169,7 +1181,7 @@ export default function PaymentWithShopPage() {
                                   </td>
                                   <td style={{ padding: '12px 10px', textAlign: 'center', border: 'none' }}>
                                     <span style={{ background: '#fee2e2', color: '#ef4444', padding: '4px 10px', borderRadius: 6, fontSize: 11, fontWeight: 700 }}>
-                                      {lang === 'km' ? 'បង្វិលត្រឡប់' : 'Returned'}
+                                      {lang === 'km' ? 'បានត្រឡប់' : 'Returned'}
                                     </span>
                                   </td>
                                 </tr>
@@ -1586,7 +1598,7 @@ export default function PaymentWithShopPage() {
                                   <td style={{ textAlign: 'right', padding: '4px 4px', border: '1px solid #64748b', whiteSpace: 'nowrap' }}>{isUSD ? `$${codVal.toFixed(2)}` : '$0.00'}</td>
                                   <td style={{ textAlign: 'right', padding: '4px 4px', border: '1px solid #64748b', whiteSpace: 'nowrap' }}>{!isUSD ? `${codVal.toLocaleString()} ៛` : '0 ៛'}</td>
                                   <td style={{ textAlign: 'right', padding: '4px 4px', border: '1px solid #64748b', whiteSpace: 'nowrap' }}>${parseFloat(o.deliveryFee || 0).toFixed(2)}</td>
-                                  <td style={{ padding: '4px 4px', border: '1px solid #64748b', textAlign: 'center', color: '#15803d', fontWeight: 700, whiteSpace: 'nowrap' }}>{lang === 'km' ? 'ជោគជ័យ' : 'Delivered'}</td>
+                                  <td style={{ padding: '4px 4px', border: '1px solid #64748b', textAlign: 'center', color: '#15803d', fontWeight: 700, whiteSpace: 'nowrap' }}>{lang === 'km' ? 'បានដឹកជោគជ័យ' : 'Delivered'}</td>
                                   <td style={{ padding: '4px 4px', border: '1px solid #64748b', textAlign: 'left', fontSize: 9, wordBreak: 'break-word' }}>{cleanNote(o.note)}</td>
                                 </tr>
                               );
@@ -1621,13 +1633,17 @@ export default function PaymentWithShopPage() {
 
                             let statusLabel = '';
                             if (o.status === 'failed') {
-                              statusLabel = lang === 'km' ? 'មិនជោគជ័យ' : 'Failed';
+                              statusLabel = lang === 'km' ? 'បរាជ័យ' : 'Failed';
                             } else if (o.status === 'pending') {
-                              statusLabel = lang === 'km' ? 'រង់ចាំ' : 'Pending';
+                              statusLabel = lang === 'km' ? 'កំពុងរង់ចាំ' : 'Pending';
                             } else if (o.status === 'picked-up') {
+                              statusLabel = lang === 'km' ? 'បានប្រមូល' : 'Picked Up';
+                            } else if (o.status === 'in-warehouse') {
                               statusLabel = lang === 'km' ? 'ក្នុងឃ្លាំង' : 'In Warehouse';
+                            } else if (o.status === 'assigned') {
+                              statusLabel = lang === 'km' ? 'បានចាត់តាំង' : 'Assigned';
                             } else {
-                              statusLabel = lang === 'km' ? 'កំពុងដឹក' : 'In Transit';
+                              statusLabel = lang === 'km' ? 'កំពុងដឹកជញ្ជូន' : 'In Transit';
                             }
 
                             const latestNote = getLatestParcelNote(o, statusLabel);
@@ -1678,7 +1694,7 @@ export default function PaymentWithShopPage() {
                                 <td style={{ textAlign: 'right', padding: '4px 4px', border: '1px solid #64748b', whiteSpace: 'nowrap' }}>{isUSD ? `$${codVal.toFixed(2)}` : '$0.00'}</td>
                                 <td style={{ textAlign: 'right', padding: '4px 4px', border: '1px solid #64748b', whiteSpace: 'nowrap' }}>{!isUSD ? `${codVal.toLocaleString()} ៛` : '0 ៛'}</td>
                                 <td style={{ textAlign: 'right', padding: '4px 4px', border: '1px solid #64748b', whiteSpace: 'nowrap' }}>$0.00</td>
-                                <td style={{ padding: '4px 4px', border: '1px solid #64748b', textAlign: 'center', color: '#dc2626', fontWeight: 700, whiteSpace: 'nowrap' }}>{lang === 'km' ? 'បង្វិលត្រឡប់' : 'Returned'}</td>
+                                <td style={{ padding: '4px 4px', border: '1px solid #64748b', textAlign: 'center', color: '#dc2626', fontWeight: 700, whiteSpace: 'nowrap' }}>{lang === 'km' ? 'បានត្រឡប់' : 'Returned'}</td>
                                 <td style={{ padding: '4px 4px', border: '1px solid #64748b', textAlign: 'left', color: '#475569', fontSize: 9, wordBreak: 'break-word' }}>{latestNote}</td>
                               </tr>
                             );

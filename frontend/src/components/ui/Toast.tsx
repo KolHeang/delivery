@@ -36,7 +36,7 @@ export default function Toast({ message, type = 'success', onClose, duration = 3
         alignItems: 'center',
         gap: 8,
         animation: 'slideIn 0.3s ease-out',
-        fontFamily: "'Kantumruy Pro', sans-serif"
+        fontFamily: "'Inter', 'Battambang', sans-serif"
       }}
     >
       <style>{`

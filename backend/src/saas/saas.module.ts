@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { getJwtSecret } from '../common/jwt-secret.util';
 
 // Control Plane Core Entities
 import { Tenant } from './entities/tenant.entity';
@@ -70,10 +71,7 @@ import { DomainsController } from './domains/domains.controller';
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: (config: ConfigService) => ({
-        secret: config.get<string>(
-          'JWT_SECRET',
-          'delivery_jwt_secret_2024_!@#$',
-        ),
+        secret: getJwtSecret(config),
         signOptions: { expiresIn: '30d' },
       }),
       inject: [ConfigService],

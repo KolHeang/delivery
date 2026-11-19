@@ -263,7 +263,7 @@ export default function CustomerTrackingPage() {
   const currentStep = getStatusStep(trackingData?.parcel?.status || 'pending');
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f8fafc', fontFamily: "'Kantumruy Pro', 'Inter', sans-serif" }}>
+    <div style={{ minHeight: '100vh', background: '#f8fafc', fontFamily: "'Inter', 'Battambang', sans-serif" }}>
       {/* Leaflet CSS requirement */}
       <link
         rel="stylesheet"

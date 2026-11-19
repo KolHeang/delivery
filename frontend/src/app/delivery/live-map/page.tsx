@@ -352,7 +352,7 @@ export default function AdminLiveFleetMapPage() {
   }, [drivers, searchQuery, activeTab]);
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: '#f8fafc', fontFamily: "'Kantumruy Pro', 'Inter', sans-serif" }}>
+    <div style={{ display: 'flex', minHeight: '100vh', background: '#f8fafc', fontFamily: "'Inter', 'Battambang', sans-serif" }}>
       {/* Leaflet CSS requirement */}
       <link
         rel="stylesheet"

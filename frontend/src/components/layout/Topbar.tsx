@@ -563,7 +563,7 @@ export default function Topbar({ title, subtitle }: TopbarProps) {
                         style={{
                           background: 'none',
                           border: 'none',
-                          color: '#2563EB',
+                          color: 'var(--accent, #1565D8)',
                           fontSize: 11.5,
                           fontWeight: 600,
                           cursor: 'pointer',
@@ -749,7 +749,7 @@ export default function Topbar({ title, subtitle }: TopbarProps) {
                                     display: 'flex',
                                     alignItems: 'center',
                                     gap: 2,
-                                    color: '#2563EB',
+                                    color: 'var(--accent, #1565D8)',
                                     fontWeight: 600,
                                   }}
                                 >

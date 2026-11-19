@@ -754,7 +754,7 @@ export default function PrintInvoicePage() {
                   margin: '0 auto 28px',
                   width: '100%',
                   color: '#0f172a',
-                  fontFamily: "'Kantumruy Pro', sans-serif",
+                  fontFamily: "'Inter', 'Battambang', sans-serif",
                   boxShadow: isDirectMode ? '0 10px 25px -5px rgba(15, 23, 42, 0.1), 0 8px 10px -6px rgba(15, 23, 42, 0.06)' : 'none',
                   boxSizing: 'border-box',
                 }}
@@ -771,11 +771,11 @@ export default function PrintInvoicePage() {
                     ) : (
                       <div style={{
                         width: 40, height: 40, borderRadius: 10,
-                        background: 'linear-gradient(135deg, #2563eb, #4f46e5)',
+                        background: 'var(--sidebar-bg, #1565D8)',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         color: '#fff', fontSize: 20,
                         flexShrink: 0,
-                        boxShadow: '0 4px 8px rgba(37, 99, 235, 0.25)',
+                        boxShadow: '0 4px 8px var(--accent-glow, rgba(21, 101, 216, 0.25))',
                         WebkitPrintColorAdjust: 'exact',
                         printColorAdjust: 'exact'
                       }}>
@@ -783,7 +783,7 @@ export default function PrintInvoicePage() {
                       </div>
                     )}
                     <div style={{ display: 'flex', flexDirection: 'column' }}>
-                      <span style={{ fontSize: 18, fontWeight: 900, color: '#1e3a8a', letterSpacing: '0.5px', lineHeight: 1.1, WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
+                      <span style={{ fontSize: 18, fontWeight: 900, color: 'var(--sidebar-bg, #1565D8)', letterSpacing: '0.5px', lineHeight: 1.1, WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
                         {dynamicCompanyName}
                       </span>
                     </div>

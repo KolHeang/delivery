@@ -52,7 +52,7 @@ export default function ReportHeader({ title, startDate, endDate }: ReportHeader
         marginBottom: 16,
         paddingBottom: 12,
         borderBottom: '2px solid #0f172a',
-        fontFamily: "'Kantumruy Pro', 'Inter', sans-serif",
+        fontFamily: "'Inter', 'Battambang', sans-serif",
         WebkitPrintColorAdjust: 'exact',
         printColorAdjust: 'exact',
       }}
@@ -73,7 +73,7 @@ export default function ReportHeader({ title, startDate, endDate }: ReportHeader
                   width: 32,
                   height: 32,
                   borderRadius: 8,
-                  background: '#1e3a8a',
+                  background: 'var(--sidebar-bg, #1565D8)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -86,7 +86,7 @@ export default function ReportHeader({ title, startDate, endDate }: ReportHeader
                 {companyName.charAt(0).toUpperCase()}
               </div>
             )}
-            <span style={{ fontSize: 15, fontWeight: 800, color: '#1e3a8a', lineHeight: 1.2 }}>
+            <span style={{ fontSize: 15, fontWeight: 800, color: 'var(--sidebar-bg, #1565D8)', lineHeight: 1.2 }}>
               {companyName}
             </span>
           </div>

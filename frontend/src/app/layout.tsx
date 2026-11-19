@@ -22,6 +22,7 @@ const THEME_INIT_SCRIPT = `
   try {
     var collapsed = localStorage.getItem('sidebar-collapsed') === 'true';
     document.documentElement.setAttribute('data-sidebar-collapsed', collapsed ? 'true' : 'false');
+    if (window.location.pathname.indexOf('/admin/saas') === 0) return;
     var color = localStorage.getItem('app-brand-color');
     if (!color) {
       var org = localStorage.getItem('app-org-settings');

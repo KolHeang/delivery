@@ -160,7 +160,7 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
           justifyContent: 'center',
           background: 'linear-gradient(135deg, #0f172a, #1e293b)',
           padding: 24,
-          fontFamily: "'Kantumruy Pro', 'Inter', sans-serif",
+          fontFamily: "'Inter', 'Battambang', sans-serif",
           color: '#fff',
         }}
       >

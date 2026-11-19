@@ -126,7 +126,7 @@ export default function Sidebar() {
         {
           key: 'operation',
           href: '/report/operation',
-          label: t('operationReports'),
+          label: lang === 'km' ? 'ប្រតិបត្តិការ' : 'Operations',
           permission: 'reports.operation_daily, reports.view',
           children: [
             { href: '/report/operation/1', label: t('rpt1Menu'), permission: 'reports.operation_daily, reports.view' },
@@ -142,7 +142,7 @@ export default function Sidebar() {
         {
           key: 'financial',
           href: '/report/financial',
-          label: t('financialReports'),
+          label: lang === 'km' ? 'ហិរញ្ញវត្ថុ' : 'Financial',
           permission: 'reports.financial_ledger, reports.view',
           children: [
             { href: '/report/financial/1', label: t('frpt1Menu'), permission: 'reports.financial_ledger, reports.view' },
@@ -513,107 +513,80 @@ export default function Sidebar() {
                       const isItemActive = (item.href && pathname === item.href) || isChildActive;
 
                       if (hasChildren) {
+                        const visibleChildren = item.children!.filter(
+                          (c: MenuItemChild) => !c.permission || hasPermission(c.permission)
+                        );
+                        if (visibleChildren.length === 0) return null;
+
                         return (
-                          <div key={item.key || item.href} style={{ display: 'flex', flexDirection: 'column', marginBottom: 2 }}>
-                            {/* Submenu Header */}
-                            <button
-                              type="button"
-                              onClick={() => toggleSubMenu(item.key || '')}
+                          <div key={item.key || item.href} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                            {/* Non-clickable Section Divider Label */}
+                            <div
                               style={{
-                                width: '100%',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'space-between',
-                                position: 'relative',
-                                borderRadius: 'var(--radius-sm)',
-                                background: isItemActive ? 'rgba(255, 255, 255, 0.16)' : 'transparent',
-                                border: 'none',
-                                padding: '8px 12px',
-                                color: '#ffffff',
-                                cursor: 'pointer',
-                                textAlign: 'left',
-                                transition: 'all 0.15s ease',
-                              }}
-                              onMouseEnter={e => {
-                                if (!isItemActive) e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
-                              }}
-                              onMouseLeave={e => {
-                                if (!isItemActive) e.currentTarget.style.background = 'transparent';
+                                fontSize: '11.5px',
+                                fontWeight: 700,
+                                color: 'rgba(255, 255, 255, 0.6)',
+                                padding: '8px 12px 3px',
+                                letterSpacing: '0.4px',
+                                textTransform: 'uppercase',
+                                userSelect: 'none',
                               }}
                             >
-                              <span style={{
-                                position: 'absolute',
-                                left: -19.75,
-                                top: 'calc(50% - 3px)',
-                                width: 6,
-                                height: 6,
-                                borderRadius: '50%',
-                                background: isItemActive ? '#ffffff' : 'rgba(255, 255, 255, 0.5)',
-                                boxShadow: isItemActive ? '0 0 8px #ffffff' : 'none',
-                                transition: 'all 0.2s ease',
-                              }} />
-                              <span style={{ fontSize: '13.5px', fontWeight: 600, color: '#ffffff' }}>
-                                {item.label}
-                              </span>
-                              <span style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                transform: isSubOpen ? 'rotate(180deg)' : 'rotate(0deg)',
-                                transition: 'transform 0.2s ease',
-                                opacity: 0.85,
-                              }}>
-                                <MdKeyboardArrowDown size={17} />
-                              </span>
-                            </button>
+                              {item.label}
+                            </div>
 
-                            {/* Clean child reports list (no dashed line, no dots, no truncation) */}
-                            {isSubOpen && (
-                              <div style={{
-                                display: 'flex',
-                                flexDirection: 'column',
-                                gap: 2,
-                                paddingLeft: 12,
-                                marginTop: 3,
-                                marginBottom: 4,
-                              }}>
-                                {item.children!
-                                  .filter((c: MenuItemChild) => !c.permission || hasPermission(c.permission))
-                                  .map((child: MenuItemChild) => {
-                                    const isCurrent = pathname === child.href;
-                                    return (
-                                      <Link
-                                        key={child.href}
-                                        href={child.href}
-                                        style={{
-                                          fontSize: '13px',
-                                          padding: '7px 12px',
-                                          color: isCurrent ? '#ffffff' : 'rgba(255, 255, 255, 0.82)',
-                                          fontWeight: isCurrent ? 700 : 500,
-                                          borderRadius: 'var(--radius-sm)',
-                                          background: isCurrent ? 'rgba(255, 255, 255, 0.24)' : 'transparent',
-                                          textDecoration: 'none',
-                                          display: 'block',
-                                          whiteSpace: 'nowrap',
-                                          overflow: 'hidden',
-                                          textOverflow: 'ellipsis',
-                                          transition: 'all 0.15s ease',
-                                        }}
-                                        title={child.label}
-                                        onMouseEnter={e => {
-                                          if (!isCurrent) (e.currentTarget as HTMLAnchorElement).style.background = 'rgba(255, 255, 255, 0.1)';
-                                          (e.currentTarget as HTMLAnchorElement).style.color = '#ffffff';
-                                        }}
-                                        onMouseLeave={e => {
-                                          if (!isCurrent) (e.currentTarget as HTMLAnchorElement).style.background = 'transparent';
-                                          (e.currentTarget as HTMLAnchorElement).style.color = isCurrent ? '#ffffff' : 'rgba(255, 255, 255, 0.82)';
-                                        }}
-                                      >
-                                        {child.label}
-                                      </Link>
-                                    );
-                                  })}
-                              </div>
-                            )}
+                            {/* Flat Report Links aligned on the single vertical guide line */}
+                            {visibleChildren.map((child: MenuItemChild) => {
+                              const isCurrent = pathname === child.href;
+                              return (
+                                <Link
+                                  key={child.href}
+                                  href={child.href}
+                                  className={`sidebar-item ${isCurrent ? 'active' : ''}`}
+                                  style={{
+                                    position: 'relative',
+                                    fontSize: '13.5px',
+                                    padding: '7.5px 12px',
+                                    color: isCurrent ? '#ffffff' : 'rgba(255, 255, 255, 0.88)',
+                                    fontWeight: isCurrent ? 700 : 500,
+                                    borderRadius: 'var(--radius-sm)',
+                                    background: isCurrent ? 'rgba(255, 255, 255, 0.22)' : 'transparent',
+                                    textDecoration: 'none',
+                                    display: 'block',
+                                    transition: 'all 0.15s ease',
+                                  }}
+                                  title={child.label}
+                                  onMouseEnter={e => {
+                                    if (!isCurrent) (e.currentTarget as HTMLAnchorElement).style.background = 'rgba(255, 255, 255, 0.1)';
+                                    (e.currentTarget as HTMLAnchorElement).style.color = '#ffffff';
+                                  }}
+                                  onMouseLeave={e => {
+                                    if (!isCurrent) (e.currentTarget as HTMLAnchorElement).style.background = 'transparent';
+                                    (e.currentTarget as HTMLAnchorElement).style.color = isCurrent ? '#ffffff' : 'rgba(255, 255, 255, 0.88)';
+                                  }}
+                                >
+                                  <span style={{
+                                    position: 'absolute',
+                                    left: -19.75,
+                                    top: 'calc(50% - 3px)',
+                                    width: 6,
+                                    height: 6,
+                                    borderRadius: '50%',
+                                    background: isCurrent ? '#ffffff' : 'rgba(255, 255, 255, 0.5)',
+                                    boxShadow: isCurrent ? '0 0 8px #ffffff' : 'none',
+                                    transition: 'all 0.2s ease',
+                                  }} />
+                                  <span style={{
+                                    display: 'block',
+                                    whiteSpace: 'nowrap',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                  }}>
+                                    {child.label}
+                                  </span>
+                                </Link>
+                              );
+                            })}
                           </div>
                         );
                       }

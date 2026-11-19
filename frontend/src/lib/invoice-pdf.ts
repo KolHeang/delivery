@@ -68,11 +68,11 @@ export const printInvoicePdf = (inv: any) => {
     <head>
       <meta charset="UTF-8">
       <title>Invoice #${invoiceNumber} - ${companyName}</title>
-      <link href="https://fonts.googleapis.com/css2?family=Kantumruy+Pro:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+      <link href="https://fonts.googleapis.com/css2?family=Battambang:wght@400;700;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
       <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
-          font-family: 'Kantumruy Pro', 'Inter', -apple-system, sans-serif;
+          font-family: 'Inter', 'Battambang', -apple-system, sans-serif;
           background: #f8fafc;
           color: #0f172a;
           padding: 40px 20px;

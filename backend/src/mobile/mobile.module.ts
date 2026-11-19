@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { getJwtSecret } from '../common/jwt-secret.util';
 
 import { User } from '../users/entities/users.entity';
 import { Merchant } from '../merchants/entities/merchant.entity';
@@ -57,10 +58,7 @@ import { TelegramModule } from '../telegram/telegram.module';
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: (config: ConfigService) => ({
-        secret: config.get<string>(
-          'JWT_SECRET',
-          'delivery_jwt_secret_2024_!@#$',
-        ),
+        secret: getJwtSecret(config),
         signOptions: {
           expiresIn: config.get<string>('JWT_EXPIRES_IN', '30d') as any,
         },

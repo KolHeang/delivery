@@ -262,7 +262,7 @@ export default function SearchableSelect({
             display: 'flex',
             flexDirection: 'column',
             overflow: 'hidden',
-            fontFamily: 'Kantumruy Pro, Inter, sans-serif',
+            fontFamily: "'Inter', 'Battambang', sans-serif",
             animation: 'fadeIn 0.15s ease-out',
           }}
         >
@@ -352,10 +352,10 @@ export default function SearchableSelect({
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'space-between',
-                      backgroundColor: isSelected ? '#eff6ff' : 'transparent',
-                      color: isSelected ? '#1d4ed8' : '#1e293b',
+                      backgroundColor: isSelected ? 'var(--accent-light, #eff6ff)' : 'transparent',
+                      color: isSelected ? 'var(--accent, #1565D8)' : '#1e293b',
                       fontWeight: isSelected ? 600 : 400,
-                      borderLeft: isSelected ? '3px solid #3b82f6' : '3px solid transparent',
+                      borderLeft: isSelected ? '3px solid var(--accent, #1565D8)' : '3px solid transparent',
                       transition: 'background-color 0.1s',
                     }}
                     onMouseEnter={e => {
@@ -386,7 +386,7 @@ export default function SearchableSelect({
                       )}
                     </div>
                     {isSelected && (
-                      <span style={{ color: '#2563eb', fontSize: '13px', fontWeight: 'bold' }}>✓</span>
+                      <span style={{ color: 'var(--accent, #1565D8)', fontSize: '13px', fontWeight: 'bold' }}>✓</span>
                     )}
                   </div>
                 );

@@ -12,6 +12,7 @@ import { RefreshToken } from './entities/refresh-token.entity';
 import { DeviceToken } from './entities/device-token.entity';
 import { PermissionsGuard } from './permissions.guard';
 import { RolesGuard } from './roles.guard';
+import { getJwtSecret } from '../common/jwt-secret.util';
 
 @Global()
 @Module({
@@ -22,10 +23,7 @@ import { RolesGuard } from './roles.guard';
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: (config: ConfigService) => ({
-        secret: config.get<string>(
-          'JWT_SECRET',
-          'delivery_jwt_secret_2024_!@#$',
-        ),
+        secret: getJwtSecret(config),
         signOptions: {
           expiresIn: config.get<string>('JWT_EXPIRES_IN', '7d') as any,
         },

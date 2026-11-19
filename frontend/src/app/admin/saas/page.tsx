@@ -1342,7 +1342,22 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
   const paginatedCommissions = filteredCommissions.slice((commissionsPage - 1) * commissionsLimit, commissionsPage * commissionsLimit);
 
   return (
-    <div style={{ display: 'flex', height: '100vh', maxHeight: '100vh', background: '#f8fafc', fontFamily: "'Kantumruy Pro', 'Inter', sans-serif", width: '100vw', maxWidth: '100vw', overflow: 'hidden' }}>
+    <div style={{
+      display: 'flex',
+      height: '100vh',
+      maxHeight: '100vh',
+      background: '#f8fafc',
+      fontFamily: "'Inter', 'Battambang', sans-serif",
+      width: '100vw',
+      maxWidth: '100vw',
+      overflow: 'hidden',
+      ['--sidebar-bg' as any]: '#1565D8',
+      ['--sidebar-active' as any]: '#0d47a1',
+      ['--accent' as any]: '#1565D8',
+      ['--accent-dark' as any]: '#0d47a1',
+      ['--accent-light' as any]: 'rgba(21, 101, 216, 0.12)',
+      ['--accent-glow' as any]: 'rgba(21, 101, 216, 0.28)',
+    }}>
       {/* 1. DEDICATED SAAS MASTER SIDEBAR */}
       {isMobileOpen && <div className="sidebar-mobile-backdrop" onClick={closeMobile} />}
       <aside
@@ -4891,7 +4906,7 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
               boxShadow: '0 20px 50px -10px rgba(15, 23, 42, 0.25)',
               border: '1px solid #e2e8f0',
               overflow: 'hidden',
-              fontFamily: "'Kantumruy Pro', 'Inter', sans-serif",
+              fontFamily: "'Inter', 'Battambang', sans-serif",
             }}
           >
             {/* ── 1. Clean Minimal Header ── */}
@@ -5261,7 +5276,7 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
               justifyContent: 'center',
               zIndex: 9999,
               padding: 16,
-              fontFamily: "'Kantumruy Pro', 'Inter', sans-serif",
+              fontFamily: "'Inter', 'Battambang', sans-serif",
             }}
           >
             <div
@@ -5620,7 +5635,7 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
             justifyContent: 'center',
             zIndex: 9999,
             padding: 16,
-            fontFamily: "'Kantumruy Pro', 'Inter', sans-serif",
+            fontFamily: "'Inter', 'Battambang', sans-serif",
           }}
         >
           <div
@@ -5902,7 +5917,7 @@ ${tr('សូមចូលប្រើប្រាស់ និងផ្លាស�
             justifyContent: 'center',
             zIndex: 9999,
             padding: 16,
-            fontFamily: "'Kantumruy Pro', 'Inter', sans-serif",
+            fontFamily: "'Inter', 'Battambang', sans-serif",
           }}
         >
           <div

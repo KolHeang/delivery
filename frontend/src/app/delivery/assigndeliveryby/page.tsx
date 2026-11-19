@@ -195,13 +195,13 @@ export default function AssignDeliveryPage() {
                 <div className="card-header" style={{ padding: '14px 20px', background: 'var(--bg-card)', borderBottom: '1px solid var(--border)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <span style={{
-                      fontSize: 11,
-                      fontWeight: 800,
+                      fontSize: 12,
+                      fontWeight: 700,
                       color: 'var(--accent)',
                       background: 'var(--accent-light)',
-                      padding: '3px 9px',
+                      padding: '3px 10px',
                       borderRadius: 6,
-                      letterSpacing: '0.3px',
+                      letterSpacing: '0.2px',
                       textTransform: 'uppercase'
                     }}>
                       {lang === 'km' ? 'ជំហានទី ១' : 'Step 1'}
@@ -615,13 +615,13 @@ export default function AssignDeliveryPage() {
                 <div className="card-header" style={{ padding: '14px 18px', background: 'var(--bg-card)', borderBottom: '1px solid var(--border)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <span style={{
-                      fontSize: 11,
-                      fontWeight: 800,
-                      color: '#2563eb',
-                      background: '#eff6ff',
-                      padding: '3px 9px',
+                      fontSize: 12,
+                      fontWeight: 700,
+                      color: 'var(--accent)',
+                      background: 'var(--accent-light)',
+                      padding: '3px 10px',
                       borderRadius: 6,
-                      letterSpacing: '0.3px',
+                      letterSpacing: '0.2px',
                       textTransform: 'uppercase'
                     }}>
                       {lang === 'km' ? 'ជំហានទី ២' : 'Step 2'}

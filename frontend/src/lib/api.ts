@@ -58,6 +58,9 @@ const sanitizeDashPlaceholders = (val: any): any => {
 // Redirect to login on 401 (except for SaaS Master admin portal)
 api.interceptors.response.use(
   (response) => {
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('app:server-recovered'));
+    }
     if (
       response.data &&
       typeof response.data === 'object' &&
@@ -71,7 +74,20 @@ api.interceptors.response.use(
     return response;
   },
   (error) => {
-    if (error.response?.status === 401 && typeof window !== 'undefined') {
+    const status = error.response?.status;
+    if (typeof window !== 'undefined') {
+      if (
+        status === 502 ||
+        status === 503 ||
+        status === 504 ||
+        (!error.response && error.code === 'ERR_NETWORK' && navigator.onLine)
+      ) {
+        window.dispatchEvent(
+          new CustomEvent('app:server-unavailable', { detail: { status: status || 502 } }),
+        );
+      }
+    }
+    if (status === 401 && typeof window !== 'undefined') {
       const pathname = window.location.pathname;
       const isAuthPage =
         pathname === '/auth' ||

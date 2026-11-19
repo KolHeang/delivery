@@ -172,7 +172,7 @@ export default function GlobalToastProvider() {
               borderLeft: `4px solid ${meta.accent}`,
               boxShadow: '0 14px 30px -6px rgba(15, 23, 42, 0.16), 0 4px 10px -2px rgba(15, 23, 42, 0.06)',
               animation: 'slideUp 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
-              fontFamily: "'Kantumruy Pro', 'Inter', sans-serif",
+              fontFamily: "'Inter', 'Battambang', sans-serif",
             }}
           >
             <div

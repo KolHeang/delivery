@@ -156,7 +156,7 @@ export default function ReportPaymentCustomerPage() {
         minHeight: '100vh',
         background: '#f8fafc',
         gap: 14,
-        fontFamily: "'Kantumruy Pro', 'Inter', sans-serif"
+        fontFamily: "'Inter', 'Battambang', sans-serif"
       }}>
         <div style={{
           width: 42,
@@ -183,7 +183,7 @@ export default function ReportPaymentCustomerPage() {
         minHeight: '100vh',
         padding: 20,
         background: '#f8fafc',
-        fontFamily: "'Kantumruy Pro', 'Inter', sans-serif"
+        fontFamily: "'Inter', 'Battambang', sans-serif"
       }}>
         <div style={{
           background: '#ffffff',
@@ -298,7 +298,7 @@ export default function ReportPaymentCustomerPage() {
     <div className="settlement-public-root" style={{
       minHeight: '100vh',
       background: '#f1f5f9',
-      fontFamily: "'Kantumruy Pro', 'Inter', sans-serif",
+      fontFamily: "'Inter', 'Battambang', sans-serif",
       color: '#0f172a',
       boxSizing: 'border-box',
     }}>

@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Kantumruy+Pro:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Battambang:wght@300;400;700;900&family=Inter:wght@300;400;500;600;700;800&display=swap');
 
 /* ============================================================
    CSS DESIGN SYSTEM — Delivery Management
@@ -73,16 +73,16 @@ textarea {
 }
 
 html {
-  font-size: 14px;
+  font-size: 15px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
 body {
-  font-family: 'Kantumruy Pro', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-family: 'Inter', 'Battambang', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   background: var(--bg-primary);
   color: var(--text-primary);
-  line-height: 1.6;
+  line-height: 1.65;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -523,11 +523,12 @@ table {
 
 thead th {
   background: var(--sidebar-bg, #1565D8);
-  padding: 12px 16px;
+  padding: 12px 14px;
   text-align: left;
-  font-weight: 600;
+  font-weight: 700;
   color: #ffffff;
-  font-size: 13px;
+  font-size: 13.5px;
+  line-height: 1.4;
   white-space: nowrap;
   border-bottom: 1px solid rgba(255, 255, 255, 0.15);
 }
@@ -554,7 +555,7 @@ tbody tr:last-child {
 }
 
 tbody td {
-  padding: 14px 16px;
+  padding: 12px 14px;
   color: #334155;
   vertical-align: middle;
   border: none;
@@ -1756,7 +1757,9 @@ select.form-control + .input-error-icon {
   body {
     background: #ffffff !important;
     color: #0f172a !important;
-    font-size: 11px !important;
+    font-family: 'Inter', 'Battambang', sans-serif !important;
+    font-size: 12px !important;
+    line-height: 1.5 !important;
     padding: 0 !important;
     margin: 0 !important;
     width: 100% !important;
@@ -1822,14 +1825,15 @@ select.form-control + .input-error-icon {
     border: 1px solid #94a3b8 !important;
     padding: 6px 8px !important;
     color: #0f172a !important;
-    font-size: 10.5px !important;
+    font-size: 11.5px !important;
+    line-height: 1.45 !important;
   }
 
   .app-layout thead th {
-    background-color: #1e3a8a !important;
+    background-color: var(--sidebar-bg, #1565D8) !important;
     color: #ffffff !important;
     font-weight: 700 !important;
-    border-color: #475569 !important;
+    border-color: rgba(15, 23, 42, 0.2) !important;
   }
 
   .badge {
@@ -1959,7 +1963,7 @@ body.dark .skeleton-shimmer {
 .thumbnail-container.hover-zoom:hover {
   transform: scale(1.08);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12) !important;
-  border-color: #2563eb !important;
+  border-color: var(--accent, #1565D8) !important;
 }
 
 @keyframes fadeIn {
@@ -2026,6 +2030,20 @@ body.dark .skeleton-shimmer {
     border-right: none !important;
     border-top: none !important;
     border-color: rgba(255, 255, 255, 0.15);
+  }
+
+  /* Uniform Table Header Typography & Spacing (Screen Only) */
+  table:not(.receipt-table):not(.print-table) thead th {
+    font-size: 13.5px !important;
+    font-weight: 700 !important;
+    padding: 12px 14px !important;
+    line-height: 1.4 !important;
+    letter-spacing: 0.1px !important;
+  }
+
+  table:not(.receipt-table):not(.print-table) tbody td {
+    font-size: 14px;
+    line-height: 1.5;
   }
 }
 

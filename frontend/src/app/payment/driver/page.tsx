@@ -432,7 +432,7 @@ export default function PaymentWithStaffPage() {
   if (loading) return (
     <div className="app-layout">
       <Sidebar />
-      <div className="main-content" style={{ background: '#f3f4f6', minHeight: '100vh', fontFamily: 'Kantumruy Pro, sans-serif' }}>
+      <div className="main-content" style={{ background: '#f3f4f6', minHeight: '100vh', fontFamily: "'Inter', 'Battambang', sans-serif" }}>
         <Topbar title={lang === 'km' ? 'ទូទាត់ប្រាក់ជាមួយអ្នកដឹកជញ្ជូន' : 'Payment with Rider'} subtitle={lang === 'km' ? 'ទូទាត់ប្រាក់ជាមួយអ្នកដឹកជញ្ជូន' : 'Settle payout with riders'} />
         <div className="page-content" style={{ padding: 20 }}>
           <div className="card" style={{ padding: 20, marginBottom: 20 }}>
@@ -460,7 +460,7 @@ export default function PaymentWithStaffPage() {
     <>
       <div className="app-layout">
       <Sidebar />
-      <div className="main-content" style={{ background: '#fff', minHeight: '100vh', fontFamily: 'Kantumruy Pro, sans-serif' }}>
+      <div className="main-content" style={{ background: '#fff', minHeight: '100vh', fontFamily: "'Inter', 'Battambang', sans-serif" }}>
         <Topbar title={lang === 'km' ? 'ទូទាត់ប្រាក់ជាមួយអ្នកដឹកជញ្ជូន' : 'Payment with Rider'} subtitle={lang === 'km' ? 'ទូទាត់ប្រាក់ជាមួយអ្នកដឹកជញ្ជូន' : 'Settle payout with riders'} />
         
         {/* Tabs Bar */}
@@ -1310,7 +1310,7 @@ export default function PaymentWithStaffPage() {
 
 
       {/* Printable Invoice List Table — outside app-layout (Print-only) */}
-      <div className="receipt-print-container" style={{ fontFamily: "'Kantumruy Pro', 'Inter', sans-serif", color: '#0f172a' }}>
+      <div className="receipt-print-container" style={{ fontFamily: "'Inter', 'Battambang', sans-serif", color: '#0f172a' }}>
         {/* Header Layout */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, marginBottom: 12, borderBottom: '2px solid #0f172a', paddingBottom: 10 }}>
           {/* Left side: Company Info */}
@@ -1342,7 +1342,7 @@ export default function PaymentWithStaffPage() {
 
           {/* Center side: Title */}
           <div style={{ textAlign: 'center', alignSelf: 'center', flex: 1.3 }}>
-            <h2 style={{ margin: 0, fontSize: 16, fontWeight: 800, fontFamily: "'Kantumruy Pro', sans-serif", color: '#0f172a', whiteSpace: 'nowrap' }}>
+            <h2 style={{ margin: 0, fontSize: 16, fontWeight: 800, fontFamily: "'Inter', 'Battambang', sans-serif", color: '#0f172a', whiteSpace: 'nowrap' }}>
               {lang === 'km' ? 'របាយការណ៍ទូទាត់ប្រចាំថ្ងៃ' : 'Daily Settlement Report'}
             </h2>
             <div style={{ marginTop: 3, fontSize: 11.5, fontWeight: 700, color: 'var(--sidebar-bg, #1565D8)' }}>

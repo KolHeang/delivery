@@ -7,17 +7,7 @@ const COLLAPSE_EVENT = 'sidebar-collapsed-change';
 const MOBILE_EVENT = 'sidebar-mobile-change';
 
 export function useSidebarCollapsed() {
-  const [isCollapsed, setIsCollapsed] = useState<boolean>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        return (
-          document.documentElement.getAttribute('data-sidebar-collapsed') === 'true' ||
-          localStorage.getItem(STORAGE_KEY) === 'true'
-        );
-      } catch {}
-    }
-    return false;
-  });
+  const [isCollapsed, setIsCollapsed] = useState<boolean>(false);
 
   const [isMobileOpen, setIsMobileOpen] = useState<boolean>(false);
   const [isMobileViewport, setIsMobileViewport] = useState<boolean>(false);
@@ -85,19 +75,8 @@ export function useSidebarCollapsed() {
   }, []);
 
   const toggleCollapsed = useCallback(() => {
-    setIsCollapsed((prev) => {
-      const next = !prev;
-      try {
-        localStorage.setItem(STORAGE_KEY, next ? 'true' : 'false');
-        document.documentElement.setAttribute('data-sidebar-collapsed', next ? 'true' : 'false');
-        window.dispatchEvent(new CustomEvent<boolean>(COLLAPSE_EVENT, { detail: next }));
-        setTimeout(() => {
-          window.dispatchEvent(new Event('resize'));
-        }, 220);
-      } catch {}
-      return next;
-    });
-  }, []);
+    setCollapsed(!isCollapsed);
+  }, [isCollapsed, setCollapsed]);
 
   const toggleMobile = useCallback(() => {
     window.dispatchEvent(new CustomEvent(MOBILE_EVENT, { detail: 'toggle' }));

@@ -6,6 +6,7 @@ import { DataSource } from 'typeorm';
 import { User } from '../users/entities/users.entity';
 import { Merchant } from '../merchants/entities/merchant.entity';
 import { SaasAdmin } from '../saas/admins/saas-admin.entity';
+import { getJwtSecret } from '../common/jwt-secret.util';
 
 interface JwtPayload {
   sub: number;
@@ -22,10 +23,16 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     super({
       jwtFromRequest: ExtractJwt.fromExtractors([
         ExtractJwt.fromAuthHeaderAsBearerToken(),
-        ExtractJwt.fromUrlQueryParameter('token'),
+        (req: any) => {
+          const url = String(req?.url || '');
+          if (url.includes('/stream') || url.includes('/realtime') || url.includes('/sse')) {
+            return ExtractJwt.fromUrlQueryParameter('token')(req);
+          }
+          return null;
+        },
       ]),
       ignoreExpiration: false,
-      secretOrKey: config.get<string>('JWT_SECRET', 'delivery_jwt_secret_2024_!@#$'),
+      secretOrKey: getJwtSecret(config),
       passReqToCallback: true,
     });
   }
@@ -48,7 +55,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         role: 'merchant',
         name: merchant.name,
         permissions: [],
-        tenantId: merchant.tenantId ?? payload.tenantId ?? headerTenantId ?? null,
+        tenantId: merchant.tenantId ?? payload.tenantId ?? null,
       };
     }
 
@@ -98,7 +105,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         isDriver: user.isDriver,
         isStaff: user.isStaff,
         permissions,
-        tenantId: user.tenantId ?? payload.tenantId ?? headerTenantId ?? null,
+        tenantId: user.tenantId ?? payload.tenantId ?? null,
       };
     }
 

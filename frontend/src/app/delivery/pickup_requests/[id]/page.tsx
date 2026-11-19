@@ -913,7 +913,7 @@ export default function PickupRequestDetailPage() {
 
       {/* ════════════════ Hidden Waybill Print ════════════════ */}
       <div id="waybill-print" style={{ display: 'none' }} ref={printRef}>
-        <div style={{ fontFamily: 'sans-serif', padding: 20 }}>
+        <div style={{ fontFamily: "'Inter', 'Battambang', sans-serif", padding: 20 }}>
           <h2 style={{ marginBottom: 6 }}>Pickup Request Waybills — #{id}</h2>
           <p style={{ marginBottom: 20, fontSize: 13, color: '#555' }}>
             Merchant: {request?.merchant?.name} · Printed: {printedAt}

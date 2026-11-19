@@ -64,10 +64,16 @@ export function SaasMasterLayout({ activeTab, children }: SaasMasterLayoutProps)
         height: '100vh',
         maxHeight: '100vh',
         background: '#f8fafc',
-        fontFamily: "'Kantumruy Pro', 'Inter', sans-serif",
+        fontFamily: "'Inter', 'Battambang', sans-serif",
         width: '100vw',
         maxWidth: '100vw',
         overflow: 'hidden',
+        ['--sidebar-bg' as any]: '#1565D8',
+        ['--sidebar-active' as any]: '#0d47a1',
+        ['--accent' as any]: '#1565D8',
+        ['--accent-dark' as any]: '#0d47a1',
+        ['--accent-light' as any]: 'rgba(21, 101, 216, 0.12)',
+        ['--accent-glow' as any]: 'rgba(21, 101, 216, 0.28)',
       }}
     >
       {/* 1. DEDICATED SAAS MASTER SIDEBAR */}
@@ -124,10 +130,10 @@ export function SaasMasterLayout({ activeTab, children }: SaasMasterLayoutProps)
           </div>
           {!isCollapsed && (
             <div style={{ minWidth: 0, overflow: 'hidden' }}>
-              <div style={{ fontSize: 15, fontWeight: 900, color: '#ffffff', letterSpacing: '-0.2px', lineHeight: 1.2, whiteSpace: 'nowrap' }}>
+              <div style={{ fontSize: 15.5, fontWeight: 900, color: '#ffffff', letterSpacing: '-0.2px', lineHeight: 1.25, whiteSpace: 'nowrap' }}>
                 EBS Master SaaS
               </div>
-              <div style={{ fontSize: 10.5, color: '#93c5fd', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px', whiteSpace: 'nowrap' }}>
+              <div style={{ fontSize: 11.5, color: '#93c5fd', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.4px', whiteSpace: 'nowrap' }}>
                 ● {tr('ផ្ទាំងគ្រប់គ្រង SUPER ADMIN', 'SUPER ADMIN PORTAL')}
               </div>
             </div>
@@ -137,7 +143,7 @@ export function SaasMasterLayout({ activeTab, children }: SaasMasterLayoutProps)
         {/* Navigation List */}
         <div style={{ padding: isCollapsed ? '16px 8px' : '16px 12px', display: 'flex', flexDirection: 'column', gap: 6, flex: 1, overflowY: 'auto' }}>
           {!isCollapsed && (
-            <div style={{ fontSize: 11, fontWeight: 800, color: '#93c5fd', padding: '8px 12px', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: '#93c5fd', padding: '8px 12px', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
               {tr('ម៉ឺនុយមេ', 'Main Menu')}
             </div>
           )}
@@ -162,8 +168,8 @@ export function SaasMasterLayout({ activeTab, children }: SaasMasterLayoutProps)
                   border: 'none',
                   background: isActive ? 'rgba(255, 255, 255, 0.18)' : 'transparent',
                   color: '#ffffff',
-                  fontSize: 14,
-                  fontWeight: isActive ? 900 : 600,
+                  fontSize: 14.5,
+                  fontWeight: isActive ? 700 : 500,
                   cursor: 'pointer',
                   textAlign: 'left',
                   textDecoration: 'none',
@@ -282,8 +288,8 @@ export function SaasMasterLayout({ activeTab, children }: SaasMasterLayoutProps)
                 border: '1px solid rgba(255, 255, 255, 0.25)',
                 background: 'rgba(255, 255, 255, 0.15)',
                 color: '#ffffff',
-                fontSize: 13,
-                fontWeight: 800,
+                fontSize: 13.5,
+                fontWeight: 700,
                 cursor: 'pointer',
                 transition: 'all 0.15s',
               }}
@@ -336,10 +342,10 @@ export function SaasMasterLayout({ activeTab, children }: SaasMasterLayoutProps)
                   {user?.name ? user.name.charAt(0).toUpperCase() : 'M'}
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column' }}>
-                  <div style={{ fontSize: 12.5, fontWeight: 800, color: '#ffffff', lineHeight: 1.2 }}>
+                  <div style={{ fontSize: 13.5, fontWeight: 700, color: '#ffffff', lineHeight: 1.25 }}>
                     {user?.name || 'Master Super Admin'}
                   </div>
-                  <div style={{ fontSize: 10.5, color: '#93c5fd', lineHeight: 1.1 }}>
+                  <div style={{ fontSize: 11.5, color: '#93c5fd', lineHeight: 1.2 }}>
                     {user?.email || 'superadmin@gmail.com'}
                   </div>
                 </div>
@@ -367,16 +373,16 @@ export function SaasMasterLayout({ activeTab, children }: SaasMasterLayoutProps)
                     }}
                   >
                     <div style={{ padding: '10px 12px', borderBottom: '1px solid #f1f5f9' }}>
-                      <div style={{ fontSize: 13.5, fontWeight: 900, color: '#0f172a' }}>{user?.name || 'Admin User'}</div>
-                      <div style={{ fontSize: 11.5, color: '#64748b', marginTop: 1 }}>{user?.email || 'admin@gmail.com'}</div>
+                      <div style={{ fontSize: 14.5, fontWeight: 700, color: '#0f172a' }}>{user?.name || 'Admin User'}</div>
+                      <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>{user?.email || 'admin@gmail.com'}</div>
                       <span
                         style={{
                           display: 'inline-block',
                           marginTop: 6,
                           background: '#eff6ff',
                           color: '#2563eb',
-                          fontSize: 10.5,
-                          fontWeight: 800,
+                          fontSize: 11.5,
+                          fontWeight: 700,
                           padding: '2px 8px',
                           borderRadius: 6,
                         }}
@@ -398,7 +404,7 @@ export function SaasMasterLayout({ activeTab, children }: SaasMasterLayoutProps)
                           border: 'none',
                           background: 'transparent',
                           color: '#ef4444',
-                          fontSize: 13,
+                          fontSize: 14,
                           fontWeight: 700,
                           cursor: 'pointer',
                           transition: 'all 0.15s',

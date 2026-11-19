@@ -10,10 +10,8 @@ import {
   MdLock,
   MdVisibility,
   MdVisibilityOff,
-  MdDns,
 } from 'react-icons/md';
 import { FlagKm, FlagEn } from '@/components/ui/Flags';
-import { SaasCloudIcon } from '@/components/ui/SaasCloudIcon';
 
 export default function SaasAdminLoginPage() {
   const router = useRouter();
@@ -97,398 +95,126 @@ export default function SaasAdminLoginPage() {
   };
 
   return (
-    <div className="saas-cloud-bg-container">
-      {/* SaaS Cloud & Server Infrastructure Network Styles */}
+    <div
+      className="saas-cloud-bg-container"
+      style={{
+        ['--sidebar-bg' as any]: '#1565D8',
+        ['--sidebar-active' as any]: '#0d47a1',
+        ['--accent' as any]: '#1565D8',
+        ['--accent-dark' as any]: '#0d47a1',
+        ['--accent-light' as any]: 'rgba(21, 101, 216, 0.12)',
+        ['--accent-glow' as any]: 'rgba(21, 101, 216, 0.28)',
+      }}
+    >
+      {/* Soft Ambient Mesh Gradient + Subtle Grid Styles */}
       <style jsx global>{`
-        @keyframes networkFlow {
-          to {
-            stroke-dashoffset: -60;
-          }
+        @keyframes saasAmbientFloat {
+          0%, 100% { transform: translate(0, 0) scale(1); }
+          50%       { transform: translate(24px, -18px) scale(1.06); }
         }
 
-        @keyframes moveCloudPacket {
-          0% {
-            offset-distance: 0%;
-            opacity: 0;
-          }
-          4% {
-            opacity: 1;
-          }
-          96% {
-            opacity: 1;
-          }
-          100% {
-            offset-distance: 100%;
-            opacity: 0;
-          }
-        }
-
-        @keyframes moveServerPacket {
-          0% {
-            offset-distance: 0%;
-            opacity: 0;
-          }
-          4% {
-            opacity: 1;
-          }
-          96% {
-            opacity: 1;
-          }
-          100% {
-            offset-distance: 100%;
-            opacity: 0;
-          }
-        }
-
-        @keyframes cloudServerPulse {
-          0% {
-            transform: scale(0.85);
-            opacity: 0.85;
-          }
-          100% {
-            transform: scale(2.4);
-            opacity: 0;
-          }
-        }
-
-        @keyframes adminFloat {
-          0%, 100% { transform: translateY(0px); }
-          50%       { transform: translateY(-8px); }
-        }
-
-        @keyframes personBounce {
-          0%, 100% { transform: translateY(0px) rotate(0deg); }
-          25%       { transform: translateY(-10px) rotate(-1.5deg); }
-          50%       { transform: translateY(-4px) rotate(0deg); }
-          75%       { transform: translateY(-12px) rotate(1.5deg); }
-        }
-
-        @keyframes legSwingL {
-          0%, 100% { transform: rotate(0deg); transform-origin: top center; }
-          25%       { transform: rotate(22deg); transform-origin: top center; }
-          50%       { transform: rotate(0deg); transform-origin: top center; }
-          75%       { transform: rotate(-18deg); transform-origin: top center; }
-        }
-
-        @keyframes legSwingR {
-          0%, 100% { transform: rotate(0deg); transform-origin: top center; }
-          25%       { transform: rotate(-20deg); transform-origin: top center; }
-          50%       { transform: rotate(0deg); transform-origin: top center; }
-          75%       { transform: rotate(20deg); transform-origin: top center; }
-        }
-
-        @keyframes armSwingL {
-          0%, 100% { transform: rotate(0deg); transform-origin: top center; }
-          25%       { transform: rotate(-18deg); transform-origin: top center; }
-          50%       { transform: rotate(0deg); transform-origin: top center; }
-          75%       { transform: rotate(16deg); transform-origin: top center; }
-        }
-
-        @keyframes armSwingR {
-          0%, 100% { transform: rotate(0deg); transform-origin: top center; }
-          25%       { transform: rotate(18deg); transform-origin: top center; }
-          50%       { transform: rotate(0deg); transform-origin: top center; }
-          75%       { transform: rotate(-16deg); transform-origin: top center; }
+        @keyframes saasAmbientFloatReverse {
+          0%, 100% { transform: translate(0, 0) scale(1); }
+          50%       { transform: translate(-22px, 16px) scale(1.05); }
         }
 
         .saas-cloud-bg-container {
           min-height: 100vh;
           width: 100vw;
-          background: #f8fafc;
+          background: linear-gradient(160deg, #f8fafc 0%, #f1f5f9 55%, #eef2ff 100%);
           display: flex;
           align-items: center;
           justify-content: center;
           padding: 24px 16px;
-          font-family: 'Kantumruy Pro', 'Inter', sans-serif;
+          font-family: 'Inter', 'Battambang', sans-serif;
           position: relative;
           overflow: hidden;
         }
 
-        /* SaaS Dot Matrix & Server Grid */
         .saas-grid-pattern {
           position: absolute;
           inset: 0;
-          background-image: 
-            radial-gradient(rgba(37, 99, 235, 0.12) 1.5px, transparent 1.5px),
-            linear-gradient(to right, rgba(226, 232, 240, 0.4) 1px, transparent 1px),
-            linear-gradient(to bottom, rgba(226, 232, 240, 0.4) 1px, transparent 1px);
-          background-size: 32px 32px;
+          background-image:
+            linear-gradient(to right, rgba(148, 163, 184, 0.14) 1px, transparent 1px),
+            linear-gradient(to bottom, rgba(148, 163, 184, 0.14) 1px, transparent 1px);
+          background-size: 40px 40px;
+          mask-image: radial-gradient(ellipse 75% 70% at 50% 45%, #000 35%, transparent 100%);
+          -webkit-mask-image: radial-gradient(ellipse 75% 70% at 50% 45%, #000 35%, transparent 100%);
           pointer-events: none;
           z-index: 1;
         }
 
-        /* Large Cloud Sync Node (រត់តាមខ្សែ Network ខាងលើ - ធំ & ច្បាស់) */
-        .cloud-node-runner {
+        .saas-mesh-orb {
           position: absolute;
-          top: 0;
-          left: 0;
-          width: 60px;
-          height: 60px;
-          offset-path: path("M -80,160 C 350,40 600,340 1000,160 C 1400,-10 1650,360 2080,180");
-          offset-rotate: auto;
-          animation: moveCloudPacket 16s linear infinite;
-          z-index: 4;
-          pointer-events: none;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          filter: drop-shadow(0 4px 10px rgba(37, 99, 235, 0.25));
-        }
-
-        /* Large Server Cluster Node (រត់តាមខ្សែ Server Bus ខាងក្រោម - ធំ & ច្បាស់) */
-        .server-node-runner {
-          position: absolute;
-          top: 0;
-          left: 0;
-          width: 60px;
-          height: 60px;
-          offset-path: path("M -80,720 C 400,500 750,800 1200,600 C 1550,400 1800,740 2180,560");
-          offset-rotate: auto;
-          animation: moveServerPacket 20s linear infinite;
-          z-index: 4;
-          pointer-events: none;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          filter: drop-shadow(0 4px 10px rgba(99, 102, 241, 0.25));
-        }
-
-        /* Cloud Architect / Super Admin Figure */
-        .admin-person-node {
-          position: absolute;
-          z-index: 3;
-          pointer-events: none;
-          animation: personBounce 1.2s ease-in-out infinite;
-          filter: drop-shadow(0 4px 10px rgba(0,0,0,0.13));
-        }
-
-        .person-leg-l {
-          animation: legSwingL 0.6s ease-in-out infinite;
-          transform-origin: top center;
-        }
-
-        .person-leg-r {
-          animation: legSwingR 0.6s ease-in-out infinite;
-          transform-origin: top center;
-        }
-
-        .person-arm-l {
-          animation: armSwingL 0.6s ease-in-out infinite;
-          transform-origin: top center;
-        }
-
-        .person-arm-r {
-          animation: armSwingR 0.6s ease-in-out infinite;
-          transform-origin: top center;
-        }
-
-        .server-pulse-point {
-          position: absolute;
-          width: 14px;
-          height: 14px;
           border-radius: 50%;
-          background: #2563eb;
-          z-index: 2;
+          filter: blur(80px);
           pointer-events: none;
+          z-index: 0;
         }
 
-        .server-pulse-point::after {
-          content: '';
-          position: absolute;
-          inset: -8px;
-          border-radius: 50%;
-          border: 2px solid #60a5fa;
-          animation: cloudServerPulse 2.2s ease-out infinite;
+        .saas-mesh-orb-1 {
+          width: 560px;
+          height: 560px;
+          top: -180px;
+          left: -140px;
+          background: radial-gradient(circle, rgba(37, 99, 235, 0.2) 0%, rgba(37, 99, 235, 0) 70%);
+          animation: saasAmbientFloat 18s ease-in-out infinite;
+        }
+
+        .saas-mesh-orb-2 {
+          width: 520px;
+          height: 520px;
+          bottom: -180px;
+          right: -120px;
+          background: radial-gradient(circle, rgba(99, 102, 241, 0.2) 0%, rgba(99, 102, 241, 0) 70%);
+          animation: saasAmbientFloatReverse 22s ease-in-out infinite;
+        }
+
+        .saas-mesh-orb-3 {
+          width: 420px;
+          height: 420px;
+          top: 22%;
+          right: 12%;
+          background: radial-gradient(circle, rgba(14, 165, 233, 0.14) 0%, rgba(14, 165, 233, 0) 70%);
+          animation: saasAmbientFloat 25s ease-in-out infinite reverse;
         }
 
         .saas-clean-card {
           width: 100%;
           max-width: 430px;
-          background: #ffffff;
+          background: rgba(255, 255, 255, 0.92);
+          backdrop-filter: blur(18px);
+          -webkit-backdrop-filter: blur(18px);
           border-radius: 24px;
-          padding: 42px 36px;
-          border: 1px solid #e2e8f0;
-          box-shadow: 0 20px 45px -10px rgba(15, 23, 42, 0.08), 0 1px 3px rgba(0, 0, 0, 0.02);
+          padding: 40px 36px 34px;
+          border: 1px solid rgba(255, 255, 255, 0.85);
+          box-shadow:
+            0 24px 60px -16px rgba(15, 23, 42, 0.12),
+            0 4px 16px -4px rgba(15, 23, 42, 0.05),
+            0 0 0 1px rgba(226, 232, 240, 0.75);
           position: relative;
           z-index: 10;
+          overflow: hidden;
+        }
+
+        .saas-clean-card::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          height: 4px;
+          background: linear-gradient(90deg, #1565D8 0%, #4f46e5 100%);
         }
       `}</style>
 
-      {/* 1. SaaS Cloud Infrastructure Grid Background */}
+      {/* 1. Soft Ambient Mesh Glow Orbs */}
+      <div className="saas-mesh-orb saas-mesh-orb-1" />
+      <div className="saas-mesh-orb saas-mesh-orb-2" />
+      <div className="saas-mesh-orb saas-mesh-orb-3" />
+
+      {/* 2. Subtle Vignette Grid */}
       <div className="saas-grid-pattern" />
-
-      {/* 2. SaaS Cloud & Server Highway Vector Lines */}
-      <svg
-        style={{
-          position: 'absolute',
-          inset: 0,
-          width: '100%',
-          height: '100%',
-          pointerEvents: 'none',
-          zIndex: 2,
-        }}
-        viewBox="0 0 1920 1080"
-        preserveAspectRatio="none"
-      >
-        {/* Top Cloud Highway Path */}
-        <path
-          d="M -80,160 C 350,40 600,340 1000,160 C 1400,-10 1650,360 2080,180"
-          fill="none"
-          stroke="rgba(37, 99, 235, 0.32)"
-          strokeWidth="3.5"
-          strokeDasharray="9,11"
-          style={{ animation: 'networkFlow 2.2s linear infinite' }}
-        />
-
-        {/* Bottom Server Bus Network Path */}
-        <path
-          d="M -80,720 C 400,500 750,800 1200,600 C 1550,400 1800,740 2180,560"
-          fill="none"
-          stroke="rgba(99, 102, 241, 0.32)"
-          strokeWidth="3.5"
-          strokeDasharray="11,13"
-          style={{ animation: 'networkFlow 2.8s linear infinite' }}
-        />
-      </svg>
-
-      {/* 3. Large Cloud Sync Hub (ធំ & ច្បាស់) */}
-      <div className="cloud-node-runner">
-        <div
-          style={{
-            background: '#ffffff',
-            borderRadius: 18,
-            padding: 8,
-            border: '2px solid #3b82f6',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            boxShadow: '0 4px 14px rgba(37, 99, 235, 0.3)',
-          }}
-        >
-          <SaasCloudIcon size={34} />
-        </div>
-      </div>
-
-      {/* 4. Large Datacenter Server Node (ធំ & ច្បាស់) */}
-      <div className="server-node-runner">
-        <div
-          style={{
-            background: '#ffffff',
-            borderRadius: 18,
-            padding: 8,
-            border: '2px solid #6366f1',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            boxShadow: '0 4px 14px rgba(99, 102, 241, 0.3)',
-          }}
-        >
-          <MdDns size={32} color="#6366f1" />
-        </div>
-      </div>
-
-      {/* 5. Cloud Platform Engineer / Super Admin (មនុស្សគ្រប់គ្រងប្រព័ន្ធ) */}
-
-      {/* Admin 1: Cloud Architect (top right) - blue suit + laptop */}
-      <div className="admin-person-node" style={{ top: '115px', right: '13%' }}>
-        <svg width="50" height="66" viewBox="0 0 32 44" fill="none">
-          {/* Head */}
-          <circle cx="16" cy="7" r="5.5" fill="#1e3a8a" />
-          {/* Glasses */}
-          <rect x="11" y="6" width="4" height="2.5" rx="1" fill="none" stroke="#38bdf8" strokeWidth="0.8" />
-          <rect x="17" y="6" width="4" height="2.5" rx="1" fill="none" stroke="#38bdf8" strokeWidth="0.8" />
-          <path d="M15 7.2H17" stroke="#38bdf8" strokeWidth="0.6" />
-          {/* Body - suit */}
-          <path d="M10 15C10 13 13 12.5 16 12.5C19 12.5 22 13 22 15L23 26H9L10 15Z" fill="#1e3a8a" />
-          {/* Tie */}
-          <path d="M15.5 13L16 22L16.5 13Z" fill="#38bdf8" />
-          {/* Laptop in hands */}
-          <rect x="8" y="18" width="13" height="9" rx="1.5" fill="#0f172a" stroke="#38bdf8" strokeWidth="1" />
-          <rect x="9.5" y="19.5" width="10" height="6" rx="0.5" fill="#1d4ed8" />
-          <path d="M11 22H17M11 24H15" stroke="#60a5fa" strokeWidth="0.8" strokeLinecap="round" />
-          {/* Left arm holding laptop */}
-          <path d="M10 16L8 20" stroke="#1e3a8a" strokeWidth="2.5" strokeLinecap="round" />
-          {/* Right arm */}
-          <g className="person-arm-r">
-            <path d="M22 16L26 21" stroke="#1e3a8a" strokeWidth="2.5" strokeLinecap="round" />
-          </g>
-          {/* Left leg */}
-          <g className="person-leg-l">
-            <path d="M13 26L11 38" stroke="#0f172a" strokeWidth="2.8" strokeLinecap="round" />
-            <path d="M11 38L8 41" stroke="#0f172a" strokeWidth="2" strokeLinecap="round" />
-          </g>
-          {/* Right leg */}
-          <g className="person-leg-r">
-            <path d="M19 26L21 38" stroke="#0f172a" strokeWidth="2.8" strokeLinecap="round" />
-            <path d="M21 38L24 41" stroke="#0f172a" strokeWidth="2" strokeLinecap="round" />
-          </g>
-        </svg>
-      </div>
-
-      {/* Admin 2: DevOps Engineer (bottom left) - green hoodie + server rack */}
-      <div className="admin-person-node" style={{ bottom: '135px', left: '11%', animationDelay: '-0.6s' }}>
-        <svg width="50" height="66" viewBox="0 0 32 44" fill="none">
-          {/* Head */}
-          <circle cx="16" cy="7" r="5.5" fill="#0f172a" />
-          {/* Hoodie */}
-          <path d="M10.5 6C10.5 3 13 1 16 1C19 1 21.5 3 21.5 6H10.5Z" fill="#059669" />
-          {/* Body */}
-          <path d="M10 15C10 13 13 12.5 16 12.5C19 12.5 21 13 21 15L22 26H10L10 15Z" fill="#059669" />
-          {/* Server rack tablet */}
-          <rect x="3" y="15" width="8" height="11" rx="1.5" fill="#0f172a" stroke="#34d399" strokeWidth="1" />
-          <rect x="4.5" y="17" width="5" height="1.5" rx="0.5" fill="#34d399" />
-          <rect x="4.5" y="20" width="5" height="1.5" rx="0.5" fill="#6ee7b7" />
-          <rect x="4.5" y="23" width="3" height="1.5" rx="0.5" fill="#34d399" />
-          {/* Left arm holding rack */}
-          <path d="M10 16L7 19" stroke="#065f46" strokeWidth="2.5" strokeLinecap="round" />
-          {/* Right arm swings */}
-          <g className="person-arm-r">
-            <path d="M22 15L26 21" stroke="#065f46" strokeWidth="2.5" strokeLinecap="round" />
-          </g>
-          {/* Left leg */}
-          <g className="person-leg-l" style={{ animationDelay: '0.3s' }}>
-            <path d="M13 26L11 38" stroke="#1e293b" strokeWidth="2.8" strokeLinecap="round" />
-            <path d="M11 38L8 41" stroke="#1e293b" strokeWidth="2" strokeLinecap="round" />
-          </g>
-          {/* Right leg */}
-          <g className="person-leg-r" style={{ animationDelay: '0.3s' }}>
-            <path d="M19 26L21 38" stroke="#1e293b" strokeWidth="2.8" strokeLinecap="round" />
-            <path d="M21 38L24 41" stroke="#1e293b" strokeWidth="2" strokeLinecap="round" />
-          </g>
-        </svg>
-      </div>
-
-      {/* Admin 3: Security Engineer (bottom right) - purple + shield */}
-      <div className="admin-person-node" style={{ bottom: '175px', right: '9%', animationDelay: '-1.1s' }}>
-        <svg width="44" height="58" viewBox="0 0 32 44" fill="none">
-          <circle cx="16" cy="7" r="5" fill="#4c1d95" />
-          <path d="M10.5 6C10.5 3.5 13 1.5 16 1.5C19 1.5 21.5 3.5 21.5 6H10.5Z" fill="#7c3aed" />
-          <path d="M11 15C11 13 13.5 12.5 16 12.5C18.5 12.5 21 13 21 15L22.5 26H9.5L11 15Z" fill="#6d28d9" />
-          {/* Shield badge */}
-          <path d="M14 17C14 17 16 15.5 18 17V21C18 22.5 16 23.5 16 23.5C16 23.5 14 22.5 14 21V17Z" fill="#a78bfa" stroke="#7c3aed" strokeWidth="0.8" />
-          <path d="M15.5 19.5L16.5 20.5L18 18.5" stroke="#ffffff" strokeWidth="0.9" strokeLinecap="round" strokeLinejoin="round" />
-          <g className="person-arm-l">
-            <path d="M11 16L7 22" stroke="#4c1d95" strokeWidth="2.5" strokeLinecap="round" />
-          </g>
-          <g className="person-arm-r">
-            <path d="M21 15L25 20" stroke="#4c1d95" strokeWidth="2.5" strokeLinecap="round" />
-          </g>
-          <g className="person-leg-l">
-            <path d="M13 26L11 38" stroke="#2e1065" strokeWidth="2.8" strokeLinecap="round" />
-            <path d="M11 38L8 41" stroke="#2e1065" strokeWidth="2" strokeLinecap="round" />
-          </g>
-          <g className="person-leg-r">
-            <path d="M19 26L21 38" stroke="#2e1065" strokeWidth="2.8" strokeLinecap="round" />
-            <path d="M21 38L24 41" stroke="#2e1065" strokeWidth="2" strokeLinecap="round" />
-          </g>
-        </svg>
-      </div>
-
-      {/* 6. Cloud Server Pulse Nodes */}
-      <div className="server-pulse-point" style={{ top: '160px', left: '18%' }} />
-      <div className="server-pulse-point" style={{ top: '160px', right: '20%' }} />
-      <div className="server-pulse-point" style={{ bottom: '260px', left: '22%', background: '#6366f1' }} />
-      <div className="server-pulse-point" style={{ bottom: '200px', right: '18%', background: '#6366f1' }} />
 
       {/* 7. Top Right Flag Switcher */}
       <div
@@ -609,7 +335,7 @@ export default function SaasAdminLoginPage() {
             EBS Master SaaS
           </h1>
 
-          <p style={{ fontSize: 13, color: '#64748b', margin: 0, fontWeight: 500 }}>
+          <p style={{ fontSize: 14, color: '#64748b', margin: 0, fontWeight: 500 }}>
             {tr('ផ្ទាំងចូលគ្រប់គ្រង SaaS Platform Master Admin', 'Login portal for SaaS Platform Master Admin')}
           </p>
         </div>
@@ -647,9 +373,9 @@ export default function SaasAdminLoginPage() {
             <label
               style={{
                 display: 'block',
-                fontSize: 13.5,
+                fontSize: 14.5,
                 fontWeight: 700,
-                color: '#1e293b',
+                color: '#334155',
                 marginBottom: 7,
               }}
             >
@@ -709,9 +435,9 @@ export default function SaasAdminLoginPage() {
             <label
               style={{
                 display: 'block',
-                fontSize: 13.5,
+                fontSize: 14.5,
                 fontWeight: 700,
-                color: '#1e293b',
+                color: '#334155',
                 marginBottom: 7,
               }}
             >
@@ -791,7 +517,7 @@ export default function SaasAdminLoginPage() {
               border: 'none',
               background: 'linear-gradient(135deg, #1e40af 0%, #2563eb 100%)',
               color: '#ffffff',
-              fontSize: 15,
+              fontSize: 15.5,
               fontWeight: 700,
               cursor: loading ? 'not-allowed' : 'pointer',
               display: 'flex',
@@ -810,9 +536,9 @@ export default function SaasAdminLoginPage() {
         {/* Footer */}
         <div
           style={{
-            marginTop: 26,
+            marginTop: 22,
             textAlign: 'center',
-            fontSize: 12,
+            fontSize: 12.5,
             color: '#94a3b8',
             fontWeight: 500,
           }}

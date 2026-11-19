@@ -68,11 +68,10 @@ async function bootstrap() {
 
       const lowerOrigin = origin.toLowerCase();
 
-      // 2. In non-production, if CORS_ORIGIN is '*' or not set, allow all origins
+      // 2. In non-production, or if CORS_ORIGIN is explicitly '*', allow all origins
       if (
         process.env.NODE_ENV !== 'production' ||
-        configuredOrigins.includes('*') ||
-        configuredOrigins.length === 0
+        configuredOrigins.includes('*')
       ) {
         return callback(null, true);
       }
@@ -100,8 +99,11 @@ async function bootstrap() {
         return callback(null, true);
       }
 
-      // 5. Allow local dev origins (localhost & 127.0.0.1)
-      if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(lowerOrigin)) {
+      // 5. Allow local dev origins (localhost & 127.0.0.1) only outside production
+      if (
+        process.env.NODE_ENV !== 'production' &&
+        /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(lowerOrigin)
+      ) {
         return callback(null, true);
       }
 
@@ -217,37 +219,45 @@ async function bootstrap() {
     paths: merchantPaths,
   };
 
-  // Scalar API Reference (loaded via dynamic import for ESM compatibility across Node versions)
-  const { apiReference } = await import('@scalar/nestjs-api-reference');
+  const enableDocs =
+    process.env.NODE_ENV !== 'production' ||
+    process.env.ENABLE_API_DOCS === 'true';
 
-  // Full API documentation for all services (Admin, Driver, SaaS)
-  // Registered before '/api/docs' so Express doesn't match the prefix first
-  app.use(
-    '/api/docs/all',
-    apiReference({
-      pageTitle: 'All Services API Reference',
-      theme: 'default',
-      persistAuth: true,
-      content: fullDocument,
-    }),
-  );
+  if (enableDocs) {
+    // Scalar API Reference (loaded via dynamic import for ESM compatibility across Node versions)
+    const { apiReference } = await import('@scalar/nestjs-api-reference');
 
-  // Primary Scalar API Reference URL: Only shows Mobile Merchant
-  app.use(
-    '/api/docs',
-    apiReference({
-      pageTitle: 'Delivery & Merchant API Reference',
-      theme: 'default',
-      persistAuth: true,
-      content: merchantDocument as Record<string, any>,
-    }),
-  );
+    // Full API documentation for all services (Admin, Driver, SaaS)
+    // Registered before '/api/docs' so Express doesn't match the prefix first
+    app.use(
+      '/api/docs/all',
+      apiReference({
+        pageTitle: 'All Services API Reference',
+        theme: 'default',
+        persistAuth: true,
+        content: fullDocument,
+      }),
+    );
+
+    // Primary Scalar API Reference URL: Only shows Mobile Merchant
+    app.use(
+      '/api/docs',
+      apiReference({
+        pageTitle: 'Delivery & Merchant API Reference',
+        theme: 'default',
+        persistAuth: true,
+        content: merchantDocument as Record<string, any>,
+      }),
+    );
+  }
 
   const port = process.env.PORT ?? 3001;
   await app.listen(port);
   console.log(`🚀 Backend running on http://localhost:${port}`);
-  console.log(`✨ Scalar Docs: http://localhost:${port}/api/docs`);
-  console.log(`✨ Scalar Docs (All): http://localhost:${port}/api/docs/all`);
+  if (enableDocs) {
+    console.log(`✨ Scalar Docs: http://localhost:${port}/api/docs`);
+    console.log(`✨ Scalar Docs (All): http://localhost:${port}/api/docs/all`);
+  }
   // trigger restart - db reset
 }
 bootstrap();

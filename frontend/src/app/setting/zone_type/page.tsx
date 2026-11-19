@@ -245,7 +245,7 @@ export default function ZonesPage() {
           open={!!subzoneModal}
           onClose={() => setSubzoneModal(null)}
           title={
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontFamily: "'Kantumruy Pro', sans-serif" }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontFamily: "'Inter', 'Battambang', sans-serif" }}>
               <span style={{ fontWeight: 'bold', fontSize: 16 }}>
                 {lang === 'km' ? 'បន្ថែមតំបន់ប្រតិបត្តិការរង' : 'Add Operation Subzone'}
               </span>
@@ -253,7 +253,7 @@ export default function ZonesPage() {
           }
           size="sm"
           footer={
-            <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', width: '100%', fontFamily: "'Kantumruy Pro', sans-serif" }}>
+            <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', width: '100%', fontFamily: "'Inter', 'Battambang', sans-serif" }}>
               <button 
                 type="button"
                 className="btn btn-cancel btn-sm"
@@ -272,7 +272,7 @@ export default function ZonesPage() {
             </div>
           }
         >
-          <div style={{ fontFamily: "'Kantumruy Pro', sans-serif", padding: '10px 0' }}>
+          <div style={{ fontFamily: "'Inter', 'Battambang', sans-serif", padding: '10px 0' }}>
             <div className="form-group" style={{ marginBottom: 16 }}>
               <label className="form-label" style={{ fontWeight: 'bold', fontSize: 13, marginBottom: 6, display: 'block', color: '#1e293b' }}>
                 {lang === 'km' ? 'ប្រភេទតំបន់ប្រតិបត្តិការ' : 'Operation Zone Type'} <span style={{ color: 'red' }}>*</span>

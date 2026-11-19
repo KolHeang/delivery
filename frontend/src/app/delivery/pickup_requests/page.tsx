@@ -12,7 +12,7 @@ import { TableSkeleton } from '@/components/ui/Skeleton';
 import Pagination from '@/components/ui/Pagination';
 import {
   MdRefresh, MdSearch, MdClose, MdVisibility, MdDirectionsBike,
-  MdCheckCircle, MdHourglassEmpty, MdLocalShipping,
+  MdCheckCircle, MdHourglassEmpty, MdLocalShipping, MdPhone, MdNotes, MdStorefront,
 } from 'react-icons/md';
 
 const PAGE_SIZE_OPTIONS = [20, 50, 100];
@@ -197,51 +197,116 @@ export default function PickupRequestsPage() {
                     </tr>
                   ) : (
                     paginated.map((r: any) => {
-                      const completedCount = r.orders?.length ?? 0;
-                      const progress = r.declaredQuantity > 0 ? Math.round((completedCount / r.declaredQuantity) * 100) : 0;
+                      const completedCount = r.parcels?.length ?? r.orders?.length ?? 0;
+                      const progress = r.declaredQuantity > 0 ? Math.min(100, Math.round((completedCount / r.declaredQuantity) * 100)) : 0;
+                      const merchantName = r.merchant?.nameKh || r.merchant?.name || '—';
+                      const photoUrl = r.photo || r.photos?.[0];
                       return (
                         <tr key={r.id} style={{ borderBottom: '1px solid #f1f5f9', transition: 'background-color 0.15s' }}>
                           <td style={{ padding: '12px 10px', textAlign: 'center', border: 'none' }}>
-                            <code style={{ fontSize: 12, background: 'rgba(47,85,165,0.08)', color: 'var(--accent, #1565D8)', padding: '3px 8px', borderRadius: 6, fontWeight: 700 }}>
+                            <span style={{
+                              display: 'inline-block',
+                              fontFamily: 'monospace',
+                              fontSize: 12.5,
+                              background: 'var(--accent-light, #eff6ff)',
+                              color: 'var(--accent, #1565D8)',
+                              padding: '3px 9px',
+                              borderRadius: 7,
+                              fontWeight: 700,
+                            }}>
                               #{r.id}
-                            </code>
+                            </span>
                           </td>
                           <td style={{ padding: '12px 10px', border: 'none' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                              {(r.photo || r.photos?.[0]) ? (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
+                              {photoUrl ? (
                                 <div
-                                  onClick={() => setPreviewModalImg(r.photo || r.photos[0])}
+                                  onClick={() => setPreviewModalImg(photoUrl)}
                                   style={{
-                                    width: 44,
-                                    height: 44,
+                                    width: 40,
+                                    height: 40,
                                     borderRadius: 10,
                                     overflow: 'hidden',
-                                    border: '1.5px solid #dbeafe',
+                                    border: '1.5px solid #e2e8f0',
                                     flexShrink: 0,
                                     cursor: 'pointer',
-                                    position: 'relative',
-                                    background: '#000',
-                                    boxShadow: '0 2px 6px rgba(0,0,0,0.08)',
+                                    background: '#f8fafc',
                                   }}
-                                  title="ចុចដើម្បីពង្រីករូបភាព (Click to zoom)"
+                                  title={lang === 'km' ? 'ចុចដើម្បីពង្រីករូបភាព' : 'Click to zoom'}
                                 >
                                   <img
-                                    src={r.photo || r.photos[0]}
+                                    src={photoUrl}
                                     alt="Goods"
                                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                                   />
                                 </div>
-                              ) : null}
-                              <div>
-                                <div style={{ fontWeight: 600, fontSize: 13, color: '#0f172a' }}>{r.merchant?.nameKh || r.merchant?.name || ''}</div>
-                                {r.merchant?.phone && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>📞 {r.merchant.phone}</div>}
-                                {r.note && <div style={{ fontSize: 11, color: '#7c3aed', marginTop: 2, maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={r.note}>📝 {r.note}</div>}
+                              ) : (
+                                <div
+                                  style={{
+                                    width: 40,
+                                    height: 40,
+                                    borderRadius: 10,
+                                    background: '#f1f5f9',
+                                    border: '1px solid #e2e8f0',
+                                    color: '#64748b',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    flexShrink: 0,
+                                  }}
+                                >
+                                  <MdStorefront size={19} />
+                                </div>
+                              )}
+                              <div style={{ minWidth: 0 }}>
+                                <div style={{ fontWeight: 700, fontSize: 13.5, color: '#0f172a', lineHeight: 1.35 }}>
+                                  {merchantName}
+                                </div>
+                                {r.merchant?.phone && (
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: '#64748b', marginTop: 2 }}>
+                                    <MdPhone size={12} color="#94a3b8" />
+                                    <span>{r.merchant.phone}</span>
+                                  </div>
+                                )}
+                                {r.note && (
+                                  <div
+                                    style={{
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      gap: 4,
+                                      fontSize: 11.5,
+                                      color: '#64748b',
+                                      marginTop: 2,
+                                      maxWidth: 180,
+                                    }}
+                                    title={r.note}
+                                  >
+                                    <MdNotes size={12} color="#94a3b8" style={{ flexShrink: 0 }} />
+                                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                      {r.note}
+                                    </span>
+                                  </div>
+                                )}
                               </div>
                             </div>
                           </td>
                           <td style={{ padding: '12px 10px', border: 'none' }}>
-                            <div style={{ fontSize: 12, maxWidth: 180, wordBreak: 'break-word', lineHeight: 1.4, color: '#475569' }}>
-                              {r.pickupAddress || ''}
+                            <div
+                              title={r.pickupAddress || ''}
+                              style={{
+                                fontSize: 13,
+                                maxWidth: 210,
+                                lineHeight: 1.45,
+                                color: '#475569',
+                                display: '-webkit-box',
+                                WebkitLineClamp: 2,
+                                WebkitBoxOrient: 'vertical',
+                                overflow: 'hidden',
+                              }}
+                            >
+                              {r.pickupAddress && r.pickupAddress.trim() !== '=' ? r.pickupAddress : (
+                                <span style={{ color: '#94a3b8' }}>—</span>
+                              )}
                             </div>
                           </td>
                           <td style={{ padding: '12px 10px', border: 'none' }}>
@@ -251,18 +316,16 @@ export default function PickupRequestsPage() {
                                   <div
                                     onClick={() => setPreviewModalImg(r.pickupProofPhoto || r.pickupProofPhotos[0])}
                                     style={{
-                                      width: 38,
-                                      height: 38,
+                                      width: 34,
+                                      height: 34,
                                       borderRadius: 8,
                                       overflow: 'hidden',
                                       border: '1.5px solid #86efac',
                                       flexShrink: 0,
                                       cursor: 'pointer',
-                                      position: 'relative',
-                                      background: '#000',
-                                      boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
+                                      background: '#f8fafc',
                                     }}
-                                    title="ភស្តុតាងទៅយក (Pickup Proof) — ចុចមើល"
+                                    title={lang === 'km' ? 'ភស្តុតាងទៅយក — ចុចមើល' : 'Pickup Proof — Click to view'}
                                   >
                                     <img
                                       src={r.pickupProofPhoto || r.pickupProofPhotos[0]}
@@ -272,37 +335,61 @@ export default function PickupRequestsPage() {
                                   </div>
                                 ) : null}
                                 <div>
-                                  <div style={{ fontWeight: 600, fontSize: 13, color: '#0f172a' }}>{r.pickupDriver.nameKh || r.pickupDriver.name}</div>
-                                  {r.driverNote && <div style={{ fontSize: 11, color: '#16a34a', marginTop: 1, maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={r.driverNote}>💬 {r.driverNote}</div>}
+                                  <div style={{ fontWeight: 600, fontSize: 13.5, color: '#0f172a' }}>{r.pickupDriver.nameKh || r.pickupDriver.name}</div>
+                                  {r.driverNote && (
+                                    <div style={{ fontSize: 11.5, color: '#16a34a', marginTop: 1, maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={r.driverNote}>
+                                      {r.driverNote}
+                                    </div>
+                                  )}
                                 </div>
                               </div>
                             ) : (
-                              <span style={{ fontSize: 12, color: 'var(--text-muted)' }}></span>
+                              <span style={{
+                                display: 'inline-block',
+                                fontSize: 12,
+                                fontWeight: 600,
+                                color: '#94a3b8',
+                                background: '#f8fafc',
+                                border: '1px solid #e2e8f0',
+                                padding: '2px 9px',
+                                borderRadius: 6,
+                                whiteSpace: 'nowrap',
+                              }}>
+                                {lang === 'km' ? 'មិនទាន់ចាត់ចែង' : 'Unassigned'}
+                              </span>
                             )}
                           </td>
-                          <td style={{ padding: '12px 10px', textAlign: 'center', fontWeight: 700, border: 'none' }}>{r.declaredQuantity ?? ''}</td>
-                          <td style={{ padding: '12px 10px', textAlign: 'center', fontWeight: 700, border: 'none' }}>{r.actualQuantity ?? ''}</td>
+                          <td style={{ padding: '12px 10px', textAlign: 'center', fontWeight: 700, fontSize: 14, color: '#0f172a', border: 'none' }}>
+                            {r.declaredQuantity ?? <span style={{ color: '#cbd5e1', fontWeight: 500 }}>—</span>}
+                          </td>
+                          <td style={{ padding: '12px 10px', textAlign: 'center', fontWeight: 700, fontSize: 14, color: '#0f172a', border: 'none' }}>
+                            {r.actualQuantity ?? <span style={{ color: '#cbd5e1', fontWeight: 500 }}>—</span>}
+                          </td>
                           <td style={{ padding: '12px 10px', textAlign: 'center', border: 'none' }}>
-                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-                              <span style={{ fontWeight: 700, color: completedCount >= (r.declaredQuantity ?? 0) && r.declaredQuantity > 0 ? '#16a34a' : 'var(--text-primary)' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
+                              <span style={{ fontWeight: 700, fontSize: 13.5, color: completedCount >= (r.declaredQuantity ?? 0) && r.declaredQuantity > 0 ? '#16a34a' : '#0f172a' }}>
                                 {completedCount}{r.declaredQuantity ? ` / ${r.declaredQuantity}` : ''}
                               </span>
                               {r.declaredQuantity > 0 && (
-                                <div style={{ width: 60, height: 5, borderRadius: 9999, background: 'var(--border)', overflow: 'hidden' }}>
-                                  <div style={{ width: `${progress}%`, height: '100%', borderRadius: 9999, background: progress >= 100 ? '#16a34a' : '#1565D8', transition: 'width 0.4s' }} />
+                                <div style={{ width: 64, height: 5, borderRadius: 9999, background: '#e2e8f0', overflow: 'hidden' }}>
+                                  <div style={{ width: `${progress}%`, height: '100%', borderRadius: 9999, background: progress >= 100 ? '#16a34a' : 'var(--accent, #1565D8)', transition: 'width 0.4s' }} />
                                 </div>
                               )}
                             </div>
                           </td>
-                          <td style={{ padding: '12px 10px', fontSize: 12, color: '#64748b', border: 'none' }}>{formatDate(r.pickupTime)}</td>
-                          <td style={{ padding: '12px 10px', textAlign: 'center', border: 'none' }}><StatusBadge status={r.status} lang={lang} /></td>
+                          <td style={{ padding: '12px 10px', fontSize: 12.5, color: '#64748b', whiteSpace: 'nowrap', border: 'none' }}>
+                            {formatDate(r.pickupTime)}
+                          </td>
+                          <td style={{ padding: '12px 10px', textAlign: 'center', border: 'none' }}>
+                            <StatusBadge status={r.status} lang={lang} />
+                          </td>
                           <td style={{ padding: '12px 10px', textAlign: 'center', border: 'none' }}>
                             <button
                               className="btn btn-primary btn-sm"
                               onClick={() => router.push(`/delivery/pickup_requests/${r.id}`)}
-                              style={{ padding: '5px 12px', minHeight: 32, fontSize: 12 }}
+                              style={{ padding: '6px 12px', minHeight: 32, fontSize: 12.5, whiteSpace: 'nowrap', borderRadius: 8 }}
                             >
-                              <MdVisibility size={14} /> {t('viewInbound')}
+                              <MdVisibility size={15} /> {t('viewInbound')}
                             </button>
                           </td>
                         </tr>

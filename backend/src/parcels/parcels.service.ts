@@ -1362,21 +1362,28 @@ export class ParcelsService {
     merchantId?: number;
     tenantId?: number;
   }) {
-    const where: Record<string, any> = {};
-    if (query?.status) where.status = query.status;
-    if (query?.merchantId) where.merchantId = query.merchantId;
-    if (query?.tenantId) where.tenantId = query.tenantId;
+    const qb = this.pickupRequestRepo
+      .createQueryBuilder('pr')
+      .leftJoinAndSelect('pr.merchant', 'merchant')
+      .leftJoinAndSelect('pr.pickupDriver', 'pickupDriver')
+      .leftJoinAndSelect('pr.parcels', 'parcels')
+      .leftJoinAndSelect('pr.branch', 'branch')
+      .orderBy('pr.createdAt', 'DESC');
 
-    return this.pickupRequestRepo.find({
-      where,
-      relations: {
-        merchant: true,
-        pickupDriver: true,
-        parcels: true,
-        branch: true,
-      },
-      order: { createdAt: 'DESC' },
-    });
+    if (query?.status) {
+      qb.andWhere('pr.status = :status', { status: query.status });
+    }
+    if (query?.merchantId) {
+      qb.andWhere('pr.merchantId = :merchantId', { merchantId: query.merchantId });
+    }
+    if (query?.tenantId) {
+      qb.andWhere(
+        '(pr.tenantId = :tenantId OR (pr.tenantId IS NULL AND merchant.tenantId = :tenantId))',
+        { tenantId: query.tenantId },
+      );
+    }
+
+    return qb.getMany();
   }
 
   async findPickupRequestById(
@@ -1388,18 +1395,22 @@ export class ParcelsService {
       ? manager.getRepository(PickupRequest)
       : this.pickupRequestRepo;
 
-    const where: Record<string, any> = { id };
-    if (tenantId) where.tenantId = tenantId;
+    const qb = targetRepo
+      .createQueryBuilder('pr')
+      .leftJoinAndSelect('pr.merchant', 'merchant')
+      .leftJoinAndSelect('pr.pickupDriver', 'pickupDriver')
+      .leftJoinAndSelect('pr.parcels', 'parcels')
+      .leftJoinAndSelect('pr.branch', 'branch')
+      .where('pr.id = :id', { id });
 
-    const request = await targetRepo.findOne({
-      where,
-      relations: {
-        merchant: true,
-        pickupDriver: true,
-        parcels: true,
-        branch: true,
-      },
-    });
+    if (tenantId) {
+      qb.andWhere(
+        '(pr.tenantId = :tenantId OR (pr.tenantId IS NULL AND merchant.tenantId = :tenantId))',
+        { tenantId },
+      );
+    }
+
+    const request = await qb.getOne();
     if (!request)
       throw new NotFoundException(`Pickup request #${id} not found`);
     return request;

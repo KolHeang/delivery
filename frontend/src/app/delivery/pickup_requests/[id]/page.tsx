@@ -21,7 +21,8 @@ import {
 import {
   MdArrowBack, MdRefresh, MdDirectionsBike, MdClose,
   MdDelete, MdPrint, MdCheckCircle, MdAdd, MdHourglassEmpty,
-  MdLocalShipping, MdWarehouse,
+  MdLocalShipping, MdWarehouse, MdPhone, MdWarningAmber,
+  MdInventory2, MdLock, MdBolt, MdPhotoCamera,
 } from 'react-icons/md';
 
 /* ────────────────────────────────── helpers ── */
@@ -313,22 +314,38 @@ export default function PickupRequestDetailPage() {
 
   /* ────────────────────────────── print ── */
   const handlePrint = () => {
+    const el = document.getElementById('waybill-print');
+    if (!el) return;
+
+    const existingRoot = document.getElementById('waybill-print-root');
+    if (existingRoot) existingRoot.remove();
+
+    const printRoot = document.createElement('div');
+    printRoot.id = 'waybill-print-root';
+    printRoot.innerHTML = el.innerHTML;
+    document.body.appendChild(printRoot);
+
     const style = document.createElement('style');
+    style.id = 'waybill-print-style';
     style.textContent = `
+      @media screen {
+        #waybill-print-root { display: none !important; }
+      }
       @media print {
-        body > *:not(#print-root) { display: none !important; }
-        #print-root { display: block !important; }
-        @page { size: auto; margin: 0mm; }
+        body > *:not(#waybill-print-root) { display: none !important; }
+        #waybill-print-root { display: block !important; width: 100% !important; background: #ffffff !important; }
+        @page { size: A4 portrait; margin: 10mm; }
       }
     `;
     document.head.appendChild(style);
-    const el = document.getElementById('waybill-print');
-    if (!el) return;
-    const orig = el.style.display;
-    el.style.display = 'block';
+
+    const cleanup = () => {
+      printRoot.remove();
+      style.remove();
+      window.removeEventListener('afterprint', cleanup);
+    };
+    window.addEventListener('afterprint', cleanup);
     window.print();
-    el.style.display = orig;
-    document.head.removeChild(style);
   };
 
   /* ────────────────────────────── derived ── */
@@ -354,9 +371,9 @@ export default function PickupRequestDetailPage() {
             <button className="btn btn-outline" onClick={() => router.push('/delivery/pickup_requests')} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13 }}>
               <MdArrowBack size={16} /> {t('pickupRequestList')}
             </button>
-            <div style={{ display: 'flex', gap: 8 }}>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               <button className="btn btn-outline" onClick={load} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <MdRefresh size={16} /> Refresh
+                <MdRefresh size={16} /> {lang === 'km' ? 'ផ្ទុកឡើងវិញ' : 'Refresh'}
               </button>
               <button
                 type="button"
@@ -378,7 +395,7 @@ export default function PickupRequestDetailPage() {
           {loading ? (
             <div className="loading-wrapper"><div className="spinner" /></div>
           ) : !request ? (
-            <div className="empty-state"><div className="empty-state-title">Request not found</div></div>
+            <div className="empty-state"><div className="empty-state-title">{lang === 'km' ? 'រកមិនឃើញសំណើនេះទេ' : 'Request not found'}</div></div>
           ) : (
             <>
               {/* ── Success toast ── */}
@@ -388,84 +405,102 @@ export default function PickupRequestDetailPage() {
                 </div>
               )}
 
-              {/* ── Summary card ── */}
+              {/* ── Clean Balanced Summary Card ── */}
               <div className="card" style={{ marginBottom: 20, padding: '20px 24px' }}>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 32, alignItems: 'flex-start' }}>
-                  {/* Request info */}
-                  <div style={{ flex: '1 1 280px' }}>
-                    <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>Request Info</div>
-                    <InfoRow label="Request ID" value={`#${request.id}`} />
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 20, alignItems: 'stretch' }}>
+                  {/* 1. Request Info */}
+                  <div style={{ paddingRight: 12 }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: '#64748b', letterSpacing: '0.03em', marginBottom: 12 }}>
+                      {lang === 'km' ? 'ព័ត៌មានសំណើ' : 'REQUEST INFO'}
+                    </div>
+                    <InfoRow label={lang === 'km' ? 'លេខសំណើ' : 'Request ID'} value={<span style={{ fontFamily: 'monospace', fontWeight: 700, color: 'var(--accent, #1565D8)' }}>#{request.id}</span>} />
                     <InfoRow label={t('status')} value={<StatusBadge status={request.status} lang={lang} />} />
                     <InfoRow label={t('merchant')} value={<><span style={{ fontWeight: 700 }}>{request.merchant?.name}</span>{request.merchant?.nameKh && <span style={{ fontSize: 12, color: 'var(--text-muted)', marginLeft: 6 }}>({request.merchant.nameKh})</span>}</>} />
-                    <InfoRow label={t('location')} value={request.pickupAddress || ''} />
-                    <InfoRow label={t('scheduledAt')} value={formatDate(request.pickupTime)} />
-                    <InfoRow label={t('pickedUpAt')} value={formatDate(request.pickedUpAt)} />
-                    <InfoRow label={t('note')} value={request.note || ''} />
+                    <InfoRow label={t('location')} value={request.pickupAddress && request.pickupAddress.trim() !== '=' ? request.pickupAddress : '—'} />
+                    <InfoRow label={t('scheduledAt')} value={formatDate(request.pickupTime) || '—'} />
+                    {request.pickedUpAt && <InfoRow label={t('pickedUpAt')} value={formatDate(request.pickedUpAt)} />}
+                    {request.note && <InfoRow label={t('note')} value={request.note} />}
                     {request.driverNote && <InfoRow label={lang === 'km' ? 'កំណត់ចំណាំអ្នកប្រមូលកញ្ចប់' : 'Pickup Rider Note'} value={<span style={{ color: '#16a34a' }}>{request.driverNote}</span>} />}
                   </div>
 
-                  {/* Driver */}
-                  <div style={{ flex: '1 1 220px' }}>
-                    <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>{lang === 'km' ? 'អ្នកប្រមូលកញ្ចប់' : 'Pickup Rider'}</div>
+                  {/* 2. Pickup Driver */}
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: '#64748b', letterSpacing: '0.03em', marginBottom: 12 }}>
+                      {lang === 'km' ? 'អ្នកប្រមូលកញ្ចប់' : 'PICKUP RIDER'}
+                    </div>
                     {request.pickupDriver ? (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', borderRadius: 12, background: '#f0f9ff', border: '1.5px solid #bae6fd' }}>
-                        <div style={{ width: 44, height: 44, borderRadius: '50%', background: '#0284c7', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 18 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', borderRadius: 12, background: '#f8fafc', border: '1px solid #e2e8f0', flex: 1 }}>
+                        <div style={{ width: 42, height: 42, borderRadius: '50%', background: 'var(--accent, #1565D8)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 17, flexShrink: 0 }}>
                           {request.pickupDriver.name?.charAt(0)}
                         </div>
-                        <div>
-                          <div style={{ fontWeight: 700, fontSize: 15 }}>{request.pickupDriver.name}</div>
-                          {request.pickupDriver.nameKh && <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{request.pickupDriver.nameKh}</div>}
-                          {request.pickupDriver.phone && <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>📞 {request.pickupDriver.phone}</div>}
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ fontWeight: 700, fontSize: 14.5, color: '#0f172a' }}>{request.pickupDriver.name}</div>
+                          {request.pickupDriver.nameKh && <div style={{ fontSize: 12, color: '#64748b' }}>{request.pickupDriver.nameKh}</div>}
+                          {request.pickupDriver.phone && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12.5, color: '#64748b', marginTop: 2 }}>
+                              <MdPhone size={13} color="#94a3b8" />
+                              <span>{request.pickupDriver.phone}</span>
+                            </div>
+                          )}
                         </div>
                       </div>
                     ) : (
-                      <div style={{ padding: '14px 16px', borderRadius: 12, background: '#fef9c3', border: '1.5px dashed #fbbf24', color: '#92400e', fontSize: 13, fontWeight: 600, textAlign: 'center' }}>
-                        ⚠️ {lang === 'km' ? 'មិនទាន់មានអ្នកប្រមូលកញ្ចប់ត្រូវបានចាត់តាំង' : 'No pickup rider assigned yet'}
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '16px', borderRadius: 12, background: '#fffbeb', border: '1px dashed #fcd34d', color: '#b45309', fontSize: 13.5, fontWeight: 600, flex: 1 }}>
+                        <MdWarningAmber size={18} style={{ flexShrink: 0 }} />
+                        <span>{lang === 'km' ? 'មិនទាន់មានអ្នកប្រមូលកញ្ចប់' : 'No pickup rider assigned'}</span>
                       </div>
                     )}
                   </div>
 
-                  {/* Progress */}
-                  <div style={{ flex: '1 1 220px' }}>
-                    <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>{t('batchProgress')}</div>
-                    <div style={{ padding: '16px 20px', borderRadius: 12, background: 'var(--bg-primary)', border: '1.5px solid var(--border)' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                        <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>Inbounded / Declared</span>
-                        <span style={{ fontWeight: 800, fontSize: 15 }}>{completed} / {declared || '?'}</span>
+                  {/* 3. Progress */}
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: '#64748b', letterSpacing: '0.03em', marginBottom: 12 }}>
+                      {t('batchProgress')}
+                    </div>
+                    <div style={{ padding: '16px 18px', borderRadius: 12, background: '#f8fafc', border: '1px solid #e2e8f0', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                        <span style={{ fontSize: 13, color: '#64748b', fontWeight: 600 }}>
+                          {lang === 'km' ? 'បានទទួល / ប្រកាស' : 'Inbounded / Declared'}
+                        </span>
+                        <span style={{ fontWeight: 800, fontSize: 16, color: '#0f172a' }}>{completed} / {declared || '—'}</span>
                       </div>
-                      <div style={{ height: 8, borderRadius: 999, background: 'var(--border)', overflow: 'hidden', marginBottom: 8 }}>
-                        <div style={{ width: `${progress}%`, height: '100%', borderRadius: 999, background: progress >= 100 ? '#16a34a' : '#d97706', transition: 'width 0.5s' }} />
+                      <div style={{ height: 7, borderRadius: 999, background: '#e2e8f0', overflow: 'hidden', marginBottom: 10 }}>
+                        <div style={{ width: `${progress}%`, height: '100%', borderRadius: 999, background: progress >= 100 ? '#16a34a' : 'var(--accent, #1565D8)', transition: 'width 0.4s' }} />
                       </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
-                        <span style={{ color: 'var(--text-muted)' }}>{progress}% complete</span>
-                        {request.actualQuantity && <span style={{ color: '#7c3aed', fontWeight: 600 }}>Actual picked: {request.actualQuantity}</span>}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5 }}>
+                        <span style={{ color: '#64748b' }}>
+                          {lang === 'km' ? `សម្រេចបាន ${progress}%` : `${progress}% complete`}
+                        </span>
+                        {request.actualQuantity && (
+                          <span style={{ color: 'var(--accent, #1565D8)', fontWeight: 700 }}>
+                            {lang === 'km' ? `ជាក់ស្តែង: ${request.actualQuantity}` : `Actual: ${request.actualQuantity}`}
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
 
-                  {/* Package / Goods Photos */}
+                  {/* 4. Package / Goods Photos */}
                   {(request.photo || (request.photos && request.photos.length > 0)) && (
-                    <div style={{ flex: '1 1 200px' }}>
-                      <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>
-                        Package Photo(s)
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: '#64748b', letterSpacing: '0.03em', marginBottom: 12 }}>
+                        {lang === 'km' ? 'រូបភាពកញ្ចប់' : 'PACKAGE PHOTOS'}
                       </div>
-                      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', padding: '12px 14px', borderRadius: 12, background: '#f8fafc', border: '1px solid #e2e8f0', flex: 1, alignItems: 'center' }}>
                         {(request.photos && request.photos.length > 0 ? request.photos : [request.photo]).map((src: string, idx: number) => (
                           <div
                             key={idx}
                             onClick={() => setPreviewModalImg(src)}
                             style={{
-                              width: 68,
-                              height: 68,
-                              borderRadius: 12,
+                              width: 64,
+                              height: 64,
+                              borderRadius: 10,
                               overflow: 'hidden',
-                              border: '1.5px solid #dbeafe',
+                              border: '1.5px solid #e2e8f0',
                               cursor: 'pointer',
-                              boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
-                              position: 'relative',
-                              background: '#000',
+                              background: '#ffffff',
                             }}
-                            title="Click to view"
+                            title={lang === 'km' ? 'ចុចដើម្បីពង្រីក' : 'Click to view'}
                           >
                             <img src={src} alt={`Goods ${idx + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                           </div>
@@ -474,29 +509,28 @@ export default function PickupRequestDetailPage() {
                     </div>
                   )}
 
-                  {/* Driver Pickup Proof Photos */}
+                  {/* 5. Driver Pickup Proof Photos */}
                   {(request.pickupProofPhoto || (request.pickupProofPhotos && request.pickupProofPhotos.length > 0)) && (
-                    <div style={{ flex: '1 1 200px' }}>
-                      <div style={{ fontSize: 12, fontWeight: 600, color: '#16a34a', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>
-                        📸 Pickup Proof Photo(s)
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 700, color: '#16a34a', letterSpacing: '0.03em', marginBottom: 12 }}>
+                        <MdPhotoCamera size={14} />
+                        <span>{lang === 'km' ? 'រូបភាពភស្តុតាងទៅយក' : 'PICKUP PROOF'}</span>
                       </div>
-                      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', padding: '12px 14px', borderRadius: 12, background: '#f0fdf4', border: '1px solid #bbf7d0', flex: 1, alignItems: 'center' }}>
                         {(request.pickupProofPhotos && request.pickupProofPhotos.length > 0 ? request.pickupProofPhotos : [request.pickupProofPhoto]).map((src: string, idx: number) => (
                           <div
                             key={idx}
                             onClick={() => setPreviewModalImg(src)}
                             style={{
-                              width: 68,
-                              height: 68,
-                              borderRadius: 12,
+                              width: 64,
+                              height: 64,
+                              borderRadius: 10,
                               overflow: 'hidden',
                               border: '1.5px solid #86efac',
                               cursor: 'pointer',
-                              boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
-                              position: 'relative',
-                              background: '#000',
+                              background: '#ffffff',
                             }}
-                            title="Click to view driver proof"
+                            title={lang === 'km' ? 'ចុចដើម្បីពង្រីក' : 'Click to view driver proof'}
                           >
                             <img src={src} alt={`Proof ${idx + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                           </div>
@@ -514,19 +548,25 @@ export default function PickupRequestDetailPage() {
                 <div className="card" style={{ overflow: 'hidden' }}>
                   <div className="card-header" style={{ padding: '14px 20px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <MdWarehouse size={20} style={{ color: '#d97706' }} />
+                      <div style={{ width: 34, height: 34, borderRadius: 9, background: 'var(--accent-light, #eff6ff)', color: 'var(--accent, #1565D8)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <MdWarehouse size={18} />
+                      </div>
                       <div>
                         <span className="card-title" style={{ fontSize: 15 }}>{t('parcelsInBatch')}</span>
-                        <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 1 }}>{completed} parcel(s) registered</div>
+                        <div style={{ fontSize: 12.5, color: '#64748b', marginTop: 1 }}>
+                          {lang === 'km' ? `បានចុះឈ្មោះ ${completed} កញ្ចប់` : `${completed} parcel(s) registered`}
+                        </div>
                       </div>
                     </div>
                   </div>
 
                   {parcels.length === 0 ? (
-                    <div style={{ padding: '40px 20px', textAlign: 'center' }}>
-                      <div style={{ fontSize: 36, marginBottom: 10 }}>📪</div>
-                      <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--text-primary)', marginBottom: 6 }}>{t('noParcelsYet')}</div>
-                      <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>{t('noParcelsYetText')}</div>
+                    <div style={{ padding: '48px 20px', textAlign: 'center' }}>
+                      <div style={{ width: 52, height: 52, borderRadius: 14, background: '#f1f5f9', color: '#94a3b8', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
+                        <MdInventory2 size={26} />
+                      </div>
+                      <div style={{ fontWeight: 700, fontSize: 15, color: '#0f172a', marginBottom: 4 }}>{t('noParcelsYet')}</div>
+                      <div style={{ fontSize: 13.5, color: '#64748b' }}>{t('noParcelsYetText')}</div>
                     </div>
                   ) : (
                     <div style={{ overflowX: 'auto' }}>
@@ -585,34 +625,55 @@ export default function PickupRequestDetailPage() {
 
                   {declared > 0 && completed >= declared ? (
                     /* ── CAPACITY FULL BANNER ── */
-                    <div style={{ padding: '28px 24px', textAlign: 'center' }}>
-                      <div style={{ fontSize: 36, marginBottom: 10 }}>🔒</div>
-                      <div style={{ fontWeight: 800, fontSize: 16, color: '#dc2626', marginBottom: 6 }}>
-                        Declared Quantity Reached
+                    <div style={{ padding: '32px 24px', textAlign: 'center' }}>
+                      <div style={{ width: 52, height: 52, borderRadius: 14, background: '#fef2f2', color: '#dc2626', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
+                        <MdLock size={24} />
                       </div>
-                      <div style={{ fontSize: 13, color: 'var(--text-muted)', maxWidth: 280, margin: '0 auto' }}>
-                        All <strong>{declared}</strong> declared parcel(s) have been registered.
-                        Remove an existing parcel first to add a new one.
+                      <div style={{ fontWeight: 800, fontSize: 15.5, color: '#dc2626', marginBottom: 6 }}>
+                        {lang === 'km' ? 'គ្រប់ចំនួនកញ្ចប់ដែលបានប្រកាសហើយ' : 'Declared Quantity Reached'}
+                      </div>
+                      <div style={{ fontSize: 13, color: '#64748b', maxWidth: 280, margin: '0 auto', lineHeight: 1.6 }}>
+                        {lang === 'km'
+                          ? `បានចុះឈ្មោះគ្រប់ ${declared} កញ្ចប់ហើយ។ សូមលុបកញ្ចប់ណាមួយសិន ប្រសិនបើចង់បន្ថែមថ្មី។`
+                          : `All ${declared} declared parcel(s) have been registered. Remove an existing parcel first to add a new one.`}
                       </div>
                     </div>
                   ) : (
                     <>
                   {/* Tab switcher */}
-                  <div style={{ display: 'flex', borderBottom: '1.5px solid var(--border)' }}>
+                  <div style={{ display: 'flex', borderBottom: '1px solid #e2e8f0' }}>
                     {(['single', 'batch'] as const).map(tab => (
                       <button
                         key={tab}
                         onClick={() => { setEntryTab(tab); setBatchResults([]); }}
                         style={{
-                          flex: 1, padding: '13px 0', border: 'none', cursor: 'pointer',
-                          fontWeight: 700, fontSize: 13,
-                          background: entryTab === tab ? 'var(--bg-card)' : 'var(--bg-primary)',
-                          color: entryTab === tab ? '#1e3a8a' : 'var(--text-muted)',
-                          borderBottom: entryTab === tab ? '2.5px solid #1e3a8a' : '2.5px solid transparent',
+                          flex: 1,
+                          padding: '13px 0',
+                          border: 'none',
+                          cursor: 'pointer',
+                          fontWeight: 700,
+                          fontSize: 13.5,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: 6,
+                          background: entryTab === tab ? '#ffffff' : '#f8fafc',
+                          color: entryTab === tab ? 'var(--accent, #1565D8)' : '#64748b',
+                          borderBottom: entryTab === tab ? '2.5px solid var(--accent, #1565D8)' : '2.5px solid transparent',
                           transition: 'all 0.2s',
                         }}
                       >
-                        {tab === 'single' ? '+ Add Single' : '⚡ Batch Entry'}
+                        {tab === 'single' ? (
+                          <>
+                            <MdAdd size={16} />
+                            <span>{lang === 'km' ? 'បន្ថែមម្តងមួយ' : 'Add Single'}</span>
+                          </>
+                        ) : (
+                          <>
+                            <MdBolt size={16} />
+                            <span>{lang === 'km' ? 'បញ្ចូលជាបណ្តុំ' : 'Batch Entry'}</span>
+                          </>
+                        )}
                       </button>
                     ))}
                   </div>
@@ -621,12 +682,14 @@ export default function PickupRequestDetailPage() {
                   {entryTab === 'single' && (
                     <div style={{ padding: '20px 24px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
-                        <div style={{ width: 36, height: 36, borderRadius: 10, background: 'linear-gradient(135deg,#1e3a8a,#2563eb)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <div style={{ width: 36, height: 36, borderRadius: 10, background: 'var(--accent-light, #eff6ff)', color: 'var(--accent, #1565D8)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                           <MdAdd size={20} />
                         </div>
                         <div>
-                          <div style={{ fontWeight: 700, fontSize: 15 }}>{t('addParcelTitle')}</div>
-                          <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Fill in parcel details below</div>
+                          <div style={{ fontWeight: 700, fontSize: 15, color: '#0f172a' }}>{t('addParcelTitle')}</div>
+                          <div style={{ fontSize: 12.5, color: '#64748b' }}>
+                            {lang === 'km' ? 'បំពេញព័ត៌មានកញ្ចប់ខាងក្រោម' : 'Fill in parcel details below'}
+                          </div>
                         </div>
                       </div>
 
@@ -638,13 +701,13 @@ export default function PickupRequestDetailPage() {
 
                       <form onSubmit={handleAddParcel} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                         <FormField label={t('receiverName')}>
-                          <input type="text" value={form.receiverName} onChange={e => setForm(f => ({ ...f, receiverName: e.target.value }))} placeholder="Customer name" style={inputStyle} />
+                          <input type="text" value={form.receiverName} onChange={e => setForm(f => ({ ...f, receiverName: e.target.value }))} placeholder={lang === 'km' ? 'បញ្ចូលឈ្មោះអ្នកទទួល' : 'Customer name'} style={inputStyle} />
                         </FormField>
                         <FormField label={`${t('receiverPhone')} *`}>
-                          <input type="text" inputMode="tel" value={form.receiverPhone} onChange={e => setForm(f => ({ ...f, receiverPhone: sanitizePhoneInput(e.target.value) }))} placeholder="e.g. 012345678" required style={inputStyle} />
+                          <input type="text" inputMode="tel" value={form.receiverPhone} onChange={e => setForm(f => ({ ...f, receiverPhone: sanitizePhoneInput(e.target.value) }))} placeholder={lang === 'km' ? 'ឧ. 012345678' : 'e.g. 012345678'} required style={inputStyle} />
                         </FormField>
                         <FormField label={`${t('receiverAddress')} *`}>
-                          <input type="text" value={form.receiverAddress} onChange={e => setForm(f => ({ ...f, receiverAddress: e.target.value }))} placeholder="Delivery address" required style={inputStyle} />
+                          <input type="text" value={form.receiverAddress} onChange={e => setForm(f => ({ ...f, receiverAddress: e.target.value }))} placeholder={lang === 'km' ? 'បញ្ចូលអាសយដ្ឋានដឹកជញ្ជូន' : 'Delivery address'} required style={inputStyle} />
                         </FormField>
 
                         <FormField label={`${t('deliveryFee')} ($)`}>
@@ -654,7 +717,7 @@ export default function PickupRequestDetailPage() {
                           <FormField label={t('cod')}>
                             <input type="number" min="0" step="0.01" value={form.cod} onChange={e => setForm(f => ({ ...f, cod: e.target.value }))} placeholder="0" style={inputStyle} />
                           </FormField>
-                          <FormField label="Currency">
+                          <FormField label={lang === 'km' ? 'រូបិយប័ណ្ណ' : 'Currency'}>
                             <select value={form.codCurrency} onChange={e => setForm(f => ({ ...f, codCurrency: e.target.value }))} style={inputStyle}>
                               <option value="USD">USD</option>
                               <option value="KHR">KHR</option>
@@ -662,10 +725,10 @@ export default function PickupRequestDetailPage() {
                           </FormField>
                         </div>
                         <FormField label={t('note')}>
-                          <input type="text" value={form.note} onChange={e => setForm(f => ({ ...f, note: e.target.value }))} placeholder="Optional note" style={inputStyle} />
+                          <input type="text" value={form.note} onChange={e => setForm(f => ({ ...f, note: e.target.value }))} placeholder={lang === 'km' ? 'ចំណាំបន្ថែម (ជាជម្រើស)' : 'Optional note'} style={inputStyle} />
                         </FormField>
-                        <button type="submit" className="btn btn-primary w-full" disabled={submitting} style={{ marginTop: 4, padding: '12px', borderRadius: 10, fontWeight: 700, fontSize: 14 }}>
-                          <MdAdd size={18} />{submitting ? 'Adding...' : t('addParcel')}
+                        <button type="submit" className="btn btn-primary w-full" disabled={submitting} style={{ marginTop: 4, padding: '12px', borderRadius: 10, fontWeight: 700, fontSize: 14.5 }}>
+                          <MdAdd size={18} />{submitting ? (lang === 'km' ? 'កំពុងបន្ថែម...' : 'Adding...') : t('addParcel')}
                         </button>
                       </form>
                     </div>
@@ -913,30 +976,51 @@ export default function PickupRequestDetailPage() {
 
       {/* ════════════════ Hidden Waybill Print ════════════════ */}
       <div id="waybill-print" style={{ display: 'none' }} ref={printRef}>
-        <div style={{ fontFamily: "'Inter', 'Battambang', sans-serif", padding: 20 }}>
-          <h2 style={{ marginBottom: 6 }}>Pickup Request Waybills — #{id}</h2>
-          <p style={{ marginBottom: 20, fontSize: 13, color: '#555' }}>
-            Merchant: {request?.merchant?.name} · Printed: {printedAt}
-          </p>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-            {parcels.map((p: any, idx: number) => (
-              <div key={p.id} style={{ border: '1.5px solid #ccc', borderRadius: 8, padding: 14, breakInside: 'avoid', pageBreakInside: 'avoid' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                  <span style={{ fontWeight: 800, fontSize: 16 }}>#{idx + 1}</span>
-                  <code style={{ fontSize: 13, fontWeight: 800 }}>{p.trackingCode}</code>
-                </div>
-                <div style={{ fontSize: 12, lineHeight: 1.7 }}>
-                  <div><b>From:</b> {request?.merchant?.name}</div>
-                  <div><b>To:</b> {[p.receiverName, p.receiverPhone].filter(Boolean).join(' · ')}</div>
-                  <div><b>Address:</b> {p.receiverAddress}</div>
-                  <div><b>Zone:</b> {p.zone?.name || ''}</div>
-                  <div><b>COD:</b> {formatCOD(p.cod, p.codCurrency)}</div>
-                  <div><b>Fee:</b> ${parseFloat(p.deliveryFee || 0).toFixed(2)}</div>
-                  {p.note && <div><b>Note:</b> {p.note}</div>}
-                </div>
+        <div style={{ fontFamily: "'Inter', 'Battambang', sans-serif", padding: 12, color: '#0f172a' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '2px solid #0f172a', paddingBottom: 10, marginBottom: 16 }}>
+            <div>
+              <h2 style={{ margin: '0 0 4px', fontSize: 18, fontWeight: 800 }}>
+                {lang === 'km' ? `បញ្ជីវិក្កយបត្រសំណើប្រមូល — #${id}` : `Pickup Request Waybills — #${id}`}
+              </h2>
+              <div style={{ fontSize: 12.5, color: '#475569' }}>
+                {lang === 'km' ? 'ហាង៖' : 'Merchant:'} <strong>{request?.merchant?.nameKh || request?.merchant?.name || '—'}</strong>
+                {request?.pickupDriver && (
+                  <> · {lang === 'km' ? 'អ្នកប្រមូល៖' : 'Rider:'} <strong>{request.pickupDriver.nameKh || request.pickupDriver.name}</strong></>
+                )}
               </div>
-            ))}
+            </div>
+            <div style={{ textAlign: 'right', fontSize: 12, color: '#475569' }}>
+              <div>{lang === 'km' ? 'ចំនួនប្រកាស៖' : 'Declared:'} <strong>{declared}</strong> · {lang === 'km' ? 'បានចុះឈ្មោះ៖' : 'Registered:'} <strong>{completed}</strong></div>
+              <div>{lang === 'km' ? 'បោះពុម្ពនៅ៖' : 'Printed:'} {printedAt}</div>
+            </div>
           </div>
+
+          {parcels.length === 0 ? (
+            <div style={{ border: '1.5px dashed #cbd5e1', borderRadius: 10, padding: '24px 16px', textAlign: 'center', fontSize: 13.5, color: '#64748b' }}>
+              {lang === 'km'
+                ? 'មិនទាន់មានកញ្ចប់ត្រូវបានចុះឈ្មោះក្នុងសំណើនេះទេ។'
+                : 'No parcels have been registered in this pickup request yet.'}
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+              {parcels.map((p: any, idx: number) => (
+                <div key={p.id} style={{ border: '1.5px solid #cbd5e1', borderRadius: 10, padding: 14, breakInside: 'avoid', pageBreakInside: 'avoid' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, paddingBottom: 6, borderBottom: '1px solid #e2e8f0' }}>
+                    <span style={{ fontWeight: 800, fontSize: 15 }}>#{idx + 1}</span>
+                    <code style={{ fontSize: 13, fontWeight: 800, fontFamily: 'monospace' }}>{p.trackingCode}</code>
+                  </div>
+                  <div style={{ fontSize: 12.5, lineHeight: 1.7 }}>
+                    <div><b>{lang === 'km' ? 'ពីហាង៖' : 'From:'}</b> {request?.merchant?.nameKh || request?.merchant?.name || '—'}</div>
+                    <div><b>{lang === 'km' ? 'អ្នកទទួល៖' : 'To:'}</b> {[p.receiverName, p.receiverPhone].filter(Boolean).join(' · ')}</div>
+                    <div><b>{lang === 'km' ? 'អាសយដ្ឋាន៖' : 'Address:'}</b> {p.receiverAddress}</div>
+                    {p.zone?.name && <div><b>{lang === 'km' ? 'តំបន់៖' : 'Zone:'}</b> {p.zone.name}</div>}
+                    <div><b>COD:</b> {formatCOD(p.cod, p.codCurrency)} · <b>{lang === 'km' ? 'សេវាដឹក៖' : 'Fee:'}</b> ${parseFloat(p.deliveryFee || 0).toFixed(2)}</div>
+                    {p.note && <div><b>{lang === 'km' ? 'ចំណាំ៖' : 'Note:'}</b> {p.note}</div>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 

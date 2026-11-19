@@ -2000,6 +2000,7 @@ export class MerchantService {
     const photos = dto.photos && dto.photos.length > 0 ? dto.photos : (dto.photo ? [dto.photo] : undefined);
 
     const pickupRequest = this.pickupRequestRepo.create({
+      tenantId: merchant.tenantId,
       merchantId,
       branchId: dto.branchId || undefined,
       declaredQuantity: dto.declaredQuantity,

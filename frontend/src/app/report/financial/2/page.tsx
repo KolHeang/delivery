@@ -8,7 +8,8 @@ import Topbar from '@/components/layout/Topbar';
 import api from '@/lib/api';
 import { useLanguage } from '@/lib/LanguageContext';
 import DateInput, { formatDateToDDMMYYYY } from '@/components/ui/DateInput';
-import { MdPrint, MdSearch, MdArrowBack } from 'react-icons/md';
+import { MdPrint, MdSearch, MdArrowBack, MdDownload } from 'react-icons/md';
+import { exportPageTableToExcel } from '@/lib/export-excel';
 import ReportHeader from '@/components/ui/ReportHeader';
 
 interface Row { id: any; name: string; date: string; packages: number; totalUSD: number; totalKHR: number; }
@@ -72,6 +73,7 @@ export default function Frpt2Page() {
               />
               <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', marginLeft: 'auto' }}>
                 <button className="btn btn-primary" onClick={load} style={{ display: 'flex', alignItems: 'center', gap: 6 }}><MdSearch size={16} /> {t('filterBtn')}</button>
+                <button type="button" className="btn btn-outline" onClick={() => exportPageTableToExcel('daily-collections-report-' + new Date().toISOString().slice(0, 10))} style={{ display: 'flex', alignItems: 'center', gap: 6 }}><MdDownload size={16} /> Excel</button>
                 <button className="btn btn-outline" onClick={() => window.print()} style={{ display: 'flex', alignItems: 'center', gap: 6 }}><MdPrint size={16} /> {t('downloadAndPrint')}</button>
               </div>
             </div>

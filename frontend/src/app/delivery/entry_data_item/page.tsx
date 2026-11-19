@@ -51,6 +51,8 @@ export default function BatchEntryPage() {
 
   const [merchantBranches, setMerchantBranches] = useState<any[]>([]);
   const [selectedBranchId, setSelectedBranchId] = useState('');
+  const [pickupRequests, setPickupRequests] = useState<any[]>([]);
+  const [selectedPickupRequestId, setSelectedPickupRequestId] = useState('');
 
   useEffect(() => {
     if (selectedMerchantId) {
@@ -67,11 +69,66 @@ export default function BatchEntryPage() {
           setMerchantBranches([]);
           setSelectedBranchId('');
         });
+
+      api.get('/parcels/pickup-requests', { params: { merchantId: selectedMerchantId } })
+        .then(res => {
+          const list = Array.isArray(res.data) ? res.data : (res.data?.data || []);
+          const openList = list.filter((pr: any) => pr.status !== 'completed' && pr.status !== 'cancelled');
+          setPickupRequests(openList);
+          setSelectedPickupRequestId('');
+        })
+        .catch(() => {
+          setPickupRequests([]);
+          setSelectedPickupRequestId('');
+        });
     } else {
       setMerchantBranches([]);
       setSelectedBranchId('');
+      setPickupRequests([]);
+      setSelectedPickupRequestId('');
     }
   }, [selectedMerchantId]);
+
+  const handleSelectPickupRequest = (prId: string) => {
+    setSelectedPickupRequestId(prId);
+    if (!prId) return;
+    const pr = pickupRequests.find((p: any) => String(p.id) === prId);
+    if (!pr) return;
+
+    if (pr.branchId) {
+      setSelectedBranchId(String(pr.branchId));
+    }
+    const pickupDriverIdStr = pr.pickupDriverId
+      ? String(pr.pickupDriverId)
+      : (pr.pickupDriver?.id ? String(pr.pickupDriver.id) : '');
+    const targetQty = pr.actualQuantity || pr.declaredQuantity || 0;
+    const existingCount = pr.parcels?.length ?? pr.orders?.length ?? 0;
+    const remaining = Math.max(1, Math.min(targetQty - existingCount, 30));
+
+    setRows(prev => {
+      const isSingleEmpty =
+        prev.length === 1 &&
+        !prev[0].receiverAddress?.trim() &&
+        !prev[0].receiverPhone?.trim();
+      if (isSingleEmpty && remaining > 1) {
+        return Array.from({ length: remaining }, () => ({
+          receiverName: '',
+          receiverAddress: '',
+          receiverPhone: '',
+          deliveryFee: deliveryFee || '1.25',
+          codUSD: '0',
+          codKHR: '0',
+          pickupId: pickupDriverIdStr,
+          driverId: '',
+          note: '',
+        }));
+      }
+      return prev.map(r => ({
+        ...r,
+        pickupId: r.pickupId || pickupDriverIdStr,
+      }));
+    });
+  };
 
   useEffect(() => {
     const merchant = merchants.find(m => m.id.toString() === selectedMerchantId);
@@ -94,9 +151,13 @@ export default function BatchEntryPage() {
   }, [selectedMerchantId, merchants]);
 
   const addRow = () => {
+    const selectedPr = pickupRequests.find((p: any) => String(p.id) === selectedPickupRequestId);
+    const defaultPickupId = selectedPr?.pickupDriverId
+      ? String(selectedPr.pickupDriverId)
+      : (selectedPr?.pickupDriver?.id ? String(selectedPr.pickupDriver.id) : '');
     setRows(prev => [
       ...prev,
-      { receiverName: '', receiverAddress: '', receiverPhone: '', deliveryFee: deliveryFee || '1.25', codUSD: '0', codKHR: '0', pickupId: '', driverId: '', note: '' }
+      { receiverName: '', receiverAddress: '', receiverPhone: '', deliveryFee: deliveryFee || '1.25', codUSD: '0', codKHR: '0', pickupId: defaultPickupId, driverId: '', note: '' }
     ]);
   };
 
@@ -186,6 +247,7 @@ export default function BatchEntryPage() {
         const basePayload = {
           merchantId: parseInt(selectedMerchantId),
           branchId: selectedBranchId ? parseInt(selectedBranchId) : undefined,
+          pickupRequestId: selectedPickupRequestId ? parseInt(selectedPickupRequestId) : undefined,
           receiverName: r.receiverName,
           receiverPhone: r.receiverPhone,
           receiverAddress: r.receiverAddress,
@@ -301,6 +363,37 @@ export default function BatchEntryPage() {
                         value: String(b.id),
                         label: `${b.name} ${b.code ? `[${b.code}]` : ''} ${b.isDefault ? `⭐ (${lang === 'km' ? 'ដើម' : 'Default'})` : ''}`,
                       })),
+                    ]}
+                  />
+                </div>
+              )}
+
+              {pickupRequests.length > 0 && (
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label" style={{ fontWeight: 600 }}>
+                    {lang === 'km' ? 'ភ្ជាប់សំណើប្រមូលកញ្ចប់' : 'Link Pickup Request'}
+                  </label>
+                  <SearchableSelect
+                    value={selectedPickupRequestId}
+                    onChange={handleSelectPickupRequest}
+                    style={{ height: 42, fontSize: 13.5 }}
+                    placeholder={lang === 'km' ? '-- មិនភ្ជាប់ (បញ្ចូលធម្មតា) --' : '-- None (Standalone) --'}
+                    options={[
+                      { value: '', label: lang === 'km' ? '-- មិនភ្ជាប់ (បញ្ចូលធម្មតា) --' : '-- None (Standalone) --' },
+                      ...pickupRequests.map((pr: any) => {
+                        const existing = pr.parcels?.length ?? pr.orders?.length ?? 0;
+                        const target = pr.actualQuantity || pr.declaredQuantity || 0;
+                        const statusText =
+                          pr.status === 'picked-up'
+                            ? (lang === 'km' ? 'ប្រមូលរួច' : 'Picked Up')
+                            : pr.status === 'assigned'
+                              ? (lang === 'km' ? 'បានចាត់តាំង' : 'Assigned')
+                              : (lang === 'km' ? 'កំពុងរង់ចាំ' : 'Pending');
+                        return {
+                          value: String(pr.id),
+                          label: `#${pr.id} — ${statusText} (${existing}/${target} ${lang === 'km' ? 'កញ្ចប់' : 'parcels'})`,
+                        };
+                      }),
                     ]}
                   />
                 </div>

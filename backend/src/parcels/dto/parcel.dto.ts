@@ -95,6 +95,11 @@ export class CreateParcelDto {
   pickupDriverId?: number;
   @ApiProperty({ required: false })
   @IsOptional()
+  @IsNumber()
+  @Type(() => Number)
+  pickupRequestId?: number;
+  @ApiProperty({ required: false })
+  @IsOptional()
   @IsString()
   trackingCode?: string;
   @ApiProperty({ required: false })

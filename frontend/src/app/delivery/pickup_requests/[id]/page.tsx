@@ -68,10 +68,10 @@ const emptyForm = () => ({
   note: '', packageName: '', weight: '', size: '',
 });
 
-const emptyBatchRow = () => ({
+const emptyBatchRow = (defaults?: { deliveryFee?: string; pickupDriverId?: string }) => ({
   receiverAddress: '', receiverPhone: '',
-  deliveryFee: '', amountUSD: '0', amountKHR: '0',
-  pickupDriverId: '', deliveryDriverId: '',
+  deliveryFee: defaults?.deliveryFee ?? '', amountUSD: '0', amountKHR: '0',
+  pickupDriverId: defaults?.pickupDriverId ?? '', deliveryDriverId: '',
   note: '', zoneId: '',
 });
 
@@ -102,6 +102,8 @@ export default function PickupRequestDetailPage() {
   const [batchRows, setBatchRows]             = useState<any[]>([emptyBatchRow()]);
   const [batchSubmitting, setBatchSubmitting] = useState(false);
   const [batchResults, setBatchResults]       = useState<{ idx: number; success: boolean; msg: string }[]>([]);
+  const [defaultFeeStr, setDefaultFeeStr]     = useState('');
+  const didAutoInitBatchRef                   = useRef(false);
 
   /* ── assign driver modal ── */
   const [showAssign, setShowAssign]       = useState(false);
@@ -126,8 +128,9 @@ export default function PickupRequestDetailPage() {
       ]);
       const reqData = reqRes.data;
       const zonesData: any[] = zoneRes.data?.data ?? zoneRes.data ?? [];
+      const existingParcels = reqData.parcels ?? reqData.orders ?? [];
       setRequest(reqData);
-      setParcels(reqData.parcels ?? reqData.orders ?? []);
+      setParcels(existingParcels);
       setDrivers(drvRes.data);
       setZones(zonesData);
 
@@ -140,11 +143,43 @@ export default function PickupRequestDetailPage() {
         const tier = merchant?.pricingTier?.toLowerCase();
         fee = (tier && zone[tier] != null) ? zone[tier] : zone.deliveryFee ?? zone.price ?? '';
       }
+      let resolvedFeeStr = '';
       if (fee !== '' && fee != null) {
         const num = parseFloat(String(fee));
-        const feeStr = !isNaN(num) ? num.toFixed(2) : String(fee);
-        setForm(f => ({ ...f, deliveryFee: feeStr }));
-        setBatchRows(rows => rows.map((r, i) => i === 0 && !r.deliveryFee ? { ...r, deliveryFee: feeStr } : r));
+        resolvedFeeStr = !isNaN(num) ? num.toFixed(2) : String(fee);
+        setDefaultFeeStr(resolvedFeeStr);
+        setForm(f => ({ ...f, deliveryFee: resolvedFeeStr }));
+      }
+
+      const assignedPickupId = reqData.pickupDriverId
+        ? String(reqData.pickupDriverId)
+        : (reqData.pickupDriver?.id ? String(reqData.pickupDriver.id) : '');
+
+      /* Option 1: Auto-open Batch Entry & auto-generate pre-filled rows when pickup succeeded */
+      const targetQty = reqData.actualQuantity || reqData.declaredQuantity || 0;
+      const remaining = Math.max(0, targetQty - existingParcels.length);
+
+      if (!didAutoInitBatchRef.current && reqData.status === 'picked-up' && remaining > 0) {
+        didAutoInitBatchRef.current = true;
+        const count = Math.min(remaining, 30);
+        setEntryTab('batch');
+        setBatchRows(
+          Array.from({ length: count }, () =>
+            emptyBatchRow({ deliveryFee: resolvedFeeStr, pickupDriverId: assignedPickupId }),
+          ),
+        );
+      } else {
+        setBatchRows(rows =>
+          rows.map((r, i) =>
+            i === 0
+              ? {
+                  ...r,
+                  deliveryFee: r.deliveryFee || resolvedFeeStr,
+                  pickupDriverId: r.pickupDriverId || assignedPickupId,
+                }
+              : r,
+          ),
+        );
       }
     } catch { /* silent */ }
     setLoading(false);
@@ -214,13 +249,32 @@ export default function PickupRequestDetailPage() {
   };
 
   /* ────────────────────────────── batch helpers ── */
+  const getBatchDefaults = () => ({
+    deliveryFee: defaultFeeStr,
+    pickupDriverId: request?.pickupDriverId
+      ? String(request.pickupDriverId)
+      : (request?.pickupDriver?.id ? String(request.pickupDriver.id) : ''),
+  });
+
   const addBatchRow = () => {
     const declaredQty = request?.declaredQuantity ?? 0;
     if (declaredQty > 0 && parcels.length + batchRows.length >= declaredQty) {
-      alert(`Cannot add more rows — only ${Math.max(0, declaredQty - parcels.length)} slot(s) remaining.`);
+      alert(
+        lang === 'km'
+          ? `មិនអាចបន្ថែមជួរបានទៀតទេ — នៅសល់តែ ${Math.max(0, declaredQty - parcels.length)} កញ្ចប់ប៉ុណ្ណោះ។`
+          : `Cannot add more rows — only ${Math.max(0, declaredQty - parcels.length)} slot(s) remaining.`,
+      );
       return;
     }
-    setBatchRows(r => [...r, emptyBatchRow()]);
+    setBatchRows(r => [...r, emptyBatchRow(getBatchDefaults())]);
+  };
+
+  const generateRemainingBatchRows = () => {
+    const targetQty = request?.actualQuantity || request?.declaredQuantity || 0;
+    const remaining = Math.max(1, Math.min(targetQty - parcels.length, 30));
+    const defaults = getBatchDefaults();
+    setBatchRows(Array.from({ length: remaining }, () => emptyBatchRow(defaults)));
+    setBatchResults([]);
   };
 
   const removeBatchRow = (idx: number) =>
@@ -753,20 +807,20 @@ export default function PickupRequestDetailPage() {
                       <div style={{ overflowX: 'auto', borderRadius: 10, border: '1px solid #cbd5e1', overflow: 'hidden' }}>
                         <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 900 }}>
                           <thead>
-                            <tr style={{ background: '#1e3a8a' }}>
+                            <tr style={{ background: 'var(--sidebar-bg, #1565D8)' }}>
                               {[
-                                { label: 'No.', w: 44 },
-                                { label: 'Receiver Address *', w: undefined },
-                                { label: 'Receiver Phone *', w: 150 },
-                                { label: 'Delivery Fee', w: 110 },
-                                { label: 'Amount ($)', w: 100 },
-                                { label: 'Amount (៛)', w: 100 },
-                                { label: 'Pickup Person', w: 160 },
-                                { label: 'Delivery Person', w: 160 },
-                                { label: 'Note', w: undefined },
-                                { label: 'Actions', w: 70 },
+                                { label: lang === 'km' ? 'ល.រ' : 'No.', w: 44 },
+                                { label: lang === 'km' ? 'អាសយដ្ឋានអ្នកទទួល *' : 'Receiver Address *', w: undefined },
+                                { label: lang === 'km' ? 'ទូរស័ព្ទអ្នកទទួល *' : 'Receiver Phone *', w: 150 },
+                                { label: lang === 'km' ? 'សេវាដឹក ($)' : 'Delivery Fee', w: 110 },
+                                { label: lang === 'km' ? 'COD ($)' : 'Amount ($)', w: 100 },
+                                { label: lang === 'km' ? 'COD (៛)' : 'Amount (៛)', w: 100 },
+                                { label: lang === 'km' ? 'អ្នកប្រមូលកញ្ចប់' : 'Pickup Person', w: 160 },
+                                { label: lang === 'km' ? 'អ្នកដឹកជញ្ជូន' : 'Delivery Person', w: 160 },
+                                { label: lang === 'km' ? 'ចំណាំ' : 'Note', w: undefined },
+                                { label: lang === 'km' ? 'លុប' : 'Actions', w: 64 },
                               ].map(({ label, w }) => (
-                                <th key={label} style={{ padding: '11px 10px', fontSize: 12, fontWeight: 700, color: '#fff', textAlign: 'left', whiteSpace: 'nowrap', width: w }}>{label}</th>
+                                <th key={label} style={{ padding: '11px 10px', fontSize: 12.5, fontWeight: 700, color: '#fff', textAlign: 'left', whiteSpace: 'nowrap', width: w }}>{label}</th>
                               ))}
                             </tr>
                           </thead>
@@ -888,27 +942,41 @@ export default function PickupRequestDetailPage() {
                       </div>
 
                       {/* Bottom actions */}
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 16 }}>
-                        <div style={{ flex: 1 }} />
-                        <button
-                          type="button"
-                          className="btn btn-outline"
-                          onClick={addBatchRow}
-                          style={{ padding: '9px 24px', borderRadius: 8, fontWeight: 600, fontSize: 13 }}
-                        >
-                          <MdAdd size={16} /> Add New
-                        </button>
-                        <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 16, flexWrap: 'wrap', gap: 10 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                           <button
                             type="button"
-                            className="btn btn-primary"
-                            onClick={handleBatchSubmit}
-                            disabled={batchSubmitting}
-                            style={{ padding: '9px 32px', borderRadius: 8, fontWeight: 700, fontSize: 13 }}
+                            className="btn btn-outline"
+                            onClick={addBatchRow}
+                            style={{ padding: '9px 18px', borderRadius: 8, fontWeight: 600, fontSize: 13 }}
                           >
-                            {batchSubmitting ? 'Saving...' : 'Save'}
+                            <MdAdd size={16} /> {lang === 'km' ? 'បន្ថែមជួរថ្មី' : 'Add Row'}
                           </button>
+                          {((request?.actualQuantity || request?.declaredQuantity || 0) - parcels.length) > 1 && (
+                            <button
+                              type="button"
+                              className="btn btn-outline"
+                              onClick={generateRemainingBatchRows}
+                              style={{ padding: '9px 16px', borderRadius: 8, fontWeight: 600, fontSize: 13, color: 'var(--accent, #1565D8)', borderColor: 'var(--accent, #1565D8)' }}
+                            >
+                              <MdBolt size={16} />{' '}
+                              {lang === 'km'
+                                ? `បង្កើតជួរតាមចំនួននៅសល់ (${Math.min((request?.actualQuantity || request?.declaredQuantity || 0) - parcels.length, 30)})`
+                                : `Fill Remaining (${Math.min((request?.actualQuantity || request?.declaredQuantity || 0) - parcels.length, 30)} rows)`}
+                            </button>
+                          )}
                         </div>
+                        <button
+                          type="button"
+                          className="btn btn-primary"
+                          onClick={handleBatchSubmit}
+                          disabled={batchSubmitting}
+                          style={{ padding: '9px 32px', borderRadius: 8, fontWeight: 700, fontSize: 13.5 }}
+                        >
+                          {batchSubmitting
+                            ? (lang === 'km' ? 'កំពុងរក្សាទុក...' : 'Saving...')
+                            : (lang === 'km' ? `រក្សាទុកទាំងអស់ (${batchRows.length})` : `Save All (${batchRows.length})`)}
+                        </button>
                       </div>
                     </div>
                   )}

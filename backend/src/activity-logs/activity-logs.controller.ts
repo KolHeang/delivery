@@ -1,9 +1,10 @@
-import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Query, Request, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { ActivityLogsService } from './activity-logs.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/permissions.guard';
 import { RequirePermissions } from '../auth/permissions.decorator';
+import { getEffectiveTenantId } from '../common/tenant.util';
 
 @ApiTags('Activity Logs')
 @ApiBearerAuth()
@@ -22,6 +23,7 @@ export class ActivityLogsController {
   @ApiQuery({ name: 'userId', required: false, type: Number })
   @ApiQuery({ name: 'merchantId', required: false, type: Number })
   findAll(
+    @Request() req: any,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
     @Query('action') action?: string,
@@ -36,6 +38,7 @@ export class ActivityLogsController {
       entityName,
       userId: userId ? +userId : undefined,
       merchantId: merchantId ? +merchantId : undefined,
+      tenantId: getEffectiveTenantId(req),
     });
   }
 }

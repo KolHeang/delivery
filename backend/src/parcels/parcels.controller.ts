@@ -239,8 +239,14 @@ export class ParcelsController {
   @RequirePermissions('parcels.read')
   @ApiOperation({ summary: 'Get pickup request by ID' })
   @ApiParam({ name: 'id', type: Number, description: 'Pickup request ID' })
-  findOnePickupRequest(@Param('id', ParseIntPipe) id: number) {
-    return this.parcelsService.findPickupRequestById(id);
+  findOnePickupRequest(
+    @Request() req: any,
+    @Param('id', ParseIntPipe) id: number,
+  ) {
+    return this.parcelsService.findPickupRequestById(
+      id,
+      this.getEffectiveTenantId(req),
+    );
   }
 
   @Patch('pickup-requests/:id/assign-driver')

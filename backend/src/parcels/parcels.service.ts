@@ -1462,6 +1462,12 @@ export class ParcelsService {
     tenantId?: number,
   ) {
     const request = await this.findPickupRequestById(id, tenantId);
+    const lockedStatuses = ['picked-up', 'in-warehouse', 'completed', 'cancelled'];
+    if (lockedStatuses.includes(request.status)) {
+      throw new BadRequestException(
+        `Cannot assign pickup driver because pickup request #${id} is already "${request.status}".`,
+      );
+    }
     const effectiveTenantId: number | undefined =
       tenantId ??
       (request as any).tenantId ??
@@ -1514,6 +1520,77 @@ export class ParcelsService {
       } catch {
         // Non-blocking notification
       }
+    }
+
+    return reloaded;
+  }
+
+  async updatePickupRequestStatus(
+    id: number,
+    dto: { status: string; actualQuantity?: number; driverNote?: string },
+    tenantId?: number,
+  ) {
+    const allowedStatuses = [
+      'pending',
+      'assigned',
+      'picked-up',
+      'in-warehouse',
+      'completed',
+      'cancelled',
+    ];
+    if (!dto?.status || !allowedStatuses.includes(dto.status)) {
+      throw new BadRequestException(
+        `Invalid pickup request status "${dto?.status}". Allowed: ${allowedStatuses.join(', ')}`,
+      );
+    }
+
+    const request = await this.findPickupRequestById(id, tenantId);
+    const lockedStatuses = ['picked-up', 'in-warehouse', 'completed', 'cancelled'];
+    if (lockedStatuses.includes(request.status)) {
+      throw new BadRequestException(
+        `Cannot update status because pickup request #${id} is already "${request.status}".`,
+      );
+    }
+    const effectiveTenantId: number | undefined =
+      tenantId ??
+      (request as any).tenantId ??
+      request.merchant?.tenantId ??
+      undefined;
+
+    request.status = dto.status as any;
+
+    if (
+      dto.actualQuantity !== undefined &&
+      dto.actualQuantity !== null &&
+      !Number.isNaN(Number(dto.actualQuantity))
+    ) {
+      request.actualQuantity = Math.max(0, Math.floor(Number(dto.actualQuantity)));
+    } else if (
+      (dto.status === 'picked-up' || dto.status === 'in-warehouse') &&
+      (request.actualQuantity === null || request.actualQuantity === undefined)
+    ) {
+      request.actualQuantity = request.declaredQuantity;
+    }
+
+    if (dto.status === 'picked-up' && !request.pickedUpAt) {
+      request.pickedUpAt = new Date();
+    }
+
+    if (dto.driverNote !== undefined) {
+      request.driverNote = dto.driverNote;
+    }
+
+    await this.pickupRequestRepo.save(request);
+    const reloaded = await this.findPickupRequestById(id, effectiveTenantId);
+
+    if (reloaded.merchantId) {
+      try {
+        this.trackingGateway?.notifyMerchantPickupRequest(
+          reloaded.merchantId,
+          formatMerchantPickupRequest(reloaded),
+          'pickup_request_updated',
+        );
+      } catch {}
     }
 
     return reloaded;

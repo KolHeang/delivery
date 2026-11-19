@@ -12,33 +12,46 @@ import { TableSkeleton } from '@/components/ui/Skeleton';
 import Pagination from '@/components/ui/Pagination';
 import {
   MdRefresh, MdSearch, MdClose, MdVisibility, MdDirectionsBike,
-  MdCheckCircle, MdHourglassEmpty, MdLocalShipping, MdPhone, MdNotes, MdStorefront,
+  MdCheckCircle, MdHourglassEmpty, MdLocalShipping, MdPhone, MdNotes, MdStorefront, MdSync, MdExpandMore,
 } from 'react-icons/md';
 
 const PAGE_SIZE_OPTIONS = [20, 50, 100];
 
 const STATUS_COLORS: Record<string, { bg: string; color: string }> = {
-  pending:    { bg: '#fef3c7', color: '#d97706' },
-  assigned:   { bg: '#dbeafe', color: '#2563eb' },
-  'picked-up':{ bg: '#f3e8ff', color: '#7c3aed' },
-  completed:  { bg: '#dcfce7', color: '#16a34a' },
-  cancelled:  { bg: '#fee2e2', color: '#dc2626' },
+  pending:        { bg: '#fef3c7', color: '#d97706' },
+  assigned:       { bg: '#dbeafe', color: '#2563eb' },
+  'picked-up':    { bg: '#f3e8ff', color: '#7c3aed' },
+  'in-warehouse': { bg: '#e0f2fe', color: '#0284c7' },
+  completed:      { bg: '#dcfce7', color: '#16a34a' },
+  cancelled:      { bg: '#fee2e2', color: '#dc2626' },
 };
 
-function StatusBadge({ status, lang }: { status: string; lang: string }) {
+function StatusBadge({ status, lang, onClick }: { status: string; lang: string; onClick?: () => void }) {
   const cfg = STATUS_COLORS[status] ?? { bg: '#f3f4f6', color: '#6b7280' };
   return (
-    <span style={{
-      display: 'inline-flex', alignItems: 'center', gap: 5,
-      padding: '4px 10px', borderRadius: 999, fontSize: 12, fontWeight: 700,
-      background: cfg.bg, color: cfg.color,
-    }}>
+    <button
+      type="button"
+      onClick={onClick}
+      title={lang === 'km' ? 'ចុចដើម្បីប្តូរស្ថានភាព' : 'Click to update status'}
+      style={{
+        display: 'inline-flex', alignItems: 'center', gap: 4,
+        padding: '4px 10px', borderRadius: 999, fontSize: 12, fontWeight: 700,
+        background: cfg.bg, color: cfg.color,
+        border: '1px solid transparent',
+        cursor: onClick ? 'pointer' : 'default',
+        transition: 'filter 0.15s, transform 0.15s',
+        whiteSpace: 'nowrap',
+      }}
+      onMouseEnter={(e) => { if (onClick) e.currentTarget.style.filter = 'brightness(0.94)'; }}
+      onMouseLeave={(e) => { if (onClick) e.currentTarget.style.filter = 'none'; }}
+    >
       {status === 'pending' && <MdHourglassEmpty size={13} />}
       {status === 'assigned' && <MdDirectionsBike size={13} />}
       {status === 'picked-up' && <MdLocalShipping size={13} />}
       {status === 'completed' && <MdCheckCircle size={13} />}
-      {getPickupRequestStatusLabel(status, lang)}
-    </span>
+      <span>{getPickupRequestStatusLabel(status, lang)}</span>
+      {onClick && <MdExpandMore size={14} style={{ opacity: 0.75, marginLeft: -1 }} />}
+    </button>
   );
 }
 
@@ -59,6 +72,51 @@ export default function PickupRequestsPage() {
   const [pageSize, setPageSize]       = useState(20);
   const [currentPage, setCurrentPage] = useState(1);
   const [previewModalImg, setPreviewModalImg] = useState<string | null>(null);
+
+  /* ── update status modal ── */
+  const [statusTarget, setStatusTarget]     = useState<any | null>(null);
+  const [nextStatus, setNextStatus]         = useState<string>('picked-up');
+  const [actualQtyInput, setActualQtyInput] = useState<string>('');
+  const [statusNote, setStatusNote]         = useState<string>('');
+  const [updatingStatus, setUpdatingStatus] = useState(false);
+
+  const openStatusModal = (r: any) => {
+    setStatusTarget(r);
+    const defaultNext =
+      r.status === 'pending' || r.status === 'assigned'
+        ? 'picked-up'
+        : r.status;
+    setNextStatus(defaultNext);
+    setActualQtyInput(
+      r.actualQuantity != null
+        ? String(r.actualQuantity)
+        : r.declaredQuantity != null
+          ? String(r.declaredQuantity)
+          : '',
+    );
+    setStatusNote(r.driverNote || '');
+  };
+
+  const handleUpdateStatus = async () => {
+    if (!statusTarget || !nextStatus) return;
+    setUpdatingStatus(true);
+    try {
+      const payload: Record<string, any> = {
+        status: nextStatus,
+        driverNote: statusNote.trim() || undefined,
+      };
+      if (actualQtyInput !== '' && !isNaN(Number(actualQtyInput))) {
+        payload.actualQuantity = Math.max(0, Math.floor(Number(actualQtyInput)));
+      }
+      await api.patch(`/parcels/pickup-requests/${statusTarget.id}/status`, payload);
+      setStatusTarget(null);
+      await load();
+    } catch (err: any) {
+      alert(err.response?.data?.message || (lang === 'km' ? 'មិនអាចធ្វើបច្ចុប្បន្នភាពស្ថានភាពបានទេ' : 'Failed to update status'));
+    } finally {
+      setUpdatingStatus(false);
+    }
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -97,7 +155,7 @@ export default function PickupRequestsPage() {
 
   useEffect(() => { setCurrentPage(1); }, [search, statusFilter, pageSize]);
 
-  const statuses = ['', 'pending', 'assigned', 'picked-up', 'completed', 'cancelled'];
+  const statuses = ['', 'pending', 'assigned', 'picked-up', 'in-warehouse', 'completed', 'cancelled'];
 
   return (
     <div className="app-layout">
@@ -201,6 +259,7 @@ export default function PickupRequestsPage() {
                       const progress = r.declaredQuantity > 0 ? Math.min(100, Math.round((completedCount / r.declaredQuantity) * 100)) : 0;
                       const merchantName = r.merchant?.nameKh || r.merchant?.name || '—';
                       const photoUrl = r.photo || r.photos?.[0];
+                      const canUpdateStatus = r.status === 'pending' || r.status === 'assigned';
                       return (
                         <tr key={r.id} style={{ borderBottom: '1px solid #f1f5f9', transition: 'background-color 0.15s' }}>
                           <td style={{ padding: '12px 10px', textAlign: 'center', border: 'none' }}>
@@ -381,16 +440,68 @@ export default function PickupRequestsPage() {
                             {formatDate(r.pickupTime)}
                           </td>
                           <td style={{ padding: '12px 10px', textAlign: 'center', border: 'none' }}>
-                            <StatusBadge status={r.status} lang={lang} />
+                            <StatusBadge
+                              status={r.status}
+                              lang={lang}
+                              onClick={canUpdateStatus ? () => openStatusModal(r) : undefined}
+                            />
                           </td>
                           <td style={{ padding: '12px 10px', textAlign: 'center', border: 'none' }}>
-                            <button
-                              className="btn btn-primary btn-sm"
-                              onClick={() => router.push(`/delivery/pickup_requests/${r.id}`)}
-                              style={{ padding: '6px 12px', minHeight: 32, fontSize: 12.5, whiteSpace: 'nowrap', borderRadius: 8 }}
-                            >
-                              <MdVisibility size={15} /> {t('viewInbound')}
-                            </button>
+                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, flexWrap: 'nowrap' }}>
+                              {canUpdateStatus && (
+                                <button
+                                  type="button"
+                                  onClick={() => openStatusModal(r)}
+                                  title={lang === 'km' ? 'ប្តូរស្ថានភាព' : 'Update Status'}
+                                  style={{
+                                    width: 32,
+                                    height: 32,
+                                    padding: 0,
+                                    borderRadius: 8,
+                                    border: '1px solid #e2e8f0',
+                                    background: '#ffffff',
+                                    color: '#475569',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.15s',
+                                    flexShrink: 0,
+                                  }}
+                                  onMouseEnter={(e) => {
+                                    e.currentTarget.style.borderColor = 'var(--accent, #0f766e)';
+                                    e.currentTarget.style.color = 'var(--accent, #0f766e)';
+                                    e.currentTarget.style.background = 'var(--accent-light, #f0fdfa)';
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    e.currentTarget.style.borderColor = '#e2e8f0';
+                                    e.currentTarget.style.color = '#475569';
+                                    e.currentTarget.style.background = '#ffffff';
+                                  }}
+                                >
+                                  <MdSync size={16} />
+                                </button>
+                              )}
+                              <button
+                                type="button"
+                                className="btn btn-primary btn-sm"
+                                onClick={() => router.push(`/delivery/pickup_requests/${r.id}`)}
+                                title={t('viewInbound')}
+                                style={{
+                                  width: 32,
+                                  height: 32,
+                                  padding: 0,
+                                  minHeight: 32,
+                                  borderRadius: 8,
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  flexShrink: 0,
+                                }}
+                              >
+                                <MdVisibility size={16} />
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       );
@@ -414,6 +525,110 @@ export default function PickupRequestsPage() {
           </div>
         </div>
       </div>
+
+      {/* Update Status Modal */}
+      {statusTarget && (
+        <div
+          onClick={() => setStatusTarget(null)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{ background: 'var(--bg-card)', borderRadius: 16, padding: '28px 32px', width: '100%', maxWidth: 480, boxShadow: '0 24px 60px rgba(0,0,0,0.2)', position: 'relative' }}
+          >
+            <button
+              onClick={() => setStatusTarget(null)}
+              style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', alignItems: 'center' }}
+            >
+              <MdClose size={22} />
+            </button>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+              <div style={{ width: 44, height: 44, borderRadius: 12, background: '#ccfbf1', color: '#0f766e', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <MdSync size={24} />
+              </div>
+              <div>
+                <div style={{ fontWeight: 800, fontSize: 17 }}>
+                  {lang === 'km' ? 'ប្តូរស្ថានភាពសំណើប្រមូល' : 'Update Pickup Request Status'}
+                </div>
+                <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+                  #{statusTarget.id} — {statusTarget.merchant?.nameKh || statusTarget.merchant?.name || '—'}
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 16 }}>
+              {(['pending', 'assigned', 'picked-up', 'in-warehouse', 'completed', 'cancelled'] as const).map((st) => {
+                const selected = nextStatus === st;
+                const sc = STATUS_COLORS[st] ?? { bg: '#f1f5f9', color: '#475569' };
+                return (
+                  <button
+                    key={st}
+                    type="button"
+                    onClick={() => setNextStatus(st)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '10px 14px',
+                      borderRadius: 10,
+                      border: `2px solid ${selected ? sc.color : 'var(--border)'}`,
+                      background: selected ? sc.bg : 'var(--bg-primary)',
+                      color: selected ? sc.color : 'var(--text-primary)',
+                      fontWeight: 700,
+                      fontSize: 13,
+                      cursor: 'pointer',
+                      transition: 'all 0.15s',
+                    }}
+                  >
+                    <span>{getPickupRequestStatusLabel(st, lang)}</span>
+                    {selected && <MdCheckCircle size={18} />}
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="form-group" style={{ marginBottom: 12 }}>
+              <label className="form-label" style={{ fontSize: 12.5, fontWeight: 600 }}>
+                {lang === 'km' ? 'ចំនួនកញ្ចប់ជាក់ស្តែង (Actual Quantity)' : 'Actual Quantity'}
+              </label>
+              <input
+                type="number"
+                min={0}
+                className="form-control"
+                value={actualQtyInput}
+                onChange={(e) => setActualQtyInput(e.target.value)}
+                placeholder={String(statusTarget.declaredQuantity ?? 0)}
+              />
+            </div>
+
+            <div className="form-group" style={{ marginBottom: 16 }}>
+              <label className="form-label" style={{ fontSize: 12.5, fontWeight: 600 }}>
+                {lang === 'km' ? 'កំណត់ចំណាំ (ស្រេចចិត្ត)' : 'Note (Optional)'}
+              </label>
+              <input
+                type="text"
+                className="form-control"
+                value={statusNote}
+                onChange={(e) => setStatusNote(e.target.value)}
+                placeholder={lang === 'km' ? 'ឧ. ហាងយកមកដាក់ឃ្លាំងផ្ទាល់...' : 'e.g. Dropped off at warehouse...'}
+              />
+            </div>
+
+            <button
+              type="button"
+              className="btn btn-primary w-full"
+              onClick={handleUpdateStatus}
+              disabled={updatingStatus}
+              style={{ width: '100%', padding: '12px', borderRadius: 10, fontWeight: 700, fontSize: 14 }}
+            >
+              {updatingStatus
+                ? (lang === 'km' ? 'កំពុងរក្សាទុក...' : 'Saving...')
+                : (lang === 'km' ? 'រក្សាទុកស្ថានភាពថ្មី' : 'Save Status')}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Lightbox / Zoom Modal */}
       {previewModalImg && (

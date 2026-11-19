@@ -73,8 +73,8 @@ export default function BatchEntryPage() {
       api.get('/parcels/pickup-requests', { params: { merchantId: selectedMerchantId } })
         .then(res => {
           const list = Array.isArray(res.data) ? res.data : (res.data?.data || []);
-          const openList = list.filter((pr: any) => pr.status !== 'completed' && pr.status !== 'cancelled');
-          setPickupRequests(openList);
+          const readyList = list.filter((pr: any) => pr.status === 'picked-up' || pr.status === 'in-warehouse');
+          setPickupRequests(readyList);
           setSelectedPickupRequestId('');
         })
         .catch(() => {

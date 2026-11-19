@@ -260,6 +260,27 @@ export class ParcelsController {
     return this.parcelsService.assignPickupDriverToRequest(id, dto.pickupDriverId);
   }
 
+  @Patch('pickup-requests/:id/status')
+  @RequirePermissions('parcels.update')
+  @ApiOperation({ summary: 'Update pickup request status (admin)' })
+  @ApiParam({ name: 'id', type: Number, description: 'Pickup request ID' })
+  @LogActivity({
+    action: 'UPDATE_PICKUP_REQUEST_STATUS',
+    entityName: 'PickupRequest',
+    description: 'Updated pickup request status',
+  })
+  updatePickupRequestStatus(
+    @Request() req: any,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: { status: string; actualQuantity?: number; driverNote?: string },
+  ) {
+    return this.parcelsService.updatePickupRequestStatus(
+      id,
+      body,
+      this.getEffectiveTenantId(req),
+    );
+  }
+
   @Post('pickup-requests/:id/parcels')
   @RequirePermissions('parcels.create')
   @ApiOperation({ summary: 'Add a parcel to a pickup request' })

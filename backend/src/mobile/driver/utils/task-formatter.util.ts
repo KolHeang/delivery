@@ -136,13 +136,13 @@ export function formatDriverTask(parcel: any, driverId?: number): FormattedDrive
     parcel.merchant?.name ||
     parcel.merchant?.nameKh ||
     parcel.receiverName ||
-    'Heang';
+    '';
 
   const zoneName = parcel.zone?.name || parcel.zone?.nameKh || '';
   const location =
     parcel.receiverAddress ||
     zoneName ||
-    'Phnom Penh';
+    '';
 
   return {
     ...parcel,

@@ -1745,7 +1745,7 @@ select.form-control + .input-error-icon {
 @media print {
   @page {
     size: A4 portrait;
-    margin: 9mm 8mm;
+    margin: 10mm 9mm;
   }
 
   * {
@@ -1758,19 +1758,24 @@ select.form-control + .input-error-icon {
     background: #ffffff !important;
     color: #0f172a !important;
     font-family: 'Inter', 'Battambang', sans-serif !important;
-    font-size: 12px !important;
-    line-height: 1.5 !important;
+    font-size: 11px !important;
+    line-height: 1.45 !important;
     padding: 0 !important;
     margin: 0 !important;
     width: 100% !important;
+    height: auto !important;
+    overflow: visible !important;
   }
 
   .sidebar,
   .sidebar-backdrop,
+  .sidebar-mobile-backdrop,
   .header,
   .page-header-container,
   .topbar,
   .no-print,
+  .pagination,
+  .pagination-container,
   .loading-wrapper,
   .spinner {
     display: none !important;
@@ -1778,39 +1783,51 @@ select.form-control + .input-error-icon {
 
   /* Hide buttons and form controls only outside of print container */
   .app-layout .btn,
+  .app-layout button,
   .app-layout select,
-  .app-layout input[type="text"],
-  .app-layout input[type="checkbox"],
-  .app-layout input[type="date"] {
+  .app-layout input,
+  .app-layout .form-label,
+  .app-layout .searchable-select {
     display: none !important;
   }
 
-  .main-content {
-    margin-left: 0 !important;
+  .app-layout,
+  .main-content,
+  .page-content {
+    display: block !important;
+    margin: 0 !important;
     padding: 0 !important;
     width: 100% !important;
-  }
-
-  .page-content {
-    padding: 0 !important;
     max-width: 100% !important;
+    min-height: 0 !important;
+    height: auto !important;
+    overflow: visible !important;
+    background: #ffffff !important;
   }
 
   .app-layout .card {
     border: none !important;
+    border-radius: 0 !important;
     box-shadow: none !important;
-    margin-bottom: 16px !important;
+    margin: 0 0 12px 0 !important;
+    padding: 0 !important;
     background: #ffffff !important;
+    overflow: visible !important;
+  }
+
+  .app-layout .card > div {
+    overflow: visible !important;
   }
 
   .app-layout .card-header {
-    border-bottom: 2px solid #0f172a !important;
-    padding: 8px 0 !important;
+    border-bottom: 1.5px solid #cbd5e1 !important;
+    padding: 6px 0 !important;
+    margin-bottom: 8px !important;
     background: #ffffff !important;
   }
 
   .app-layout .card-title {
-    font-size: 15px !important;
+    font-size: 13.5px !important;
     font-weight: 700 !important;
     color: #0f172a !important;
   }
@@ -1818,36 +1835,63 @@ select.form-control + .input-error-icon {
   .app-layout table {
     border-collapse: collapse !important;
     width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    table-layout: auto !important;
+  }
+
+  .app-layout thead {
+    display: table-header-group !important;
+  }
+
+  .app-layout tbody tr {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  .app-layout tbody tr:nth-child(even) {
+    background: #ffffff !important;
+  }
+
+  .app-layout tbody tr:nth-child(odd) {
+    background: #f8fafc !important;
   }
 
   .app-layout th,
   .app-layout td {
-    border: 1px solid #94a3b8 !important;
-    padding: 6px 8px !important;
+    border: 1px solid #cbd5e1 !important;
+    padding: 5px 6px !important;
     color: #0f172a !important;
-    font-size: 11.5px !important;
-    line-height: 1.45 !important;
+    font-size: 10.5px !important;
+    line-height: 1.4 !important;
+    white-space: normal !important;
+    word-break: break-word !important;
   }
 
   .app-layout thead th {
     background-color: var(--sidebar-bg, #1565D8) !important;
     color: #ffffff !important;
     font-weight: 700 !important;
+    font-size: 10.5px !important;
+    padding: 6px 6px !important;
     border-color: rgba(15, 23, 42, 0.2) !important;
   }
 
   .badge {
-    border: 1px solid #94a3b8 !important;
+    border: 1px solid #cbd5e1 !important;
     background: transparent !important;
     color: #0f172a !important;
-    padding: 2px 6px !important;
+    padding: 1px 5px !important;
+    font-size: 10px !important;
   }
 
   .stats-card {
-    border: 1px solid #cbd5e1 !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 6px !important;
     box-shadow: none !important;
-    background: #ffffff !important;
-    padding: 10px 14px !important;
+    background: #f8fafc !important;
+    padding: 8px 10px !important;
+    break-inside: avoid !important;
   }
 
   .print-only {
@@ -1889,7 +1933,6 @@ select.form-control + .input-error-icon {
     border-collapse: collapse !important;
   }
 
-  thead,
   body.receipt-print-active .receipt-print-container thead {
     display: table-row-group !important;
   }

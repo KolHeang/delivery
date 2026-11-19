@@ -137,6 +137,8 @@ export default function Sidebar() {
             { href: '/report/operation/6', label: t('rpt6Menu'), permission: 'reports.operation_package, reports.view' },
             { href: '/report/operation/7', label: t('rpt7Menu'), permission: 'reports.operation_pickup, reports.view' },
             { href: '/report/operation/8', label: t('rpt8Menu'), permission: 'reports.operation_stock, reports.view' },
+            { href: '/report/operation/9', label: t('rpt9Menu'), permission: 'reports.operation_package, reports.view' },
+            { href: '/report/operation/10', label: t('rpt10Menu'), permission: 'reports.operation_daily, reports.view' },
           ],
         },
         {
@@ -148,6 +150,9 @@ export default function Sidebar() {
             { href: '/report/financial/1', label: t('frpt1Menu'), permission: 'reports.financial_ledger, reports.view' },
             { href: '/report/financial/2', label: t('frpt2Menu'), permission: 'reports.financial_collection, reports.view' },
             { href: '/report/financial/3', label: t('frpt3Menu'), permission: 'reports.financial_balance, reports.view' },
+            { href: '/report/financial/4', label: t('frpt4Menu'), permission: 'reports.financial_collection, reports.view' },
+            { href: '/report/financial/5', label: t('frpt5Menu'), permission: 'reports.financial_balance, reports.view' },
+            { href: '/report/financial/6', label: t('frpt6Menu'), permission: 'reports.financial_balance, reports.view' },
           ],
         },
       ],

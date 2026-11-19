@@ -1012,6 +1012,31 @@ export class ParcelsService {
     if (suppressIndividual && created.length > 0) {
       await this.notifyParcelsBatchCreatedTelegram(created, tenantId);
     }
+
+    // Auto-complete any linked PickupRequest whose registered parcel count reached its target
+    const linkedRequestIds = Array.from(
+      new Set(
+        created
+          .map((p) => p.pickupRequestId)
+          .filter((id): id is number => typeof id === 'number' && id > 0),
+      ),
+    );
+    for (const reqId of linkedRequestIds) {
+      try {
+        const pr = await this.pickupRequestRepo.findOne({ where: { id: reqId } });
+        if (!pr || pr.status === 'completed' || pr.status === 'cancelled') continue;
+        const targetQty = pr.actualQuantity || pr.declaredQuantity || 0;
+        if (targetQty > 0) {
+          const totalLinked = await this.repo.count({
+            where: { pickupRequestId: reqId },
+          });
+          if (totalLinked >= targetQty) {
+            await this.pickupRequestRepo.update(reqId, { status: 'completed' as any });
+          }
+        }
+      } catch {}
+    }
+
     return created;
   }
 
@@ -1395,22 +1420,37 @@ export class ParcelsService {
       ? manager.getRepository(PickupRequest)
       : this.pickupRequestRepo;
 
-    const qb = targetRepo
-      .createQueryBuilder('pr')
-      .leftJoinAndSelect('pr.merchant', 'merchant')
-      .leftJoinAndSelect('pr.pickupDriver', 'pickupDriver')
-      .leftJoinAndSelect('pr.parcels', 'parcels')
-      .leftJoinAndSelect('pr.branch', 'branch')
-      .where('pr.id = :id', { id });
+    let request: PickupRequest | null = null;
+    if (typeof targetRepo.createQueryBuilder === 'function') {
+      const qb = targetRepo
+        .createQueryBuilder('pr')
+        .leftJoinAndSelect('pr.merchant', 'merchant')
+        .leftJoinAndSelect('pr.pickupDriver', 'pickupDriver')
+        .leftJoinAndSelect('pr.parcels', 'parcels')
+        .leftJoinAndSelect('pr.branch', 'branch')
+        .where('pr.id = :id', { id });
 
-    if (tenantId) {
-      qb.andWhere(
-        '(pr.tenantId = :tenantId OR (pr.tenantId IS NULL AND merchant.tenantId = :tenantId))',
-        { tenantId },
-      );
+      if (tenantId) {
+        qb.andWhere(
+          '(pr.tenantId = :tenantId OR (pr.tenantId IS NULL AND merchant.tenantId = :tenantId))',
+          { tenantId },
+        );
+      }
+      request = await qb.getOne();
+    } else {
+      const where: Record<string, any> = { id };
+      if (tenantId) where.tenantId = tenantId;
+      request = await targetRepo.findOne({
+        where,
+        relations: {
+          merchant: true,
+          pickupDriver: true,
+          parcels: true,
+          branch: true,
+        },
+      });
     }
 
-    const request = await qb.getOne();
     if (!request)
       throw new NotFoundException(`Pickup request #${id} not found`);
     return request;

@@ -46,6 +46,7 @@ export class ActivityLogsService {
     entityName?: string;
     userId?: number;
     merchantId?: number;
+    tenantId?: number;
   }) {
     const page = query.page && query.page > 0 ? query.page : 1;
     const limit = query.limit && query.limit > 0 ? query.limit : 10;
@@ -57,6 +58,10 @@ export class ActivityLogsService {
       .orderBy('log.createdAt', 'DESC')
       .skip(skip)
       .take(limit);
+
+    if (query.tenantId) {
+      queryBuilder.andWhere('log.tenantId = :tenantId', { tenantId: query.tenantId });
+    }
 
     if (query.action) {
       queryBuilder.andWhere('log.action = :action', { action: query.action });

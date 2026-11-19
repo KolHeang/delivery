@@ -154,4 +154,96 @@ export class ReportsController {
       this.getEffectiveTenantId(req),
     );
   }
+
+  @Get('unpaid-cod')
+  @ApiOperation({ summary: 'Get unpaid COD & settlement aging report' })
+  @ApiQuery({ name: 'startDate', required: false })
+  @ApiQuery({ name: 'endDate', required: false })
+  getUnpaidCodReport(
+    @Request() req: any,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
+    return this.reportsService.getUnpaidCodReport(
+      startDate,
+      endDate,
+      this.getEffectiveTenantId(req),
+    );
+  }
+
+  @Get('driver-commission')
+  @ApiOperation({ summary: 'Get driver commission / payroll report' })
+  @ApiQuery({ name: 'startDate', required: false })
+  @ApiQuery({ name: 'endDate', required: false })
+  @ApiQuery({ name: 'driverId', required: false })
+  getDriverCommissionReport(
+    @Request() req: any,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+    @Query('driverId') driverId?: string,
+  ) {
+    return this.reportsService.getDriverCommissionReport(
+      startDate,
+      endDate,
+      driverId,
+      this.getEffectiveTenantId(req),
+    );
+  }
+
+  @Get('failed-returned')
+  @ApiOperation({ summary: 'Get failed and returned parcels analysis report' })
+  @ApiQuery({ name: 'startDate', required: false })
+  @ApiQuery({ name: 'endDate', required: false })
+  @ApiQuery({ name: 'driverId', required: false })
+  @ApiQuery({ name: 'merchantId', required: false })
+  @ApiQuery({ name: 'status', required: false })
+  getFailedReturnedReport(
+    @Request() req: any,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+    @Query('driverId') driverId?: string,
+    @Query('merchantId') merchantId?: string,
+    @Query('status') status?: string,
+  ) {
+    return this.reportsService.getFailedReturnedReport(
+      startDate,
+      endDate,
+      driverId,
+      merchantId,
+      status,
+      this.getEffectiveTenantId(req),
+    );
+  }
+
+  @Get('overdue-parcels')
+  @ApiOperation({ summary: 'Get overdue / SLA delayed parcels report' })
+  @ApiQuery({ name: 'minHours', required: false })
+  @ApiQuery({ name: 'status', required: false })
+  getOverdueParcelsReport(
+    @Request() req: any,
+    @Query('minHours') minHours?: string,
+    @Query('status') status?: string,
+  ) {
+    return this.reportsService.getOverdueParcelsReport(
+      minHours ? parseInt(minHours, 10) : 24,
+      status,
+      this.getEffectiveTenantId(req),
+    );
+  }
+
+  @Get('zone-performance')
+  @ApiOperation({ summary: 'Get zone performance and delivery fee revenue report' })
+  @ApiQuery({ name: 'startDate', required: false })
+  @ApiQuery({ name: 'endDate', required: false })
+  getZonePerformanceReport(
+    @Request() req: any,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
+    return this.reportsService.getZonePerformanceReport(
+      startDate,
+      endDate,
+      this.getEffectiveTenantId(req),
+    );
+  }
 }

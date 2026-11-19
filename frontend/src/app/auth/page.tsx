@@ -7,7 +7,7 @@ import { saasApi } from '@/lib/saas-api';
 import { setAuth } from '@/lib/auth';
 import { useLanguage } from '@/lib/LanguageContext';
 import { useTenant } from '@/lib/TenantContext';
-import { MdEmail, MdLock, MdVisibility, MdVisibilityOff } from 'react-icons/md';
+import { MdEmail, MdLock, MdVisibility, MdVisibilityOff, MdLocalShipping } from 'react-icons/md';
 import { FlagKm, FlagEn } from '@/components/ui/Flags';
 import { detectTenantSubdomain } from '@/lib/domain';
 import { applyBrandTheme, initBrandTheme } from '@/lib/theme';
@@ -67,6 +67,7 @@ export default function LoginPage() {
   const [form, setForm] = useState({ email: '', password: '' });
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   const [loading, setLoading] = useState(false);
+  const [loginProgress, setLoginProgress] = useState(0);
   const [errorKey, setErrorKey] = useState('');
   const [rawError, setRawError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -114,10 +115,17 @@ export default function LoginPage() {
 
     setErrors({});
     setLoading(true);
+    setLoginProgress(20);
     setErrorKey('');
     setRawError('');
+
+    const progressInterval = setInterval(() => {
+      setLoginProgress((prev) => (prev < 78 ? prev + 12 : prev));
+    }, 120);
+
     try {
       const res = await api.post('/auth/login', form);
+      clearInterval(progressInterval);
       const col = res.data?.user?.primaryColor || res.data?.primaryColor || tenant?.primaryColor;
       if (col) {
         try {
@@ -126,12 +134,16 @@ export default function LoginPage() {
         } catch {}
       }
       setAuth(res.data.access_token, res.data.user);
-      window.location.href = '/dashboard';
+      setLoginProgress(100);
+      setTimeout(() => {
+        window.location.href = '/dashboard';
+      }, 450);
       return;
     } catch (err: any) {
       try {
         const saasRes = await saasApi.adminLogin(form.email, form.password);
         if (saasRes && saasRes.access_token && saasRes.admin) {
+          clearInterval(progressInterval);
           setAuth(saasRes.access_token, {
             id: saasRes.admin.id,
             name: saasRes.admin.name,
@@ -141,13 +153,17 @@ export default function LoginPage() {
             permissions: ['*'],
           });
           localStorage.setItem('saas_admin', JSON.stringify(saasRes.admin));
-          window.location.href = '/admin/saas';
+          setLoginProgress(100);
+          setTimeout(() => {
+            window.location.href = '/admin/saas';
+          }, 450);
           return;
         }
       } catch (saasErr) {
         // fallback to standard error
       }
 
+      clearInterval(progressInterval);
       const serverMsg = err.response?.data?.message;
       if (serverMsg) {
         const lower = String(serverMsg).toLowerCase();
@@ -163,7 +179,7 @@ export default function LoginPage() {
       } else {
         setErrorKey('invalidCredentials');
       }
-    } finally {
+      setLoginProgress(0);
       setLoading(false);
     }
   };
@@ -180,6 +196,12 @@ export default function LoginPage() {
         @keyframes authAmbientFloatReverse {
           0%, 100% { transform: translate(0, 0) scale(1); }
           50%       { transform: translate(-22px, 16px) scale(1.05); }
+        }
+
+        @keyframes loginProgressRun {
+          0%   { transform: translateX(-100%); width: 35%; }
+          50%  { transform: translateX(100%);  width: 55%; }
+          100% { transform: translateX(300%);  width: 35%; }
         }
 
         .blueprint-login-container {
@@ -283,6 +305,84 @@ export default function LoginPage() {
 
       {/* 2. Subtle Vignette Grid */}
       <div className="blueprint-grid" />
+
+      {/* Full-Screen Clean Login Progress Overlay */}
+      {loading && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 9999,
+            background: 'linear-gradient(160deg, #f8fafc 0%, #f1f5f9 60%, #f8fafc 100%)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '24px',
+            fontFamily: "'Inter', 'Battambang', sans-serif",
+          }}
+        >
+          <div className="auth-mesh-orb auth-mesh-orb-1" />
+          <div className="auth-mesh-orb auth-mesh-orb-2" />
+          <div className="blueprint-grid" />
+
+          <div style={{ position: 'relative', zIndex: 10, width: '100%', maxWidth: 360, textAlign: 'center' }}>
+            <div
+              style={{
+                width: 68,
+                height: 68,
+                borderRadius: 18,
+                background: tenant?.logoUrl ? '#ffffff' : 'var(--accent-subtle, rgba(21, 101, 216, 0.08))',
+                border: tenant?.logoUrl ? '1px solid #e2e8f0' : '1.5px solid var(--accent-light, rgba(21, 101, 216, 0.18))',
+                color: 'var(--accent, #1565D8)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                margin: '0 auto 18px',
+                padding: tenant?.logoUrl ? 8 : 0,
+                boxShadow: '0 8px 24px rgba(15, 23, 42, 0.08)',
+              }}
+            >
+              {tenant?.logoUrl ? (
+                <img
+                  src={tenant.logoUrl}
+                  alt={activeCompanyName || 'Logo'}
+                  style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                />
+              ) : (
+                <MdLocalShipping size={34} />
+              )}
+            </div>
+
+            <div style={{ fontSize: 20, fontWeight: 900, color: '#0f172a', marginBottom: 6 }}>
+              {activeCompanyName || 'EBS Express'}
+            </div>
+            <div style={{ fontSize: 14, color: '#64748b', fontWeight: 500, marginBottom: 22 }}>
+              {lang === 'km' ? 'កំពុងចូលទៅកាន់ប្រព័ន្ធ...' : 'Signing you in...'}
+            </div>
+
+            <div
+              style={{
+                width: '100%',
+                height: 6,
+                borderRadius: 999,
+                background: '#e2e8f0',
+                overflow: 'hidden',
+              }}
+            >
+              <div
+                style={{
+                  height: '100%',
+                  width: `${loginProgress}%`,
+                  borderRadius: 999,
+                  background: 'var(--accent, #1565D8)',
+                  transition: 'width 0.35s ease-out',
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 7. Top Right Flag Switcher */}
       <div
@@ -612,11 +712,36 @@ export default function LoginPage() {
               gap: 8,
               boxShadow: '0 6px 18px var(--accent-glow, rgba(21, 101, 216, 0.3))',
               transition: 'all 0.2s ease',
-              opacity: loading ? 0.8 : 1,
+              opacity: loading ? 0.85 : 1,
             }}
           >
             <span>{loading ? t.signingIn : t.signInBtn}</span>
           </button>
+
+          {/* Running Progress Bar while authenticating */}
+          {loading && (
+            <div
+              style={{
+                width: '100%',
+                height: 5,
+                borderRadius: 999,
+                background: '#e2e8f0',
+                marginTop: 14,
+                overflow: 'hidden',
+                position: 'relative',
+              }}
+            >
+              <div
+                style={{
+                  height: '100%',
+                  width: '40%',
+                  borderRadius: 999,
+                  background: 'var(--accent, #1565D8)',
+                  animation: 'loginProgressRun 1.15s ease-in-out infinite',
+                }}
+              />
+            </div>
+          )}
         </form>
 
         {/* SaaS Super Admin Switcher (Only visible on main root domain, hidden on tenant workspaces) */}

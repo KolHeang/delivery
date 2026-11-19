@@ -12,6 +12,7 @@ import {
   MdVisibilityOff,
 } from 'react-icons/md';
 import { FlagKm, FlagEn } from '@/components/ui/Flags';
+import { SaasCloudIcon } from '@/components/ui/SaasCloudIcon';
 
 export default function SaasAdminLoginPage() {
   const router = useRouter();
@@ -23,6 +24,7 @@ export default function SaasAdminLoginPage() {
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [loginProgress, setLoginProgress] = useState(0);
   const [errorKey, setErrorKey] = useState('');
   const [rawError, setRawError] = useState('');
 
@@ -65,9 +67,15 @@ export default function SaasAdminLoginPage() {
     setErrorKey('');
     setRawError('');
     setLoading(true);
+    setLoginProgress(20);
+
+    const progressInterval = setInterval(() => {
+      setLoginProgress((prev) => (prev < 78 ? prev + 12 : prev));
+    }, 120);
 
     try {
       const res = await saasApi.adminLogin(email.trim(), password);
+      clearInterval(progressInterval);
       if (res && res.access_token && res.admin) {
         setAuth(res.access_token, {
           id: res.admin.id,
@@ -78,18 +86,25 @@ export default function SaasAdminLoginPage() {
           permissions: ['*'],
         });
         localStorage.setItem('saas_admin', JSON.stringify(res.admin));
-        window.location.href = '/admin/saas';
+        setLoginProgress(100);
+        setTimeout(() => {
+          window.location.href = '/admin/saas';
+        }, 450);
+        return;
       } else {
         setErrorKey('loginFailed');
+        setLoginProgress(0);
+        setLoading(false);
       }
     } catch (err: any) {
+      clearInterval(progressInterval);
       const msg = err.response?.data?.message;
       if (msg) {
         setRawError(msg);
       } else {
         setErrorKey('invalidCredentials');
       }
-    } finally {
+      setLoginProgress(0);
       setLoading(false);
     }
   };
@@ -116,6 +131,12 @@ export default function SaasAdminLoginPage() {
         @keyframes saasAmbientFloatReverse {
           0%, 100% { transform: translate(0, 0) scale(1); }
           50%       { transform: translate(-22px, 16px) scale(1.05); }
+        }
+
+        @keyframes loginProgressRun {
+          0%   { transform: translateX(-100%); width: 35%; }
+          50%  { transform: translateX(100%);  width: 55%; }
+          100% { transform: translateX(300%);  width: 35%; }
         }
 
         .saas-cloud-bg-container {
@@ -215,6 +236,73 @@ export default function SaasAdminLoginPage() {
 
       {/* 2. Subtle Vignette Grid */}
       <div className="saas-grid-pattern" />
+
+      {/* Full-Screen Clean Login Progress Overlay */}
+      {loading && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 9999,
+            background: 'linear-gradient(160deg, #f8fafc 0%, #f1f5f9 55%, #eef2ff 100%)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '24px',
+            fontFamily: "'Inter', 'Battambang', sans-serif",
+          }}
+        >
+          <div className="saas-mesh-orb saas-mesh-orb-1" />
+          <div className="saas-mesh-orb saas-mesh-orb-2" />
+          <div className="saas-grid-pattern" />
+
+          <div style={{ position: 'relative', zIndex: 10, width: '100%', maxWidth: 360, textAlign: 'center' }}>
+            <div
+              style={{
+                width: 68,
+                height: 68,
+                borderRadius: 18,
+                background: '#ffffff',
+                border: '1px solid #e2e8f0',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                margin: '0 auto 18px',
+                boxShadow: '0 8px 24px rgba(21, 101, 216, 0.14)',
+              }}
+            >
+              <SaasCloudIcon size={40} />
+            </div>
+            <div style={{ fontSize: 21, fontWeight: 900, color: '#0f172a', marginBottom: 6 }}>
+              EBS Master SaaS
+            </div>
+            <div style={{ fontSize: 14, color: '#64748b', fontWeight: 500, marginBottom: 22 }}>
+              {tr('កំពុងចូលទៅកាន់ផ្ទាំងគ្រប់គ្រង...', 'Signing you in...')}
+            </div>
+
+            <div
+              style={{
+                width: '100%',
+                height: 6,
+                borderRadius: 999,
+                background: '#e2e8f0',
+                overflow: 'hidden',
+              }}
+            >
+              <div
+                style={{
+                  height: '100%',
+                  width: `${loginProgress}%`,
+                  borderRadius: 999,
+                  background: '#1565D8',
+                  transition: 'width 0.35s ease-out',
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 7. Top Right Flag Switcher */}
       <div
@@ -526,11 +614,36 @@ export default function SaasAdminLoginPage() {
               gap: 8,
               boxShadow: '0 4px 14px rgba(37, 99, 235, 0.28)',
               transition: 'all 0.2s ease',
-              opacity: loading ? 0.8 : 1,
+              opacity: loading ? 0.85 : 1,
             }}
           >
             <span>{loading ? tr('កំពុងផ្ទៀងផ្ទាត់...', 'Authenticating...') : tr('ចូលប្រើប្រាស់', 'Sign In')}</span>
           </button>
+
+          {/* Running Progress Bar while authenticating */}
+          {loading && (
+            <div
+              style={{
+                width: '100%',
+                height: 5,
+                borderRadius: 999,
+                background: '#e2e8f0',
+                marginTop: 14,
+                overflow: 'hidden',
+                position: 'relative',
+              }}
+            >
+              <div
+                style={{
+                  height: '100%',
+                  width: '40%',
+                  borderRadius: 999,
+                  background: '#1565D8',
+                  animation: 'loginProgressRun 1.15s ease-in-out infinite',
+                }}
+              />
+            </div>
+          )}
         </form>
 
         {/* Footer */}

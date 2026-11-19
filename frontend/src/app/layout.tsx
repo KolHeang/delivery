@@ -6,6 +6,7 @@ import { SettingsProvider } from '@/lib/SettingsContext';
 import { TenantProvider } from '@/lib/TenantContext';
 import DynamicTitle from '@/components/layout/DynamicTitle';
 import GlobalToastProvider from '@/components/ui/GlobalToastProvider';
+import ServerStatusOverlay from '@/components/ui/ServerStatusOverlay';
 
 export const metadata: Metadata = {
   title: 'EBS Express',
@@ -77,6 +78,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               </Suspense>
               {children}
               <GlobalToastProvider />
+              <ServerStatusOverlay />
             </SettingsProvider>
           </LanguageProvider>
         </TenantProvider>

@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="km">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ប្រព័ន្ធកំពុងធ្វើបច្ចុប្បន្នភាព • System Updating</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Battambang:wght@400;700;900&family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      min-height: 100vh;
+      width: 100vw;
+      background: linear-gradient(160deg, #f8fafc 0%, #f1f5f9 55%, #eef2ff 100%);
+      font-family: 'Inter', 'Battambang', -apple-system, BlinkMacSystemFont, sans-serif;
+      color: #0f172a;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 16px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .mesh-orb {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(85px);
+      pointer-events: none;
+      z-index: 0;
+    }
+    .mesh-orb-1 {
+      width: 540px;
+      height: 540px;
+      top: -180px;
+      left: -140px;
+      background: rgba(21, 101, 216, 0.16);
+    }
+    .mesh-orb-2 {
+      width: 500px;
+      height: 500px;
+      bottom: -180px;
+      right: -120px;
+      background: rgba(99, 102, 241, 0.16);
+    }
+
+    .grid-bg {
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(to right, rgba(148, 163, 184, 0.14) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(148, 163, 184, 0.14) 1px, transparent 1px);
+      background-size: 40px 40px;
+      mask-image: radial-gradient(ellipse 75% 70% at 50% 45%, #000 35%, transparent 100%);
+      -webkit-mask-image: radial-gradient(ellipse 75% 70% at 50% 45%, #000 35%, transparent 100%);
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    .card {
+      position: relative;
+      z-index: 10;
+      width: 100%;
+      max-width: 460px;
+      background: rgba(255, 255, 255, 0.94);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      border-radius: 24px;
+      padding: 42px 34px 34px;
+      text-align: center;
+      border: 1px solid rgba(255, 255, 255, 0.85);
+      box-shadow:
+        0 24px 60px -16px rgba(15, 23, 42, 0.12),
+        0 4px 16px -4px rgba(15, 23, 42, 0.05),
+        0 0 0 1px rgba(226, 232, 240, 0.8);
+      overflow: hidden;
+    }
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, #1565D8 0%, #4f46e5 100%);
+    }
+
+    .icon-box {
+      width: 72px;
+      height: 72px;
+      border-radius: 20px;
+      background: rgba(21, 101, 216, 0.08);
+      border: 1.5px solid rgba(21, 101, 216, 0.16);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 20px;
+    }
+    .spinner {
+      width: 34px;
+      height: 34px;
+      border: 3.5px solid rgba(21, 101, 216, 0.2);
+      border-top-color: #1565D8;
+      border-radius: 50%;
+      animation: spin 0.9s linear infinite;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #eff6ff;
+      color: #1565D8;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 4px 12px;
+      border-radius: 999px;
+      margin-bottom: 14px;
+    }
+    .badge-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #1565D8;
+      animation: pulse 1.4s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.8); }
+    }
+
+    h1 {
+      font-size: 22px;
+      font-weight: 900;
+      color: #0f172a;
+      margin-bottom: 10px;
+      line-height: 1.4;
+    }
+    p {
+      font-size: 14.5px;
+      color: #64748b;
+      line-height: 1.65;
+      margin-bottom: 6px;
+    }
+    .en-sub {
+      font-size: 13px;
+      color: #94a3b8;
+      margin-bottom: 24px;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 13px 20px;
+      border-radius: 14px;
+      border: none;
+      background: #1565D8;
+      color: #ffffff;
+      font-family: inherit;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 6px 18px rgba(21, 101, 216, 0.28);
+      transition: background 0.15s ease, transform 0.15s ease;
+    }
+    .btn:hover {
+      background: #0d47a1;
+    }
+    .btn:active {
+      transform: scale(0.99);
+    }
+
+    .countdown {
+      margin-top: 16px;
+      font-size: 12.5px;
+      color: #94a3b8;
+      font-weight: 600;
+    }
+    .countdown strong {
+      color: #1565D8;
+    }
+  </style>
+</head>
+<body>
+  <div class="mesh-orb mesh-orb-1"></div>
+  <div class="mesh-orb mesh-orb-2"></div>
+  <div class="grid-bg"></div>
+
+  <div class="card">
+    <div class="icon-box">
+      <div class="spinner"></div>
+    </div>
+
+    <div class="badge">
+      <span class="badge-dot"></span>
+      <span>System Updating • 502</span>
+    </div>
+
+    <h1>ប្រព័ន្ធកំពុងធ្វើបច្ចុប្បន្នភាព</h1>
+    <p>សូមរង់ចាំបន្តិច ប្រព័ន្ធកំពុងដំណើរការឡើងវិញ ដើម្បីផ្តល់សេវាកម្មកាន់តែប្រសើរ។ ទិន្នន័យរបស់អ្នកមានសុវត្ថិភាព ១០០%។</p>
+    <p class="en-sub">The system is briefly restarting for an update. Please wait a moment.</p>
+
+    <button class="btn" onclick="window.location.reload()">
+      ផ្ទុកទំព័រឡើងវិញ (Reload Now)
+    </button>
+
+    <div class="countdown">
+      នឹងផ្ទុកឡើងវិញដោយស្វ័យប្រវត្តិក្នុងរយៈពេល <strong id="sec">10</strong> វិនាទី...
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      var left = 10;
+      var el = document.getElementById('sec');
+      var timer = setInterval(function () {
+        left -= 1;
+        if (el) el.textContent = String(Math.max(0, left));
+        if (left <= 0) {
+          clearInterval(timer);
+          window.location.reload();
+        }
+      }, 1000);
+    })();
+  </script>
+</body>
+</html>

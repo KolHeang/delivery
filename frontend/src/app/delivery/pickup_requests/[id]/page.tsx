@@ -22,7 +22,7 @@ import {
   MdArrowBack, MdRefresh, MdDirectionsBike, MdClose,
   MdDelete, MdPrint, MdCheckCircle, MdAdd, MdHourglassEmpty,
   MdLocalShipping, MdWarehouse, MdPhone, MdWarningAmber,
-  MdInventory2, MdLock, MdBolt, MdPhotoCamera,
+  MdInventory2, MdLock, MdBolt, MdPhotoCamera, MdSync,
 } from 'react-icons/md';
 
 /* ────────────────────────────────── helpers ── */
@@ -109,6 +109,13 @@ export default function PickupRequestDetailPage() {
   const [showAssign, setShowAssign]       = useState(false);
   const [assignDriverId, setAssignDriver] = useState<number | null>(null);
   const [assigning, setAssigning]         = useState(false);
+
+  /* ── update status modal ── */
+  const [showStatusModal, setShowStatusModal] = useState(false);
+  const [nextStatus, setNextStatus]           = useState<string>('picked-up');
+  const [actualQtyInput, setActualQtyInput]   = useState<string>('');
+  const [statusNote, setStatusNote]           = useState<string>('');
+  const [updatingStatus, setUpdatingStatus]   = useState(false);
 
   /* ── print ref ── */
   const printRef = useRef<HTMLDivElement>(null);
@@ -366,6 +373,55 @@ export default function PickupRequestDetailPage() {
     }
   };
 
+  /* ────────────────────────────── update status (admin) ── */
+  const openStatusModal = () => {
+    if (!request) return;
+    const defaultNext =
+      request.status === 'pending' || request.status === 'assigned'
+        ? 'picked-up'
+        : request.status;
+    setNextStatus(defaultNext);
+    setActualQtyInput(
+      request.actualQuantity != null
+        ? String(request.actualQuantity)
+        : request.declaredQuantity != null
+          ? String(request.declaredQuantity)
+          : '',
+    );
+    setStatusNote(request.driverNote || '');
+    setShowStatusModal(true);
+  };
+
+  const handleUpdateStatus = async () => {
+    if (!nextStatus) return;
+    setUpdatingStatus(true);
+    try {
+      const payload: Record<string, any> = {
+        status: nextStatus,
+        driverNote: statusNote.trim() || undefined,
+      };
+      if (actualQtyInput !== '' && !isNaN(Number(actualQtyInput))) {
+        payload.actualQuantity = Math.max(0, Math.floor(Number(actualQtyInput)));
+      }
+      await api.patch(`/parcels/pickup-requests/${id}/status`, payload);
+      setShowStatusModal(false);
+      if (nextStatus === 'picked-up') {
+        didAutoInitBatchRef.current = false;
+      }
+      setSuccessMsg(
+        lang === 'km'
+          ? 'បានធ្វើបច្ចុប្បន្នភាពស្ថានភាពសំណើប្រមូលដោយជោគជ័យ!'
+          : 'Pickup request status updated successfully!',
+      );
+      setTimeout(() => setSuccessMsg(''), 4000);
+      await load();
+    } catch (err: any) {
+      alert(err.response?.data?.message || (lang === 'km' ? 'មិនអាចធ្វើបច្ចុប្បន្នភាពស្ថានភាពបានទេ' : 'Failed to update status'));
+    } finally {
+      setUpdatingStatus(false);
+    }
+  };
+
   /* ────────────────────────────── print ── */
   const handlePrint = () => {
     const el = document.getElementById('waybill-print');
@@ -429,13 +485,25 @@ export default function PickupRequestDetailPage() {
               <button className="btn btn-outline" onClick={load} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <MdRefresh size={16} /> {lang === 'km' ? 'ផ្ទុកឡើងវិញ' : 'Refresh'}
               </button>
-              <button
-                type="button"
-                className="btn btn-primary"
-                onClick={() => setShowAssign(true)}
-              >
-                <MdDirectionsBike size={16} /> {t('assignDriverTitle')}
-              </button>
+              {(request?.status === 'pending' || request?.status === 'assigned') && (
+                <>
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    onClick={() => setShowAssign(true)}
+                  >
+                    <MdDirectionsBike size={16} /> {t('assignDriverTitle')}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-outline"
+                    onClick={openStatusModal}
+                    style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#0f766e', borderColor: '#0f766e' }}
+                  >
+                    <MdSync size={16} /> {lang === 'km' ? 'ប្តូរស្ថានភាព' : 'Update Status'}
+                  </button>
+                </>
+              )}
               <button
                 type="button"
                 className="btn btn-outline"
@@ -461,9 +529,9 @@ export default function PickupRequestDetailPage() {
 
               {/* ── Clean Balanced Summary Card ── */}
               <div className="card" style={{ marginBottom: 20, padding: '20px 24px' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 20, alignItems: 'stretch' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 24, alignItems: 'start' }}>
                   {/* 1. Request Info */}
-                  <div style={{ paddingRight: 12 }}>
+                  <div style={{ paddingRight: 8 }}>
                     <div style={{ fontSize: 12, fontWeight: 700, color: '#64748b', letterSpacing: '0.03em', marginBottom: 12 }}>
                       {lang === 'km' ? 'ព័ត៌មានសំណើ' : 'REQUEST INFO'}
                     </div>
@@ -478,12 +546,12 @@ export default function PickupRequestDetailPage() {
                   </div>
 
                   {/* 2. Pickup Driver */}
-                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <div>
                     <div style={{ fontSize: 12, fontWeight: 700, color: '#64748b', letterSpacing: '0.03em', marginBottom: 12 }}>
                       {lang === 'km' ? 'អ្នកប្រមូលកញ្ចប់' : 'PICKUP RIDER'}
                     </div>
                     {request.pickupDriver ? (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', borderRadius: 12, background: '#f8fafc', border: '1px solid #e2e8f0', flex: 1 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', borderRadius: 12, background: '#f8fafc', border: '1px solid #e2e8f0' }}>
                         <div style={{ width: 42, height: 42, borderRadius: '50%', background: 'var(--accent, #1565D8)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 17, flexShrink: 0 }}>
                           {request.pickupDriver.name?.charAt(0)}
                         </div>
@@ -499,7 +567,7 @@ export default function PickupRequestDetailPage() {
                         </div>
                       </div>
                     ) : (
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '16px', borderRadius: 12, background: '#fffbeb', border: '1px dashed #fcd34d', color: '#b45309', fontSize: 13.5, fontWeight: 600, flex: 1 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '16px', borderRadius: 12, background: '#fffbeb', border: '1px dashed #fcd34d', color: '#b45309', fontSize: 13.5, fontWeight: 600 }}>
                         <MdWarningAmber size={18} style={{ flexShrink: 0 }} />
                         <span>{lang === 'km' ? 'មិនទាន់មានអ្នកប្រមូលកញ្ចប់' : 'No pickup rider assigned'}</span>
                       </div>
@@ -507,11 +575,11 @@ export default function PickupRequestDetailPage() {
                   </div>
 
                   {/* 3. Progress */}
-                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <div>
                     <div style={{ fontSize: 12, fontWeight: 700, color: '#64748b', letterSpacing: '0.03em', marginBottom: 12 }}>
                       {t('batchProgress')}
                     </div>
-                    <div style={{ padding: '16px 18px', borderRadius: 12, background: '#f8fafc', border: '1px solid #e2e8f0', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                    <div style={{ padding: '16px 18px', borderRadius: 12, background: '#f8fafc', border: '1px solid #e2e8f0' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
                         <span style={{ fontSize: 13, color: '#64748b', fontWeight: 600 }}>
                           {lang === 'km' ? 'បានទទួល / ប្រកាស' : 'Inbounded / Declared'}
@@ -595,12 +663,18 @@ export default function PickupRequestDetailPage() {
                 </div>
               </div>
 
-              {/* ── Layout: side-by-side (single) or full-width (batch) ── */}
-              <div style={{ display: 'grid', gridTemplateColumns: entryTab === 'batch' ? '1fr' : '1fr 380px', gap: 20, alignItems: 'start' }}>
+              {/* ── Layout: full-width when completed/cancelled/full or batch; side-by-side when entering single ── */}
+              {(() => {
+                const isFullOrClosed =
+                  (declared > 0 && completed >= declared) ||
+                  request.status === 'completed' ||
+                  request.status === 'cancelled';
+                return (
+              <div style={{ display: 'grid', gridTemplateColumns: (entryTab === 'batch' || isFullOrClosed) ? '1fr' : '1fr 380px', gap: 20, alignItems: 'start' }}>
 
                 {/* ── Parcels list ── */}
                 <div className="card" style={{ overflow: 'hidden' }}>
-                  <div className="card-header" style={{ padding: '14px 20px' }}>
+                  <div className="card-header" style={{ padding: '14px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                       <div style={{ width: 34, height: 34, borderRadius: 9, background: 'var(--accent-light, #eff6ff)', color: 'var(--accent, #1565D8)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <MdWarehouse size={18} />
@@ -612,6 +686,27 @@ export default function PickupRequestDetailPage() {
                         </div>
                       </div>
                     </div>
+                    {isFullOrClosed && (
+                      <span
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 6,
+                          padding: '5px 12px',
+                          borderRadius: 999,
+                          fontSize: 12.5,
+                          fontWeight: 700,
+                          background: request.status === 'cancelled' ? '#fee2e2' : '#dcfce7',
+                          color: request.status === 'cancelled' ? '#dc2626' : '#16a34a',
+                        }}
+                      >
+                        {request.status === 'cancelled' ? (
+                          <><MdLock size={14} /> {lang === 'km' ? 'បានលុបចោល' : 'Cancelled'}</>
+                        ) : (
+                          <><MdCheckCircle size={15} /> {lang === 'km' ? `គ្រប់ចំនួន (${completed}/${declared || completed})` : `Completed (${completed}/${declared || completed})`}</>
+                        )}
+                      </span>
+                    )}
                   </div>
 
                   {parcels.length === 0 ? (
@@ -627,41 +722,49 @@ export default function PickupRequestDetailPage() {
                       <table>
                         <thead style={{ position: 'sticky', top: 0, zIndex: 5, background: 'var(--bg-primary)', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
                           <tr>
-                            <th style={{ paddingLeft: 20 }}>{t('colNo')}</th>
+                            <th style={{ width: 60, textAlign: 'center' }}>{t('colNo')}</th>
                             <th>{t('trackingCode')}</th>
                             <th>{t('receiverName')}</th>
                             <th>{t('receiverPhone')}</th>
                             <th>{t('zone')}</th>
-                            <th>{t('cod')}</th>
-                            <th>{t('deliveryFee')}</th>
-                            <th>{t('status')}</th>
-                            <th>{t('actions')}</th>
+                            <th style={{ textAlign: 'right' }}>{t('cod')}</th>
+                            <th style={{ textAlign: 'right' }}>{t('deliveryFee')}</th>
+                            <th style={{ textAlign: 'center' }}>{t('status')}</th>
+                            <th style={{ width: 70, textAlign: 'center' }}>{t('actions')}</th>
                           </tr>
                         </thead>
                         <tbody>
                           {parcels.map((p: any, idx: number) => (
                             <tr key={p.id}>
-                              <td style={{ paddingLeft: 20, fontWeight: 600, color: 'var(--text-muted)', fontSize: 12 }}>{idx + 1}</td>
+                              <td style={{ textAlign: 'center', fontWeight: 600, color: '#64748b', fontSize: 12.5 }}>{idx + 1}</td>
                               <td>
-                                <code style={{ fontSize: 11, background: 'rgba(0,0,0,0.05)', padding: '3px 7px', borderRadius: 6, fontWeight: 700 }}>
+                                <code style={{ fontSize: 12, background: 'var(--accent-light, #eff6ff)', color: 'var(--accent, #1565D8)', padding: '3px 8px', borderRadius: 6, fontWeight: 700 }}>
                                   {p.trackingCode}
                                 </code>
                               </td>
-                              <td style={{ fontWeight: 600, fontSize: 13 }}>{p.receiverName || ''}</td>
-                              <td style={{ fontWeight: 600, fontSize: 13 }}>{p.receiverPhone}</td>
-                              <td style={{ fontSize: 12 }}>{p.zone?.name || ''}</td>
-                              <td style={{ fontWeight: 700, fontSize: 13 }}>{formatCOD(p.cod, p.codCurrency)}</td>
-                              <td style={{ color: 'var(--success)', fontWeight: 700, fontSize: 13 }}>${parseFloat(p.deliveryFee || 0).toFixed(2)}</td>
-                              <td>
-                                <span style={{ fontSize: 11, padding: '3px 8px', borderRadius: 999, fontWeight: 700, background: getParcelStatusBadgeColor(p.status), color: '#fff' }}>
+                              <td style={{ fontWeight: 600, fontSize: 13, color: p.receiverName ? '#0f172a' : '#94a3b8' }}>
+                                {p.receiverName || '—'}
+                              </td>
+                              <td style={{ fontWeight: 600, fontSize: 13, fontFamily: 'monospace' }}>{p.receiverPhone || '—'}</td>
+                              <td style={{ fontSize: 12.5, color: p.zone?.name ? '#334155' : '#94a3b8' }}>
+                                {p.zone?.name || '—'}
+                              </td>
+                              <td style={{ textAlign: 'right', fontWeight: 700, fontSize: 13 }}>
+                                {formatCOD(p.cod, p.codCurrency) || <span style={{ color: '#94a3b8', fontWeight: 500 }}>—</span>}
+                              </td>
+                              <td style={{ textAlign: 'right', color: 'var(--success)', fontWeight: 700, fontSize: 13 }}>
+                                ${parseFloat(p.deliveryFee || 0).toFixed(2)}
+                              </td>
+                              <td style={{ textAlign: 'center' }}>
+                                <span style={{ fontSize: 11.5, padding: '3px 10px', borderRadius: 999, fontWeight: 700, background: getParcelStatusBadgeColor(p.status), color: '#fff', display: 'inline-block' }}>
                                   {getParcelStatusLabel(p.status, lang)}
                                 </span>
                               </td>
-                              <td>
+                              <td style={{ textAlign: 'center' }}>
                                 <button
                                   onClick={() => handleDeleteParcel(p.id)}
-                                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--danger)', padding: 4, borderRadius: 6, display: 'flex', alignItems: 'center' }}
-                                  title="Delete parcel"
+                                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--danger)', padding: 6, borderRadius: 6, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                                  title={lang === 'km' ? 'លុបកញ្ចប់' : 'Delete parcel'}
                                 >
                                   <MdDelete size={17} />
                                 </button>
@@ -674,7 +777,8 @@ export default function PickupRequestDetailPage() {
                   )}
                 </div>
 
-                {/* ── Tabbed panel: Single / Batch Entry ── */}
+                {/* ── Tabbed panel: Single / Batch Entry (hidden when completed/cancelled/full) ── */}
+                {!isFullOrClosed && (
                 <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
 
                   {declared > 0 && completed >= declared ? (
@@ -983,7 +1087,10 @@ export default function PickupRequestDetailPage() {
                     </>
                   )}
                 </div>
+                )}
               </div>
+                );
+              })()}
             </>
           )}
         </div>
@@ -1037,6 +1144,104 @@ export default function PickupRequestDetailPage() {
               style={{ marginTop: 20, width: '100%', padding: '13px', borderRadius: 10, fontWeight: 700, fontSize: 14 }}
             >
               {assigning ? 'Assigning...' : t('assignDriver')}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ════════════════ Update Status Modal ════════════════ */}
+      {showStatusModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div style={{ background: 'var(--bg-card)', borderRadius: 16, padding: '28px 32px', width: '100%', maxWidth: 480, boxShadow: '0 24px 60px rgba(0,0,0,0.2)', position: 'relative' }}>
+            <button
+              onClick={() => setShowStatusModal(false)}
+              style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', alignItems: 'center' }}
+            >
+              <MdClose size={22} />
+            </button>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+              <div style={{ width: 44, height: 44, borderRadius: 12, background: '#ccfbf1', color: '#0f766e', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <MdSync size={24} />
+              </div>
+              <div>
+                <div style={{ fontWeight: 800, fontSize: 17 }}>
+                  {lang === 'km' ? 'ប្តូរស្ថានភាពសំណើប្រមូល' : 'Update Pickup Request Status'}
+                </div>
+                <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+                  {lang === 'km' ? `សំណើលេខ #${id}` : `Pickup Request #${id}`}
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 16 }}>
+              {(['pending', 'assigned', 'picked-up', 'in-warehouse', 'completed', 'cancelled'] as const).map((st) => {
+                const selected = nextStatus === st;
+                const sc = STATUS_COLORS[st] ?? { bg: '#f1f5f9', color: '#475569' };
+                return (
+                  <button
+                    key={st}
+                    type="button"
+                    onClick={() => setNextStatus(st)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '10px 14px',
+                      borderRadius: 10,
+                      border: `2px solid ${selected ? sc.color : 'var(--border)'}`,
+                      background: selected ? sc.bg : 'var(--bg-primary)',
+                      color: selected ? sc.color : 'var(--text-primary)',
+                      fontWeight: 700,
+                      fontSize: 13,
+                      cursor: 'pointer',
+                      transition: 'all 0.15s',
+                    }}
+                  >
+                    <span>{getPickupRequestStatusLabel(st, lang)}</span>
+                    {selected && <MdCheckCircle size={18} />}
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="form-group" style={{ marginBottom: 12 }}>
+              <label className="form-label" style={{ fontSize: 12.5, fontWeight: 600 }}>
+                {lang === 'km' ? 'ចំនួនកញ្ចប់ជាក់ស្តែង (Actual Quantity)' : 'Actual Quantity'}
+              </label>
+              <input
+                type="number"
+                min={0}
+                className="form-control"
+                value={actualQtyInput}
+                onChange={(e) => setActualQtyInput(e.target.value)}
+                placeholder={String(request?.declaredQuantity ?? 0)}
+              />
+            </div>
+
+            <div className="form-group" style={{ marginBottom: 16 }}>
+              <label className="form-label" style={{ fontSize: 12.5, fontWeight: 600 }}>
+                {lang === 'km' ? 'កំណត់ចំណាំ (ស្រេចចិត្ត)' : 'Note (Optional)'}
+              </label>
+              <input
+                type="text"
+                className="form-control"
+                value={statusNote}
+                onChange={(e) => setStatusNote(e.target.value)}
+                placeholder={lang === 'km' ? 'ឧ. ហាងយកមកដាក់ឃ្លាំងផ្ទាល់...' : 'e.g. Dropped off at warehouse...'}
+              />
+            </div>
+
+            <button
+              type="button"
+              className="btn btn-primary w-full"
+              onClick={handleUpdateStatus}
+              disabled={updatingStatus}
+              style={{ width: '100%', padding: '12px', borderRadius: 10, fontWeight: 700, fontSize: 14 }}
+            >
+              {updatingStatus
+                ? (lang === 'km' ? 'កំពុងរក្សាទុក...' : 'Saving...')
+                : (lang === 'km' ? 'រក្សាទុកស្ថានភាពថ្មី' : 'Save Status')}
             </button>
           </div>
         </div>

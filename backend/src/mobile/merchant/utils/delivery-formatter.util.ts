@@ -1,3 +1,29 @@
+function getParcelStatusKh(status: string): string {
+  switch ((status || 'pending').toLowerCase()) {
+    case 'delivered':
+      return 'បានដឹកជញ្ជូន';
+    case 'assigned':
+    case 'picked-up':
+    case 'picked_up':
+      return 'ទទួលយក';
+    case 'in-transit':
+    case 'in_transit':
+      return 'កំពុងដឹកជញ្ជូន';
+    case 'in-warehouse':
+    case 'in_warehouse':
+      return 'ក្នុងឃ្លាំង';
+    case 'failed':
+      return 'ដឹកមិនជោគជ័យ';
+    case 'returned':
+      return 'បានត្រឡប់ទៅហាង';
+    case 'cancelled':
+      return 'បានបោះបង់';
+    case 'pending':
+    default:
+      return 'រង់ចាំដឹក';
+  }
+}
+
 export function formatMerchantDelivery(parcel: any) {
   if (!parcel) return null;
   if (parcel.cod && typeof parcel.cod === 'object' && 'usd' in parcel.cod) {
@@ -9,6 +35,8 @@ export function formatMerchantDelivery(parcel: any) {
   const isUsd = (parcel.codCurrency || 'USD').toUpperCase() === 'USD';
   const rawFee = parcel.deliveryFee !== undefined ? parcel.deliveryFee : 0;
   const feeNum = isNaN(Number(rawFee)) ? 0 : Number(rawFee);
+  const normalizedStatus = (parcel.status || 'pending').toLowerCase();
+  const statusKh = getParcelStatusKh(normalizedStatus);
 
   return {
     id: parcel.id,
@@ -19,9 +47,9 @@ export function formatMerchantDelivery(parcel: any) {
     receiverPhone: parcel.receiverPhone || parcel.customer?.phone || '',
     address: parcel.receiverAddress || parcel.customer?.address || '',
     receiverAddress: parcel.receiverAddress || parcel.customer?.address || '',
-    status: parcel.status || 'delivered',
-    statusKh: parcel.status === 'delivered' ? 'បានដឹកជញ្ជូន' : parcel.status,
-    statusLabel: parcel.status === 'delivered' ? 'បានដឹកជញ្ជូន' : parcel.status,
+    status: normalizedStatus,
+    statusKh,
+    statusLabel: statusKh,
     cod: {
       usd: isUsd ? codNum : 0,
       usdCents: isUsd ? Math.round(codNum * 100) : 0,
@@ -41,26 +69,26 @@ export function formatMerchantPickupRequest(pr: any) {
     return pr; // Already formatted
   }
 
-  const branchName = pr.branch?.name || 'Main Shop';
-  const branchAddress = pr.branch?.address || pr.pickupAddress || 'Street 271, Toul Tom Poung, Phnom Penh';
-  const rawId = pr.id ? String(pr.id) : 'PB9001';
-  const code = pr.code || (rawId.startsWith('PB') ? rawId : `PB${rawId.padStart(4, '0')}`);
+  const branchName = pr.branch?.name || pr.merchant?.name || '';
+  const branchAddress = pr.branch?.address || pr.pickupAddress || '';
+  const rawId = pr.id ? String(pr.id) : '';
+  const code = pr.code || (rawId ? (rawId.startsWith('PB') ? rawId : `PB${rawId.padStart(4, '0')}`) : '');
 
-  // Rider info if assigned
+  // Rider info if assigned (no fake mock fallback)
   let rider = null;
   if (pr.pickupDriver) {
     rider = {
       id: String(pr.pickupDriver.id),
-      name: pr.pickupDriver.name || 'Sok Dara',
+      name: pr.pickupDriver.name || '',
       phone: pr.pickupDriver.phone || '',
       photoUrl: pr.pickupDriver.photo || null,
       online: true,
     };
-  } else if (pr.status === 'assigned' || pr.pickupDriverId) {
+  } else if (pr.pickupDriverId) {
     rider = {
-      id: String(pr.pickupDriverId || '4'),
-      name: 'Sok Dara',
-      phone: '087654322',
+      id: String(pr.pickupDriverId),
+      name: '',
+      phone: '',
       photoUrl: null,
       online: true,
     };
@@ -71,7 +99,7 @@ export function formatMerchantPickupRequest(pr: any) {
   if (status === 'pending') status = 'requested';
   if (status === 'picked-up') status = 'pickedUp';
 
-  const totalCount = Number(pr.totalParcels || pr.declaredQuantity || pr.actualQuantity || 4);
+  const totalCount = Number(pr.totalParcels ?? pr.declaredQuantity ?? pr.actualQuantity ?? 0);
 
   return {
     id: String(code),
